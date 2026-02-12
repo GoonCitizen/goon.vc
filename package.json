@@ -1,0 +1,32 @@
+{
+  "name": "goon.vc",
+  "version": "0.1.0-RC1",
+  "description": "goon.vc public",
+  "main": "services/goon.vc.git",
+  "scripts": {
+    "build": "npm run build:browser",
+    "build:browser": "node scripts/build.js",
+    "report:install": "rm -rf node_modules && echo \"\n\" > package-lock.json && echo \"$ npm i\" > reports/install.log && npm i >> reports/install.log",
+    "test": "mocha tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GoonCitizen/goon.vc.git"
+  },
+  "keywords": [
+    "star",
+    "citizen",
+    "fabric",
+    "bitcoin",
+    "sensemaker"
+  ],
+  "author": "Fabric Labs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GoonCitizen/goon.vc/issues"
+  },
+  "homepage": "https://github.com/GoonCitizen/goon.vc#readme",
+  "dependencies": {
+    "@fabric/star-citizen-live": "GoonCitizen/star-citizen-live#feature/discord"
+  }
+}
