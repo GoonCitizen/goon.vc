@@ -1,6 +1,11 @@
 'use strict';
 
-require('@babel/register');
+// Transpile JS/JSX including node_modules/@fabric (e.g. HubInterface.js)
+require('@babel/register')({
+  extensions: ['.js', '.jsx'],
+  ignore: [/node_modules\/(?!@fabric)/],
+  presets: ['@babel/preset-env', '@babel/preset-react']
+});
 
 const React = require('react');
 const ReactDOM = require('react-dom');
@@ -10,10 +15,8 @@ const webpack = require('webpack');
 // Settings
 const settings = require('../settings/local');
 
-// Fabric HTTP Types
-// const Compiler = require('@fabric/http/types/compiler');
-
-const Compiler = require('@fabric/http/types/compiler');
+// Goon.VC compiler (custom HTML template in types/GoonSPA.js)
+const Compiler = require('../types/GoonCompiler');
 // const webpackConfig = require('../webpack.config');
 
 // Components

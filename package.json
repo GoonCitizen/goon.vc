@@ -29,6 +29,12 @@
     "url": "https://github.com/GoonCitizen/goon.vc/issues"
   },
   "homepage": "https://github.com/GoonCitizen/goon.vc#readme",
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.0",
+    "@babel/register": "^7.26.0"
+  },
   "dependencies": {
     "@fabric/star-citizen-live": "GoonCitizen/star-citizen-live#feature/discord"
   }
