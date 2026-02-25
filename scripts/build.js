@@ -17,11 +17,11 @@ const Compiler = require('@fabric/http/types/compiler');
 // const webpackConfig = require('../webpack.config');
 
 // Components
-const HubInterface = require('../components/HubInterface');
+const Interface = require('../components/Interface');
 
 // Program Body
 async function main (input = {}) {
-  const site = new HubInterface(input);
+  const site = new Interface(input);
   const compiler = new Compiler({
     document: site,
     //webpack: webpackConfig,
