@@ -1,0 +1,10 @@
+{
+  "name": "goon.vc",
+  "chat": "https://goon.vc/discord",
+  "source": "https://github.com/GoonCitizen/goon.vc",
+  "templates": {
+    "default": {
+      "layoutFile": "assets/docs.tmpl"
+    }
+  }
+}

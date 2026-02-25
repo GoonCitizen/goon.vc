@@ -6,6 +6,8 @@
   "scripts": {
     "build": "npm run build:browser",
     "build:browser": "node scripts/build.js",
+    "docs": "npm run make:api && npm run make:docs && http-server -p 8000 docs",
+    "make:api": "jsdoc2md --configure jsdoc.json --files types/*.js schemata/*.js services/*.js settings/deprecations.js README.md > API.md",
     "report:install": "rm -rf node_modules && echo \"\n\" > package-lock.json && echo \"$ npm i\" > reports/install.log && npm i >> reports/install.log",
     "test": "mocha tests"
   },
