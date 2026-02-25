@@ -35,6 +35,8 @@ class GoonVC extends Hub {
    * @returns {GoonVC} Instance of the {@link GoonVC}.
    */
   async start () {
+    await super.start();
+
     // Handle this event in your application
     // Name, Channel, Message
     this.emit('log', 'GOON.VC', 'Starting service...');
