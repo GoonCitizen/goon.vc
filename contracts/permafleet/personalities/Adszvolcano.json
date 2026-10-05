@@ -1,0 +1,12 @@
+{
+  "type": "permafleetPersonality",
+  "version": 1,
+  "handle": "Adszvolcano",
+  "organization": "INFINITY INDUSTRIES",
+  "roles": [
+    {
+      "title": "CEO",
+      "organization": "INFINITY INDUSTRIES"
+    }
+  ]
+}

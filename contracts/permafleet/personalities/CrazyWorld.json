@@ -1,0 +1,17 @@
+{
+  "type": "permafleetPersonality",
+  "version": 1,
+  "handle": "CrazyWorld",
+  "organization": "PERMAFLEET",
+  "roles": [
+    {
+      "title": "Fun Creator",
+      "scope": "PERMAFLEET",
+      "notes": "Brings laughs and chaos into routine ops — cargo hauls, NPC mission clears, and mess around before a capital-ship quantum jump."
+    },
+    {
+      "title": "Littering Specialist",
+      "notes": "places empty bottles across the ship cockpit."
+    }
+  ]
+}

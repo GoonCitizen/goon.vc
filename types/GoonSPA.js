@@ -3,12 +3,12 @@
 const fs = require('fs');
 const path = require('path');
 const FabricSPA = require('@fabric/http/types/spa');
+const escapeHtml = require('../functions/escapeHtml');
+const HomePage = require('../components/HomePage');
+const PermafleetOperation = require('../components/PermafleetOperation');
+const PermafleetSchedule = require('../components/PermafleetSchedule');
 
 const PERSONALITIES_DIR = path.join(__dirname, '../contracts/permafleet/personalities');
-
-const ARTICLES_URL = 'https://docs.google.com/document/d/1r50-vh0qIZniGRXNHMV3G0aXrXij-tN-qGo19LnwAic/edit';
-
-const SERIES_URL = 'https://docs.google.com/document/d/1otjrh9vk4q4WBmOyI903H7NTGNjO0qNStpxmehgDTbU/edit';
 
 const DEFAULTS = {
   title: 'GOON SQUAD',
@@ -24,11 +24,21 @@ const DEFAULTS = {
   dossierHeading: 'DOSSIER',
   dossierIntro: 'Public roster derived from alliance records and org chart.',
   dossierDocumentTitle: 'DOSSIER — GOON SQUAD',
-  articlesPath: '/articles',
-  articlesLabel: 'ARTICLES',
-  articlesHeading: 'Articles of Incorporation',
-  articlesIntro: 'Founding instrument for PERMAFLEET (full text in Google Docs). Character dossiers also cite this document alongside PERMAFLEET SERIES.',
-  articlesDocumentTitle: 'Articles of Incorporation — GOON SQUAD',
+  dossierHeroImage: '/dossier-cold.jpg',
+  permafleetPath: '/operations/PERMAFLEET',
+  permafleetLabel: 'PERMAFLEET',
+  permafleetHeading: 'PERMAFLEET',
+  permafleetTagline: 'We’re always online.',
+  permafleetIntro: 'Dedicated to giving everyone a group to fly with, PERMAFLEET runs 24/7 public assistance. Security is always on standby, giving us rapid response times to hostile encounters.',
+  permafleetDocumentTitle: 'PERMAFLEET — GOON SQUAD',
+  permafleetChannelId: '1236721094153732276',
+  permafleetChannelName: 'permafleet',
+  permafleetInviteUrl: 'https://discord.com/invite/M4h9bBWq',
+  permafleetHeroImage: '/hero-quantum.jpg',
+  permafleetSchedulePath: '/operations/PERMAFLEET/schedule',
+  permafleetScheduleImage: '/permafleet-schedule.svg',
+  permafleetScheduleHtml: '/permafleet-schedule.html',
+  permafleetScheduleDocumentTitle: 'PERMAFLEET Weekly Ops — GOON SQUAD',
   discordWidgetId: '1190527980120850493',
   discordWidgetTheme: 'dark',
   discordWidgetWidth: 350,
@@ -37,15 +47,6 @@ const DEFAULTS = {
   copyright: '&copy; big lol',
   viewport: 'width=500, initial-scale=1'
 };
-
-function escapeHtml (value) {
-  if (value == null) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 function loadPersonalities () {
   let files = [];
@@ -109,6 +110,7 @@ function renderDossierCardHtml (p, dossierBasePath) {
   const rolesHtml = renderRolesUlHtml(p);
   const sourcesFooter = renderSourcesFooterHtml(normalizeSources(p));
   return `<article class="dossier-card">
+      <div class="dossier-card-corners" aria-hidden="true"><span></span><span></span></div>
       <header><h2 class="dossier-handle"><a href="${escapeHtml(profileHref)}">${escapeHtml(p.handle)}</a></h2></header>
       ${org}
       ${rolesHtml}
@@ -131,16 +133,20 @@ function renderPersonMainHtml (p, dossierBasePath, loginPath, loginLabel, copyri
   const rolesHtml = renderRolesUlHtml(p);
   const sourcesFooter = renderSourcesFooterHtml(normalizeSources(p));
   return `<main id="${id}" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="${dossierBasePath}">Dossier index</a> · <a href="/articles">Articles</a></p>
-      <h1 class="person-title">${escapeHtml(p.handle)}</h1>
-      ${org}
-      ${rolesHtml}
-      ${sourcesFooter}
-      <p class="person-permalink"><a href="${escapeHtml(profileHref)}">Permalink</a></p>
-      <footer>
-        <div style="padding-top: 2em;"><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
-        <div><small>${copyright}</small></div>
-      </footer>
+      <div class="dossier-shell">
+        <div class="dossier-shell-inner">
+          <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="${dossierBasePath}">Dossier index</a></p>
+          <h1 class="person-title">${escapeHtml(p.handle)}</h1>
+          ${org}
+          ${rolesHtml}
+          ${sourcesFooter}
+          <p class="person-permalink"><a href="${escapeHtml(profileHref)}">Permalink</a></p>
+          <footer>
+            <div style="padding-top: 2em;"><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
+            <div><small>${copyright}</small></div>
+          </footer>
+        </div>
+      </div>
     </main>`;
 }
 
@@ -172,13 +178,13 @@ class GoonSPA extends FabricSPA {
     const dossierHeading = escapeHtml(this._site('dossierHeading'));
     const dossierIntro = escapeHtml(this._site('dossierIntro'));
     const dossierDocumentTitle = this._site('dossierDocumentTitle');
-    const articlesPath = this._site('articlesPath');
-    const articlesLabel = escapeHtml(this._site('articlesLabel'));
-    const articlesHeading = escapeHtml(this._site('articlesHeading'));
-    const articlesIntro = escapeHtml(this._site('articlesIntro'));
-    const articlesDocumentTitle = this._site('articlesDocumentTitle');
     const dossierTitleJson = JSON.stringify(dossierDocumentTitle);
-    const articlesTitleJson = JSON.stringify(articlesDocumentTitle);
+    const dossierHeroImage = this._site('dossierHeroImage');
+    const permafleetPath = this._site('permafleetPath');
+    const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
+    const permafleetInviteUrl = this._site('permafleetInviteUrl');
+    const schedulePath = this._site('permafleetSchedulePath');
+    const scheduleTitleJson = JSON.stringify(this._site('permafleetScheduleDocumentTitle'));
     const titleJson = JSON.stringify(title);
     const personas = loadPersonalities();
     const dossierCardsHtml = renderDossierCardsHtml(personas, dossierPath);
@@ -194,6 +200,54 @@ class GoonSPA extends FabricSPA {
     const viewport = this._site('viewport');
     const widgetSrc = `https://discord.com/widget?id=${widgetId}&theme=${widgetTheme}`;
     const personPathPattern = '^' + dossierPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/([^/]+)$';
+    const homeMainHtml = HomePage.render({
+      heading,
+      nav: [
+        { href: dossierPath, label: dossierLabel },
+        { href: permafleetPath, label: escapeHtml(this._site('permafleetLabel')) },
+        { href: monitorUrl, label: monitorLabel },
+        { href: loginPath, label: 'Login' }
+      ],
+      joinUrl,
+      joinLabel,
+      widgetSrc,
+      widgetWidth,
+      widgetHeight,
+      loginPath,
+      loginLabel,
+      bitcoinAddress,
+      copyright
+    });
+    const permafleetMainHtml = PermafleetOperation.render({
+      heading: escapeHtml(this._site('permafleetHeading')),
+      goonBrandHtml: heading,
+      tagline: escapeHtml(this._site('permafleetTagline')),
+      intro: escapeHtml(this._site('permafleetIntro')),
+      inviteUrl: permafleetInviteUrl,
+      hotlineUrl: joinUrl,
+      schedulePath,
+      bitcoinAddress,
+      copyright,
+      nav: [
+        { href: dossierPath, label: dossierLabel },
+        { href: schedulePath, label: 'Schedule' },
+        { href: monitorUrl, label: monitorLabel },
+        { href: loginPath, label: 'Login' }
+      ]
+    });
+    const scheduleMainHtml = PermafleetSchedule.render({
+      title: 'PERMAFLEET',
+      imageSrc: this._site('permafleetScheduleImage'),
+      htmlSrc: this._site('permafleetScheduleHtml'),
+      operationPath: permafleetPath,
+      joinUrl: permafleetInviteUrl
+    });
+    const permafleetScript = PermafleetOperation.script({
+      guildId: widgetId,
+      channelId: this._site('permafleetChannelId'),
+      channelName: this._site('permafleetChannelName'),
+      inviteUrl: permafleetInviteUrl
+    });
 
     return `<html>
   <head>
@@ -205,7 +259,7 @@ class GoonSPA extends FabricSPA {
     <meta name="viewport" content="${viewport}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style type="text/css">
       body { background: #333; color: #ddd; text-align: center; }
       h1, h2, h3 { font-family: "Bungee", sans-serif; font-weight: 400; font-style: normal; }
@@ -223,7 +277,6 @@ class GoonSPA extends FabricSPA {
       }
       .footer-login-button:hover { background: rgba(255, 255, 255, 0.1); }
       .login-page { display: none; margin: 3em auto; max-width: 32em; padding: 0 1em; }
-      .home-page { display: block; }
       .session-form { margin: 2em auto; max-width: 26em; display: flex; flex-direction: column; gap: 0.75em; }
       .session-form button {
         background: #222;
@@ -248,101 +301,177 @@ class GoonSPA extends FabricSPA {
         display: none;
       }
       .session-identity code { word-break: break-all; font-size: 0.85em; }
-      .site-nav {
-        font-family: "Bungee", sans-serif;
-        letter-spacing: 0.06em;
-        margin: 0.35em 0 1.25em;
-      }
-      .site-nav a {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-        text-decoration: none;
-      }
-      .site-nav a:hover { border-bottom-color: #fff; }
-      .articles-page {
-        display: none;
-        margin: 0 auto;
-        max-width: 38em;
-        padding: 0 1em 3em;
-        text-align: left;
-      }
-      .articles-page > h1 { text-align: center; }
-      .articles-doc-link {
-        display: inline-block;
-        margin-top: 1.25em;
-        font-family: "Bungee", sans-serif;
-        letter-spacing: 0.05em;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-        text-decoration: none;
-      }
-      .articles-doc-link:hover { border-bottom-color: #fff; }
+      body.dossier-active { margin: 0; background: #050A18; }
       .dossier-page {
+        --dossier-void: #050A18;
+        --dossier-text: #F2F8FF;
+        --dossier-muted: #B7C9D8;
+        --dossier-accent: #8EBFD0;
+        --dossier-line: rgba(142, 191, 208, 0.45);
+        --dossier-cyan: #00D4FF;
+        --dossier-glass: rgba(5, 12, 28, 0.72);
         display: none;
-        margin: 0 auto;
-        max-width: 38em;
-        padding: 0 1em 3em;
+        position: relative;
+        min-height: 100vh;
+        margin: 0;
+        max-width: none;
+        padding: 0;
+        color: var(--dossier-text);
+        font-family: "Rajdhani", sans-serif;
+        font-weight: 500;
         text-align: left;
+        -webkit-font-smoothing: antialiased;
       }
-      .dossier-page > h1 { text-align: center; }
-      .dossier-back { text-align: center; margin-bottom: 1.5em; }
-      .dossier-intro {
-        color: #bbb;
-        font-size: 0.92em;
-        line-height: 1.45;
-        margin: 0 auto 2em;
-        max-width: 28em;
+      .dossier-page *, .dossier-page *::before, .dossier-page *::after { box-sizing: border-box; }
+      .dossier-page a { color: var(--dossier-accent); text-decoration: none; }
+      .dossier-page a:hover { color: #fff; }
+      .dossier-hero-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background: var(--dossier-void) left center / cover no-repeat;
+        background-image: url(${JSON.stringify(dossierHeroImage)});
+      }
+      .dossier-hero-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 48% 90% at 50% 45%, rgba(5, 10, 24, 0.82) 0%, rgba(5, 10, 24, 0.55) 52%, rgba(5, 10, 24, 0.22) 78%, rgba(5, 10, 24, 0.08) 100%),
+          linear-gradient(90deg, rgba(5, 10, 24, 0.12) 0%, rgba(5, 10, 24, 0.28) 28%, rgba(5, 10, 24, 0.55) 50%, rgba(5, 10, 24, 0.28) 72%, rgba(5, 10, 24, 0.18) 100%),
+          linear-gradient(180deg, rgba(5, 10, 24, 0.45) 0%, transparent 22%, transparent 78%, rgba(5, 10, 24, 0.7) 100%);
+      }
+      .dossier-shell {
+        position: relative;
+        z-index: 2;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1.25rem 1.25rem 3rem;
+      }
+      .dossier-shell-inner {
+        width: min(100%, 28rem);
+      }
+      .dossier-page > h1,
+      .dossier-shell-inner > h1 {
         text-align: center;
+        color: #fff;
+        margin: 0 0 0.75rem;
+        letter-spacing: 0.06em;
+        text-shadow: 0 1px 12px rgba(5, 10, 24, 0.9), 0 0 2px rgba(5, 10, 24, 0.8);
       }
-      .dossier-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+      .dossier-back {
+        text-align: center;
+        margin: 0 0 1.25em;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-shadow: 0 1px 8px rgba(5, 10, 24, 0.85);
+      }
+      .dossier-back a { border-bottom: 1px solid rgba(255, 255, 255, 0.35); }
+      .dossier-back a:hover { border-bottom-color: var(--dossier-cyan); color: #7FE9FF; }
+      .dossier-intro {
+        color: var(--dossier-muted);
+        font-size: 0.98em;
+        line-height: 1.45;
+        margin: 0 auto 1.75em;
+        max-width: 26em;
+        text-align: center;
+        letter-spacing: 0.02em;
+        text-shadow: 0 1px 10px rgba(5, 10, 24, 0.9), 0 0 2px rgba(5, 10, 24, 0.75);
+      }
+      .dossier-grid { display: flex; flex-direction: column; gap: 1.1rem; }
       .dossier-card {
-        background: rgba(0, 0, 0, 0.22);
-        border: 1px solid #555;
-        border-radius: 10px;
-        padding: 1rem 1.15rem;
+        position: relative;
+        background: var(--dossier-glass);
+        border: 1px solid rgba(142, 191, 208, 0.28);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 0 40px rgba(142, 191, 208, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        padding: 1.15rem 1.2rem 1.25rem;
       }
-      .dossier-handle { font-size: 1.2rem; margin: 0 0 0.5rem; }
-      .dossier-handle a { text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.25); }
-      .dossier-handle a:hover { border-bottom-color: #fff; }
-      .dossier-org { font-size: 0.88rem; margin: 0 0 0.85rem; }
+      .dossier-card::before, .dossier-card::after, .dossier-card-corners span {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-color: var(--dossier-accent);
+        border-style: solid;
+        pointer-events: none;
+      }
+      .dossier-card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+      .dossier-card::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+      .dossier-card-corners { position: absolute; inset: 0; pointer-events: none; }
+      .dossier-card-corners span:nth-child(1) { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+      .dossier-card-corners span:nth-child(2) { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+      .dossier-handle {
+        font-family: "Bungee", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        margin: 0 0 0.55rem;
+      }
+      .dossier-handle a {
+        color: #fff;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(255,255,255,0.25);
+      }
+      .dossier-handle a:hover { border-bottom-color: var(--dossier-cyan); color: #7FE9FF; }
+      .dossier-org { font-size: 0.92rem; margin: 0 0 0.85rem; color: var(--dossier-text); }
       .dossier-roles {
         list-style: disc;
         margin: 0;
         padding-left: 1.25rem;
+        color: var(--dossier-text);
       }
       .dossier-role-line { margin-bottom: 0.15rem; }
-      .dossier-role-meta { color: #c9c9c9; font-weight: normal; }
+      .dossier-role-meta { color: var(--dossier-muted); font-weight: normal; }
       .dossier-role-notes {
-        color: #aaa;
-        font-size: 0.82rem;
+        color: var(--dossier-muted);
+        font-size: 0.85rem;
         line-height: 1.35;
         margin: 0.35rem 0 0.5rem;
       }
       .dossier-source {
-        border-top: 1px solid #444;
-        color: #999;
-        font-size: 0.78rem;
+        border-top: 1px solid rgba(142, 191, 208, 0.22);
+        color: var(--dossier-muted);
+        font-size: 0.8rem;
         margin-top: 1rem;
         padding-top: 0.75rem;
       }
-      .dossier-src-notes { margin-top: 0.35rem; color: #888; font-size: 0.78rem; }
-      .dossier-empty { color: #888; text-align: center; padding: 2em 0; }
+      .dossier-src-notes { margin-top: 0.35rem; color: #9eb3c4; font-size: 0.78rem; }
+      .dossier-empty { color: var(--dossier-muted); text-align: center; padding: 2em 0; }
       .muted { color: #777; }
-      .person-title { text-align: center; margin-top: 0; }
-      .person-permalink { font-size: 0.85rem; margin-top: 1.25rem; color: #999; }
+      .dossier-page .muted { color: var(--dossier-muted); }
+      .person-title { text-align: center; margin-top: 0; color: #fff; }
+      .person-permalink { font-size: 0.85rem; margin-top: 1.25rem; color: var(--dossier-muted); }
+      .dossier-page .footer-login-button {
+        border-color: rgba(142, 191, 208, 0.65);
+        color: #fff;
+      }
+      .dossier-page .footer-login-button:hover {
+        background: rgba(0, 212, 255, 0.08);
+        border-color: var(--dossier-cyan);
+      }
+      .dossier-page footer small { color: var(--dossier-muted); }
+      @media (max-width: 720px) {
+        .dossier-hero-bg { background-position: center 35%; }
+        .dossier-hero-scrim {
+          background:
+            linear-gradient(180deg, rgba(5, 10, 24, 0.62) 0%, rgba(5, 10, 24, 0.78) 40%, rgba(5, 10, 24, 0.92) 100%);
+        }
+        .dossier-shell { padding: 1rem 1rem 2.5rem; }
+        .dossier-shell-inner { width: 100%; }
+      }
+${HomePage.styles()}
+${PermafleetOperation.styles({ heroImage: this._site('permafleetHeroImage') })}
+${PermafleetSchedule.styles()}
     </style>
   </head>
   <body>
-    <main id="home-page" class="home-page">
-      <h1>${heading}</h1>
-      <p class="site-nav"><a href="${dossierPath}">${dossierLabel}</a> · <a href="${articlesPath}">${articlesLabel}</a> · <a href="${escapeHtml(monitorUrl)}">${monitorLabel}</a> · <a href="${loginPath}">Login</a></p>
-      <h3><a href="${joinUrl}">${joinLabel}</a></h3>
-      <iframe src="${widgetSrc}" width="${widgetWidth}" height="${widgetHeight}" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
-      <footer>
-        <div><h3><a href="${joinUrl}">${joinLabel}</a></h3></div>
-        <div><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
-        <div><code>${bitcoinAddress}</code></div>
-        <div><small>${copyright}</small></div>
-      </footer>
-    </main>
+    ${homeMainHtml}
     <main id="login-page" class="login-page">
       <h1>${loginLabel}</h1>
       <p>Sign in with your Fabric identity — GoonCitizen desktop or Fabric Passport. Same key, interchangeable.</p>
@@ -354,58 +483,59 @@ class GoonSPA extends FabricSPA {
       <div id="session-identity" class="session-identity"></div>
       <p><a href="/">Back to Home</a></p>
     </main>
-    <main id="articles-page" class="articles-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="${dossierPath}">Dossier index</a></p>
-      <h1>${articlesHeading}</h1>
-      <p class="dossier-intro">${articlesIntro}</p>
-      <p style="text-align:center;">
-        <a class="articles-doc-link" href="${escapeHtml(ARTICLES_URL)}" rel="noopener noreferrer">Articles of Incorporation (Google Docs)</a>
-      </p>
-      <p style="text-align:center; margin-top: 1em;">
-        <a class="articles-doc-link" href="${escapeHtml(SERIES_URL)}" rel="noopener noreferrer">PERMAFLEET SERIES (Google Docs)</a>
-      </p>
-      <footer>
-        <div style="padding-top: 2em;"><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
-        <div><small>${copyright}</small></div>
-      </footer>
-    </main>
     <main id="dossier-page" class="dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="${articlesPath}">${articlesLabel}</a></p>
-      <h1>${dossierHeading}</h1>
-      <p class="dossier-intro">${dossierIntro}</p>
-      <div class="dossier-grid">
+      <div class="dossier-hero-bg" aria-hidden="true"></div>
+      <div class="dossier-hero-scrim" aria-hidden="true"></div>
+      <div class="dossier-shell">
+        <div class="dossier-shell-inner">
+          <p class="dossier-back"><a href="/">&larr; Home</a></p>
+          <h1>${dossierHeading}</h1>
+          <p class="dossier-intro">${dossierIntro}</p>
+          <div class="dossier-grid">
 ${dossierCardsHtml}
+          </div>
+          <footer>
+            <div style="padding-top: 2em;"><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
+            <div><small>${copyright}</small></div>
+          </footer>
+        </div>
       </div>
-      <footer>
-        <div style="padding-top: 2em;"><a class="footer-login-button" href="${loginPath}">${loginLabel}</a></div>
-        <div><small>${copyright}</small></div>
-      </footer>
     </main>
 ${personMainsHtml}
+    ${permafleetMainHtml}
+    ${scheduleMainHtml}
     <script type="text/javascript">
       (function () {
         var loginPath = ${JSON.stringify(loginPath)};
         var dossierPath = ${JSON.stringify(dossierPath)};
-        var articlesPath = ${JSON.stringify(articlesPath)};
+        var permafleetPath = ${JSON.stringify(permafleetPath)};
+        var schedulePath = ${JSON.stringify(schedulePath)};
         var personRe = new RegExp(${JSON.stringify(personPathPattern)});
         var path = (window.location.pathname || '/').replace(/\\/+$/, '') || '/';
         var isLogin = path === loginPath;
         var isDossier = path === dossierPath;
-        var isArticles = path === articlesPath;
+        var isRoot = path === '/';
+        var isPermafleet = isRoot || path.toLowerCase() === permafleetPath.toLowerCase();
+        var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var personMatch = personRe.exec(path);
         var personId = personMatch ? ('person-' + decodeURIComponent(personMatch[1])) : null;
         var home = document.getElementById('home-page');
         var login = document.getElementById('login-page');
         var dossierEl = document.getElementById('dossier-page');
-        var articlesEl = document.getElementById('articles-page');
+        var permafleetEl = document.getElementById('operation-permafleet');
+        var scheduleEl = document.getElementById('permafleet-schedule');
         var personEl = personId ? document.getElementById(personId) : null;
 
         if (home) {
-          home.style.display = (!isLogin && !isDossier && !isArticles && !personEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isDossier && !isPermafleet && !isSchedule && !personEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (dossierEl) dossierEl.style.display = isDossier ? 'block' : 'none';
-        if (articlesEl) articlesEl.style.display = isArticles ? 'block' : 'none';
+        if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
+        document.body.classList.toggle('op-active', isPermafleet);
+        if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
+        document.body.classList.toggle('schedule-active', isSchedule);
+        document.body.classList.toggle('dossier-active', isDossier || !!personEl);
         document.querySelectorAll('.person-page').forEach(function (el) {
           el.style.display = (personEl && el.id === personId) ? 'block' : 'none';
         });
@@ -413,7 +543,8 @@ ${personMainsHtml}
         if (personEl && personMatch) {
           document.title = decodeURIComponent(personMatch[1]) + ' — GOON SQUAD';
         } else if (isDossier) document.title = ${dossierTitleJson};
-        else if (isArticles) document.title = ${articlesTitleJson};
+        else if (isPermafleet) document.title = ${permafleetTitleJson};
+        else if (isSchedule) document.title = ${scheduleTitleJson};
         else document.title = ${titleJson};
 
         var status = document.getElementById('session-status');
@@ -423,7 +554,8 @@ ${personMainsHtml}
 
         function setLoginCtAsVisible (visible) {
           document.querySelectorAll('a.footer-login-button, .site-nav a[href="' + loginPath + '"]').forEach(function (el) {
-            el.style.display = visible ? '' : 'none';
+            var target = el.closest('.site-nav-item') || el;
+            target.style.display = visible ? '' : 'none';
           });
           if (btnDesktop) btnDesktop.disabled = !visible;
           if (btnPassport) btnPassport.disabled = !visible;
@@ -620,6 +752,7 @@ ${personMainsHtml}
         } catch (e) {}
       })();
     </script>
+    ${permafleetScript}
   </body>
 </html>
 `;

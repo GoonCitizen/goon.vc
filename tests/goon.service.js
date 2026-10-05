@@ -224,6 +224,81 @@ describe('goon.vc HTTP', function () {
     assert.ok(!/Star Citizen relay API/i.test(res.body));
   });
 
+  it('serves the PERMAFLEET operation page via SPA fallback', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/operations/PERMAFLEET',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="operation-permafleet"'));
+    assert.ok(res.body.includes('/operations/PERMAFLEET'));
+    assert.ok(res.body.includes('/hero-quantum.jpg'));
+  });
+
+  it('serves the PERMAFLEET schedule page via SPA fallback', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/operations/PERMAFLEET/schedule',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="permafleet-schedule"'));
+    assert.ok(res.body.includes('/permafleet-schedule.svg'));
+  });
+
+  it('redirects /permafleet to the PERMAFLEET operation page', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/permafleet',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.location, '/operations/PERMAFLEET');
+  });
+
+  it('redirects / to the PERMAFLEET operation page', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.location, '/operations/PERMAFLEET');
+  });
+
   it('proxies POST /sessions to the Hub', async function () {
     const res = await fetchJson('/sessions', {
       method: 'POST',

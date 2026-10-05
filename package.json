@@ -5,6 +5,7 @@
   "main": "services/goon.vc.js",
   "scripts": {
     "build": "node scripts/build.js",
+    "build:schedule": "node scripts/schedule.js",
     "start": "node scripts/node.js",
     "test": "mocha tests --exit",
     "coverage": "c8 npm test",
@@ -26,7 +27,8 @@
   },
   "homepage": "https://github.com/GoonCitizen/goon.vc#readme",
   "dependencies": {
-    "@fabric/http": "FabricLabs/fabric-http#feature/rsi"
+    "@fabric/http": "FabricLabs/fabric-http#feature/rsi",
+    "@fabric/discord": "FabricLabs/fabric-discord#feature/rsi"
   },
   "devDependencies": {
     "c8": "=10.1.3",

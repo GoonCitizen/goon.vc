@@ -1,5 +1,7 @@
 # `goon.vc` Developers
 
+Карта проекта (что есть и как работает): [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 Public GOON SQUAD site. The Node process is an `@fabric/http` server:
 
 - **HTML** — `types/GoonSPA.js` compiled to `assets/index.html` (`npm run build`)

@@ -6,3 +6,4 @@ reports
 access.log
 .DS_Store
 .env
+*.secrets.json
