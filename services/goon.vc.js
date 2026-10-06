@@ -10,6 +10,7 @@ const {
 } = require('../functions/hubApiProxy');
 const Members = require('./members');
 const Events = require('./events');
+const Operations = require('./operations');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
 const DEFAULT_HTTP_PORT = 8080;
@@ -59,7 +60,6 @@ class GoonVC {
   constructor (settings = {}) {
     const defaultSite = {
       title: 'GOON SQUAD',
-      monitorUrl: 'https://relay.goon.vc',
       joinUrl: 'https://discord.com/servers/g00n-squad-1190527980120850493',
       loginLabel: '&gt; LOGIN &lt;',
       loginPath: '/sessions',
@@ -98,6 +98,7 @@ class GoonVC {
     this.http = null;
     this.members = null;
     this.events = null;
+    this.operations = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
     this._listeners = {};
@@ -165,10 +166,26 @@ class GoonVC {
       snapshot: discord.schedule && discord.schedule.snapshot
         ? path.resolve(discord.schedule.snapshot)
         : undefined,
+      scheduleBrand: discord.schedule && discord.schedule.brand,
       fetch: eventSettings.fetch,
       resolveToken: eventSettings.resolveToken
     });
     await this.events.start();
+
+    const operationSettings = this.settings.operations || {};
+    this.operations = new Operations({
+      path: operationSettings.path || './stores/operations',
+      file: operationSettings.file ? path.resolve(operationSettings.file) : undefined,
+      discord,
+      gateway: operationSettings.gateway,
+      flushMs: operationSettings.flushMs,
+      tickMs: operationSettings.tickMs,
+      Discord: operationSettings.Discord,
+      resolveToken: operationSettings.resolveToken
+    });
+    this.operations.on('log', (...parts) => this.emit('log', ...parts));
+    this.operations.on('error', (...parts) => this.emit('error', ...parts));
+    await this.operations.start();
 
     this.http = new HTTPServer({
       name: this.name,
@@ -191,7 +208,8 @@ class GoonVC {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
         }),
         members: this.members.middleware(),
-        events: this.events.middleware()
+        events: this.events.middleware(),
+        operations: this.operations.middleware()
       }
     });
 
@@ -210,6 +228,7 @@ class GoonVC {
     }
     if (this.members) await this.members.stop();
     if (this.events) await this.events.stop();
+    if (this.operations) await this.operations.stop();
     return this;
   }
 }

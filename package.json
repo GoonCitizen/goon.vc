@@ -12,7 +12,8 @@
     "test": "mocha tests --exit",
     "coverage": "c8 npm test",
     "report:install": "rm -rf node_modules && mkdir -p reports && rm -f package-lock.json && echo \"$ npm i --allow-git=all\" > reports/install.log && npm i --allow-git=all >> reports/install.log 2>&1",
-    "link:http": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_HTTP||path.resolve(__dirname,'../fabric-http');const dest=path.join('node_modules','@fabric','http');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/http ->',target)\""
+    "link:http": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_HTTP||path.resolve(__dirname,'../fabric-http');const dest=path.join('node_modules','@fabric','http');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/http ->',target)\"",
+    "link:discord": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_DISCORD||path.resolve(__dirname,'../fabric-discord');const dest=path.join('node_modules','@fabric','discord');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/discord ->',target)\""
   },
   "repository": {
     "type": "git",

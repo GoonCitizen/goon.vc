@@ -120,6 +120,44 @@ describe('Events', function () {
     assert.strictEqual(calls.length, before);
   });
 
+  it('renders the PERMAFLEET week board for each server from the stored copy', async function () {
+    const before = calls.length;
+    const home = await events.board({ server: GOON });
+    assert.ok(home.startsWith('<svg'));
+    assert.ok(home.includes('>PERMAFLEET</text>'), 'home guild uses the PERMAFLEET brand');
+    assert.ok(home.includes('TURTLE BRIGADE'));
+    assert.ok(home.includes(`<a href="https://discord.com/events/${GOON}/11"`), 'events link to Discord');
+    assert.ok(home.includes('FIGHTER FRIDAY'));
+    assert.ok(!home.includes('Ally meetup'));
+    assert.ok(!home.includes('npm run build:schedule'));
+
+    const ally = await events.board({ server: ALLY });
+    assert.ok(ally.includes('>ALLY ORG</text>'));
+    assert.ok(ally.includes('Ally meetup'));
+    assert.ok(!ally.includes('TURTLE BRIGADE'), 'no alliance chips on other servers');
+
+    const all = await events.board({ server: 'all' });
+    assert.ok(all.includes('>ALL SERVERS</text>'));
+    assert.ok(all.includes('FIGHTER FRIDAY') && all.includes('Ally meetup'));
+    assert.strictEqual(calls.length, before, 'board reads from disk');
+
+    const res = await new Promise((resolve) => {
+      const out = { headers: {}, setHeader (k, v) { this.headers[k.toLowerCase()] = v; }, end (body) { this.body = body; resolve(this); } };
+      events.middleware()({ method: 'GET', url: `/services/events/schedule.svg?server=${ALLY}` }, out, () => resolve(null));
+    });
+    assert.strictEqual(res.statusCode, 200);
+    assert.ok(/^image\/svg\+xml/.test(res.headers['content-type']));
+    assert.ok(res.body.includes('Ally meetup'));
+
+    const zoned = await new Promise((resolve) => {
+      const out = { headers: {}, setHeader (k, v) { this.headers[k.toLowerCase()] = v; }, end (body) { this.body = body; resolve(this); } };
+      events.middleware()({ method: 'GET', url: '/services/events/schedule.svg?tz=Europe/Berlin' }, out, () => resolve(null));
+    });
+    assert.ok(zoned.body.includes('>EUROPE/BERLIN</text>'));
+    const bogus = await events.board({ timeZone: '"><script>' });
+    assert.ok(bogus.includes('>AMERICA/CHICAGO</text>'), 'unknown zones fall back to Central');
+  });
+
   it('keeps a guild\'s saved events when only that guild fails', async function () {
     allyUp = false;
     try {

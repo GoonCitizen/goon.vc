@@ -95,7 +95,6 @@ function renderIndexHtml (props) {
  * @param {Array<{ label: string, href: string }>} props.downloads Installer links; empty until a public release exists.
  * @param {string} props.repoUrl
  * @param {string} props.discordUrl
- * @param {string} props.monitorUrl
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
@@ -132,9 +131,7 @@ function renderGoonCitizenHtml (props) {
         </ul>
         <h2>Good to know</h2>
         <ul>
-          <li>Kill tracking only works on old logs: CIG stopped logging kills after Star Citizen 4.3.0. Combat shows up as progress on mission objectives instead.</li>
-          <li>Prefer the browser? The <a href="${escapeHtml(props.monitorUrl)}" target="_blank" rel="noopener">web monitor</a> shows the public relay.</li>
-        </ul>
+          <li>Kill tracking only works on old logs: CIG stopped logging kills after Star Citizen 4.3.0. Combat shows up as progress on mission objectives instead.</li>        </ul>
         ${checksums ? `<h2>Downloads</h2>
         <ul class="gooncitizen-downloads">${checksums}</ul>
         <p class="gooncitizen-note">Source: <a href="${escapeHtml(props.repoUrl)}" target="_blank" rel="noopener">GitHub</a>. Pre-release builds are not code-signed. Windows: choose More info → Run anyway if SmartScreen warns. macOS: if the app is blocked, open System Settings → Privacy &amp; Security and choose Open Anyway. Android: allow installs from unknown sources to sideload.</p>` : ''}

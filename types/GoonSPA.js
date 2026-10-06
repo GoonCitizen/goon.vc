@@ -13,8 +13,10 @@ const EventsPage = require('../components/EventsPage');
 const OperationsIndex = require('../components/OperationsIndex');
 const Organizations = require('../components/Organizations');
 const Resources = require('../components/Resources');
+const SquadronApplication = require('../components/SquadronApplication');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
+const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
 
 const DEFAULTS = {
   title: 'GOON SQUAD',
@@ -24,11 +26,8 @@ const DEFAULTS = {
   loginLabel: '&gt; LOGIN &lt;',
   loginPath: '/sessions',
   loginDocumentTitle: 'Login — GOON SQUAD',
-  monitorUrl: 'https://relay.goon.vc',
-  monitorLabel: 'Monitor',
   eventsPath: '/events',
   eventsLabel: 'EVENTS',
-  eventsHeading: 'EVENTS',
   eventsIntro: 'Upcoming scheduled events from every Discord server we fly with.',
   eventsDocumentTitle: 'EVENTS — GOON SQUAD',
   operationsPath: '/operations',
@@ -38,6 +37,8 @@ const DEFAULTS = {
   operationsDocumentTitle: 'OPERATIONS — GOON SQUAD',
   // Extra index entries beyond PERMAFLEET: [{ name, path, tagline, summary, links: [{ label, href }] }].
   operations: [],
+  // Cross-org operations (squadrons) with Discord metrics; same file services/operations reads.
+  operationsFile: OPERATIONS_FILE,
   organizationsPath: '/organizations',
   organizationsLabel: 'ORGANIZATIONS',
   organizationsHeading: 'ORGANIZATIONS',
@@ -75,9 +76,23 @@ const DEFAULTS = {
   permafleetScheduleHtml: '/permafleet-schedule.html',
   permafleetScheduleDocumentTitle: 'PERMAFLEET Weekly Ops — GOON SQUAD',
   discordWidgetId: '1190527980120850493',
-  discordWidgetTheme: 'dark',
-  discordWidgetWidth: 350,
-  discordWidgetHeight: 800,
+  discordRosterTitle: 'Discord',
+  // Front-page overview; facts, logo, and motto come from the G00N record in organizationsFile.
+  overviewSymbol: 'G00N',
+  overviewParagraphs: [
+    'G00N SQUAD is a hardcore private military company focused on security and infiltration, and a member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>. We keep PERMAFLEET members safe across the ’verse, around the clock.',
+    'We run <strong>ALPHA SQUADRON</strong>, an elite unit dedicated to being the tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON.',
+    'To join G00N SQUAD, apply to ALPHA SQUADRON. The application is required for membership, even if you’re already in PERMAFLEET.'
+  ],
+  // Google Form behind the ALPHA SQUADRON application (fields: entry ids from the live form).
+  alphaSquadronForm: {
+    action: 'https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse',
+    viewUrl: 'https://forms.gle/GvUx3o1MuWtxJifT9',
+    fields: [
+      { name: 'entry.1263490172', label: 'What is your in-game name (IGN)?', type: 'short', required: true },
+      { name: 'entry.1476806575', label: 'Why would you like to apply?', type: 'paragraph', required: true }
+    ]
+  },
   bitcoinAddress: 'bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0',
   copyright: '&copy; big lol',
   viewport: 'width=500, initial-scale=1'
@@ -91,6 +106,15 @@ function loadOrganizations (file) {
     return { fetchedAt: payload.fetchedAt || null, organizations };
   } catch {
     return { fetchedAt: null, organizations: [] };
+  }
+}
+
+function loadOperations (file) {
+  try {
+    const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return (payload.operations || []).filter((op) => op && op.id && op.name);
+  } catch {
+    return [];
   }
 }
 
@@ -124,8 +148,6 @@ class GoonSPA extends FabricSPA {
     const joinUrl = this._site('joinUrl');
     const loginLabel = this._site('loginLabel');
     const loginPath = this._site('loginPath');
-    const monitorUrl = this._site('monitorUrl');
-    const monitorLabel = escapeHtml(this._site('monitorLabel'));
     const loginTitleJson = JSON.stringify(this._site('loginDocumentTitle'));
     const eventsPath = this._site('eventsPath');
     const eventsTitleJson = JSON.stringify(this._site('eventsDocumentTitle'));
@@ -145,13 +167,9 @@ class GoonSPA extends FabricSPA {
     const scheduleTitleJson = JSON.stringify(this._site('permafleetScheduleDocumentTitle'));
     const titleJson = JSON.stringify(title);
     const widgetId = this._site('discordWidgetId');
-    const widgetTheme = this._site('discordWidgetTheme');
-    const widgetWidth = this._site('discordWidgetWidth');
-    const widgetHeight = this._site('discordWidgetHeight');
     const bitcoinAddress = this._site('bitcoinAddress');
     const copyright = this._site('copyright');
     const viewport = this._site('viewport');
-    const widgetSrc = `https://discord.com/widget?id=${widgetId}&theme=${widgetTheme}`;
     const alliance = SiteHeader.renderAlliance(permafleetPath);
     const headerHtml = SiteHeader.render({
       heading,
@@ -160,16 +178,31 @@ class GoonSPA extends FabricSPA {
         { href: organizationsPath, label: escapeHtml(this._site('organizationsLabel')) },
         { href: operationsPath, label: escapeHtml(this._site('operationsLabel')) },
         { href: resourcesPath, label: escapeHtml(this._site('resourcesLabel')) },
-        { href: monitorUrl, label: monitorLabel },
         { href: loginPath, label: 'Login' }
       ]
     });
+    const overviewOrg = orgData.organizations.find((org) => org.symbol === this._site('overviewSymbol')) || {};
     const homeMainHtml = HomePage.render({
+      overview: {
+        name: overviewOrg.displayName || overviewOrg.name || title,
+        logoUrl: overviewOrg.logoUrl,
+        facts: [
+          overviewOrg.model,
+          overviewOrg.commitment,
+          overviewOrg.focus && [overviewOrg.focus.primary, overviewOrg.focus.secondary].filter(Boolean).join(' / '),
+          overviewOrg.recruiting ? 'Recruiting' : null
+        ],
+        paragraphs: this._site('overviewParagraphs'),
+        motto: [].concat(overviewOrg.manifesto || [], overviewOrg.charter || []).slice(0, 2),
+        actions: [
+          { label: 'Apply to ALPHA SQUADRON', href: `${permafleetPath}#alpha-squadron` },
+          overviewOrg.symbol ? { label: 'Org profile', href: Organizations.organizationPath(overviewOrg, organizationsPath) } : null,
+          { label: 'Events', href: eventsPath }
+        ].filter(Boolean)
+      },
+      discordTitle: this._site('discordRosterTitle'),
       joinUrl,
       joinLabel,
-      widgetSrc,
-      widgetWidth,
-      widgetHeight,
       loginPath,
       loginLabel,
       bitcoinAddress,
@@ -179,19 +212,23 @@ class GoonSPA extends FabricSPA {
     const loginMainHtml = Login.render({ title: loginLabel, joinUrl });
     const loginScript = Login.script({ path: loginPath });
     const eventsMainHtml = EventsPage.render({
-      heading: escapeHtml(this._site('eventsHeading')),
-      intro: escapeHtml(this._site('eventsIntro')),
+      description: this._site('eventsIntro'),
       loginPath,
       loginLabel,
       alliance,
       copyright
     });
-    const eventsScript = EventsPage.script({ path: eventsPath });
+    const eventsScript = EventsPage.script();
+    const operationsScript = OperationsIndex.script();
     const operationsTitleJson = JSON.stringify(this._site('operationsDocumentTitle'));
+    const hasMetrics = (op) => !!op && Array.isArray(op.metrics) && op.metrics.length > 0;
+    const crossOrgOperations = loadOperations(this._site('operationsFile'));
+    const permafleetOperation = crossOrgOperations.find((op) => op.id === 'permafleet');
     const operationsMainHtml = OperationsIndex.render({
       heading: escapeHtml(this._site('operationsHeading')),
       intro: escapeHtml(this._site('operationsIntro')),
       operations: [{
+        id: 'permafleet',
         name: this._site('permafleetHeading'),
         path: permafleetPath,
         tagline: this._site('permafleetTagline'),
@@ -199,8 +236,17 @@ class GoonSPA extends FabricSPA {
         links: [
           { label: 'Weekly schedule', href: schedulePath },
           { label: 'Join on Discord', href: permafleetInviteUrl }
-        ]
-      }].concat(this._site('operations') || []),
+        ],
+        metrics: hasMetrics(permafleetOperation)
+      }].concat(crossOrgOperations.filter((op) => op !== permafleetOperation).map((op) => ({
+        id: op.id,
+        name: op.name,
+        path: op.path || `${permafleetPath}#${op.id}`,
+        tagline: op.role,
+        summary: op.summary,
+        links: op.links,
+        metrics: hasMetrics(op)
+      })), this._site('operations') || []),
       loginPath,
       loginLabel,
       alliance,
@@ -230,7 +276,6 @@ class GoonSPA extends FabricSPA {
         : loadDownloads(this._site('gooncitizenManifest')),
       repoUrl: this._site('gooncitizenRepoUrl'),
       discordUrl: joinUrl,
-      monitorUrl,
       loginPath,
       loginLabel,
       alliance,
@@ -253,7 +298,18 @@ class GoonSPA extends FabricSPA {
     const organizationMainsHtml = orgData.organizations
       .map((org) => Organizations.renderOrganization(org, orgProps))
       .join('\n');
+    const alphaApplicationHtml = SquadronApplication.render({
+      id: 'alpha-squadron',
+      form: this._site('alphaSquadronForm')
+    });
+    const alphaApplicationScript = alphaApplicationHtml
+      ? SquadronApplication.script({
+        id: 'alpha-squadron',
+        successText: 'Application sent. G00N SQUAD leadership reviews every application; watch Discord for a reply.'
+      })
+      : '';
     const permafleetMainHtml = PermafleetOperation.render({
+      alphaApplicationHtml,
       memberOrgs: orgData.organizations.length
         ? orgData.organizations.map((org) => ({
           name: org.displayName || org.name,
@@ -398,8 +454,11 @@ ${organizationMainsHtml}
     </script>
     ${SiteHeader.script()}
     ${loginScript}
+    ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
+    ${operationsScript}
     ${permafleetScript}
+    ${alphaApplicationScript}
   </body>
 </html>
 `;

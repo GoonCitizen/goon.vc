@@ -37,6 +37,23 @@ const WEEKDAY = Object.freeze([
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]);
 
+const DEFAULT_TIME_ZONE = 'America/Chicago';
+
+/**
+ * Canonical IANA zone name, or DEFAULT_TIME_ZONE when unknown.
+ * @param {string} [tz]
+ * @returns {string}
+ */
+function normalizeTimeZone (tz) {
+  const raw = String(tz || '').trim();
+  if (!raw) return DEFAULT_TIME_ZONE;
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: raw }).resolvedOptions().timeZone;
+  } catch (_) {
+    return DEFAULT_TIME_ZONE;
+  }
+}
+
 const THEME_NAME_RE = /^(MINING MONDAY|TRAUMA TUESDAY|HUMPDAY HAULING|FIGHTER FRIDAY|SATURDAY SHENANIGANS|SUNDAY FUNDAY)\b/i;
 const TRAINING_NAME_RE = /^(TRAINING |FLIGHT SCHOOL |FRIDAY NIGHT FIGHTS\b)/i;
 const SPECIAL_NAME_RE = /(TOURNAMENT|CAPITAL COMBAT|TOUR THROUGH)/i;
@@ -128,9 +145,10 @@ function serializeRecurrence (rule) {
  * Evening blocks that land at 00:00 UTC map to the previous local theme day when
  * the name encodes a weekday (Training Wednesday / Thursday).
  * @param {object} event serializeScheduledEvent row
+ * @param {string} [timeZone] IANA zone for the calendar day (default Central)
  * @returns {string|null} Monday…Sunday
  */
-function inferWeekday (event) {
+function inferWeekday (event, timeZone = DEFAULT_TIME_ZONE) {
   if (!event) return null;
   const name = String(event.name || '');
   const nameDay = name.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY|HUMPDAY)\b/i);
@@ -139,14 +157,14 @@ function inferWeekday (event) {
     if (w === 'HUMPDAY') return 'Wednesday';
     return w.charAt(0) + w.slice(1).toLowerCase();
   }
-  // Prefer local (Central) calendar day of the next occurrence so late-evening
-  // CT ops that land after midnight UTC stay on the intended play day.
+  // Prefer the viewer's (default Central) calendar day of the next occurrence so
+  // late-evening ops that land after midnight UTC stay on the intended play day.
   if (event.scheduledStartTime) {
     const dt = new Date(event.scheduledStartTime);
     if (!Number.isNaN(dt.getTime())) {
       try {
         const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Chicago',
+          timeZone,
           weekday: 'long'
         }).formatToParts(dt);
         const w = parts.find((p) => p.type === 'weekday');
@@ -177,9 +195,10 @@ function inferWeekday (event) {
 /**
  * Categorize one event: day theme vs timed training vs special/tournament.
  * @param {object} event serializeScheduledEvent row
+ * @param {string} [timeZone] IANA zone for weekday grouping
  * @returns {object}
  */
-function categorizeEvent (event) {
+function categorizeEvent (event, timeZone) {
   const row = serializeScheduledEvent(event) || event;
   const name = String((row && row.name) || '');
   const rule = row && row.recurrenceRule;
@@ -205,7 +224,7 @@ function categorizeEvent (event) {
     reason = 'ops / ad-hoc event';
   }
 
-  const weekday = inferWeekday(row);
+  const weekday = inferWeekday(row, timeZone);
   return {
     id: row && row.id,
     name: row && row.name,
@@ -258,10 +277,13 @@ function ordinal (n) {
 /**
  * Build a week schedule: one theme per day + timed/special overlays.
  * @param {Array<object>} events
+ * @param {Object} [opts]
+ * @param {string} [opts.timeZone] IANA zone for weekday grouping (default Central)
  * @returns {object}
  */
-function buildWeekSchedule (events) {
-  const categorized = (events || []).map((e) => categorizeEvent(e));
+function buildWeekSchedule (events, opts = {}) {
+  const timeZone = normalizeTimeZone(opts.timeZone);
+  const categorized = (events || []).map((e) => categorizeEvent(e, timeZone));
   const days = {};
   for (const name of WEEKDAY) {
     days[name] = { theme: null, timed: [], special: [], other: [] };
@@ -394,9 +416,11 @@ function formatEventTimes (iso) {
 
 module.exports = {
   DEFAULT_GUILD_ID,
+  DEFAULT_TIME_ZONE,
   ENTITY_TYPE,
   STATUS,
   WEEKDAY,
+  normalizeTimeZone,
   serializeScheduledEvent,
   serializeRecurrence,
   inferWeekday,

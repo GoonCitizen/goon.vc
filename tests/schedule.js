@@ -49,6 +49,25 @@ describe('PERMAFLEET schedule', function () {
     assert.deepStrictEqual(schedule.counts, { theme: 1, timed: 1, special: 1, total: 3 });
   });
 
+  it('groups days and clocks by the requested time zone', function () {
+    const rows = FIXTURE.map(events.serializeScheduledEvent);
+    const tokyo = events.buildWeekSchedule(rows, { timeZone: 'Asia/Tokyo' });
+    assert.strictEqual(tokyo.days.Sunday.special[0].name, 'CAPITAL COMBAT', 'Sat 3 PM Central is Sun 5 AM Tokyo');
+    assert.strictEqual(tokyo.days.Wednesday.timed[0].name, 'TRAINING WEDNESDAY', 'named weekday wins');
+    assert.strictEqual(events.normalizeTimeZone('not/a_zone'), 'America/Chicago');
+    assert.strictEqual(events.normalizeTimeZone('utc'), 'UTC');
+
+    const svg = graphic.renderWeekScheduleSvg({ events: rows, timeZone: 'Asia/Tokyo' }).svg;
+    assert.ok(/<text id="schedule-timezone"[^>]*>ASIA\/TOKYO<\/text>/.test(svg));
+    assert.ok(svg.includes('5:00 AM'));
+    assert.ok(svg.includes('Times in Japan'));
+    for (const hook of ['schedule-title', 'schedule-subtitle', 'schedule-timezone', 'schedule-asof', 'schedule-legend']) {
+      assert.ok(svg.includes(`<text id="${hook}"`), `<fabric-calendar> hook #${hook}`);
+    }
+    const central = graphic.renderWeekScheduleSvg({ events: rows }).svg;
+    assert.ok(central.includes('>AMERICA/CHICAGO</text>') && central.includes('3:00 PM'));
+  });
+
   it('renders the PERMAFLEET board with org chips and goon.vc footer', function () {
     const rows = FIXTURE.map(events.serializeScheduledEvent);
     const rendered = graphic.renderWeekScheduleGraphic({ events: rows, brand: 'permafleet' });

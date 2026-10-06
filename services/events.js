@@ -3,9 +3,11 @@
 const fs = require('fs');
 const Store = require('@fabric/core/types/store');
 const discordEvents = require('../functions/discordScheduledEvents');
+const scheduleGraphic = require('../functions/scheduleGraphic');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 
 const BASE = '/services/events';
+const BOARD_PATH = `${BASE}/schedule.svg`;
 const LATEST_KEY = '/events/latest';
 // Store keys are JSON Pointer paths: the index must not sit above /events/guilds/<id>.
 const GUILD_INDEX_KEY = '/events/guildIndex';
@@ -52,10 +54,31 @@ function publicEvent (event, guild) {
     location: (event.entityMetadata && event.entityMetadata.location) || null,
     interested: event.userCount,
     cadence: event.recurrenceRule ? discordEvents.describeCadence(event.recurrenceRule) : null,
+    recurrence: event.recurrenceRule || null,
     imageUrl: event.image
       ? `https://cdn.discordapp.com/guild-events/${event.id}/${event.image}.png?size=512`
       : null,
     url: `https://discord.com/events/${guild.id}/${event.id}`
+  };
+}
+
+/**
+ * Back to the serializeScheduledEvent shape the week board categorizes.
+ * @param {object} event publicEvent row
+ * @returns {object}
+ */
+function scheduleRow (event) {
+  return {
+    id: event.id,
+    name: event.name,
+    description: event.description,
+    scheduledStartTime: event.start,
+    scheduledEndTime: event.end,
+    statusName: event.status,
+    entityTypeName: event.type,
+    userCount: event.interested,
+    recurrenceRule: event.recurrence || null,
+    url: event.url
   };
 }
 
@@ -91,6 +114,7 @@ class Events {
    * @param {number} [settings.refreshIntervalMs] Background poll interval (defaults to ttlMs; 0 disables).
    * @param {boolean} [settings.refreshOnStart] Poll Discord as soon as the service starts.
    * @param {string} [settings.snapshot] Single-guild schedule snapshot used before the first fetch.
+   * @param {string} [settings.scheduleBrand] Week-board brand for the home guild (settings.discord.guildId).
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
    * @param {Function} [settings.resolveToken] Injected for tests; defaults to resolveDiscordToken.
    */
@@ -100,7 +124,8 @@ class Events {
       discord: {},
       ttlMs: DEFAULT_TTL_MS,
       refreshOnStart: true,
-      snapshot: null
+      snapshot: null,
+      scheduleBrand: 'permafleet'
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     if (this.settings.refreshIntervalMs === undefined) this.settings.refreshIntervalMs = this.settings.ttlMs;
     this._resolveToken = this.settings.resolveToken || resolveDiscordToken;
@@ -277,14 +302,51 @@ class Events {
   }
 
   /**
-   * Express middleware for `GET /services/events`.
+   * Week board (same renderer as the PERMAFLEET schedule) for one guild, or
+   * every guild when `server` is omitted or `all`.
+   * @param {{ server?: string, timeZone?: string }} [opts]
+   * @returns {Promise<string>} SVG
+   */
+  async board (opts = {}) {
+    const snapshot = await this.list();
+    const server = opts.server && opts.server !== 'all' ? String(opts.server) : null;
+    const guild = server ? (snapshot.guilds || []).find((g) => g.id === server) : null;
+    const events = (snapshot.events || []).filter((e) => !server || e.guildId === server).map(scheduleRow);
+    const homeGuild = String((this.settings.discord && this.settings.discord.guildId) || discordEvents.DEFAULT_GUILD_ID);
+    const home = server === homeGuild;
+    return scheduleGraphic.renderWeekScheduleSvg({
+      events,
+      fetchedAt: snapshot.fetchedAt || undefined,
+      timeZone: opts.timeZone,
+      brand: home ? this.settings.scheduleBrand : 'goon',
+      guildName: home ? undefined : (guild ? guild.name : 'ALL SERVERS').toUpperCase(),
+      orgs: home ? undefined : [],
+      subtitle: home ? undefined : 'Weekly events · day theme + training / ops blocks · Discord scheduled events',
+      regenerateCommand: ''
+    }).svg;
+  }
+
+  /**
+   * Express middleware for `GET /services/events` and `GET /services/events/schedule.svg`.
    * @returns {Function}
    */
   middleware () {
     return (req, res, next) => {
-      const pathname = (req.path || new URL(req.url, 'http://localhost').pathname).replace(/\/+$/, '');
-      if (pathname !== BASE) return next();
+      const url = new URL(req.originalUrl || req.url, 'http://localhost');
+      const pathname = (req.path || url.pathname).replace(/\/+$/, '');
+      if (pathname !== BASE && pathname !== BOARD_PATH) return next();
       if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
+      if (pathname === BOARD_PATH) {
+        this.board({ server: url.searchParams.get('server'), timeZone: url.searchParams.get('tz') }).then((svg) => {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(svg);
+        }).catch((error) => {
+          if (!res.headersSent) sendJson(res, 500, { error: error && error.message ? error.message : 'Events unavailable' });
+        });
+        return;
+      }
       this.list().then((body) => sendJson(res, 200, body)).catch((error) => {
         if (!res.headersSent) sendJson(res, 500, { error: error && error.message ? error.message : 'Events unavailable' });
       });

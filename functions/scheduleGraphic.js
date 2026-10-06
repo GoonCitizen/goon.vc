@@ -13,7 +13,13 @@
  * PERMAFLEET brand is the same board with alliance org mentions.
  */
 
-const { WEEKDAY, buildWeekSchedule, formatEventTimes } = require('./discordScheduledEvents');
+const {
+  DEFAULT_TIME_ZONE,
+  WEEKDAY,
+  buildWeekSchedule,
+  formatEventTimes,
+  normalizeTimeZone
+} = require('./discordScheduledEvents');
 
 const WIDTH = 1920;
 const HEIGHT = 1080;
@@ -150,15 +156,16 @@ function wrapWords (text, maxChars, maxLines = 3) {
 
 /**
  * @param {string} iso
+ * @param {string} [timeZone]
  * @returns {string}
  */
-function clockCt (iso) {
+function clockCt (iso, timeZone = DEFAULT_TIME_ZONE) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   try {
     return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Chicago',
+      timeZone,
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
@@ -171,15 +178,16 @@ function clockCt (iso) {
 
 /**
  * @param {string} iso
+ * @param {string} [timeZone]
  * @returns {string}
  */
-function dateCt (iso) {
+function dateCt (iso, timeZone = DEFAULT_TIME_ZONE) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   try {
     return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Chicago',
+      timeZone,
       month: 'short',
       day: 'numeric'
     }).format(d);
@@ -189,16 +197,33 @@ function dateCt (iso) {
 }
 
 /**
- * @param {string} iso
+ * "Central Time", "Coordinated Universal Time", … (falls back to the IANA id).
+ * @param {string} timeZone
+ * @param {Date} [at]
  * @returns {string}
  */
-function asOfLabel (iso) {
+function zoneLabel (timeZone, at = new Date()) {
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longGeneric' })
+      .formatToParts(at)
+      .find((p) => p.type === 'timeZoneName');
+    if (part && part.value) return part.value;
+  } catch (_) { /* fall through */ }
+  return timeZone;
+}
+
+/**
+ * @param {string} iso
+ * @param {string} [timeZone]
+ * @returns {string}
+ */
+function asOfLabel (iso, timeZone = DEFAULT_TIME_ZONE) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   try {
     return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Chicago',
+      timeZone,
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -277,6 +302,7 @@ function enrichSchedule (schedule, events) {
     const src = byId.get(String(row.id)) || {};
     const userCount = row.userCount != null ? row.userCount : src.userCount;
     return Object.assign({}, row, {
+      url: row.url || src.url || null,
       userCount: userCount != null ? Number(userCount) : null,
       statusName: row.statusName || src.statusName || null,
       description: row.description != null ? row.description : src.description
@@ -309,6 +335,18 @@ function roundRect (x, y, w, h, r, fill, extra) {
 }
 
 /**
+ * Wrap everything pushed since `start` in a link (only works when the SVG is inline).
+ * @param {string[]} parts
+ * @param {number} start
+ * @param {string} [url]
+ */
+function linkBlock (parts, start, url) {
+  if (!url) return;
+  parts.splice(start, 0, `<a href="${escapeXml(url)}" target="_blank" rel="noopener">`);
+  parts.push('</a>');
+}
+
+/**
  * Render the week board as SVG.
  * @param {object} [opts]
  * @param {object} [opts.schedule]
@@ -317,13 +355,16 @@ function roundRect (x, y, w, h, r, fill, extra) {
  * @param {string} [opts.guildName]
  * @param {string} [opts.brand] goon | permafleet
  * @param {string[]} [opts.orgs] override alliance org labels (permafleet)
- * @param {string} [opts.regenerateCommand] footer hint for rebuilding the board
- * @returns {{svg:string, width:number, height:number, brand:ScheduleBrand}}
+ * @param {string} [opts.subtitle] override the brand subtitle
+ * @param {string} [opts.regenerateCommand] footer hint for rebuilding the board ('' hides it)
+ * @param {string} [opts.timeZone] IANA zone for days and clocks (default America/Chicago)
+ * @returns {{svg:string, width:number, height:number, brand:ScheduleBrand, timeZone:string}}
  */
 function renderWeekScheduleSvg (opts = {}) {
   const events = opts.events || [];
+  const timeZone = normalizeTimeZone(opts.timeZone);
   const schedule = enrichSchedule(
-    opts.schedule || buildWeekSchedule(events),
+    opts.schedule || buildWeekSchedule(events, { timeZone }),
     events
   );
   const fetchedAt = opts.fetchedAt || schedule.generatedAt || new Date().toISOString();
@@ -342,8 +383,9 @@ function renderWeekScheduleSvg (opts = {}) {
   const colW = Math.floor((inner - gap * 6) / 7);
   const used = colW * 7 + gap * 6;
   const originX = margin + Math.floor((inner - used) / 2);
-  const originY = margin + headerH + 8;
-  const bodyH = HEIGHT - margin * 2 - headerH - footerH - 8;
+  // Columns start 28px above originY (weekday label row), below the header.
+  const originY = margin + headerH + 36;
+  const bodyH = HEIGHT - margin * 2 - headerH - footerH - 36;
   const themeH = 168;
   let maxSlots = 1;
   for (const name of WEEKDAY) {
@@ -362,9 +404,9 @@ function renderWeekScheduleSvg (opts = {}) {
   parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="${INK.bg}"/>`);
   parts.push(`<rect x="0" y="0" width="${WIDTH}" height="6" fill="${INK.red}"/>`);
 
-  parts.push(`<text x="${margin + 4}" y="${margin + 42}" fill="${INK.ink}" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="38" letter-spacing="4">${escapeXml(guildName)}</text>`);
+  parts.push(`<text id="schedule-title" x="${margin + 4}" y="${margin + 42}" fill="${INK.ink}" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="38" letter-spacing="4">${escapeXml(guildName)}</text>`);
   parts.push(`<text x="${margin + 4}" y="${margin + 74}" fill="${INK.red}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="6">WEEKLY OPS</text>`);
-  parts.push(`<text x="${margin + 4}" y="${margin + 98}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">${escapeXml(brand.subtitle)}</text>`);
+  parts.push(`<text id="schedule-subtitle" x="${margin + 4}" y="${margin + 98}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">${escapeXml(opts.subtitle || brand.subtitle)}</text>`);
 
   if (showOrgs) {
     const chipY = margin + 114;
@@ -383,8 +425,8 @@ function renderWeekScheduleSvg (opts = {}) {
     }
   }
 
-  parts.push(`<text x="${WIDTH - margin}" y="${margin + 48}" text-anchor="end" fill="${INK.cream}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">AMERICA/CHICAGO</text>`);
-  parts.push(`<text x="${WIDTH - margin}" y="${margin + 72}" text-anchor="end" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">As of ${escapeXml(asOfLabel(fetchedAt))}</text>`);
+  parts.push(`<text id="schedule-timezone" x="${WIDTH - margin}" y="${margin + 48}" text-anchor="end" fill="${INK.cream}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">${escapeXml(timeZone.replace(/_/g, ' ').toUpperCase())}</text>`);
+  parts.push(`<text id="schedule-asof" x="${WIDTH - margin}" y="${margin + 72}" text-anchor="end" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">As of ${escapeXml(asOfLabel(fetchedAt, timeZone))}</text>`);
 
   WEEKDAY.forEach((name, i) => {
     const x = originX + i * (colW + gap);
@@ -399,13 +441,14 @@ function renderWeekScheduleSvg (opts = {}) {
     parts.push(`<text x="${x + 14}" y="${originY - 8}" fill="${INK.faint}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">${DAY_SHORT[name]}</text>`);
 
     const ty = originY + 8;
+    const themeStart = parts.length;
     if (theme) {
       parts.push(roundRect(x + 10, ty, colW - 20, themeH, 8, INK.redDark));
       parts.push(`<rect x="${x + 10}" y="${ty}" width="6" height="${themeH}" fill="${INK.red}" rx="2"/>`);
       const themeLines = wrapWords(theme.name, 14, 3);
       parts.push(`<text fill="${INK.ink}" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18">${tspans(themeLines, x + 24, ty + 36, 22)}</text>`);
-      const tClock = clockCt(theme.scheduledStartTime);
-      const tDate = dateCt(theme.scheduledStartTime);
+      const tClock = clockCt(theme.scheduledStartTime, timeZone);
+      const tDate = dateCt(theme.scheduledStartTime, timeZone);
       if (String(theme.statusName || '').toLowerCase() === 'active') {
         const bw = 40;
         const bx = x + colW - 22 - bw;
@@ -414,6 +457,7 @@ function renderWeekScheduleSvg (opts = {}) {
       }
       parts.push(`<text x="${x + 24}" y="${ty + themeH - 36}" fill="${INK.cream}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">${escapeXml(tClock || 'All day')}</text>`);
       parts.push(`<text x="${x + 24}" y="${ty + themeH - 16}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">${escapeXml(theme.cadence || 'weekly')}${tDate ? ' · ' + escapeXml(tDate) : ''}</text>`);
+      linkBlock(parts, themeStart, theme.url);
     } else {
       parts.push(roundRect(x + 10, ty, colW - 20, themeH, 8, INK.panelAlt, `stroke="${INK.line}" stroke-width="1" stroke-dasharray="4 4"`));
       parts.push(`<text x="${x + 24}" y="${ty + 48}" fill="${INK.faint}" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16">NO THEME</text>`);
@@ -422,6 +466,7 @@ function renderWeekScheduleSvg (opts = {}) {
 
     slots.forEach((slot, si) => {
       const sy = ty + themeH + slotGap + si * (slotH + slotGap);
+      const slotStart = parts.length;
       const badge = badgeFor(slot);
       const isMonthly = badge === 'MONTHLY';
       const fill = isMonthly ? '#241111' : INK.panelAlt;
@@ -432,7 +477,7 @@ function renderWeekScheduleSvg (opts = {}) {
       const edge = slot.kind === 'timed' ? '#3f7d4e' : INK.red;
       parts.push(`<rect x="${x + 10}" y="${sy}" width="5" height="${slotH}" fill="${edge}" rx="2"/>`);
 
-      const clock = clockCt(slot.scheduledStartTime);
+      const clock = clockCt(slot.scheduledStartTime, timeZone);
       parts.push(`<text x="${x + 24}" y="${sy + 22}" fill="${INK.cream}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">${escapeXml(clock)}</text>`);
       if (badge) {
         const bw = Math.round(badge.length * 7.2 + 12);
@@ -449,7 +494,7 @@ function renderWeekScheduleSvg (opts = {}) {
 
       const blurb = oneLine(slot.description, 40);
       const meta = [
-        dateCt(slot.scheduledStartTime),
+        dateCt(slot.scheduledStartTime, timeZone),
         slot.userCount != null && Number.isFinite(Number(slot.userCount))
           ? (slot.userCount + ' in')
           : ''
@@ -461,6 +506,7 @@ function renderWeekScheduleSvg (opts = {}) {
       if (meta) {
         parts.push(`<text x="${x + 24}" y="${sy + slotH - 14}" fill="${INK.faint}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">${escapeXml(meta)}</text>`);
       }
+      linkBlock(parts, slotStart, slot.url);
     });
   });
 
@@ -468,12 +514,14 @@ function renderWeekScheduleSvg (opts = {}) {
   const orgFooter = showOrgs
     ? '   ·   Alliance orgs on the board'
     : '';
-  const regenerateCommand = opts.regenerateCommand || `npm run build:schedule -- --brand ${brand.id}`;
+  const regenerateCommand = opts.regenerateCommand != null
+    ? opts.regenerateCommand
+    : `npm run build:schedule -- --brand ${brand.id}`;
   parts.push(`<rect x="${margin}" y="${HEIGHT - footerH - margin + 16}" width="${WIDTH - margin * 2}" height="1" fill="${INK.line}"/>`);
-  parts.push(`<text x="${margin + 4}" y="${fy}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan fill="${INK.red}">&#9608;</tspan> Day theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="${INK.redMid}">&#9608;</tspan> Special / ops / monthly   ·   Times in Central${escapeXml(orgFooter)}   ·   ${escapeXml(regenerateCommand)}</text>`);
+  parts.push(`<text id="schedule-legend" x="${margin + 4}" y="${fy}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan fill="${INK.red}">&#9608;</tspan> Day theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="${INK.redMid}">&#9608;</tspan> Special / ops / monthly   ·   Times in ${escapeXml(zoneLabel(timeZone))}${escapeXml(orgFooter)}${regenerateCommand ? '   ·   ' + escapeXml(regenerateCommand) : ''}</text>`);
 
   parts.push('</svg>');
-  return { svg: parts.join('\n') + '\n', width: WIDTH, height: HEIGHT, brand };
+  return { svg: parts.join('\n') + '\n', width: WIDTH, height: HEIGHT, brand, timeZone };
 }
 
 /**
@@ -535,6 +583,7 @@ module.exports = {
   wrapWords,
   clockCt,
   dateCt,
+  zoneLabel,
   oneLine,
   badgeFor,
   overlaySlots,

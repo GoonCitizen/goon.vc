@@ -171,6 +171,10 @@ describe('goon.vc HTTP', function () {
         path: path.join(os.tmpdir(), `goonvc-events-test-${process.pid}`),
         resolveToken: () => ({ token: null, source: null })
       },
+      operations: {
+        path: path.join(os.tmpdir(), `goonvc-operations-test-${process.pid}`),
+        gateway: false
+      },
       listen: true
     });
     await site.start();
@@ -227,6 +231,15 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('favicon.svg'));
     assert.ok(res.body.includes('#4C1D95'));
     assert.ok(!/Star Citizen relay API/i.test(res.body));
+    const home = res.body.slice(res.body.indexOf('id="home-page"'), res.body.indexOf('</main>', res.body.indexOf('id="home-page"')));
+    assert.ok(!home.includes('<iframe'), 'Discord widget iframe replaced');
+    assert.ok(home.includes('id="discord-roster"'));
+    assert.ok(/<a href="bitcoin:bc1q\w+"><code>bc1q\w+<\/code><\/a>/.test(home), 'footer address is a bitcoin: link');
+    assert.ok(res.body.includes("'https://discord.com/api/guilds/' + \"1190527980120850493\" + '/widget.json'"));
+    assert.ok(home.includes('id="home-overview-title">G00N SQUAD</h2>'));
+    assert.ok(home.includes('PMC · Hardcore · Security / Infiltration · Recruiting'));
+    assert.ok(home.includes('href="/operations/PERMAFLEET#alpha-squadron">Apply to ALPHA SQUADRON</a>'));
+    assert.ok(home.includes('href="/organizations/G00N"'));
   });
 
   it('serves the PERMAFLEET operation page via SPA fallback', async function () {
@@ -249,6 +262,19 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('id="operation-permafleet"'));
     assert.ok(res.body.includes('/operations/PERMAFLEET'));
     assert.ok(res.body.includes('/hero-quantum.jpg'));
+    const squadrons = res.body.slice(res.body.indexOf('id="squadrons"'), res.body.indexOf('id="permafleet-charter"'));
+    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'ghost-squadron', 'turtle-brigade']) {
+      assert.ok(squadrons.includes(`id="${id}"`), id);
+    }
+    assert.ok(!squadrons.includes('id="permafleet"'), 'PERMAFLEET is the operation, not a squadron');
+    assert.strictEqual(res.body.split('id="operation-permafleet"').length, 2, 'unique id');
+    const form = squadrons.slice(squadrons.indexOf('id="alpha-squadron-form"'), squadrons.indexOf('</form>'));
+    assert.ok(form.includes('action="https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse"'));
+    assert.ok(form.includes('target="alpha-squadron-sink"'));
+    assert.ok(/<input[^>]+name="entry\.1263490172"[^>]+required/.test(form), 'IGN');
+    assert.ok(/<textarea[^>]+name="entry\.1476806575"[^>]+required/.test(form), 'reason');
+    assert.ok(squadrons.includes('name="alpha-squadron-sink"'));
+    assert.ok(squadrons.includes('href="https://forms.gle/GvUx3o1MuWtxJifT9"'));
   });
 
   it('serves the PERMAFLEET schedule page via SPA fallback', async function () {
@@ -292,6 +318,28 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('id="operations-page"'));
     assert.ok(res.body.includes('<h2 class="operation-name"><a href="/operations/PERMAFLEET">PERMAFLEET</a></h2>'));
     assert.ok(res.body.includes('href="/operations/PERMAFLEET/schedule">Weekly schedule</a>'));
+    assert.ok(res.body.includes('class="operation-metrics" data-operation="permafleet"'), 'PERMAFLEET metrics strip');
+    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'ghost-squadron', 'turtle-brigade']) {
+      assert.ok(res.body.includes(`<a href="/operations/PERMAFLEET#${id}">`), `${id} card`);
+      assert.ok(res.body.includes(`class="operation-metrics" data-operation="${id}"`), `${id} metrics strip`);
+    }
+    assert.ok(res.body.includes("'/services/operations'") || res.body.includes('"/services/operations"'));
+  });
+
+  it('reports per-operation metrics without exposing member ids', async function () {
+    const res = await fetchJson('/services/operations');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.json.gateway.status, 'disabled');
+    const permafleet = res.json.operations.find((op) => op.id === 'permafleet');
+    assert.strictEqual(permafleet.path, '/operations/PERMAFLEET');
+    assert.strictEqual(permafleet.metrics.voice.last7Days.hours, 0);
+    assert.ok(!('messages' in permafleet.metrics));
+    const alpha = res.json.operations.find((op) => op.id === 'alpha-squadron');
+    assert.strictEqual(alpha.path, '/operations/PERMAFLEET#alpha-squadron');
+    assert.strictEqual(alpha.metrics.voice.last7Days.hours, 0);
+    assert.strictEqual(alpha.metrics.messages.last7Days.messages, 0);
+    const turtle = res.json.operations.find((op) => op.id === 'turtle-brigade');
+    assert.ok(!('voice' in turtle.metrics), 'TURTLE BRIGADE has no voice channel');
   });
 
   it('serves the /organizations index and a page per member org', async function () {
@@ -426,6 +474,22 @@ describe('goon.vc HTTP', function () {
     });
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('id="events-page"'));
+    const page = res.body.slice(res.body.indexOf('id="events-page"'), res.body.indexOf('</main>', res.body.indexOf('id="events-page"')));
+    const calendar = page.match(/<fabric-calendar[\s\S]*?<\/fabric-calendar>/);
+    assert.ok(calendar, 'page is one <fabric-calendar>');
+    assert.ok(calendar[0].includes('board="/services/events/schedule.svg"') && calendar[0].includes('src="/services/events"'));
+    assert.ok(calendar[0].includes('description="Upcoming scheduled events from every Discord server we fly with."'));
+    assert.ok(!/<h1|<select|<button|<p /.test(page.replace(calendar[0], '').replace(/<footer>[\s\S]*<\/footer>/, '')), 'nothing outside the calendar but the footer');
+    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
+    const element = await new Promise((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port: sitePort, path: '/scripts/fabric-calendar.js' }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({ status: incoming.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(element.status, 200);
+    assert.ok(element.body.includes("customElements.define('fabric-calendar'"));
     assert.ok(res.body.includes('<a href="/events">EVENTS</a>'));
     assert.ok(res.body.includes('<a href="/operations">OPERATIONS</a>'));
     const header = res.body.slice(res.body.indexOf('id="site-header"'), res.body.indexOf('</header>'));
@@ -438,6 +502,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.indexOf('id="site-header"') < res.body.indexOf('<main'), 'header precedes every page');
     assert.ok(!res.body.includes('page-back"><a href="/">'), 'no redundant Home crumbs');
     assert.ok(!/dossier/i.test(res.body), 'dossier removed');
+    assert.ok(!res.body.includes('relay.goon.vc') && !/>Monitor</i.test(res.body), 'no Monitor link yet');
   });
 
   it('reports events as unavailable without a Discord bot token', async function () {

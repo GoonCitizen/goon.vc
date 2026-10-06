@@ -54,6 +54,13 @@ module.exports = {
     path: process.env.GOON_EVENTS_STORE || 'stores/events'
   },
 
+  // /services/operations: per-operation metrics from Discord gateway events (Fabric Store).
+  operations: {
+    path: process.env.GOON_OPERATIONS_STORE || 'stores/operations',
+    file: 'contracts/operations.json',
+    gateway: process.env.GOON_OPERATIONS_GATEWAY !== '0'
+  },
+
   site: {
     title: 'GOON SQUAD',
     heading: 'GOON SQUAD<sup>&trade;</sup>',
@@ -61,12 +68,7 @@ module.exports = {
     joinUrl: 'https://discord.com/servers/g00n-squad-1190527980120850493',
     loginLabel: '&gt; LOGIN &lt;',
     loginPath: '/sessions',
-    monitorUrl: 'https://relay.goon.vc',
-    monitorLabel: 'Monitor',
     discordWidgetId: '1190527980120850493',
-    discordWidgetTheme: 'dark',
-    discordWidgetWidth: 350,
-    discordWidgetHeight: 800,
     bitcoinAddress: 'bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0',
     copyright: '&copy; big lol',
     viewport: 'width=500, initial-scale=1'
