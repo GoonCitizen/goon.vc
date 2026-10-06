@@ -6,6 +6,8 @@
   "scripts": {
     "build": "node scripts/build.js",
     "build:schedule": "node scripts/schedule.js",
+    "build:organizations": "node scripts/organizations.js",
+    "build:downloads": "node scripts/downloads.js",
     "start": "node scripts/node.js",
     "test": "mocha tests --exit",
     "coverage": "c8 npm test",

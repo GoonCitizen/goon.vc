@@ -8,6 +8,8 @@ const {
   createHubApiMiddleware,
   normalizeHubOrigin
 } = require('../functions/hubApiProxy');
+const Members = require('./members');
+const Events = require('./events');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
 const DEFAULT_HTTP_PORT = 8080;
@@ -61,11 +63,6 @@ class GoonVC {
       joinUrl: 'https://discord.com/servers/g00n-squad-1190527980120850493',
       loginLabel: '&gt; LOGIN &lt;',
       loginPath: '/sessions',
-      dossierPath: '/dossier',
-      dossierLabel: 'DOSSIER',
-      dossierHeading: 'DOSSIER',
-      dossierIntro: 'Public roster derived from alliance records and org chart.',
-      dossierDocumentTitle: 'DOSSIER — GOON SQUAD',
       discordWidgetId: '1190527980120850493',
       bitcoinAddress: 'bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0',
       copyright: '&copy; big lol'
@@ -91,13 +88,16 @@ class GoonVC {
       redirects: {
         '/permafleet': '/operations/PERMAFLEET',
         '/permafleet/': '/operations/PERMAFLEET',
-        '/permafleet/schedule': '/operations/PERMAFLEET/schedule'
+        '/permafleet/schedule': '/operations/PERMAFLEET/schedule',
+        '/members/login': '/sessions'
       },
       spaFallback: true
     }, settings);
 
     this.settings = merged;
     this.http = null;
+    this.members = null;
+    this.events = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
     this._listeners = {};
@@ -139,6 +139,36 @@ class GoonVC {
       || resolveHttpListenHost({});
     const port = (this.settings.http && this.settings.http.port) || DEFAULT_HTTP_PORT;
     const hostname = (this.settings.http && this.settings.http.hostname) || 'goon.vc';
+    const discord = this.settings.discord || {};
+    const memberSettings = this.settings.members || {};
+
+    this.members = new Members({
+      path: memberSettings.path || './stores/members',
+      hubOrigin,
+      loginPath: (this.settings.site && this.settings.site.loginPath) || '/sessions',
+      sessionTtlMs: memberSettings.sessionTtlMs,
+      fetch: memberSettings.fetch,
+      discord: {
+        clientId: discord.clientId,
+        clientSecret: discord.clientSecret,
+        redirectUri: discord.redirectUri,
+        guildId: discord.guildId
+      }
+    });
+    await this.members.start();
+
+    const eventSettings = this.settings.events || {};
+    this.events = new Events({
+      path: eventSettings.path || './stores/events',
+      discord,
+      ttlMs: eventSettings.ttlMs,
+      snapshot: discord.schedule && discord.schedule.snapshot
+        ? path.resolve(discord.schedule.snapshot)
+        : undefined,
+      fetch: eventSettings.fetch,
+      resolveToken: eventSettings.resolveToken
+    });
+    await this.events.start();
 
     this.http = new HTTPServer({
       name: this.name,
@@ -159,7 +189,9 @@ class GoonVC {
       middlewares: {
         hubApi: createHubApiMiddleware(hubOrigin, {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
-        })
+        }),
+        members: this.members.middleware(),
+        events: this.events.middleware()
       }
     });
 
@@ -176,6 +208,8 @@ class GoonVC {
     if (this.http && typeof this.http.stop === 'function') {
       await this.http.stop();
     }
+    if (this.members) await this.members.stop();
+    if (this.events) await this.events.stop();
     return this;
   }
 }

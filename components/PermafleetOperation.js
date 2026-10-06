@@ -350,6 +350,9 @@ function renderPermafleetCss (props) {
         text-transform: uppercase;
         color: var(--op-text);
       }
+      .op-orgs a { color: inherit; text-decoration: none; }
+      .op-orgs a:hover { color: var(--op-signal); }
+      .op-charter .op-resource-link { margin-top: 1rem; }
       .op-charter .op-laws { margin-top: 0.9rem; font-style: italic; }
       .op-footer {
         position: relative;
@@ -393,7 +396,7 @@ function renderPermafleetMainHtml (opts) {
         <div class="op-hero-bg" aria-hidden="true"></div>
         <div class="op-hero-scrim" aria-hidden="true"></div>
         <canvas id="permafleet-particles" class="op-particles" aria-hidden="true"></canvas>
-        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="${opts.dossierPath}">${opts.dossierLabel}</a></nav>
+        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="${escapeHtml(opts.organizationsPath || '/organizations')}">Organizations</a></nav>
         <div class="op-content">
           <p class="op-eyebrow">The PERMAFLEET Protectorate</p>
           <h1 class="op-brand">${opts.heading}</h1>
@@ -421,7 +424,8 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>${CHARTER}</p>
-            <ul class="op-orgs">${MEMBER_ORGS.map((org) => `<li>${escapeHtml(org)}</li>`).join('')}</ul>
+            <ul class="op-orgs">${(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name }))).map((org) => `<li>${org.href ? `<a href="${escapeHtml(org.href)}">${escapeHtml(org.name)}</a>` : escapeHtml(org.name)}</li>`).join('')}</ul>
+            ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
         </div>

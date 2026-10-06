@@ -32,11 +32,26 @@ module.exports = {
     guildId: process.env.DISCORD_GUILD_ID || '1190527980120850493',
     token: process.env.DISCORD_BOT_TOKEN || null,
     secretsFile: process.env.DISCORD_SECRETS_FILE || null,
+    // Member Login (OAuth2). Register <origin>/services/members/discord/callback
+    // as a redirect in the Discord application; the secret is env-only.
+    clientId: process.env.DISCORD_APP_ID || process.env.DISCORD_CLIENT_ID || null,
+    clientSecret: process.env.DISCORD_APP_SECRET || process.env.DISCORD_CLIENT_SECRET || null,
+    redirectUri: process.env.DISCORD_REDIRECT_URI || null,
     schedule: {
       brand: process.env.DISCORD_SCHEDULE_BRAND || 'permafleet',
       // Last successful fetch; reused when Discord is unreachable.
       snapshot: 'stores/discord/scheduled-events.json'
     }
+  },
+
+  // Members, login sessions, and OAuth state (Fabric Store).
+  members: {
+    path: process.env.GOON_MEMBERS_STORE || 'stores/members'
+  },
+
+  // /events: scheduled events from every guild the Discord bot is in (Fabric Store cache).
+  events: {
+    path: process.env.GOON_EVENTS_STORE || 'stores/events'
   },
 
   site: {
@@ -48,11 +63,6 @@ module.exports = {
     loginPath: '/sessions',
     monitorUrl: 'https://relay.goon.vc',
     monitorLabel: 'Monitor',
-    dossierPath: '/dossier',
-    dossierLabel: 'DOSSIER',
-    dossierHeading: 'DOSSIER',
-    dossierIntro: 'Public roster derived from alliance records and org chart.',
-    dossierDocumentTitle: 'DOSSIER — GOON SQUAD',
     discordWidgetId: '1190527980120850493',
     discordWidgetTheme: 'dark',
     discordWidgetWidth: 350,

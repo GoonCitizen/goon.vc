@@ -21,7 +21,7 @@ describe('goon.vc', function () {
       assert.ok(!isHubApiPath('/services/star-citizen'));
       assert.ok(!isHubApiPath('/services/bitcoin'));
       assert.ok(!isHubApiPath('/'));
-      assert.ok(!isHubApiPath('/dossier'));
+      assert.ok(!isHubApiPath('/organizations'));
       assert.ok(HUB_API_PREFIXES.includes('/sessions'));
     });
 
@@ -87,7 +87,7 @@ describe('goon.vc', function () {
           http.get({
             hostname: '127.0.0.1',
             port: edgePort,
-            path: '/dossier',
+            path: '/organizations',
             headers: { Accept: 'text/html' }
           }, (res) => {
             const chunks = [];
@@ -166,6 +166,11 @@ describe('goon.vc HTTP', function () {
         hostname: '127.0.0.1'
       },
       storePath: path.join(os.tmpdir(), `goonvc-test-${process.pid}`),
+      members: { path: path.join(os.tmpdir(), `goonvc-members-test-${process.pid}`) },
+      events: {
+        path: path.join(os.tmpdir(), `goonvc-events-test-${process.pid}`),
+        resolveToken: () => ({ token: null, source: null })
+      },
       listen: true
     });
     await site.start();
@@ -267,6 +272,85 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('/permafleet-schedule.svg'));
   });
 
+  it('serves the /operations index listing PERMAFLEET', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/operations',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="operations-page"'));
+    assert.ok(res.body.includes('<h2 class="operation-name"><a href="/operations/PERMAFLEET">PERMAFLEET</a></h2>'));
+    assert.ok(res.body.includes('href="/operations/PERMAFLEET/schedule">Weekly schedule</a>'));
+  });
+
+  it('serves the /organizations index and a page per member org', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/organizations/AIMOS',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="organizations-page"'));
+    assert.ok(res.body.includes('<a href="/organizations">ORGANIZATIONS</a>'));
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+      assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
+      assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);
+      assert.ok(res.body.includes(`<li><a href="/organizations/${symbol}">`), `${symbol} charter chip`);
+    }
+    assert.ok(res.body.includes('>Apply on RSI</a>'));
+  });
+
+  it('serves /resources with a dedicated GoonCitizen page', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/resources/gooncitizen',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('<a href="/resources">RESOURCES</a>'));
+    assert.ok(res.body.includes('id="resources-page"'));
+    assert.ok(res.body.includes('<h2 class="operation-name"><a href="/resources/gooncitizen">GoonCitizen</a></h2>'));
+    assert.ok(res.body.includes('id="gooncitizen-page"'));
+    assert.ok(res.body.includes('Fly with your group'));
+    assert.ok(res.body.includes('href="https://github.com/GoonCitizen/star-citizen-live"'));
+    const manifest = require('../assets/downloads/gooncitizen/index.json');
+    for (const file of manifest.files) {
+      assert.ok(res.body.includes(`href="${file.href}" download>`), `${file.platform} download`);
+      assert.ok(res.body.includes(`sha256 ${file.sha256}`), `${file.platform} checksum`);
+    }
+  });
+
   it('redirects /permafleet to the PERMAFLEET operation page', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
@@ -281,6 +365,96 @@ describe('goon.vc HTTP', function () {
     });
     assert.strictEqual(res.status, 302);
     assert.strictEqual(res.location, '/operations/PERMAFLEET');
+  });
+
+  it('serves the login page at /sessions with every sign-in method', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/sessions',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="login-page"'));
+    assert.ok(res.body.includes('id="login-discord"'));
+    assert.ok(res.body.includes('id="login-passport"'));
+    assert.ok(res.body.includes('id="login-desktop"'));
+    assert.ok(res.body.includes('class="footer-login-button" href="/sessions"'));
+    assert.ok(!res.body.includes('member-login'));
+  });
+
+  it('redirects the retired /members/login page to /sessions', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/members/login',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.location, '/sessions');
+  });
+
+  it('serves the /events page and links it from the home nav', async function () {
+    const res = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port: sitePort,
+        path: '/events',
+        headers: { Accept: 'text/html' }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on('data', (c) => chunks.push(c));
+        incoming.on('end', () => resolve({
+          status: incoming.statusCode,
+          body: Buffer.concat(chunks).toString('utf8')
+        }));
+      }).on('error', reject);
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="events-page"'));
+    assert.ok(res.body.includes('<a href="/events">EVENTS</a>'));
+    assert.ok(res.body.includes('<a href="/operations">OPERATIONS</a>'));
+    const header = res.body.slice(res.body.indexOf('id="site-header"'), res.body.indexOf('</header>'));
+    assert.ok(!header.includes('PERMAFLEET PROTECTORATE'), 'alliance line moved out of the header');
+    const alliances = res.body.match(/<footer>[\s\S]*?<\/footer>/g).filter((f) => f.includes('THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a>'));
+    assert.ok(alliances.length >= 6, 'alliance line in every page footer');
+    const home = res.body.slice(res.body.indexOf('id="home-page"'), res.body.indexOf('<footer', res.body.indexOf('id="home-page"')));
+    assert.ok(!home.includes('Join the Squad'), 'join link only in the footer');
+    assert.strictEqual(res.body.split('id="site-header"').length, 2, 'one shared header');
+    assert.ok(res.body.indexOf('id="site-header"') < res.body.indexOf('<main'), 'header precedes every page');
+    assert.ok(!res.body.includes('page-back"><a href="/">'), 'no redundant Home crumbs');
+    assert.ok(!/dossier/i.test(res.body), 'dossier removed');
+  });
+
+  it('reports events as unavailable without a Discord bot token', async function () {
+    const res = await fetchJson('/services/events');
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.json.events, []);
+    assert.strictEqual(res.json.stale, true);
+    assert.ok(/token/i.test(res.json.error));
+  });
+
+  it('reports member login capabilities', async function () {
+    const res = await fetchJson('/services/members');
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.json, { discord: false, passport: true });
+    const session = await fetchJson('/services/members/session');
+    assert.strictEqual(session.status, 401);
+    assert.ok(Number.isFinite(site.members.settings.sessionTtlMs) && site.members.settings.sessionTtlMs > 0);
   });
 
   it('proxies POST /sessions to the Hub', async function () {

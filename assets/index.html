@@ -10,101 +10,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style type="text/css">
-      body { background: #333; color: #ddd; text-align: center; }
+      body { background: #333; color: #ddd; font-family: "Rajdhani", sans-serif; font-size: 17px; font-weight: 500; text-align: center; }
+      button, input { font-family: inherit; }
       h1, h2, h3 { font-family: "Bungee", sans-serif; font-weight: 400; font-style: normal; }
       a { color: #fff; }
       footer, footer > div { padding-top: 1em; }
-      .footer-login-button {
-        border: 2px solid #fff;
-        border-radius: 8px;
-        color: #fff;
-        display: inline-block;
-        font-family: "Bungee", sans-serif;
-        letter-spacing: 0.1em;
-        padding: 0.5em 0.9em;
-        text-decoration: none;
-      }
-      .footer-login-button:hover { background: rgba(255, 255, 255, 0.1); }
-      .login-page { display: none; margin: 3em auto; max-width: 32em; padding: 0 1em; }
-      .session-form { margin: 2em auto; max-width: 26em; display: flex; flex-direction: column; gap: 0.75em; }
-      .session-form button {
-        background: #222;
+      footer { text-align: center; }
+      .footer-login-button, .goon-button {
+        background: transparent;
         border: 2px solid #fff;
         border-radius: 8px;
         color: #fff;
         cursor: pointer;
+        display: inline-block;
         font-family: "Bungee", sans-serif;
-        letter-spacing: 0.08em;
-        padding: 0.65em 0.9em;
+        font-size: 1em;
+        letter-spacing: 0.1em;
+        padding: 0.5em 0.9em;
+        text-decoration: none;
       }
-      .session-form button:hover { background: rgba(255, 255, 255, 0.1); }
-      .session-form button:disabled { opacity: 0.45; cursor: default; }
-      .session-status { min-height: 1.2em; margin-top: 1em; word-break: break-word; }
-      .session-identity {
-        margin-top: 1.25em;
-        padding: 0.85em 1em;
-        border: 1px solid rgba(255,255,255,0.25);
-        border-radius: 8px;
-        text-align: left;
-        font-size: 0.9em;
-        display: none;
-      }
-      .session-identity code { word-break: break-all; font-size: 0.85em; }
-      .dossier-page {
-        display: none;
-        margin: 0 auto;
-        max-width: 38em;
-        padding: 0 1em 3em;
-        text-align: left;
-      }
-      .dossier-page > h1 { text-align: center; }
-      .dossier-back { text-align: center; margin-bottom: 1.5em; }
-      .dossier-intro {
-        color: #bbb;
-        font-size: 0.92em;
-        line-height: 1.45;
-        margin: 0 auto 2em;
-        max-width: 28em;
-        text-align: center;
-      }
-      .dossier-grid { display: flex; flex-direction: column; gap: 1.25rem; }
-      .dossier-card {
-        background: rgba(0, 0, 0, 0.22);
-        border: 1px solid #555;
-        border-radius: 10px;
-        padding: 1rem 1.15rem;
-      }
-      .dossier-handle { font-size: 1.2rem; margin: 0 0 0.5rem; }
-      .dossier-handle a { text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.25); }
-      .dossier-handle a:hover { border-bottom-color: #fff; }
-      .dossier-org { font-size: 0.88rem; margin: 0 0 0.85rem; }
-      .dossier-roles {
-        list-style: disc;
-        margin: 0;
-        padding-left: 1.25rem;
-      }
-      .dossier-role-line { margin-bottom: 0.15rem; }
-      .dossier-role-meta { color: #c9c9c9; font-weight: normal; }
-      .dossier-role-notes {
-        color: #aaa;
-        font-size: 0.82rem;
-        line-height: 1.35;
-        margin: 0.35rem 0 0.5rem;
-      }
-      .dossier-source {
-        border-top: 1px solid #444;
-        color: #999;
-        font-size: 0.78rem;
-        margin-top: 1rem;
-        padding-top: 0.75rem;
-      }
-      .dossier-src-notes { margin-top: 0.35rem; color: #888; font-size: 0.78rem; }
-      .dossier-empty { color: #888; text-align: center; padding: 2em 0; }
-      .muted { color: #777; }
-      .person-title { text-align: center; margin-top: 0; }
-      .person-permalink { font-size: 0.85rem; margin-top: 1.25rem; color: #999; }
+      .footer-login-button:hover, .goon-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+      .goon-button:disabled { cursor: default; opacity: 0.45; }
+      .page-back { text-align: center; margin-bottom: 1.5em; }
 
-      .home-page { display: block; }
+      .site-header h1 { margin-bottom: 0.4em; }
+      .site-header h1 a { text-decoration: none; }
       .site-nav {
         font-family: "Bungee", sans-serif;
         letter-spacing: 0.06em;
@@ -114,8 +44,13 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.35);
         text-decoration: none;
       }
-      .site-nav a:hover { border-bottom-color: #fff; }
+      .site-nav a:hover, .site-nav a[aria-current="page"] { border-bottom-color: #fff; }
+      .site-nav a[aria-current="page"] { border-bottom-width: 2px; }
       .site-nav-item + .site-nav-item::before { content: "·"; margin: 0 0.4em; }
+      body.op-active .site-header, body.schedule-active .site-header { display: none; }
+      .site-alliance { font-family: "Bungee", sans-serif; }
+
+      .home-page { display: block; }
 
       body.op-active { margin: 0; background: #050A18; }
       .op-page {
@@ -425,6 +360,9 @@
         text-transform: uppercase;
         color: var(--op-text);
       }
+      .op-orgs a { color: inherit; text-decoration: none; }
+      .op-orgs a:hover { color: var(--op-signal); }
+      .op-charter .op-resource-link { margin-top: 1rem; }
       .op-charter .op-laws { margin-top: 0.9rem; font-style: italic; }
       .op-footer {
         position: relative;
@@ -485,130 +423,586 @@
         background: #0c0c0d;
       }
       .schedule-links { color: #9a9488; font-size: 0.85rem; margin-top: 0.85em; }
+
+      .login-page { display: none; margin: 3em auto; max-width: 30em; padding: 0 1em; }
+      .login-intro { color: #bbb; line-height: 1.45; }
+      .login-buttons { display: flex; flex-direction: column; gap: 0.75em; margin: 2em auto; max-width: 22em; }
+      .login-status { min-height: 1.2em; overflow-wrap: anywhere; }
+      .login-session {
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        display: none;
+        margin: 1.5em auto;
+        max-width: 22em;
+        overflow-wrap: anywhere;
+        padding: 1em;
+      }
+      .login-session img { border-radius: 50%; height: 48px; width: 48px; }
+      .login-session .goon-button { font-size: 0.8em; margin-top: 0.75em; padding: 0.35em 0.8em; }
+
+      .events-page { display: none; margin: 0 auto; max-width: 40em; padding: 0 1em 3em; text-align: left; }
+      .events-page > h1, .events-page > .events-intro, .events-page > .events-meta { text-align: center; }
+      .events-intro { color: #bbb; font-size: 0.92em; line-height: 1.45; margin: 0 auto 1.25em; max-width: 30em; }
+      .events-meta { color: #888; font-size: 0.8em; min-height: 1.2em; }
+      .events-filters { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; margin: 1em 0 1.5em; }
+      .events-filters .goon-button { font-size: 0.75em; padding: 0.35em 0.75em; }
+      .events-filters .goon-button[aria-pressed="true"] { background: #fff; color: #333; }
+      .events-day { font-size: 1rem; letter-spacing: 0.06em; margin: 1.75em 0 0.75em; }
+      .events-list { display: flex; flex-direction: column; gap: 1rem; }
+      .event-card {
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid #555;
+        border-radius: 10px;
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 1.15rem;
+      }
+      .event-card.event-live { border-color: #fff; }
+      .event-time { color: #fff; flex: 0 0 5.5em; font-family: "Bungee", sans-serif; font-size: 0.85rem; line-height: 1.3; }
+      .event-live-badge { border: 1px solid #fff; border-radius: 4px; font-size: 0.7rem; margin-top: 0.35em; padding: 0 0.35em; width: fit-content; }
+      .event-body { flex: 1; min-width: 0; }
+      .event-name { font-size: 1.05rem; margin: 0 0 0.35rem; overflow-wrap: anywhere; }
+      .event-name a { border-bottom: 1px solid rgba(255, 255, 255, 0.25); text-decoration: none; }
+      .event-name a:hover { border-bottom-color: #fff; }
+      .event-server { align-items: center; color: #c9c9c9; display: flex; font-size: 0.85rem; gap: 0.4em; }
+      .event-server img { border-radius: 50%; height: 18px; width: 18px; }
+      .event-details { color: #999; font-size: 0.8rem; margin-top: 0.35rem; }
+      .event-description {
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        color: #aaa;
+        display: -webkit-box;
+        font-size: 0.82rem;
+        line-height: 1.35;
+        margin-top: 0.5rem;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        white-space: pre-line;
+      }
+      .events-empty { color: #888; padding: 2em 0; text-align: center; }
+
+      .operations-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .operations-page > h1, .operations-page > .operations-intro { text-align: center; }
+      .operations-intro { color: #bbb; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
+      .operations-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+      .operation-card {
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid #555;
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+      }
+      .operation-name { font-size: 1.2rem; margin: 0 0 0.35rem; }
+      .operation-name a { border-bottom: 1px solid rgba(255, 255, 255, 0.25); text-decoration: none; }
+      .operation-name a:hover { border-bottom-color: #fff; }
+      .operation-tagline { color: #fff; margin: 0 0 0.5rem; }
+      .operation-summary { color: #aaa; font-size: 0.9rem; line-height: 1.4; margin: 0 0 0.75rem; }
+      .operation-links { display: flex; flex-wrap: wrap; gap: 0.5em; }
+      .operation-links .goon-button { font-size: 0.75em; padding: 0.35em 0.75em; }
+      .operations-empty { color: #888; padding: 2em 0; text-align: center; }
+
+      .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .organizations-page > h1, .organizations-intro { text-align: center; }
+      .organizations-intro { color: #bbb; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
+      .organizations-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+      .org-card, .org-profile {
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid #555;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .org-card { display: flex; gap: 1rem; padding: 1rem 1.15rem; }
+      .org-logo { flex: 0 0 auto; height: 72px; object-fit: contain; width: 72px; }
+      .org-card-body { flex: 1 1 auto; min-width: 0; }
+      .org-name { font-size: 1.2rem; margin: 0 0 0.25rem; }
+      .org-name a { border-bottom: 1px solid rgba(255, 255, 255, 0.25); text-decoration: none; }
+      .org-name a:hover { border-bottom-color: #fff; }
+      .org-meta { color: #c9c9c9; font-size: 0.88rem; margin: 0 0 0.35rem; }
+      .org-symbol { color: #fff; font-weight: 700; letter-spacing: 0.08em; }
+      .org-focus { color: #aaa; font-size: 0.85rem; margin: 0 0 0.6rem; }
+      .org-summary { color: #ddd; line-height: 1.4; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
+      .org-links { display: flex; flex-wrap: wrap; gap: 0.5em; }
+      .org-links .goon-button { font-size: 0.75em; padding: 0.35em 0.75em; }
+      .org-banner { aspect-ratio: 4 / 1; background: #222; display: block; object-fit: cover; width: 100%; }
+      .org-profile-head { align-items: center; display: flex; gap: 1rem; padding: 1rem 1.15rem 0; }
+      .org-profile-head h1 { font-size: 1.6rem; margin: 0; }
+      .org-profile-body { padding: 0.75rem 1.15rem 1.15rem; }
+      .org-profile-body p { line-height: 1.45; overflow-wrap: anywhere; }
+      .org-actions { display: flex; flex-wrap: wrap; gap: 0.6em; margin: 1rem 0; }
+      .org-section { border-top: 1px solid #444; padding: 0.6rem 0; }
+      .org-section summary { cursor: pointer; font-family: "Bungee", sans-serif; letter-spacing: 0.05em; }
+      .org-section p { color: #ccc; font-size: 0.95rem; margin: 0.6rem 0; }
+      .org-source { color: #888; font-size: 0.78rem; margin-top: 1rem; text-align: center; }
+      .organizations-empty { color: #888; padding: 2em 0; text-align: center; }
+
+      .resources-page, .gooncitizen-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .resources-page > h1, .resources-page > .operations-intro { text-align: center; }
+      .gooncitizen-hero { text-align: center; }
+      .gooncitizen-hero h1 { font-size: 2.2rem; margin: 0.25rem 0 0.35rem; }
+      .gooncitizen-tagline { color: #fff; font-size: 1.15rem; margin: 0 0 0.75rem; }
+      .gooncitizen-intro { color: #bbb; line-height: 1.45; margin: 0 auto 1.25rem; max-width: 32em; }
+      .gooncitizen-actions { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; margin: 0 0 0.75rem; }
+      .gooncitizen-note { color: #999; font-size: 0.85rem; line-height: 1.4; margin: 0 auto 2rem; max-width: 32em; text-align: center; }
+      .gooncitizen-features { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin-bottom: 1.5rem; }
+      .gooncitizen-features h2 { font-size: 1rem; margin: 0 0 0.4rem; }
+      .gooncitizen-features p { color: #bbb; font-size: 0.92rem; line-height: 1.4; margin: 0; }
+      .gooncitizen-section h2 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+      .gooncitizen-section ul { color: #ccc; line-height: 1.5; margin: 0; padding-left: 1.25rem; }
+      .gooncitizen-downloads li { margin-bottom: 0.5rem; }
+      .gooncitizen-sha { color: #999; font-size: 0.72rem; overflow-wrap: anywhere; }
+      .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
     </style>
   </head>
   <body>
+    <header id="site-header" class="site-header">
+      <h1><a href="/">GOON SQUAD<sup>&trade;</sup></a></h1>
+      <p class="site-nav"><span class="site-nav-item"><a href="/events">EVENTS</a></span><span class="site-nav-item"><a href="/organizations">ORGANIZATIONS</a></span><span class="site-nav-item"><a href="/operations">OPERATIONS</a></span><span class="site-nav-item"><a href="/resources">RESOURCES</a></span><span class="site-nav-item"><a href="https://relay.goon.vc">Monitor</a></span><span class="site-nav-item"><a href="/sessions">Login</a></span></p>
+    </header>
     <main id="home-page" class="home-page">
-      <h1>GOON SQUAD<sup>&trade;</sup></h1>
-      <p class="site-nav"><span class="site-nav-item"><a href="/dossier">DOSSIER</a></span><span class="site-nav-item"><a href="/operations/PERMAFLEET">PERMAFLEET</a></span><span class="site-nav-item"><a href="https://relay.goon.vc">Monitor</a></span><span class="site-nav-item"><a href="/sessions">Login</a></span></p>
-      <h3><a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Squad &raquo;</a></h3>
       <iframe src="https://discord.com/widget?id=1190527980120850493&theme=dark" width="350" height="800" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
       <footer>
         <div><h3><a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Squad &raquo;</a></h3></div>
         <div><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div><code>bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0</code></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
     <main id="login-page" class="login-page">
       <h1>&gt; LOGIN &lt;</h1>
-      <p>Sign in with your Fabric identity — GoonCitizen desktop or Fabric Passport. Same key, interchangeable.</p>
-      <div id="session-form" class="session-form">
-        <button type="button" id="login-desktop">Log in with GoonCitizen / desktop</button>
-        <button type="button" id="login-passport">Sign in with Passport</button>
+      <p class="login-intro">Sign in with Discord, Fabric Passport, or the GoonCitizen desktop app.</p>
+      <div class="login-buttons">
+        <button type="button" id="login-discord" class="goon-button">Discord</button>
+        <button type="button" id="login-passport" class="goon-button">Passport</button>
+        <button type="button" id="login-desktop" class="goon-button">GoonCitizen desktop</button>
       </div>
-      <p id="session-status" class="session-status"></p>
-      <div id="session-identity" class="session-identity"></div>
-      <p><a href="/">Back to Home</a></p>
+      <p id="login-status" class="login-status"></p>
+      <div id="login-session" class="login-session"></div>
+      <p><small>Not in the Squad yet? <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Discord &raquo;</a></small></p>
     </main>
-    <main id="dossier-page" class="dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a></p>
-      <h1>DOSSIER</h1>
-      <p class="dossier-intro">Public roster derived from alliance records and org chart.</p>
-      <div class="dossier-grid">
-<article class="dossier-card">
-      <header><h2 class="dossier-handle"><a href="/dossier/Adszvolcano">Adszvolcano</a></h2></header>
-      <p class="dossier-org"><strong>Organization</strong> INFINITY INDUSTRIES</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">INFINITY INDUSTRIES</span></div></li></ul>
-      
-    </article>
-<article class="dossier-card">
-      <header><h2 class="dossier-handle"><a href="/dossier/ChairmanPoW">ChairmanPoW</a></h2></header>
-      <p class="dossier-org"><strong>Organization</strong> PERMAFLEET</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>Chairman</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div><div class="dossier-role-notes">Absolute authority over all matters; delegates administrative and board governance per Articles of Incorporation.</div></li><li><div class="dossier-role-line"><strong>Founder &amp; President</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div></li><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div></li></ul>
-      
-    </article>
-<article class="dossier-card">
-      <header><h2 class="dossier-handle"><a href="/dossier/crescendo">crescendo</a></h2></header>
-      <p class="dossier-org"><strong>Organization</strong> G00N SQUAD</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">G00N SQUAD</span></div></li></ul>
-      
-    </article>
-<article class="dossier-card">
-      <header><h2 class="dossier-handle"><a href="/dossier/RedneckRanger">RedneckRanger</a></h2></header>
-      <p class="dossier-org"><strong>Organization</strong> <span class="muted">—</span></p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong></div><div class="dossier-role-notes">Member corporation name omitted (shown as placeholder in source document).</div></li></ul>
-      
-    </article>
-<article class="dossier-card">
-      <header><h2 class="dossier-handle"><a href="/dossier/VictorSeven">VictorSeven</a></h2></header>
-      <p class="dossier-org"><strong>Organization</strong> PERMAFLEET</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>PERMAFLEET Officer</strong> · <span class="dossier-role-meta">PERMAFLEET Officers</span></div><div class="dossier-role-notes">Listed with Alliance Board members under PERMAFLEET OFFICERS in the org chart.</div></li></ul>
-      <footer class="dossier-source"><code>contracts/org.dot</code></footer>
-    </article>
+    <main id="events-page" class="events-page">
+      <h1>EVENTS</h1>
+      <p class="events-intro">Upcoming scheduled events from every Discord server we fly with.</p>
+      <p id="events-meta" class="events-meta">Loading events…</p>
+      <div id="events-filters" class="events-filters"></div>
+      <div id="events-feed"></div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="operations-page" class="operations-page">
+      <h1>OPERATIONS</h1>
+      <p class="operations-intro">Standing operations the Squad flies, runs, or supports.</p>
+      <div class="operations-grid">
+        <article class="operation-card">
+          <h2 class="operation-name"><a href="/operations/PERMAFLEET">PERMAFLEET</a></h2>
+          <p class="operation-tagline">We’re always online.</p>
+          <p class="operation-summary">Dedicated to giving everyone a group to fly with, PERMAFLEET runs 24/7 public assistance. Security is always on standby, giving us rapid response times to hostile encounters.</p>
+          <div class="operation-links"><a class="goon-button" href="/operations/PERMAFLEET">Briefing</a><a class="goon-button" href="/operations/PERMAFLEET/schedule">Weekly schedule</a><a class="goon-button" href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener">Join on Discord</a></div>
+        </article>
       </div>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
-<main id="person-Adszvolcano" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="/dossier">Dossier index</a></p>
-      <h1 class="person-title">Adszvolcano</h1>
-      <p class="dossier-org"><strong>Organization</strong> INFINITY INDUSTRIES</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">INFINITY INDUSTRIES</span></div></li></ul>
-      
-      <p class="person-permalink"><a href="/dossier/Adszvolcano">Permalink</a></p>
+    <main id="organizations-page" class="organizations-page">
+      <h1>ORGANIZATIONS</h1>
+      <p class="organizations-intro">Member organizations of the PERMAFLEET Protectorate. Each links to its RSI page, where you can apply.</p>
+      <div class="organizations-grid">
+        <article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="G00N SQUAD logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/G00N">G00N SQUAD</a></h2>
+            <p class="org-meta"><span class="org-symbol">[G00N]</span> · 19 members · PMC · Hardcore · Role play</p>
+            <p class="org-focus">Focus: Security / Infiltration</p>
+            <p class="org-summary">WE ARE GOON</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/G00N">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/syndicate.jpg" alt="Infinity Industries logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/INFN">Infinity Industries</a></h2>
+            <p class="org-meta"><span class="org-symbol">[INFN]</span> · 15 members · Syndicate · Casual · Role play</p>
+            <p class="org-focus">Focus: Resources / Transport</p>
+            <p class="org-summary">We do Logi for whoever pays us more.</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/INFN">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/o6rxr78fbjcj7r/logo/TRDE-Logo.png" alt="Trans-Galactic Trade logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/TRDE">Trans-Galactic Trade</a></h2>
+            <p class="org-meta"><span class="org-symbol">[TRDE]</span> · 56 members · Corporation · Regular</p>
+            <p class="org-focus">Focus: Trading / Freelancing</p>
+            <p class="org-summary">The Galaxy on time.™</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/TRDE">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/t411fijq0tppor/logo/LCRP-Logo.png" alt="Legacy Corporation logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/LCRP">Legacy Corporation</a></h2>
+            <p class="org-meta"><span class="org-symbol">[LCRP]</span> · 36 members · Corporation · Casual · Role play</p>
+            <p class="org-focus">Focus: Security / Freelancing</p>
+            <p class="org-summary">The Legacy Corporation: Forging Destiny Among the Stars</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/LCRP">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/corp.jpg" alt="DoubleDog Delivery, Inc. logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></h2>
+            <p class="org-meta"><span class="org-symbol">[DOUBLEDOGZ]</span> · 15 members · Corporation · Casual · Role play</p>
+            <p class="org-focus">Focus: Transport / Trading</p>
+            <p class="org-summary">We deliver doubledogs to the farthest reaches of the galaxy. Any time, any where.</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/DOUBLEDOGZ">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/qhn3ydociar7xr/logo/4MCONTRACT-Logo.png" alt="4M Contractors logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/4MCONTRACT">4M Contractors</a></h2>
+            <p class="org-meta"><span class="org-symbol">[4MCONTRACT]</span> · 82 members · Organization · Regular · Role play</p>
+            <p class="org-focus">Focus: Freelancing / Trading</p>
+            <p class="org-summary">Welcome Citizen</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/4MCONTRACT">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="A.I.M.O.S. logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/AIMOS">A.I.M.O.S.</a></h2>
+            <p class="org-meta"><span class="org-symbol">[AIMOS]</span> · 146 members · Syndicate · Hardcore · Role play</p>
+            <p class="org-focus">Focus: Resources / Security</p>
+            <p class="org-summary">Armored Interstellar Mercenary Operations Syndicate</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/AIMOS">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+      </div>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
-<main id="person-ChairmanPoW" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="/dossier">Dossier index</a></p>
-      <h1 class="person-title">ChairmanPoW</h1>
-      <p class="dossier-org"><strong>Organization</strong> PERMAFLEET</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>Chairman</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div><div class="dossier-role-notes">Absolute authority over all matters; delegates administrative and board governance per Articles of Incorporation.</div></li><li><div class="dossier-role-line"><strong>Founder &amp; President</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div></li><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">PERMAFLEET</span></div></li></ul>
-      
-      <p class="person-permalink"><a href="/dossier/ChairmanPoW">Permalink</a></p>
+<main id="org-G00N" class="organization-page" data-symbol="G00N">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/tc01lpwywqjair/banner/G00N-Banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="G00N SQUAD logo" loading="lazy">
+          <h1>G00N SQUAD</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[G00N]</span> · 19 members · PMC · Hardcore · Role play</p>
+          <p class="org-meta">Listed on RSI as <strong>GOON SQUAD</strong></p>
+          <p class="org-focus">Focus: Security / Infiltration</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>WE ARE GOON</p><p>GOONS TOGETHER STRONK</p><p>GOON SQUAD</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N/members" target="_blank" rel="noopener">Members</a>
+            <a class="goon-button" href="https://discord.gg/rDDUfZGdRN" target="_blank" rel="noopener">JOIN THE DISCORD »</a>
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>-107: the Romans perfect time travel</p><p>2085: A MESSAGE TO THE OVERSEER’S COUNCIL</p><p>2523: the United Planets of Earth unites humanity under a single banner, ushering it forth unto transcendence at the gentle and gracious hand of the Triumvirate</p><p>2547: Project FarStar begins</p><p>2681: Vanduul first contact</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>GOONS TOGETHER STRONK</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>TALK LOUD FLY BIG SHIP</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
-<main id="person-crescendo" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="/dossier">Dossier index</a></p>
-      <h1 class="person-title">crescendo</h1>
-      <p class="dossier-org"><strong>Organization</strong> G00N SQUAD</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong> · <span class="dossier-role-meta">G00N SQUAD</span></div></li></ul>
-      
-      <p class="person-permalink"><a href="/dossier/crescendo">Permalink</a></p>
+<main id="org-INFN" class="organization-page" data-symbol="INFN">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/syndicate.jpg" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/syndicate.jpg" alt="Infinity Industries logo" loading="lazy">
+          <h1>Infinity Industries</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[INFN]</span> · 15 members · Syndicate · Casual · Role play</p>
+          
+          <p class="org-focus">Focus: Resources / Transport</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>We do Logi for whoever pays us more.</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>Who’s asking?</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>Who’s asking?</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>Who’s asking?</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
-<main id="person-RedneckRanger" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="/dossier">Dossier index</a></p>
-      <h1 class="person-title">RedneckRanger</h1>
-      <p class="dossier-org"><strong>Organization</strong> <span class="muted">—</span></p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>CEO</strong></div><div class="dossier-role-notes">Member corporation name omitted (shown as placeholder in source document).</div></li></ul>
-      
-      <p class="person-permalink"><a href="/dossier/RedneckRanger">Permalink</a></p>
+<main id="org-TRDE" class="organization-page" data-symbol="TRDE">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/gt9jv4y40hzf5r/banner/TRDE-Banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/o6rxr78fbjcj7r/logo/TRDE-Logo.png" alt="Trans-Galactic Trade logo" loading="lazy">
+          <h1>Trans-Galactic Trade</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[TRDE]</span> · 56 members · Corporation · Regular</p>
+          <p class="org-meta">Listed on RSI as <strong>Trans-Galactic Delivery Enterprise</strong></p>
+          <p class="org-focus">Focus: Trading / Freelancing</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>The Galaxy on time.™</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>After a dazzling and distinguished military career, two brothers looked toward the future and wondered how best to put their piloting abilities to use in their post-service lives. One a cargo pilot with a legendary reputation for successfully completing the most difficult and dangerous logistical resupply runs the command had to offer; the other a fighter jockey and Ace many times over, notorious for taking on insurmountable odds with reckless abandon and the uncanny ability to always come out on top.</p><p>Civilian life offered them only one option which would provide the thrill and challenge their former occupations possessed; running the most sensitive freight to and through the most dangerous parts of the Galaxy. Gathering an elite group around them composed of former military personnel they had served with and mutual acquaintances from the piloting community they formed the core of Trans-Galactic. The rest, as they say, is history.</p><p>Join us on the Trans-Galactic Discord Server</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>Here at Trans-Galactic™ we aspire to provide the highest level of professionalism and performance while transporting cargo to and from any location our customers require. As a subsidiary of Extensive Enterprises™ and with an elite force of both personnel and equipment, no destination is too dangerous and no cargo beyond our ability to deliver safely and swiftly. By employing our own fighter core we save not only time, but cost as well since expensive and complicated contracts with mercenary groups are unnecessary. At Trans-Galactic we deliver the Galaxy on time, every time.</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>Roll’em like they were dice.</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
-<main id="person-VictorSeven" class="person-page dossier-page">
-      <p class="dossier-back"><a href="/">&larr; Home</a> · <a href="/dossier">Dossier index</a></p>
-      <h1 class="person-title">VictorSeven</h1>
-      <p class="dossier-org"><strong>Organization</strong> PERMAFLEET</p>
-      <ul class="dossier-roles"><li><div class="dossier-role-line"><strong>PERMAFLEET Officer</strong> · <span class="dossier-role-meta">PERMAFLEET Officers</span></div><div class="dossier-role-notes">Listed with Alliance Board members under PERMAFLEET OFFICERS in the org chart.</div></li></ul>
-      <footer class="dossier-source"><code>contracts/org.dot</code></footer>
-      <p class="person-permalink"><a href="/dossier/VictorSeven">Permalink</a></p>
+<main id="org-LCRP" class="organization-page" data-symbol="LCRP">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/92ytlm77e4kb7r/banner/LCRP-Banner.jpg" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/t411fijq0tppor/logo/LCRP-Logo.png" alt="Legacy Corporation logo" loading="lazy">
+          <h1>Legacy Corporation</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[LCRP]</span> · 36 members · Corporation · Casual · Role play</p>
+          <p class="org-meta">Listed on RSI as <strong>The Legacy Corporation</strong></p>
+          <p class="org-focus">Focus: Security / Freelancing</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>The Legacy Corporation: Forging Destiny Among the Stars</p><p>In the vast expanse of the ‘Verse, where danger lurks around every asteroid belt and intrigue echoes through the vacuum of space, stands The Legacy Corporation — a beacon of strength, honor, and unwavering resolve.</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          <details class="org-section" open>
+            <summary>Manifesto</summary>
+            <p>Our Mission: Safeguarding the Stars</p><p>At The Legacy Corporation, we don’t merely protect; we elevate. Our private military division is a formidable force, trained to defend against any and all threats, safeguard trade routes, and ensure the safety of our clients. Whether it’s escorting precious cargo through treacherous jump points or neutralizing hostile pirate factions, we stand as sentinels of order in the chaos of the cosmos.</p><p>Security Beyond Boundaries</p><p>Our security experts are more than soldiers; they’re celestial custodians. From the bustling landing zones of Terra to the remote mining outposts of Yela, we extend our protective mantle across star systems. When you see our insignia, you know safety is near.</p><p>Defense with Precision</p><p>The Legacy Corporation’s fleet boasts cutting-edge ships, each meticulously maintained by our engineers. From agile fighters to colossal capital ships, we’re prepared for any eventuality. Our defense protocols are battle-tested, our pilots seasoned, and our resolve unyielding. When the Vanduul swarm descends or the Xi’an Syndicate threatens, we rise to meet the challenge.</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>Introduction</p><p>Welcome to The Legacy Corporation! We are a galaxy-wide organization committed to applying modern technology to build a better tomorrow for all citizens. Our rich history, innovative spirit, and dedicated members drive us toward prosperity, security, and stability.</p><p>Vision</p><p>Our vision is to leave a lasting legacy—a mark on the stars that echoes through time. We strive to create a brighter future by exploring new star systems, establishing trade routes, and fostering cooperation among diverse communities.</p><p>Core Values</p><p>Innovation: We embrace cutting-edge technology and creative solutions.</p><p>Unity: Together, we achieve greatness.</p><p>Prosperity: Our success benefits all citizens.</p><p>Integrity: We uphold honesty, transparency, and honor.</p><p>Departments</p><p>Exploration and Discovery</p><p>Our intrepid explorers venture into uncharted territories, uncovering hidden wonders and mapping the cosmos. They seek ancient relics, mysterious phenomena, and celestial secrets.</p><p>Trade and Commerce</p><p>Our trade experts establish profitable routes, negotiate deals, and ensure economic stability. We believe that prosperity should reach every corner of the galaxy.</p><p>Security and Defense</p><p>Our highly trained fighter pilots protect our interests, defend our assets, and maintain peace. Their courage ensures our legacy endures.</p><p>Membership</p><p>We welcome citizens from all walks of life. Whether you’re a seasoned pilot, a skilled engineer, or a space trucker, there’s a place for you in The Legacy Corporation.</p><p>Code of Conduct</p><p>Respect: Treat fellow members with kindness and respect.</p><p>Collaboration: Work together to achieve our goals.</p><p>Adaptability: Embrace change and learn from challenges.</p><p>Secrecy: Some mysteries are best kept within our ranks.</p><p>Join Us!</p><p>Ready to shape the future? Visit our Discord channel and become part of The Legacy Corporation today!</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="org-DOUBLEDOGZ" class="organization-page" data-symbol="DOUBLEDOGZ">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/corp.jpg" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/corp.jpg" alt="DoubleDog Delivery, Inc. logo" loading="lazy">
+          <h1>DoubleDog Delivery, Inc.</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[DOUBLEDOGZ]</span> · 15 members · Corporation · Casual · Role play</p>
+          
+          <p class="org-focus">Focus: Transport / Trading</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>We deliver doubledogs to the farthest reaches of the galaxy. Any time, any where.</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="org-4MCONTRACT" class="organization-page" data-symbol="4MCONTRACT">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/84rlmu0sgwzj8r/banner/4MCONTRACT-Banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/qhn3ydociar7xr/logo/4MCONTRACT-Logo.png" alt="4M Contractors logo" loading="lazy">
+          <h1>4M Contractors</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[4MCONTRACT]</span> · 82 members · Organization · Regular · Role play</p>
+          <p class="org-meta">Listed on RSI as <strong>4M-CONTRACTORS</strong></p>
+          <p class="org-focus">Focus: Freelancing / Trading</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>Welcome Citizen</p><p>Built by friends and driven by purpose, 4M-CONTRACTORS unites combat pilots, industrial crews, medics, merchants, and outlaws into one unstoppable organization. Through loyalty, strategy, and controlled chaos, we forge our legacy across every corner of the ‘verse.</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>History of 4M-CONTRACTORS</p><p>In the sprawling universe of Star Citizen, where danger and opportunity collide among the stars, a group of like-minded individuals found themselves drawn together by a shared passion for adventure, camaraderie, and the thrill of the unknown. From this common ground, the organization known as 4M-CONTRACTORS emerged, carving a unique niche in the vast cosmos.</p><p>Founding Days and Unity</p><p>4M-CONTRACTORS was born in a time of uncertainty, when the verse echoed with tales of piracy and heroics alike. A group of daring individuals who had experienced the thrill of working together decided to formalize their collaboration, uniting under a common banner. They were united not only by their shared love for piracy but also by a set of four core values that would come to define their identity.</p><p>Mischief: A Twist of Fun</p><p>The first value of the organization, “Mischief,” embodied their belief that piracy could be more than just ruthless plundering—it could also be a thrilling escapade, a cleverly executed plan, and a source of enjoyment for all involved. 4M-CONTRACTORS distinguished themselves by infusing their actions with a touch of mischievousness, turning their piracy endeavors into captivating stories that resonated throughout the verse.</p><p>Military Might and Protective Vows</p><p>As their reputation grew, so did their capabilities. The second value, “Military,” saw 4M-CONTRACTORS transitioning into not only pirates but also hired protectors of fellow travelers in the verse. Contracting themselves as escorts, they safeguarded traders, explorers, and other players against the dangers of the cosmos. This dual role showcased their adaptability and commitment to the safety of the verse.</p><p>Merchants of Opportunity</p><p>The third value, “Merchants,” led 4M-CONTRACTORS to leverage their skills in ways unexpected. They began to engage in contract negotiations, orchestrating “Mischief Mondays” where they provided unique services and solutions to interested parties. This clever approach turned their organizational events into sought-after opportunities, where other players could engage in thrilling scenarios that blended piracy with commerce.</p><p>Medical</p><p>The fourth value, “Medical,” brought a compassionate twist to their reputation. Beyond their daring exploits, 4M-CONTRACTORS extended their hand to help other players in the verse. Whether it was aiding in rescue operations, offering medical assistance, or lending a supportive presence to those in need, this value underscored their commitment to the community and their belief in the power of unity.</p><p>A Legacy among the Stars</p><p>Today, 4M-CONTRACTORS stands as a beacon of camaraderie and adventure in the ever-expanding Star Citizen universe. With their distinct blend of mischief, military prowess, merchant ingenuity, and a healing touch, they have etched their mark on the verse. The organization’s event-focused gameplay, grounded in their core values, continues to draw players from all corners of the ‘verse who seek thrill, companionship, and a chance to make their own mark on the stars.</p><p>As the verse evolves and new horizons emerge, 4M-CONTRACTORS remains committed to their values, their community, and the endless possibilities that the cosmos has to offer. With each mission undertaken, each contract negotiated, and each life they touch, they add a new chapter to their storied history, leaving an indelible legacy among the stars.</p><p>Contact us:</p><p>Spectrum link:</p><p>https://robertsspaceindustries.com/spectrum/community/4MCONTRACT</p><p>Organization Link:</p><p>https://robertsspaceindustries.com/orgs/4MCONTRACT</p><p>Discord Server:</p><p>https://discord.gg/4m-contractors</p><p>Facebook:</p><p>https://www.facebook.com/groups/4mcontractors</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>Manifesto of 4M-CONTRACTORS: Forging New Horizons through Bold Piracy</p><p>Embrace the Stars, Conquer the Verse</p><p>Preamble: We, the daring souls of 4M-CONTRACTORS, stand united by our shared vision to redefine the very fabric of the universe. With the stars as our canvas and the Verse as our playground, we vow to challenge the conventional norms and craft a new narrative through our audacious pursuits. With a bent toward piracy, we assert our place as free-spirited architects of our own destiny, ready to leave an indelible mark on history.</p><p>Article I:Unshackling the Chains of Conformity</p><p>In the spirit of freedom, 4M-CONTRACTORS reject the mundane limitations imposed by established systems. We renounce the notion of submission to stifling laws that curb the instinct for exploration and acquisition. We proclaim the right to carve our own path, exploiting opportunities that present themselves across the cosmos.</p><p>Article II: Champions of Prosperity</p><p>We, the bold Buccaneers of 4M-CONTRACTORS, acknowledge the thrill of the unknown, and we grasp it with both hands. Through calculated piracy, we restructure wealth distribution and redistribute power to achieve our vision of shared prosperity. By wresting resources from the clenched fists of the privileged, we shall liberate the Verse from its chains of inequality.</p><p>Article III: The Code of the Void</p><p>While we plunder the riches of the cosmos, we pledge to adhere to a higher code – The Code of the Void. This code binds us to conduct ourselves with honor even in the heat of battle. We shall show respect to worthy adversaries and extend our generosity to those who display courage. We reject harm to the defenseless and vow to maintain a sense of morality even amidst chaos.</p><p>Article IV: Unity</p><p>4M-CONTRACTORS understand that strength lies in unity, and unity thrives in diversity. As a crew composed of individuals from various parts of the verse, we foster an environment where each member’s uniqueness contributes to our collective strength. By embracing our differences, we enrich our perspective and ensure our legacy.</p><p>Article V: Innovation through Adaptation</p><p>The cosmos is a realm of ever-shifting currents. We embrace change and adapt our strategies to survive and thrive. Our ships are our canvas, and the tactics we deploy are our brushstrokes. Through innovation, we remain steps ahead of those who seek to oppose us, ensuring our supremacy among the stars.</p><p>Article VI: Guardians of the Uncharted</p><p>As we carve our legacy, we stand as the unsung guardians of the uncharted territories. By policing our territories with vigilance, we ensure a safe haven for those who dare to venture beyond the boundaries. We protect the very space that fosters our ambitions, for in guarding others, we fortify our position as the true masters of the Void.</p><p>Article VII: Leadership &amp; Ranking</p><p>ORGANIZATION MEMBER ROLES</p><p>1. Mercenary:</p><p>Description: Visitors who have joined the discord but has not joined the organization.</p><p>Responsibilities: Learn about the organization’s values, rules, and gameplay mechanics.</p><p>Privileges: Limited access to organization resources and activities.</p><p>2. Soldier:</p><p>Description: Active Members who have joined the organization, shown some commitment and participation.</p><p>Responsibilities: Engage in organization activities, learn gameplay mechanics, and contribute to discussions.</p><p>Privileges: Increased access to organization resources and activities.</p><p>3. Captain:</p><p>Description: Members who have demonstrated dedication and improvement in their skills.</p><p>Responsibilities: Actively participate in organization events, assist newer members, and refine gameplay strategies.</p><p>Privileges: Access to advanced training and limited leadership roles.</p><p>4. Lieutenant:</p><p>Description: Skilled members who have a good understanding of the game mechanics.</p><p>Responsibilities: Lead small groups in missions, provide guidance to lower-ranked members, and contribute to strategic planning.</p><p>Privileges: Access to specialized equipment and roles, involvement in decision-making discussions. Help with dispute resolutions among membership.</p><p>5. General:</p><p>Description: Highly skilled members with a deep understanding of game mechanics and organizational strategies.</p><p>Responsibilities: Lead larger groups in complex missions, provide advanced training, and actively contribute to organization growth.</p><p>Privileges: Access to exclusive equipment, priority in mission selection, and involvement in leadership decisions.</p><p>ORGANIZATION OFFICER ROLES</p><p>1. Communications:</p><p>Description: Long-standing and respected members who have contributed significantly to the organization’s success.</p><p>Responsibilities: Help maintain the Organizations “Spectrum Page” and also contribute to the branding of the Organization.</p><p>Privileges: Recognition as a pillar of the organization, involvement in high-level decision-making, and special events.</p><p>2. Lieutenant:</p><p>Description: Appointed leaders responsible for managing different aspects of the organization.</p><p>Responsibilities: Oversee specific divisions, coordinate events, manage recruitment, and ensure smooth operation.</p><p>Privileges: Decision-making authority, access to administrative tools, and direct collaboration with leadership.</p><p>3. Captain:</p><p>Description: Senior officers who assist in strategic planning, decision-making and dispute resolution.</p><p>Responsibilities: Lead divisions, manage officers, contribute to long-term goals, and represent the organization externally.</p><p>Privileges: Influence over organizational direction, active involvement in high-level decisions.</p><p>4. BOSSES:</p><p>Description: Founders of the Organization responsible for the overall direction and success of the organization as a whole. Highest-ranking members who shape the organization’s destiny.</p><p>Responsibilities: Set long-term goals, define the organization’s identity, and lead major initiatives. Lead officer meetings, develop organization-wide strategies, and ensure efficient operation across divisions.</p><p>Privileges: Utmost decision-making authority, legacy recognition, and the final say in all matters of all matters.</p><p>Conclusion:</p><p>With the universe as our playground and the stars as our guiding lights, 4M-CONTRACTORS declare our unwavering commitment to reshaping the cosmos according to our vision. As we sail the starlit seas, piracy becomes our tool of transformation, enabling us to forge a new destiny that transcends the ordinary. Together, we shall plunder, explore, and shape the Verse with audacity, leaving our mark for generations to come.</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>4M-CONTRACTORS STAR CITIZEN ORGANIZATION CHARTER</p><p>Article I: Name and Purpose</p><p>The name of this organization shall be “4M-CONTRACTORS,” hereinafter referred to as “the Organization.”</p><p>The primary purpose of the Organization is to engage in activities that provide its members with opportunities for camaraderie, exploration, and mutual support within the Star Citizen universe. While embracing the lawful aspects of the verse, the Organization acknowledges the pursuit of activities with a thematic focus on exploration, trade, and defense, including a distinct bent toward piracy when deemed necessary or strategic.</p><p>Article II: Membership</p><p>Membership in the Organization is open to all individuals who share a genuine interest in participating in the verse of Star Citizen and subscribe to the Organization’s principles, regardless of their chosen career paths.</p><p>Potential members shall submit an application through the Organization’s designated channels, including a brief statement of intent and gameplay preferences.</p><p>Membership may be revoked if a member’s actions are deemed in violation of the Organization’s Code of Conduct or are contrary to the spirit of the Organization’s thematic focus.</p><p>Article III: Code of Conduct</p><p>All members shall conduct themselves in a manner that upholds the reputation of the Organization.</p><p>Members shall refrain from targeting or exploiting new players, intentionally causing grief, or engaging in actions that harm the experience of others outside the bounds of the Organization’s thematic focus.</p><p>In pursuit of piracy activities, members shall follow a strict “no unnecessary harm” policy, avoiding excessive violence or undue hardship on other players or NPCs.</p><p>Article IV: Leadership</p><p>The Organization shall be led by a Council, consisting of Bosses, Captains and select Lieutenants, responsible for different aspects of the Organization’s activities, including exploration, trade, defense, and piracy.</p><p>The Council shall make decisions through open discussion and majority vote, ensuring that all members have a voice in the direction of the Organization. Bosses oversee the council in their duties and activities and have final say during disputes.</p><p>Article V: Activities and Operations</p><p>The Organization shall engage in various activities, including but not limited to exploration of uncharted regions, legitimate trading ventures, providing defense for its members, and targeted piracy operations.</p><p>Piracy operations shall be executed strategically, targeting specific opportunities while minimizing collateral damage and adhering to the Organization’s “no unnecessary harm” policy.</p><p>Article VI: Disputes and Conflict Resolution</p><p>Internal disputes shall be resolved through open communication and, if necessary, mediated discussions led by the Bosses of the Organization.</p><p>In-game conflicts arising from piracy activities shall be dealt with in adherence to the Organization’s principles, striving to maintain a balance between immersion and ethical considerations.</p><p>We, the undersigned, hereby adopt and enact this Charter.</p><p>Signed,</p><p>The Bosses</p><p>Founders, 4M-CONTRACTORS</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="org-AIMOS" class="organization-page" data-symbol="AIMOS">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/vsb1jh3jn8rqwr/banner/AIMOS-Banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="A.I.M.O.S. logo" loading="lazy">
+          <h1>A.I.M.O.S.</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[AIMOS]</span> · 146 members · Syndicate · Hardcore · Role play</p>
+          <p class="org-meta">Listed on RSI as <strong>A.I.M.O.S</strong></p>
+          <p class="org-focus">Focus: Resources / Security</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <p>Armored Interstellar Mercenary Operations Syndicate</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS/members" target="_blank" rel="noopener">Members</a>
+            <a class="goon-button" href="http://discord.gg/aimos" target="_blank" rel="noopener">Comms</a>
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>Currently in the making.</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>Fuck it we ball!</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>The best rise up amongst the ashes.</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="resources-page" class="resources-page">
+      <h1>RESOURCES</h1>
+      <p class="operations-intro">Tools and guides for flying with the Squad.</p>
+      <div class="operations-grid">
+        <article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/gooncitizen">GoonCitizen</a></h2>
+          <p class="operation-tagline">The companion app for Star Citizen.</p>
+          <p class="operation-summary">A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.</p>
+          <div class="operation-links"><a class="goon-button" href="/resources/gooncitizen">Open</a><a class="goon-button" href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">Source on GitHub</a></div>
+        </article>
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="gooncitizen-page" class="gooncitizen-page">
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <section class="gooncitizen-hero">
+        <h1>GoonCitizen</h1>
+        <p class="gooncitizen-tagline">The companion app for Star Citizen.</p>
+        <p class="gooncitizen-intro">A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.</p>
+        <div class="gooncitizen-actions"><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-Setup-0.1.0-dev.exe" download>Windows</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-arm64.dmg" download>macOS (Apple silicon)</a><a class="goon-button" href="/downloads/gooncitizen/gooncitizen_0.1.0-dev_amd64.deb" download>Linux (.deb)</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-debug.apk" download>Android (test build)</a></div>
+        <p class="gooncitizen-note">Pre-release 0.1.0-dev. Future builds will be published to the Fabric network. Free and open source (MIT).</p>
+      </section>
+      <section class="gooncitizen-features" aria-label="Features">
+        <article class="operation-card"><h2>Track your stats</h2><p>Reads your Star Citizen Game.log as you play and keeps a running history across sessions and restarts: missions, outcomes, deaths, play sessions, and a heatmap of when you fly.</p></article>
+<article class="operation-card"><h2>Fly with your group</h2><p>Create a group for your friends or your org, chat in its channel, broadcast open missions to members, and share fleets so everyone knows what is in the hangar.</p></article>
+<article class="operation-card"><h2>Missions with receipts</h2><p>Officers post missions, members apply and do the work, and an officer signs off on completion. Every change lands in a tamper-evident audit log.</p></article>
+<article class="operation-card"><h2>One chat, everywhere</h2><p>Global shoutbox, group channels, and bridged Discord channels in one window, with optional desktop notifications.</p></article>
+<article class="operation-card"><h2>Private by default</h2><p>GoonCitizen only ever reads the game log; it never touches your install. Sharing gameplay with other players is opt-in, per group or per peer.</p></article>
+      </section>
+      <section class="gooncitizen-section">
+        <h2>Requirements</h2>
+        <ul>
+          <li>Windows, with Star Citizen installed. GoonCitizen finds your install and channel (LIVE, PTU, EPTU, HOTFIX) on its own.</li>
+          <li>Linux with Star Citizen under Wine or Proton is detected too.</li>
+          <li>macOS and Linux builds also run without the game, for groups, chat, and missions.</li>
+        </ul>
+        <h2>Good to know</h2>
+        <ul>
+          <li>Kill tracking only works on old logs: CIG stopped logging kills after Star Citizen 4.3.0. Combat shows up as progress on mission objectives instead.</li>
+          <li>Prefer the browser? The <a href="https://relay.goon.vc" target="_blank" rel="noopener">web monitor</a> shows the public relay.</li>
+        </ul>
+        <h2>Downloads</h2>
+        <ul class="gooncitizen-downloads"><li><strong>Windows</strong> · 122 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 e7ba929ab6be5d16484a23f4a7d0245bef1b0d6d6280a5f8132501b54a1581a3</code></li><li><strong>macOS (Apple silicon)</strong> · 132 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 21f18167955d9f3ff54299a042a707a32cdbdc9310560df0bdf397940d0d850a</code></li><li><strong>Linux (.deb)</strong> · 120 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 8d88b8147fc25ec5321f25cc8307d5000c2b3483b2be3b7646720c7164b62c51</code></li><li><strong>Android (test build)</strong> · 247 MB · built 2026-08-20<br><code class="gooncitizen-sha">sha256 f01d6ba663eb7a3d530d49a28e9cae093c72bd80bb29558e2516c7ecef37c5af</code></li></ul>
+        <p class="gooncitizen-note">Source: <a href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">GitHub</a>. Pre-release builds are not code-signed. Windows: choose More info → Run anyway if SmartScreen warns. macOS: if the app is blocked, open System Settings → Privacy &amp; Security and choose Open Anyway. Android: allow installs from unknown sources to sideload.</p>
+      </section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
@@ -617,7 +1011,7 @@
         <div class="op-hero-bg" aria-hidden="true"></div>
         <div class="op-hero-scrim" aria-hidden="true"></div>
         <canvas id="permafleet-particles" class="op-particles" aria-hidden="true"></canvas>
-        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="/dossier">DOSSIER</a></nav>
+        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="/organizations">Organizations</a></nav>
         <div class="op-content">
           <p class="op-eyebrow">The PERMAFLEET Protectorate</p>
           <h1 class="op-brand">PERMAFLEET</h1>
@@ -649,7 +1043,8 @@
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.</p>
-            <ul class="op-orgs"><li>G00N SQUAD</li><li>Infinity Industries</li><li>Legacy Corporation</li><li>Trans-Galactic Trade</li><li>DoubleDog Delivery, Inc.</li><li>4M Contractors</li><li>A.I.M.O.S.</li></ul>
+            <ul class="op-orgs"><li><a href="/organizations/G00N">G00N SQUAD</a></li><li><a href="/organizations/INFN">Infinity Industries</a></li><li><a href="/organizations/TRDE">Trans-Galactic Trade</a></li><li><a href="/organizations/LCRP">Legacy Corporation</a></li><li><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></li><li><a href="/organizations/4MCONTRACT">4M Contractors</a></li><li><a href="/organizations/AIMOS">A.I.M.O.S.</a></li></ul>
+            <p class="op-resource-link"><a href="/organizations">Member organizations &raquo;</a></p>
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
         </div>
@@ -667,247 +1062,442 @@
     <script type="text/javascript">
       (function () {
         var loginPath = "/sessions";
-        var dossierPath = "/dossier";
         var permafleetPath = "/operations/PERMAFLEET";
         var schedulePath = "/operations/PERMAFLEET/schedule";
-        var personRe = new RegExp("^/dossier/([^/]+)$");
         var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
         var isLogin = path === loginPath;
-        var isDossier = path === dossierPath;
+        var isEvents = path.toLowerCase() === "/events";
+        var isOperations = path.toLowerCase() === "/operations";
+        var isOrganizations = path.toLowerCase() === "/organizations";
+        var orgMatch = new RegExp("^/organizations/([^/]+)$", 'i').exec(path);
+        var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
+        var isResources = path.toLowerCase() === "/resources";
+        var isGoonCitizen = path.toLowerCase() === "/resources/gooncitizen";
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
-        var personMatch = personRe.exec(path);
-        var personId = personMatch ? ('person-' + decodeURIComponent(personMatch[1])) : null;
         var home = document.getElementById('home-page');
         var login = document.getElementById('login-page');
-        var dossierEl = document.getElementById('dossier-page');
+        var eventsEl = document.getElementById('events-page');
+        var operationsEl = document.getElementById('operations-page');
         var permafleetEl = document.getElementById('operation-permafleet');
         var scheduleEl = document.getElementById('permafleet-schedule');
-        var personEl = personId ? document.getElementById(personId) : null;
 
         if (home) {
-          home.style.display = (!isLogin && !isDossier && !isPermafleet && !isSchedule && !personEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isPermafleet && !isSchedule) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
-        if (dossierEl) dossierEl.style.display = isDossier ? 'block' : 'none';
+        if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
+        if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
+        var organizationsEl = document.getElementById('organizations-page');
+        if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
+        document.querySelectorAll('.organization-page').forEach(function (el) {
+          el.style.display = el === orgEl ? 'block' : 'none';
+        });
+        var resourcesEl = document.getElementById('resources-page');
+        var gooncitizenEl = document.getElementById('gooncitizen-page');
+        if (resourcesEl) resourcesEl.style.display = isResources ? 'block' : 'none';
+        if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
         document.body.classList.toggle('schedule-active', isSchedule);
-        document.querySelectorAll('.person-page').forEach(function (el) {
-          el.style.display = (personEl && el.id === personId) ? 'block' : 'none';
-        });
 
-        if (personEl && personMatch) {
-          document.title = decodeURIComponent(personMatch[1]) + ' — GOON SQUAD';
-        } else if (isDossier) document.title = "DOSSIER — GOON SQUAD";
+        if (isLogin) document.title = "Login — GOON SQUAD";
+        else if (isEvents) document.title = "EVENTS — GOON SQUAD";
+        else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
+        else if (isOrganizations) document.title = "ORGANIZATIONS — GOON SQUAD";
+        else if (isResources) document.title = "RESOURCES — GOON SQUAD";
+        else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
+        else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
         else document.title = "GOON SQUAD";
+      })();
+    </script>
+    <script type="text/javascript">
+      (function () {
+        var path = ((window.location.pathname || '/').replace(/\/+$/, '') || '/').toLowerCase();
+        document.querySelectorAll('.site-nav a[href^="/"]').forEach(function (a) {
+          var href = a.getAttribute('href').toLowerCase();
+          if (path === href || path.indexOf(href + '/') === 0) a.setAttribute('aria-current', 'page');
+        });
+      })();
+    </script>
+    <script type="text/javascript">
+      (function () {
+        var loginPath = "/sessions";
+        var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+        var onLoginPage = path === loginPath;
 
-        var status = document.getElementById('session-status');
-        var identityBox = document.getElementById('session-identity');
-        var btnDesktop = document.getElementById('login-desktop');
+        var btnDiscord = document.getElementById('login-discord');
         var btnPassport = document.getElementById('login-passport');
+        var btnDesktop = document.getElementById('login-desktop');
+        var status = document.getElementById('login-status');
+        var sessionBox = document.getElementById('login-session');
+        var hubAvailable = false;
+        var discordAvailable = false;
+        var busy = false;
+        var pollTimer = null;
 
-        function setLoginCtAsVisible (visible) {
-          document.querySelectorAll('a.footer-login-button, .site-nav a[href="' + loginPath + '"]').forEach(function (el) {
-            var target = el.closest('.site-nav-item') || el;
-            target.style.display = visible ? '' : 'none';
-          });
-          if (btnDesktop) btnDesktop.disabled = !visible;
-          if (btnPassport) btnPassport.disabled = !visible;
-          if (!visible && status && isLogin) {
-            status.textContent = 'Login unavailable — Hub API proxy is unreachable.';
-          }
+        function getJson (url, opts) {
+          return window.fetch(url, Object.assign({ cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}))
+            .then(function (res) {
+              return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, status: res.status, j: j }; });
+            });
         }
 
-        // Probe Hub via same-origin proxy (OPTIONS /services/rpc). Hide Login CTAs when Hub is down.
-        window.fetch('/services/rpc', {
+        function render () {
+          btnDiscord.disabled = busy || !discordAvailable;
+          btnPassport.disabled = busy || !hubAvailable;
+          btnDesktop.disabled = busy || !hubAvailable;
+        }
+
+        function setBusy (value) {
+          busy = !!value;
+          render();
+        }
+
+        var hubProbe = window.fetch('/services/rpc', {
           method: 'OPTIONS',
           headers: { Accept: 'application/json' },
           cache: 'no-store'
         }).then(function (res) {
-          if (res.status === 502 || res.status === 503 || res.status === 504) {
-            setLoginCtAsVisible(false);
-            return null;
-          }
+          if (res.status >= 502) return false;
           return res.text().then(function (t) {
             try {
               var j = t ? JSON.parse(t) : null;
-              if (j && (j.error === 'hub-unreachable' || j.error === 'Hub unreachable')) {
-                setLoginCtAsVisible(false);
-              }
-            } catch (e) {}
+              return !(j && (j.error === 'hub-unreachable' || j.error === 'Hub unreachable'));
+            } catch (e) { return true; }
           });
-        }).catch(function () {
-          setLoginCtAsVisible(false);
+        }).catch(function () { return false; });
+        var membersProbe = getJson('/services/members')
+          .then(function (r) { return !!(r.ok && r.j && r.j.discord); })
+          .catch(function () { return false; });
+
+        Promise.all([hubProbe, membersProbe]).then(function (results) {
+          hubAvailable = results[0];
+          discordAvailable = results[1];
+          if (!hubAvailable && !discordAvailable) {
+            document.querySelectorAll('a.footer-login-button[href="' + loginPath + '"], .site-nav a[href="' + loginPath + '"]').forEach(function (el) {
+              (el.closest('.site-nav-item') || el).style.display = 'none';
+            });
+          }
+          if (!onLoginPage) return;
+          btnDiscord.title = discordAvailable ? '' : 'Discord login is not configured on this server.';
+          btnPassport.title = btnDesktop.title = hubAvailable ? '' : 'The Fabric Hub is unreachable.';
+          if (!hubAvailable && !status.textContent) {
+            status.textContent = discordAvailable
+              ? 'Passport and desktop sign-in are unavailable: the Fabric Hub is unreachable.'
+              : 'Login unavailable: the Fabric Hub is unreachable and Discord login is not configured.';
+          }
+          render();
         });
 
-        if (!status || !btnDesktop || !btnPassport) return;
+        if (!onLoginPage) return;
+        render();
 
-        var pollTimer = null;
-        var passportWait = null;
+        var ERRORS = {
+          access_denied: 'Discord sign-in was cancelled.',
+          expired_state: 'That sign-in link expired. Try again.',
+          invalid_request: 'Discord returned an invalid response. Try again.',
+          discord_failed: 'Could not complete Discord sign-in. Try again.'
+        };
 
-        function setBusy (busy) {
-          btnDesktop.disabled = !!busy;
-          btnPassport.disabled = !!busy;
+        function showMember (member) {
+          sessionBox.textContent = '';
+          if (!member) {
+            sessionBox.style.display = 'none';
+            return;
+          }
+          if (member.avatarUrl) {
+            var img = document.createElement('img');
+            img.src = member.avatarUrl;
+            img.alt = '';
+            sessionBox.appendChild(img);
+          }
+          var line = document.createElement('div');
+          var strong = document.createElement('strong');
+          strong.textContent = member.displayName || member.id;
+          line.appendChild(document.createTextNode('Signed in as '));
+          line.appendChild(strong);
+          line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : 'Fabric')));
+          sessionBox.appendChild(line);
+          var out = document.createElement('button');
+          out.type = 'button';
+          out.className = 'goon-button';
+          out.textContent = 'Log out';
+          out.addEventListener('click', function () {
+            getJson('/services/members/logout', { method: 'POST' }).then(function () {
+              showMember(null);
+              status.textContent = 'Signed out.';
+            });
+          });
+          sessionBox.appendChild(out);
+          sessionBox.style.display = 'block';
         }
 
-        function clearPoll () {
-          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('error')) status.textContent = ERRORS[params.get('error')] || 'Sign-in failed.';
+        else if (params.get('signedIn')) status.textContent = 'Welcome back.';
+        if (params.get('error') || params.get('signedIn')) {
+          window.history.replaceState(null, '', loginPath);
         }
 
-        function storeSignedIdentity (payload) {
-          try {
-            var row = {
-              identity: payload.identity || null,
-              pubkeyHex: payload.pubkeyHex || null,
-              delegationToken: payload.delegationToken || null,
-              signer: payload.signer || 'client',
-              linkedAt: Date.now()
-            };
-            window.localStorage.setItem('fabric.identity.session', JSON.stringify(row));
-            if (payload.delegationToken) {
-              window.localStorage.setItem('fabric.delegation', JSON.stringify({
-                token: payload.delegationToken,
-                linkedAt: row.linkedAt,
-                origin: window.location.origin
-              }));
-            }
-            if (identityBox) {
-              identityBox.style.display = 'block';
-              identityBox.innerHTML = '<strong>Signed in</strong><br/>id <code>' +
-                (payload.identity && payload.identity.id ? String(payload.identity.id) : '—') +
-                '</code><br/>signer <code>' + (payload.signer || 'client') + '</code>';
-            }
-          } catch (e) {}
-        }
+        getJson('/services/members/session').then(function (r) {
+          if (r.ok && r.j && r.j.member) showMember(r.j.member);
+        }).catch(function () {});
 
-        function pollSigned (sessionId, pollSecret, onDone) {
+        btnDiscord.addEventListener('click', function () {
+          setBusy(true);
+          status.textContent = 'Redirecting to Discord…';
+          window.location.href = '/services/members/discord';
+        });
+
+        // The Hub releases a signed session exactly once, so only the members service may redeem it.
+        function pollClaim (sessionId, pollSecret) {
           var tries = 0;
-          clearPoll();
+          var inFlight = false;
+          if (pollTimer) clearInterval(pollTimer);
           pollTimer = setInterval(function () {
+            if (inFlight) return;
             tries += 1;
             if (tries > 90) {
-              clearPoll();
+              clearInterval(pollTimer);
               status.textContent = 'Timed out waiting for approval. Unlock your wallet and try again.';
               setBusy(false);
               return;
             }
-            var pollHeaders = { Accept: 'application/json' };
-            if (pollSecret) pollHeaders['X-Fabric-Poll-Secret'] = pollSecret;
-            window.fetch('/sessions/' + encodeURIComponent(sessionId), {
-              headers: pollHeaders,
-              cache: 'no-store'
-            }).then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
-              .then(function (r) {
-                if (!r.ok) return;
-                if (r.j && r.j.status === 'signed') {
-                  clearPoll();
-                  storeSignedIdentity(r.j);
-                  status.textContent = 'Signed in.';
-                  setBusy(false);
-                  if (typeof onDone === 'function') onDone(r.j);
-                }
-              }).catch(function () {});
+            inFlight = true;
+            getJson('/services/members/passport', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null })
+            }).then(function (r) {
+              inFlight = false;
+              if (r.status === 202) return;
+              clearInterval(pollTimer);
+              setBusy(false);
+              if (!r.ok) {
+                status.textContent = 'Sign-in failed: ' + ((r.j && r.j.error) || r.status);
+                return;
+              }
+              status.textContent = 'Signed in.';
+              showMember(r.j.member);
+            }).catch(function () { inFlight = false; });
           }, 1500);
         }
 
-        function createSession () {
-          var origin = window.location.origin;
-          return window.fetch('/sessions', {
+        function startSession (startLabel, onCreated) {
+          setBusy(true);
+          status.textContent = startLabel;
+          getJson('/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ origin: origin })
-          }).then(function (res) {
-            return res.json().then(function (j) { return { ok: res.ok, j: j }; });
-          });
-        }
-
-        btnDesktop.addEventListener('click', function () {
-          setBusy(true);
-          status.textContent = 'Starting Fabric login…';
-          createSession().then(function (r) {
+            body: JSON.stringify({ origin: window.location.origin })
+          }).then(function (r) {
             if (!r.ok || !r.j || !r.j.ok) {
-              status.textContent = 'Session create failed: ' + ((r.j && r.j.error) || 'unknown');
+              status.textContent = r.status >= 502
+                ? 'Sign-in is unavailable: the Fabric Hub is unreachable' + (r.j && r.j.detail ? ' (' + r.j.detail + ')' : '') + '.'
+                : 'Could not start sign-in: ' + ((r.j && r.j.error) || r.status);
               setBusy(false);
               return;
             }
-            var protocolUrl = r.j.protocolUrl ||
-              ('fabric://login?sessionId=' + encodeURIComponent(r.j.sessionId) +
-                '&hub=' + encodeURIComponent(window.location.origin));
-            status.textContent = 'Approve the request in GoonCitizen (or your Fabric desktop app)…';
+            onCreated(r.j);
+            pollClaim(r.j.sessionId, r.j.pollSecret);
+          }).catch(function (error) {
+            status.textContent = 'Could not start sign-in: ' + error.message;
+            setBusy(false);
+          });
+        }
+
+        var PASSPORT_ERRORS = {
+          hub_not_allowed: 'Passport does not trust this site’s Hub.',
+          origin_mismatch: 'Passport rejected the request (origin mismatch).',
+          passport_rejected: 'Sign-in was rejected in Passport.'
+        };
+
+        window.addEventListener('message', function (event) {
+          if (event.origin !== window.location.origin) return;
+          var d = event.data;
+          if (!d || d.source !== 'fabric-passport' || d.type !== 'FABRIC_SITE_LOGIN_RESULT' || d.ok) return;
+          if (pollTimer) clearInterval(pollTimer);
+          status.textContent = PASSPORT_ERRORS[d.error] || ('Passport: ' + (d.error || 'rejected'));
+          setBusy(false);
+        });
+
+        btnPassport.addEventListener('click', function () {
+          if (!document.documentElement.hasAttribute('data-fabric-passport')) {
+            status.textContent = 'Fabric Passport extension not detected. Install or enable it, then reload this page.';
+            return;
+          }
+          startSession('Starting Passport sign-in…', function (session) {
+            window.postMessage({
+              source: 'fabric-site',
+              type: 'FABRIC_SITE_LOGIN_REQUEST',
+              sessionId: session.sessionId,
+              hub: window.location.origin,
+              origin: window.location.origin,
+              message: session.message
+            }, window.location.origin);
+            status.textContent = 'Open Passport and approve the sign-in…';
+          });
+        });
+
+        btnDesktop.addEventListener('click', function () {
+          startSession('Starting desktop sign-in…', function (session) {
             var a = document.createElement('a');
-            a.href = protocolUrl;
+            a.href = session.protocolUrl ||
+              ('fabric://login?sessionId=' + encodeURIComponent(session.sessionId) +
+                '&hub=' + encodeURIComponent(window.location.origin));
             a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            pollSigned(r.j.sessionId, r.j.pollSecret);
-          }).catch(function (error) {
-            status.textContent = 'Session create failed: ' + error.message;
-            setBusy(false);
+            status.textContent = 'Approve the request in GoonCitizen (or your Fabric desktop app)…';
           });
         });
+      })();
+    </script>
+    <script type="text/javascript">
+      (function () {
+        var pagePath = "/events";
+        var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+        if (path.toLowerCase() !== pagePath.toLowerCase()) return;
 
-        btnPassport.addEventListener('click', function () {
-          setBusy(true);
-          status.textContent = 'Starting Passport login…';
-          if (passportWait) {
-            window.removeEventListener('message', passportWait);
-            passportWait = null;
+        var meta = document.getElementById('events-meta');
+        var filters = document.getElementById('events-filters');
+        var feed = document.getElementById('events-feed');
+        var data = { events: [], guilds: [] };
+        var selected = new URLSearchParams(window.location.search).get('server') || 'all';
+
+        function el (tag, className, text) {
+          var node = document.createElement(tag);
+          if (className) node.className = className;
+          if (text != null) node.textContent = text;
+          return node;
+        }
+
+        function dayKey (date) {
+          return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+        }
+
+        function dayLabel (date) {
+          var today = new Date();
+          var tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+          if (dayKey(date) === dayKey(today)) return 'Today';
+          if (dayKey(date) === dayKey(tomorrow)) return 'Tomorrow';
+          return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        }
+
+        function ago (iso) {
+          var mins = Math.round((Date.now() - Date.parse(iso)) / 60000);
+          if (!Number.isFinite(mins)) return 'unknown';
+          if (mins < 1) return 'just now';
+          if (mins < 60) return mins + ' min ago';
+          var hours = Math.round(mins / 60);
+          return hours < 48 ? hours + ' h ago' : Math.round(hours / 24) + ' days ago';
+        }
+
+        function renderCard (event) {
+          var start = new Date(event.start);
+          var live = event.status === 'active';
+          var card = el('article', 'event-card' + (live ? ' event-live' : ''));
+          var time = el('div', 'event-time', live ? 'NOW' : start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+          if (live) time.appendChild(el('div', 'event-live-badge', 'LIVE'));
+          card.appendChild(time);
+
+          var body = el('div', 'event-body');
+          var name = el('h3', 'event-name');
+          var link = el('a', null, event.name);
+          link.href = event.url;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          name.appendChild(link);
+          body.appendChild(name);
+
+          var server = el('div', 'event-server');
+          if (event.guildIconUrl) {
+            var icon = el('img');
+            icon.src = event.guildIconUrl;
+            icon.alt = '';
+            server.appendChild(icon);
           }
-          createSession().then(function (r) {
-            if (!r.ok || !r.j || !r.j.ok) {
-              status.textContent = 'Session create failed: ' + ((r.j && r.j.error) || 'unknown');
-              setBusy(false);
-              return;
-            }
-            var sessionId = r.j.sessionId;
-            var message = r.j.message;
-            passportWait = function (event) {
-              if (event.origin !== window.location.origin) return;
-              var d = event.data;
-              if (!d || d.source !== 'fabric-passport' || d.type !== 'FABRIC_SITE_LOGIN_RESULT') return;
-              window.removeEventListener('message', passportWait);
-              passportWait = null;
-              if (!d.ok) {
-                status.textContent = 'Passport: ' + (d.error || 'rejected');
-                clearPoll();
-                setBusy(false);
-                return;
-              }
-              status.textContent = 'Passport approved — confirming session…';
-            };
-            window.addEventListener('message', passportWait);
-            window.postMessage({
-              source: 'fabric-site',
-              type: 'FABRIC_SITE_LOGIN_REQUEST',
-              sessionId: sessionId,
-              hub: window.location.origin,
-              origin: window.location.origin,
-              message: message
-            }, window.location.origin);
-            status.textContent = 'Open the Passport popup and approve the sign-in…';
-            pollSigned(sessionId, r.j.pollSecret);
-          }).catch(function (error) {
-            status.textContent = 'Session create failed: ' + error.message;
-            setBusy(false);
+          server.appendChild(el('span', null, event.guildName));
+          body.appendChild(server);
+
+          var details = [];
+          // Discord recurrence weekdays are UTC; name the viewer's local day instead.
+          if (event.cadence && /^weekly\b/.test(event.cadence)) {
+            details.push('every ' + start.toLocaleDateString(undefined, { weekday: 'long' }));
+          } else if (event.cadence && event.cadence !== 'one-off or unknown') {
+            details.push(event.cadence);
+          }
+          if (event.location) details.push(event.location);
+          else if (event.type) details.push(event.type === 'external' ? 'external' : event.type + ' channel');
+          if (event.interested) details.push(event.interested + ' interested');
+          if (details.length) body.appendChild(el('div', 'event-details', details.join(' · ')));
+          if (event.description) body.appendChild(el('div', 'event-description', event.description.replace(/\n\s*\n+/g, '\n').trim()));
+          card.appendChild(body);
+          return card;
+        }
+
+        function renderFilters () {
+          filters.textContent = '';
+          var options = [{ id: 'all', name: 'All servers' }].concat(data.guilds.filter(function (g) { return g.count > 0; }));
+          if (options.length <= 2) return;
+          options.forEach(function (option) {
+            var button = el('button', 'goon-button', option.name);
+            button.type = 'button';
+            button.setAttribute('aria-pressed', String(option.id === selected));
+            button.addEventListener('click', function () {
+              selected = option.id;
+              var url = option.id === 'all' ? pagePath : pagePath + '?server=' + encodeURIComponent(option.id);
+              window.history.replaceState(null, '', url);
+              renderFilters();
+              renderFeed();
+            });
+            filters.appendChild(button);
           });
-        });
+        }
 
-        try {
-          var existing = window.localStorage.getItem('fabric.identity.session');
-          if (existing && identityBox) {
-            var parsed = JSON.parse(existing);
-            if (parsed && parsed.identity) {
-              identityBox.style.display = 'block';
-              identityBox.innerHTML = '<strong>Already signed in</strong><br/>id <code>' +
-                String(parsed.identity.id || '—') + '</code>';
-            }
+        function renderFeed () {
+          feed.textContent = '';
+          var events = data.events.filter(function (e) { return selected === 'all' || e.guildId === selected; });
+          if (!events.length) {
+            feed.appendChild(el('p', 'events-empty', 'No upcoming events.'));
+            return;
           }
-        } catch (e) {}
+          var currentKey = null;
+          var list = null;
+          events.forEach(function (event) {
+            var start = new Date(event.start);
+            var key = event.status === 'active' ? 'live' : dayKey(start);
+            if (key !== currentKey) {
+              currentKey = key;
+              feed.appendChild(el('h2', 'events-day', key === 'live' ? 'Happening now' : dayLabel(start)));
+              list = el('div', 'events-list');
+              feed.appendChild(list);
+            }
+            list.appendChild(renderCard(event));
+          });
+        }
+
+        window.fetch('/services/events', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+          .then(function (res) { return res.json(); })
+          .then(function (j) {
+            data = { events: Array.isArray(j.events) ? j.events : [], guilds: Array.isArray(j.guilds) ? j.guilds : [] };
+            if (!data.guilds.some(function (g) { return g.id === selected; })) selected = 'all';
+            var servers = data.guilds.length;
+            var parts = [data.events.length + ' event' + (data.events.length === 1 ? '' : 's') + ' across ' + servers + ' server' + (servers === 1 ? '' : 's')];
+            if (j.fetchedAt) parts.push('updated ' + ago(j.fetchedAt));
+            if (j.stale) parts.push('Discord is unreachable; showing the last saved copy');
+            meta.textContent = j.fetchedAt || data.events.length ? parts.join(' · ') : 'Events are unavailable right now.';
+            renderFilters();
+            renderFeed();
+          })
+          .catch(function () {
+            meta.textContent = 'Events are unavailable right now.';
+          });
       })();
     </script>
     <script type="text/javascript">

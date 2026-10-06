@@ -1,0 +1,365 @@
+{
+  "fetchedAt": "2026-10-06T18:16:53.870Z",
+  "source": "https://robertsspaceindustries.com",
+  "alliance": {
+    "name": "PERMAFLEET",
+    "url": "https://robertsspaceindustries.com/orgs/PERMAFLEET"
+  },
+  "organizations": [
+    {
+      "displayName": "G00N SQUAD",
+      "symbol": "G00N",
+      "name": "GOON SQUAD",
+      "url": "https://robertsspaceindustries.com/orgs/G00N",
+      "logoUrl": "https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg",
+      "bannerUrl": "https://robertsspaceindustries.com/media/tc01lpwywqjair/banner/G00N-Banner.png",
+      "members": 19,
+      "model": "PMC",
+      "commitment": "Hardcore",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Security",
+        "secondary": "Infiltration"
+      },
+      "recruiting": true,
+      "intro": [
+        "WE ARE GOON",
+        "GOONS TOGETHER STRONK",
+        "GOON SQUAD",
+        "JOIN THE DISCORD »"
+      ],
+      "links": [
+        {
+          "label": "JOIN THE DISCORD »",
+          "href": "https://discord.gg/rDDUfZGdRN"
+        }
+      ],
+      "history": [
+        "-107: the Romans perfect time travel",
+        "2085: A MESSAGE TO THE OVERSEER’S COUNCIL",
+        "2523: the United Planets of Earth unites humanity under a single banner, ushering it forth unto transcendence at the gentle and gracious hand of the Triumvirate",
+        "2547: Project FarStar begins",
+        "2681: Vanduul first contact"
+      ],
+      "manifesto": [
+        "GOONS TOGETHER STRONK"
+      ],
+      "charter": [
+        "TALK LOUD FLY BIG SHIP"
+      ]
+    },
+    {
+      "displayName": "Infinity Industries",
+      "symbol": "INFN",
+      "name": "Infinity Industries",
+      "url": "https://robertsspaceindustries.com/orgs/INFN",
+      "logoUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/syndicate.jpg",
+      "bannerUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/syndicate.jpg",
+      "members": 15,
+      "model": "Syndicate",
+      "commitment": "Casual",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Resources",
+        "secondary": "Transport"
+      },
+      "recruiting": true,
+      "intro": [
+        "We do Logi for whoever pays us more."
+      ],
+      "links": [],
+      "history": [
+        "Who’s asking?"
+      ],
+      "manifesto": [
+        "Who’s asking?"
+      ],
+      "charter": [
+        "Who’s asking?"
+      ]
+    },
+    {
+      "displayName": "Trans-Galactic Trade",
+      "symbol": "TRDE",
+      "name": "Trans-Galactic Delivery Enterprise",
+      "url": "https://robertsspaceindustries.com/orgs/TRDE",
+      "logoUrl": "https://robertsspaceindustries.com/media/o6rxr78fbjcj7r/logo/TRDE-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/gt9jv4y40hzf5r/banner/TRDE-Banner.png",
+      "members": 56,
+      "model": "Corporation",
+      "commitment": "Regular",
+      "roleplay": null,
+      "focus": {
+        "primary": "Trading",
+        "secondary": "Freelancing"
+      },
+      "recruiting": true,
+      "intro": [
+        "The Galaxy on time.™"
+      ],
+      "links": [],
+      "history": [
+        "After a dazzling and distinguished military career, two brothers looked toward the future and wondered how best to put their piloting abilities to use in their post-service lives. One a cargo pilot with a legendary reputation for successfully completing the most difficult and dangerous logistical resupply runs the command had to offer; the other a fighter jockey and Ace many times over, notorious for taking on insurmountable odds with reckless abandon and the uncanny ability to always come out on top.",
+        "Civilian life offered them only one option which would provide the thrill and challenge their former occupations possessed; running the most sensitive freight to and through the most dangerous parts of the Galaxy. Gathering an elite group around them composed of former military personnel they had served with and mutual acquaintances from the piloting community they formed the core of Trans-Galactic. The rest, as they say, is history.",
+        "Join us on the Trans-Galactic Discord Server"
+      ],
+      "manifesto": [
+        "Here at Trans-Galactic™ we aspire to provide the highest level of professionalism and performance while transporting cargo to and from any location our customers require. As a subsidiary of Extensive Enterprises™ and with an elite force of both personnel and equipment, no destination is too dangerous and no cargo beyond our ability to deliver safely and swiftly. By employing our own fighter core we save not only time, but cost as well since expensive and complicated contracts with mercenary groups are unnecessary. At Trans-Galactic we deliver the Galaxy on time, every time."
+      ],
+      "charter": [
+        "Roll’em like they were dice."
+      ]
+    },
+    {
+      "displayName": "Legacy Corporation",
+      "symbol": "LCRP",
+      "name": "The Legacy Corporation",
+      "url": "https://robertsspaceindustries.com/orgs/LCRP",
+      "logoUrl": "https://robertsspaceindustries.com/media/t411fijq0tppor/logo/LCRP-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/92ytlm77e4kb7r/banner/LCRP-Banner.jpg",
+      "members": 36,
+      "model": "Corporation",
+      "commitment": "Casual",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Security",
+        "secondary": "Freelancing"
+      },
+      "recruiting": true,
+      "intro": [
+        "The Legacy Corporation: Forging Destiny Among the Stars",
+        "In the vast expanse of the ‘Verse, where danger lurks around every asteroid belt and intrigue echoes through the vacuum of space, stands The Legacy Corporation — a beacon of strength, honor, and unwavering resolve."
+      ],
+      "links": [],
+      "history": [],
+      "manifesto": [
+        "Our Mission: Safeguarding the Stars",
+        "At The Legacy Corporation, we don’t merely protect; we elevate. Our private military division is a formidable force, trained to defend against any and all threats, safeguard trade routes, and ensure the safety of our clients. Whether it’s escorting precious cargo through treacherous jump points or neutralizing hostile pirate factions, we stand as sentinels of order in the chaos of the cosmos.",
+        "Security Beyond Boundaries",
+        "Our security experts are more than soldiers; they’re celestial custodians. From the bustling landing zones of Terra to the remote mining outposts of Yela, we extend our protective mantle across star systems. When you see our insignia, you know safety is near.",
+        "Defense with Precision",
+        "The Legacy Corporation’s fleet boasts cutting-edge ships, each meticulously maintained by our engineers. From agile fighters to colossal capital ships, we’re prepared for any eventuality. Our defense protocols are battle-tested, our pilots seasoned, and our resolve unyielding. When the Vanduul swarm descends or the Xi’an Syndicate threatens, we rise to meet the challenge."
+      ],
+      "charter": [
+        "Introduction",
+        "Welcome to The Legacy Corporation! We are a galaxy-wide organization committed to applying modern technology to build a better tomorrow for all citizens. Our rich history, innovative spirit, and dedicated members drive us toward prosperity, security, and stability.",
+        "Vision",
+        "Our vision is to leave a lasting legacy—a mark on the stars that echoes through time. We strive to create a brighter future by exploring new star systems, establishing trade routes, and fostering cooperation among diverse communities.",
+        "Core Values",
+        "Innovation: We embrace cutting-edge technology and creative solutions.",
+        "Unity: Together, we achieve greatness.",
+        "Prosperity: Our success benefits all citizens.",
+        "Integrity: We uphold honesty, transparency, and honor.",
+        "Departments",
+        "Exploration and Discovery",
+        "Our intrepid explorers venture into uncharted territories, uncovering hidden wonders and mapping the cosmos. They seek ancient relics, mysterious phenomena, and celestial secrets.",
+        "Trade and Commerce",
+        "Our trade experts establish profitable routes, negotiate deals, and ensure economic stability. We believe that prosperity should reach every corner of the galaxy.",
+        "Security and Defense",
+        "Our highly trained fighter pilots protect our interests, defend our assets, and maintain peace. Their courage ensures our legacy endures.",
+        "Membership",
+        "We welcome citizens from all walks of life. Whether you’re a seasoned pilot, a skilled engineer, or a space trucker, there’s a place for you in The Legacy Corporation.",
+        "Code of Conduct",
+        "Respect: Treat fellow members with kindness and respect.",
+        "Collaboration: Work together to achieve our goals.",
+        "Adaptability: Embrace change and learn from challenges.",
+        "Secrecy: Some mysteries are best kept within our ranks.",
+        "Join Us!",
+        "Ready to shape the future? Visit our Discord channel and become part of The Legacy Corporation today!"
+      ]
+    },
+    {
+      "displayName": "DoubleDog Delivery, Inc.",
+      "symbol": "DOUBLEDOGZ",
+      "name": "Doubledog Delivery, Inc.",
+      "url": "https://robertsspaceindustries.com/orgs/DOUBLEDOGZ",
+      "logoUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/corp.jpg",
+      "bannerUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/corp.jpg",
+      "members": 15,
+      "model": "Corporation",
+      "commitment": "Casual",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Transport",
+        "secondary": "Trading"
+      },
+      "recruiting": true,
+      "intro": [
+        "We deliver doubledogs to the farthest reaches of the galaxy. Any time, any where."
+      ],
+      "links": [],
+      "history": [],
+      "manifesto": [],
+      "charter": []
+    },
+    {
+      "displayName": "4M Contractors",
+      "symbol": "4MCONTRACT",
+      "name": "4M-CONTRACTORS",
+      "url": "https://robertsspaceindustries.com/orgs/4MCONTRACT",
+      "logoUrl": "https://robertsspaceindustries.com/media/qhn3ydociar7xr/logo/4MCONTRACT-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/84rlmu0sgwzj8r/banner/4MCONTRACT-Banner.png",
+      "members": 82,
+      "model": "Organization",
+      "commitment": "Regular",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Freelancing",
+        "secondary": "Trading"
+      },
+      "recruiting": true,
+      "intro": [
+        "Welcome Citizen",
+        "Built by friends and driven by purpose, 4M-CONTRACTORS unites combat pilots, industrial crews, medics, merchants, and outlaws into one unstoppable organization. Through loyalty, strategy, and controlled chaos, we forge our legacy across every corner of the ‘verse."
+      ],
+      "links": [],
+      "history": [
+        "History of 4M-CONTRACTORS",
+        "In the sprawling universe of Star Citizen, where danger and opportunity collide among the stars, a group of like-minded individuals found themselves drawn together by a shared passion for adventure, camaraderie, and the thrill of the unknown. From this common ground, the organization known as 4M-CONTRACTORS emerged, carving a unique niche in the vast cosmos.",
+        "Founding Days and Unity",
+        "4M-CONTRACTORS was born in a time of uncertainty, when the verse echoed with tales of piracy and heroics alike. A group of daring individuals who had experienced the thrill of working together decided to formalize their collaboration, uniting under a common banner. They were united not only by their shared love for piracy but also by a set of four core values that would come to define their identity.",
+        "Mischief: A Twist of Fun",
+        "The first value of the organization, “Mischief,” embodied their belief that piracy could be more than just ruthless plundering—it could also be a thrilling escapade, a cleverly executed plan, and a source of enjoyment for all involved. 4M-CONTRACTORS distinguished themselves by infusing their actions with a touch of mischievousness, turning their piracy endeavors into captivating stories that resonated throughout the verse.",
+        "Military Might and Protective Vows",
+        "As their reputation grew, so did their capabilities. The second value, “Military,” saw 4M-CONTRACTORS transitioning into not only pirates but also hired protectors of fellow travelers in the verse. Contracting themselves as escorts, they safeguarded traders, explorers, and other players against the dangers of the cosmos. This dual role showcased their adaptability and commitment to the safety of the verse.",
+        "Merchants of Opportunity",
+        "The third value, “Merchants,” led 4M-CONTRACTORS to leverage their skills in ways unexpected. They began to engage in contract negotiations, orchestrating “Mischief Mondays” where they provided unique services and solutions to interested parties. This clever approach turned their organizational events into sought-after opportunities, where other players could engage in thrilling scenarios that blended piracy with commerce.",
+        "Medical",
+        "The fourth value, “Medical,” brought a compassionate twist to their reputation. Beyond their daring exploits, 4M-CONTRACTORS extended their hand to help other players in the verse. Whether it was aiding in rescue operations, offering medical assistance, or lending a supportive presence to those in need, this value underscored their commitment to the community and their belief in the power of unity.",
+        "A Legacy among the Stars",
+        "Today, 4M-CONTRACTORS stands as a beacon of camaraderie and adventure in the ever-expanding Star Citizen universe. With their distinct blend of mischief, military prowess, merchant ingenuity, and a healing touch, they have etched their mark on the verse. The organization’s event-focused gameplay, grounded in their core values, continues to draw players from all corners of the ‘verse who seek thrill, companionship, and a chance to make their own mark on the stars.",
+        "As the verse evolves and new horizons emerge, 4M-CONTRACTORS remains committed to their values, their community, and the endless possibilities that the cosmos has to offer. With each mission undertaken, each contract negotiated, and each life they touch, they add a new chapter to their storied history, leaving an indelible legacy among the stars.",
+        "Contact us:",
+        "Spectrum link:",
+        "https://robertsspaceindustries.com/spectrum/community/4MCONTRACT",
+        "Organization Link:",
+        "https://robertsspaceindustries.com/orgs/4MCONTRACT",
+        "Discord Server:",
+        "https://discord.gg/4m-contractors",
+        "Facebook:",
+        "https://www.facebook.com/groups/4mcontractors"
+      ],
+      "manifesto": [
+        "Manifesto of 4M-CONTRACTORS: Forging New Horizons through Bold Piracy",
+        "Embrace the Stars, Conquer the Verse",
+        "Preamble: We, the daring souls of 4M-CONTRACTORS, stand united by our shared vision to redefine the very fabric of the universe. With the stars as our canvas and the Verse as our playground, we vow to challenge the conventional norms and craft a new narrative through our audacious pursuits. With a bent toward piracy, we assert our place as free-spirited architects of our own destiny, ready to leave an indelible mark on history.",
+        "Article I:Unshackling the Chains of Conformity",
+        "In the spirit of freedom, 4M-CONTRACTORS reject the mundane limitations imposed by established systems. We renounce the notion of submission to stifling laws that curb the instinct for exploration and acquisition. We proclaim the right to carve our own path, exploiting opportunities that present themselves across the cosmos.",
+        "Article II: Champions of Prosperity",
+        "We, the bold Buccaneers of 4M-CONTRACTORS, acknowledge the thrill of the unknown, and we grasp it with both hands. Through calculated piracy, we restructure wealth distribution and redistribute power to achieve our vision of shared prosperity. By wresting resources from the clenched fists of the privileged, we shall liberate the Verse from its chains of inequality.",
+        "Article III: The Code of the Void",
+        "While we plunder the riches of the cosmos, we pledge to adhere to a higher code – The Code of the Void. This code binds us to conduct ourselves with honor even in the heat of battle. We shall show respect to worthy adversaries and extend our generosity to those who display courage. We reject harm to the defenseless and vow to maintain a sense of morality even amidst chaos.",
+        "Article IV: Unity",
+        "4M-CONTRACTORS understand that strength lies in unity, and unity thrives in diversity. As a crew composed of individuals from various parts of the verse, we foster an environment where each member’s uniqueness contributes to our collective strength. By embracing our differences, we enrich our perspective and ensure our legacy.",
+        "Article V: Innovation through Adaptation",
+        "The cosmos is a realm of ever-shifting currents. We embrace change and adapt our strategies to survive and thrive. Our ships are our canvas, and the tactics we deploy are our brushstrokes. Through innovation, we remain steps ahead of those who seek to oppose us, ensuring our supremacy among the stars.",
+        "Article VI: Guardians of the Uncharted",
+        "As we carve our legacy, we stand as the unsung guardians of the uncharted territories. By policing our territories with vigilance, we ensure a safe haven for those who dare to venture beyond the boundaries. We protect the very space that fosters our ambitions, for in guarding others, we fortify our position as the true masters of the Void.",
+        "Article VII: Leadership & Ranking",
+        "ORGANIZATION MEMBER ROLES",
+        "1. Mercenary:",
+        "Description: Visitors who have joined the discord but has not joined the organization.",
+        "Responsibilities: Learn about the organization’s values, rules, and gameplay mechanics.",
+        "Privileges: Limited access to organization resources and activities.",
+        "2. Soldier:",
+        "Description: Active Members who have joined the organization, shown some commitment and participation.",
+        "Responsibilities: Engage in organization activities, learn gameplay mechanics, and contribute to discussions.",
+        "Privileges: Increased access to organization resources and activities.",
+        "3. Captain:",
+        "Description: Members who have demonstrated dedication and improvement in their skills.",
+        "Responsibilities: Actively participate in organization events, assist newer members, and refine gameplay strategies.",
+        "Privileges: Access to advanced training and limited leadership roles.",
+        "4. Lieutenant:",
+        "Description: Skilled members who have a good understanding of the game mechanics.",
+        "Responsibilities: Lead small groups in missions, provide guidance to lower-ranked members, and contribute to strategic planning.",
+        "Privileges: Access to specialized equipment and roles, involvement in decision-making discussions. Help with dispute resolutions among membership.",
+        "5. General:",
+        "Description: Highly skilled members with a deep understanding of game mechanics and organizational strategies.",
+        "Responsibilities: Lead larger groups in complex missions, provide advanced training, and actively contribute to organization growth.",
+        "Privileges: Access to exclusive equipment, priority in mission selection, and involvement in leadership decisions.",
+        "ORGANIZATION OFFICER ROLES",
+        "1. Communications:",
+        "Description: Long-standing and respected members who have contributed significantly to the organization’s success.",
+        "Responsibilities: Help maintain the Organizations “Spectrum Page” and also contribute to the branding of the Organization.",
+        "Privileges: Recognition as a pillar of the organization, involvement in high-level decision-making, and special events.",
+        "2. Lieutenant:",
+        "Description: Appointed leaders responsible for managing different aspects of the organization.",
+        "Responsibilities: Oversee specific divisions, coordinate events, manage recruitment, and ensure smooth operation.",
+        "Privileges: Decision-making authority, access to administrative tools, and direct collaboration with leadership.",
+        "3. Captain:",
+        "Description: Senior officers who assist in strategic planning, decision-making and dispute resolution.",
+        "Responsibilities: Lead divisions, manage officers, contribute to long-term goals, and represent the organization externally.",
+        "Privileges: Influence over organizational direction, active involvement in high-level decisions.",
+        "4. BOSSES:",
+        "Description: Founders of the Organization responsible for the overall direction and success of the organization as a whole. Highest-ranking members who shape the organization’s destiny.",
+        "Responsibilities: Set long-term goals, define the organization’s identity, and lead major initiatives. Lead officer meetings, develop organization-wide strategies, and ensure efficient operation across divisions.",
+        "Privileges: Utmost decision-making authority, legacy recognition, and the final say in all matters of all matters.",
+        "Conclusion:",
+        "With the universe as our playground and the stars as our guiding lights, 4M-CONTRACTORS declare our unwavering commitment to reshaping the cosmos according to our vision. As we sail the starlit seas, piracy becomes our tool of transformation, enabling us to forge a new destiny that transcends the ordinary. Together, we shall plunder, explore, and shape the Verse with audacity, leaving our mark for generations to come."
+      ],
+      "charter": [
+        "4M-CONTRACTORS STAR CITIZEN ORGANIZATION CHARTER",
+        "Article I: Name and Purpose",
+        "The name of this organization shall be “4M-CONTRACTORS,” hereinafter referred to as “the Organization.”",
+        "The primary purpose of the Organization is to engage in activities that provide its members with opportunities for camaraderie, exploration, and mutual support within the Star Citizen universe. While embracing the lawful aspects of the verse, the Organization acknowledges the pursuit of activities with a thematic focus on exploration, trade, and defense, including a distinct bent toward piracy when deemed necessary or strategic.",
+        "Article II: Membership",
+        "Membership in the Organization is open to all individuals who share a genuine interest in participating in the verse of Star Citizen and subscribe to the Organization’s principles, regardless of their chosen career paths.",
+        "Potential members shall submit an application through the Organization’s designated channels, including a brief statement of intent and gameplay preferences.",
+        "Membership may be revoked if a member’s actions are deemed in violation of the Organization’s Code of Conduct or are contrary to the spirit of the Organization’s thematic focus.",
+        "Article III: Code of Conduct",
+        "All members shall conduct themselves in a manner that upholds the reputation of the Organization.",
+        "Members shall refrain from targeting or exploiting new players, intentionally causing grief, or engaging in actions that harm the experience of others outside the bounds of the Organization’s thematic focus.",
+        "In pursuit of piracy activities, members shall follow a strict “no unnecessary harm” policy, avoiding excessive violence or undue hardship on other players or NPCs.",
+        "Article IV: Leadership",
+        "The Organization shall be led by a Council, consisting of Bosses, Captains and select Lieutenants, responsible for different aspects of the Organization’s activities, including exploration, trade, defense, and piracy.",
+        "The Council shall make decisions through open discussion and majority vote, ensuring that all members have a voice in the direction of the Organization. Bosses oversee the council in their duties and activities and have final say during disputes.",
+        "Article V: Activities and Operations",
+        "The Organization shall engage in various activities, including but not limited to exploration of uncharted regions, legitimate trading ventures, providing defense for its members, and targeted piracy operations.",
+        "Piracy operations shall be executed strategically, targeting specific opportunities while minimizing collateral damage and adhering to the Organization’s “no unnecessary harm” policy.",
+        "Article VI: Disputes and Conflict Resolution",
+        "Internal disputes shall be resolved through open communication and, if necessary, mediated discussions led by the Bosses of the Organization.",
+        "In-game conflicts arising from piracy activities shall be dealt with in adherence to the Organization’s principles, striving to maintain a balance between immersion and ethical considerations.",
+        "We, the undersigned, hereby adopt and enact this Charter.",
+        "Signed,",
+        "The Bosses",
+        "Founders, 4M-CONTRACTORS"
+      ]
+    },
+    {
+      "displayName": "A.I.M.O.S.",
+      "symbol": "AIMOS",
+      "name": "A.I.M.O.S",
+      "url": "https://robertsspaceindustries.com/orgs/AIMOS",
+      "logoUrl": "https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/vsb1jh3jn8rqwr/banner/AIMOS-Banner.png",
+      "members": 146,
+      "model": "Syndicate",
+      "commitment": "Hardcore",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Resources",
+        "secondary": "Security"
+      },
+      "recruiting": true,
+      "intro": [
+        "Armored Interstellar Mercenary Operations Syndicate",
+        "Comms…"
+      ],
+      "links": [
+        {
+          "label": "Comms",
+          "href": "http://discord.gg/aimos"
+        }
+      ],
+      "history": [
+        "Currently in the making."
+      ],
+      "manifesto": [
+        "Fuck it we ball!"
+      ],
+      "charter": [
+        "The best rise up amongst the ashes."
+      ]
+    }
+  ]
+}

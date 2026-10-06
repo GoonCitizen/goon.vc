@@ -6,3 +6,7 @@ reports
 access.log
 .DS_Store
 .env
+assets/downloads/**
+!assets/downloads/
+!assets/downloads/*/
+!assets/downloads/*/index.json
