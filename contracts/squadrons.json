@@ -1,0 +1,35 @@
+{
+  "about": "PERMAFLEET cross-org squadrons, shown on the PERMAFLEET page (unit paths from contracts/roles.dot). `role` and `body` are trusted HTML.",
+  "squadrons": [
+    {
+      "id": "alpha-squadron",
+      "name": "ALPHA SQUADRON",
+      "role": "Elite fighters · run by G00N SQUAD",
+      "body": "The tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON. Applications are open below. Signing up is also how you join <span class=\"op-goon\">G00N SQUAD</span>, even if you’re already in PERMAFLEET."
+    },
+    {
+      "id": "bravo-squadron",
+      "name": "BRAVO SQUADRON",
+      "role": "Fighter squadron",
+      "body": "Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on <strong>Friday Night Fights</strong>."
+    },
+    {
+      "id": "rat-squadron",
+      "name": "RAT SQUADRON",
+      "role": "Piracy unit",
+      "body": "PERMAFLEET’s pirates. Members are selected by leadership."
+    },
+    {
+      "id": "ghost-squadron",
+      "name": "GHOST SQUADRON",
+      "role": "Special operations",
+      "body": "Part of <strong>SPECIAL OPERATIONS</strong>, open to PERMAFLEET officers."
+    },
+    {
+      "id": "turtle-brigade",
+      "name": "TURTLE BRIGADE",
+      "role": "Infantry",
+      "body": "Basic infantry training. The best go on to <strong>SHELLBACK</strong>, the elite infantry unit."
+    }
+  ]
+}

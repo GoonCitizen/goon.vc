@@ -39,8 +39,22 @@ describe('Operations metrics service', function () {
   });
 
   it('connects with non-privileged intents and reports counts only', async function () {
+    const file = path.join(dir, 'operations.json');
+    fs.writeFileSync(file, JSON.stringify({
+      guildId: GUILD,
+      operations: [
+        { id: 'permafleet', name: 'PERMAFLEET', path: '/operations/PERMAFLEET', metrics: [{ plugin: 'voice', channels: ['1236721094153732276'] }] },
+        {
+          id: 'alpha-squadron',
+          name: 'ALPHA SQUADRON',
+          metrics: [{ plugin: 'voice', channels: [ALPHA_VOICE] }, { plugin: 'messages', channels: [ALPHA_TEXT] }]
+        },
+        { id: 'quiet', name: 'QUIET', metrics: ['voice'] }
+      ]
+    }));
     const ops = new Operations({
-      path: dir,
+      path: path.join(dir, 'store'),
+      file,
       Discord: FakeDiscord,
       resolveToken: () => ({ token: 'test-token', source: 'test' }),
       tickMs: 0,
@@ -64,9 +78,9 @@ describe('Operations metrics service', function () {
     const report = await ops.report();
     assert.strictEqual(report.gateway.status, 'connected');
     assert.strictEqual(report.operations[0].id, 'alpha-squadron', 'most active first');
-    assert.deepStrictEqual(report.operations.slice(1).map((op) => op.id),
-      ['permafleet', 'bravo-squadron', 'rat-squadron', 'ghost-squadron', 'turtle-brigade'], 'ties keep contract order');
+    assert.deepStrictEqual(report.operations.slice(1).map((op) => op.id), ['permafleet', 'quiet'], 'ties keep contract order');
     const alpha = report.operations.find((op) => op.id === 'alpha-squadron');
+    assert.strictEqual(alpha.path, '/operations/PERMAFLEET#alpha-squadron');
     assert.strictEqual(alpha.metrics.voice.live, 1);
     assert.strictEqual(alpha.metrics.voice.last7Days.sessions, 1);
     assert.strictEqual(alpha.metrics.messages.last7Days.messages, 1);
@@ -100,7 +114,7 @@ describe('Operations metrics service', function () {
     await ops._gatewayStarting;
     const report = await ops.report();
     assert.strictEqual(report.gateway.status, 'no-token');
-    assert.strictEqual(report.operations.length, 6);
+    assert.deepStrictEqual(report.operations.map((op) => op.id), ['permafleet'], 'the published contract lists only PERMAFLEET');
     await ops.stop();
   });
 });

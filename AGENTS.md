@@ -34,14 +34,13 @@ the element's contract.
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
 guild's public `widget.json` (no iframe). The PERMAFLEET page lists cross-org
-squadrons; ALPHA SQUADRON's application is a native form posting to its Google
+squadrons (`contracts/squadrons.json`); ALPHA SQUADRON's application is a native form posting to its Google
 Form (`alphaSquadronForm`: `formResponse` URL + `entry.*` ids). Signing up there
 is required for G00N SQUAD membership, even for PERMAFLEET members.
-Cross-org operations live in `contracts/operations.json`: PERMAFLEET itself
-(metrics from the public PERMAFLEET voice channel) and its squadrons (ALPHA,
-BRAVO, RAT, GHOST, TURTLE BRIGADE — entries with a `body`, copy for
-`/operations` and the PERMAFLEET page), plus the Discord channels each operation's **metrics** count (channel id,
-exact name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
+`/operations` lists the operations in `contracts/operations.json` — currently
+only PERMAFLEET, whose **metrics** count the public PERMAFLEET voice channel.
+Each entry names the Discord channels its metrics count (channel id, exact
+name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
 gateway client (Guilds + GuildVoiceStates + GuildMessages only) into a
 `@fabric/discord` `MetricsPipeline`; plugins (`voice`, `messages` from
 `@fabric/discord/plugins`) keep per-operation UTC day buckets in a Fabric Store

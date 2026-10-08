@@ -37,7 +37,7 @@ const DEFAULTS = {
   operationsDocumentTitle: 'OPERATIONS — GOON SQUAD',
   // Extra index entries beyond PERMAFLEET: [{ name, path, tagline, summary, links: [{ label, href }] }].
   operations: [],
-  // Cross-org operations (squadrons) with Discord metrics; same file services/operations reads.
+  // Operations with Discord metrics (PERMAFLEET's card merges its entry); same file services/operations reads.
   operationsFile: OPERATIONS_FILE,
   organizationsPath: '/organizations',
   organizationsLabel: 'ORGANIZATIONS',

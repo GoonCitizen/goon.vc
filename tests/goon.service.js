@@ -319,10 +319,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('<h2 class="operation-name"><a href="/operations/PERMAFLEET">PERMAFLEET</a></h2>'));
     assert.ok(res.body.includes('href="/operations/PERMAFLEET/schedule">Weekly schedule</a>'));
     assert.ok(res.body.includes('class="operation-metrics" data-operation="permafleet"'), 'PERMAFLEET metrics strip');
-    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'ghost-squadron', 'turtle-brigade']) {
-      assert.ok(res.body.includes(`<a href="/operations/PERMAFLEET#${id}">`), `${id} card`);
-      assert.ok(res.body.includes(`class="operation-metrics" data-operation="${id}"`), `${id} metrics strip`);
-    }
+    const page = res.body.slice(res.body.indexOf('id="operations-page"'));
+    assert.strictEqual(page.slice(0, page.indexOf('</main>')).split('<article class="operation-card"').length, 2, 'PERMAFLEET is the only operation');
     assert.ok(res.body.includes("'/services/operations'") || res.body.includes('"/services/operations"'));
   });
 
@@ -334,12 +332,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(permafleet.path, '/operations/PERMAFLEET');
     assert.strictEqual(permafleet.metrics.voice.last7Days.hours, 0);
     assert.ok(!('messages' in permafleet.metrics));
-    const alpha = res.json.operations.find((op) => op.id === 'alpha-squadron');
-    assert.strictEqual(alpha.path, '/operations/PERMAFLEET#alpha-squadron');
-    assert.strictEqual(alpha.metrics.voice.last7Days.hours, 0);
-    assert.strictEqual(alpha.metrics.messages.last7Days.messages, 0);
-    const turtle = res.json.operations.find((op) => op.id === 'turtle-brigade');
-    assert.ok(!('voice' in turtle.metrics), 'TURTLE BRIGADE has no voice channel');
+    assert.strictEqual(res.json.operations.length, 1);
   });
 
   it('serves the /organizations index and a page per member org', async function () {

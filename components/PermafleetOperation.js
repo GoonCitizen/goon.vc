@@ -30,8 +30,7 @@ const PILLARS = Object.freeze([
 const CHARTER = 'The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.';
 
 // role / body are trusted HTML.
-const SQUADRONS = Object.freeze(require('../contracts/operations.json').operations
-  .filter((op) => op.body)
+const SQUADRONS = Object.freeze(require('../contracts/squadrons.json').squadrons
   .map(({ id, name, role, body }) => Object.freeze({ id, name, role, body })));
 
 const MEMBER_ORGS = Object.freeze([

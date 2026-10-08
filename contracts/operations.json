@@ -1,5 +1,5 @@
 {
-  "about": "Cross-org operations: PERMAFLEET itself plus its squadrons (entries with a `body`, shown on the PERMAFLEET page), and the Discord channels each operation's metrics count. `body` is trusted HTML. Channel matchers: a channel id, an exact name, or \"/regex/\" on the name (@fabric/discord functions/channelMatcher).",
+  "about": "Operations listed on /operations, and the Discord channels each operation's metrics count. Channel matchers: a channel id, an exact name, or \"/regex/\" on the name (@fabric/discord functions/channelMatcher).",
   "guildId": "1190527980120850493",
   "operations": [
     {
@@ -8,61 +8,6 @@
       "path": "/operations/PERMAFLEET",
       "metrics": [
         { "plugin": "voice", "channels": ["1236721094153732276"] }
-      ]
-    },
-    {
-      "id": "alpha-squadron",
-      "name": "ALPHA SQUADRON",
-      "role": "Elite fighters · run by G00N SQUAD",
-      "body": "The tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON. Applications are open below. Signing up is also how you join <span class=\"op-goon\">G00N SQUAD</span>, even if you’re already in PERMAFLEET.",
-      "summary": "The tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON. Applications are open.",
-      "links": [{ "label": "Apply", "href": "/operations/PERMAFLEET#alpha-squadron" }],
-      "metrics": [
-        { "plugin": "voice", "channels": ["1205020182226010152"] },
-        { "plugin": "messages", "channels": ["1298475903780782240"] }
-      ]
-    },
-    {
-      "id": "bravo-squadron",
-      "name": "BRAVO SQUADRON",
-      "role": "Fighter squadron",
-      "body": "Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on <strong>Friday Night Fights</strong>.",
-      "summary": "Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on Friday Night Fights.",
-      "metrics": [
-        { "plugin": "voice", "channels": ["1205020246394671174"] },
-        { "plugin": "messages", "channels": ["1301090482406952991"] }
-      ]
-    },
-    {
-      "id": "rat-squadron",
-      "name": "RAT SQUADRON",
-      "role": "Piracy unit",
-      "body": "PERMAFLEET’s pirates. Members are selected by leadership.",
-      "summary": "PERMAFLEET’s pirates. Members are selected by leadership.",
-      "metrics": [
-        { "plugin": "voice", "channels": ["1254063920646328340"] },
-        { "plugin": "messages", "channels": ["1298451582526160918"] }
-      ]
-    },
-    {
-      "id": "ghost-squadron",
-      "name": "GHOST SQUADRON",
-      "role": "Special operations",
-      "body": "Part of <strong>SPECIAL OPERATIONS</strong>, open to PERMAFLEET officers.",
-      "summary": "Part of SPECIAL OPERATIONS, open to PERMAFLEET officers.",
-      "metrics": [
-        { "plugin": "voice", "channels": ["1254063958134886450"] },
-        { "plugin": "messages", "channels": ["1301089904989573120"] }
-      ]
-    },
-    {
-      "id": "turtle-brigade",
-      "name": "TURTLE BRIGADE",
-      "role": "Infantry",
-      "body": "Basic infantry training. The best go on to <strong>SHELLBACK</strong>, the elite infantry unit.",
-      "summary": "Basic infantry training. The best go on to SHELLBACK, the elite infantry unit.",
-      "metrics": [
-        { "plugin": "messages", "channels": ["1480517848823627827"] }
       ]
     }
   ]
