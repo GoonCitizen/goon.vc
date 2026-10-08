@@ -30,7 +30,9 @@ rendered live from that copy at `GET /services/events/schedule.svg?server=<id>&t
 control live on the board: the title picks the server, the zone label picks the
 zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
-the element's contract.
+the element's contract. The page footer's "Add our bot to your Discord" button
+hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
+application that owns the bot token (scope `bot`, View Channels only).
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
 guild's public `widget.json` (no iframe). The PERMAFLEET page lists cross-org

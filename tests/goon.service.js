@@ -263,9 +263,10 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('/operations/PERMAFLEET'));
     assert.ok(res.body.includes('/hero-quantum.jpg'));
     const squadrons = res.body.slice(res.body.indexOf('id="squadrons"'), res.body.indexOf('id="permafleet-charter"'));
-    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'ghost-squadron', 'turtle-brigade']) {
+    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'turtle-brigade']) {
       assert.ok(squadrons.includes(`id="${id}"`), id);
     }
+    assert.ok(!/ghost/i.test(squadrons), 'GHOST SQUADRON is not public');
     assert.ok(!squadrons.includes('id="permafleet"'), 'PERMAFLEET is the operation, not a squadron');
     assert.strictEqual(res.body.split('id="operation-permafleet"').length, 2, 'unique id');
     const form = squadrons.slice(squadrons.indexOf('id="alpha-squadron-form"'), squadrons.indexOf('</form>'));
@@ -473,6 +474,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(calendar[0].includes('board="/services/events/schedule.svg"') && calendar[0].includes('src="/services/events"'));
     assert.ok(calendar[0].includes('description="Upcoming scheduled events from every Discord server we fly with."'));
     assert.ok(!/<h1|<select|<button|<p /.test(page.replace(calendar[0], '').replace(/<footer>[\s\S]*<\/footer>/, '')), 'nothing outside the calendar but the footer');
+    assert.ok(/<footer>[\s\S]*href="\/services\/discord\/invite"[^>]*>Add our bot to your Discord<\/a>/.test(page), 'add-bot button in the footer');
     assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
     const element = await new Promise((resolve, reject) => {
       http.get({ host: '127.0.0.1', port: sitePort, path: '/scripts/fabric-calendar.js' }, (incoming) => {
@@ -496,6 +498,11 @@ describe('goon.vc HTTP', function () {
     assert.ok(!res.body.includes('page-back"><a href="/">'), 'no redundant Home crumbs');
     assert.ok(!/dossier/i.test(res.body), 'dossier removed');
     assert.ok(!res.body.includes('relay.goon.vc') && !/>Monitor</i.test(res.body), 'no Monitor link yet');
+  });
+
+  it('reports the bot invite as unavailable without a Discord bot token', async function () {
+    const res = await fetchJson('/services/discord/invite');
+    assert.strictEqual(res.status, 503);
   });
 
   it('reports events as unavailable without a Discord bot token', async function () {

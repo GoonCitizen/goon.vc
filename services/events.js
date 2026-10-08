@@ -8,6 +8,9 @@ const resolveDiscordToken = require('../functions/resolveDiscordToken');
 
 const BASE = '/services/events';
 const BOARD_PATH = `${BASE}/schedule.svg`;
+const INVITE_PATH = '/services/discord/invite';
+// View Channels: enough to read scheduled events and voice presence; the bot never posts.
+const INVITE_PERMISSIONS = '1024';
 const LATEST_KEY = '/events/latest';
 // Store keys are JSON Pointer paths: the index must not sit above /events/guilds/<id>.
 const GUILD_INDEX_KEY = '/events/guildIndex';
@@ -133,6 +136,7 @@ class Events {
     this._refreshing = null;
     this._timer = null;
     this._lastBackgroundAt = 0;
+    this._applicationId = null;
   }
 
   async start () {
@@ -327,15 +331,54 @@ class Events {
   }
 
   /**
-   * Express middleware for `GET /services/events` and `GET /services/events/schedule.svg`.
+   * Discord application that owns the bot token (not settings.discord.clientId,
+   * which is the member-login OAuth app and may differ). Looked up once.
+   * @returns {Promise<string|null>}
+   */
+  async applicationId () {
+    if (this._applicationId) return this._applicationId;
+    const auth = this._resolveToken(this.settings.discord);
+    if (!auth || !auth.token) return null;
+    const res = await discordEvents.discordGet('/oauth2/applications/@me', auth.token, this._discordOpts());
+    if (res.status !== 200 || !res.json || !res.json.id) return null;
+    this._applicationId = String(res.json.id);
+    return this._applicationId;
+  }
+
+  /**
+   * "Add to Discord" URL for the bot that feeds /events.
+   * @returns {Promise<string|null>}
+   */
+  async inviteUrl () {
+    const id = await this.applicationId();
+    if (!id) return null;
+    const q = new URLSearchParams({ client_id: id, scope: 'bot', permissions: INVITE_PERMISSIONS });
+    return `https://discord.com/oauth2/authorize?${q}`;
+  }
+
+  /**
+   * Express middleware for `GET /services/events`, `GET /services/events/schedule.svg`,
+   * and `GET /services/discord/invite` (redirects to the bot's Discord invite).
    * @returns {Function}
    */
   middleware () {
     return (req, res, next) => {
       const url = new URL(req.originalUrl || req.url, 'http://localhost');
       const pathname = (req.path || url.pathname).replace(/\/+$/, '');
-      if (pathname !== BASE && pathname !== BOARD_PATH) return next();
+      if (pathname !== BASE && pathname !== BOARD_PATH && pathname !== INVITE_PATH) return next();
       if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
+      if (pathname === INVITE_PATH) {
+        this.inviteUrl().then((location) => {
+          if (!location) return sendJson(res, 503, { error: 'Discord bot is not configured' });
+          res.statusCode = 302;
+          res.setHeader('Location', location);
+          res.setHeader('Cache-Control', 'no-store');
+          res.end();
+        }).catch((error) => {
+          if (!res.headersSent) sendJson(res, 502, { error: error && error.message ? error.message : 'Discord unavailable' });
+        });
+        return;
+      }
       if (pathname === BOARD_PATH) {
         this.board({ server: url.searchParams.get('server'), timeZone: url.searchParams.get('tz') }).then((svg) => {
           res.statusCode = 200;

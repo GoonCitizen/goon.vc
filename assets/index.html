@@ -555,6 +555,8 @@
       .login-session .goon-button { font-size: 0.8em; margin-top: 0.75em; padding: 0.35em 0.8em; }
 
       .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
+      .events-add-bot { padding-top: 2em; text-align: center; }
+      .events-add-bot p { color: #999; font-size: 0.85em; margin: 0.6em 0 0; }
 
       .operations-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .operations-page > h1, .operations-page > .operations-intro { text-align: center; }
@@ -700,6 +702,10 @@
         storage-key="goon.events.timeZone"
         sync-url></fabric-calendar>
       <footer>
+        <div class="events-add-bot">
+          <a class="goon-button" href="/services/discord/invite" target="_blank" rel="noopener">Add our bot to your Discord</a>
+          <p>Your server’s scheduled events will show up on this calendar.</p>
+        </div>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
         <div><small>&copy; big lol</small></div>
@@ -1185,11 +1191,6 @@
                 <h3>RAT SQUADRON</h3>
                 <p class="op-squadron-role">Piracy unit</p>
                 <p>PERMAFLEET’s pirates. Members are selected by leadership.</p>
-              </article>
-              <article class="op-squadron" id="ghost-squadron">
-                <h3>GHOST SQUADRON</h3>
-                <p class="op-squadron-role">Special operations</p>
-                <p>Part of <strong>SPECIAL OPERATIONS</strong>, open to PERMAFLEET officers.</p>
               </article>
               <article class="op-squadron" id="turtle-brigade">
                 <h3>TURTLE BRIGADE</h3>

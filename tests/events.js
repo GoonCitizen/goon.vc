@@ -70,6 +70,9 @@ describe('Events', function () {
         })
       ]));
     }
+    if (url === 'https://discord.com/api/v10/oauth2/applications/@me') {
+      return Promise.resolve(textResponse(200, { id: '444444444444444444', name: 'GOON BOT' }));
+    }
     if (url === `https://discord.com/api/v10/guilds/${LOCKED}/scheduled-events?with_user_count=true`) {
       return Promise.resolve(textResponse(403, { message: 'Missing Access' }));
     }
@@ -90,6 +93,20 @@ describe('Events', function () {
   after(async function () {
     if (events) await events.stop();
     fs.rmSync(storePath, { recursive: true, force: true });
+  });
+
+  it('redirects to an invite for the application that owns the bot token', async function () {
+    const res = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      res.end = resolve;
+      events.middleware()({ method: 'GET', url: '/services/discord/invite' }, res, () => resolve());
+    });
+    assert.strictEqual(res.statusCode, 302);
+    const location = new URL(res.headers.Location);
+    assert.strictEqual(location.origin + location.pathname, 'https://discord.com/oauth2/authorize');
+    assert.strictEqual(location.searchParams.get('client_id'), '444444444444444444');
+    assert.strictEqual(location.searchParams.get('scope'), 'bot');
+    assert.strictEqual(location.searchParams.get('permissions'), '1024', 'View Channels only');
   });
 
   it('merges upcoming events from every guild the bot is in', async function () {

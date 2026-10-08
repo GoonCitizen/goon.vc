@@ -7,7 +7,9 @@ const ELEMENT_SCRIPT = '/scripts/fabric-calendar.js';
 
 function renderEventsCss () {
   return `
-      .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }`;
+      .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
+      .events-add-bot { padding-top: 2em; text-align: center; }
+      .events-add-bot p { color: #999; font-size: 0.85em; margin: 0.6em 0 0; }`;
 }
 
 /**
@@ -15,6 +17,7 @@ function renderEventsCss () {
  * its heading, description, and controls all live on the board.
  * @param {Object} props
  * @param {string} props.description Plain text.
+ * @param {string} [props.inviteUrl] "Add to Discord" link (default: the redirect at /services/discord/invite).
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
@@ -30,6 +33,10 @@ function renderEventsHtml (props) {
         storage-key="goon.events.timeZone"
         sync-url></fabric-calendar>
       <footer>
+        <div class="events-add-bot">
+          <a class="goon-button" href="${escapeHtml(props.inviteUrl || '/services/discord/invite')}" target="_blank" rel="noopener">Add our bot to your Discord</a>
+          <p>Your server’s scheduled events will show up on this calendar.</p>
+        </div>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="${escapeHtml(props.loginPath)}">${props.loginLabel}</a></div>
         ${props.alliance || ''}
         <div><small>${props.copyright}</small></div>

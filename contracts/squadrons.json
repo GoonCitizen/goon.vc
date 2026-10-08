@@ -20,12 +20,6 @@
       "body": "PERMAFLEET’s pirates. Members are selected by leadership."
     },
     {
-      "id": "ghost-squadron",
-      "name": "GHOST SQUADRON",
-      "role": "Special operations",
-      "body": "Part of <strong>SPECIAL OPERATIONS</strong>, open to PERMAFLEET officers."
-    },
-    {
       "id": "turtle-brigade",
       "name": "TURTLE BRIGADE",
       "role": "Infantry",
