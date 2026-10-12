@@ -22,6 +22,10 @@
  *
  * Board SVG contract (all optional; a missing hook just drops that control):
  *   #schedule-title, #schedule-subtitle, #schedule-timezone, #schedule-asof, #schedule-legend
+ * A stacked copy of the same labels may use `data-hook` instead of an id.
+ * `@media (max-width: 760px)` shows that copy (`.layout-tall`) and gives the
+ * board its taller box. Keep the width in sync with `VERTICAL_MAX_WIDTH` in
+ * `functions/scheduleGraphic.js`.
  *
  * Emits `change` with `detail: { server, timeZone }` when the visitor picks either.
  */
@@ -31,21 +35,37 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const CARET = ' \u25BE';
+  const NARROW_MEDIA = '(max-width: 760px)';
 
   const STYLE = `
     :host { display: block; }
     .wrap { position: relative; }
-    .board { aspect-ratio: 16 / 9; background: #0c0c0d; border: 1px solid #2c2c30; }
-    .board svg { display: block; height: auto; width: 100%; }
+    .board {
+      aspect-ratio: var(--board-wide-w, 16) / var(--board-wide-h, 9);
+      background: #0c0c0d;
+      border: 1px solid #2c2c30;
+      position: relative;
+    }
+    .board > svg { display: block; height: 100%; inset: 0; position: absolute; width: 100%; }
     .board a:hover rect { filter: brightness(1.35); }
-    .board a:hover #schedule-download { fill: #fff; text-decoration: underline; }
+    .board a:hover #schedule-download,
+    .board a:hover .schedule-download { fill: #fff; text-decoration: underline; }
     .status { color: #9a9488; font-size: 0.9em; padding: 2em; text-align: center; }
     /* Invisible native selects laid over board labels, so clicking a label opens its picker. */
     .picker { cursor: pointer; display: none; opacity: 0; position: absolute; z-index: 1; }
     .picker[data-picker="server"]:hover ~ .board #schedule-title,
     .picker[data-picker="server"]:focus-visible ~ .board #schedule-title,
+    .picker[data-picker="server"]:hover ~ .board [data-hook="schedule-title"],
+    .picker[data-picker="server"]:focus-visible ~ .board [data-hook="schedule-title"],
     .picker[data-picker="zone"]:hover ~ .board #schedule-timezone,
-    .picker[data-picker="zone"]:focus-visible ~ .board #schedule-timezone { fill: #fff; text-decoration: underline; }`;
+    .picker[data-picker="zone"]:focus-visible ~ .board #schedule-timezone,
+    .picker[data-picker="zone"]:hover ~ .board [data-hook="schedule-timezone"],
+    .picker[data-picker="zone"]:focus-visible ~ .board [data-hook="schedule-timezone"] { fill: #fff; text-decoration: underline; }
+    @media ${NARROW_MEDIA} {
+      .board { aspect-ratio: var(--board-vertical-w, var(--board-wide-w, 16)) / var(--board-vertical-h, var(--board-wide-h, 9)); }
+      .board .layout-wide { display: none !important; }
+      .board .layout-tall { display: block !important; }
+    }`;
 
   function validZone (tz) {
     if (!tz) return null;
@@ -62,6 +82,71 @@
 
   function plural (n, word) {
     return n + ' ' + word + (n === 1 ? '' : 's');
+  }
+
+  function eachHook (svg, id, fn) {
+    const nodes = svg.querySelectorAll('#' + id + ', [data-hook="' + id + '"]');
+    for (let i = 0; i < nodes.length; i++) fn(nodes[i]);
+  }
+
+  /** The copy that is on screen. A `display: none` layout has no box. */
+  function visibleHook (svg, id) {
+    const nodes = svg.querySelectorAll('#' + id + ', [data-hook="' + id + '"]');
+    const view = svg.ownerDocument && svg.ownerDocument.defaultView;
+    let fallback = null;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (!fallback) fallback = node;
+      let hidden = false;
+      for (let el = node; el && el !== svg; el = el.parentNode) {
+        if (view && view.getComputedStyle(el).display === 'none') {
+          hidden = true;
+          break;
+        }
+      }
+      if (!hidden && node.getBoundingClientRect().width > 0) return node;
+    }
+    return fallback;
+  }
+
+  /**
+   * Write `value` into a label. `data-wrap` boards reflow onto tspans so a
+   * long line does not run out of a narrow column.
+   */
+  function refill (node, value) {
+    const wrap = Number(node.getAttribute('data-wrap'));
+    if (!wrap) {
+      node.textContent = value;
+      return;
+    }
+    const x = node.getAttribute('x') || '0';
+    const y = Number(node.getAttribute('y')) || 0;
+    const lineH = Number(node.getAttribute('data-line')) || 14;
+    const max = Number(node.getAttribute('data-max-lines')) || 3;
+    const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    for (let i = 0; i < words.length; i++) {
+      const next = cur ? (cur + ' ' + words[i]) : words[i];
+      if (next.length > wrap && cur) {
+        lines.push(cur);
+        cur = words[i];
+      } else {
+        cur = next;
+      }
+    }
+    if (cur) lines.push(cur);
+    const shown = lines.slice(0, max);
+    if (lines.length > max && shown.length) shown[shown.length - 1] = lines.slice(max - 1).join(' ');
+    if (!shown.length) shown.push('');
+    node.textContent = '';
+    for (let i = 0; i < shown.length; i++) {
+      const span = root.document.createElementNS(SVG_NS, 'tspan');
+      span.setAttribute('x', x);
+      span.setAttribute('y', String(y + i * lineH));
+      span.textContent = shown[i];
+      node.appendChild(span);
+    }
   }
 
   class FabricCalendar extends root.HTMLElement {
@@ -124,6 +209,12 @@
         this._resizeObserver = new root.ResizeObserver(() => this._place());
         this._resizeObserver.observe(this._board);
       }
+      if (typeof root.matchMedia === 'function') {
+        this._narrowMedia = root.matchMedia(NARROW_MEDIA);
+        this._onNarrow = () => this._place();
+        if (this._narrowMedia.addEventListener) this._narrowMedia.addEventListener('change', this._onNarrow);
+        else if (this._narrowMedia.addListener) this._narrowMedia.addListener(this._onNarrow);
+      }
       // Pages often keep hidden views in the DOM; wait until this one is shown.
       if (typeof root.IntersectionObserver === 'function') {
         this._visibilityObserver = new root.IntersectionObserver((entries) => {
@@ -140,6 +231,10 @@
     disconnectedCallback () {
       if (this._resizeObserver) this._resizeObserver.disconnect();
       if (this._visibilityObserver) this._visibilityObserver.disconnect();
+      if (this._narrowMedia && this._onNarrow) {
+        if (this._narrowMedia.removeEventListener) this._narrowMedia.removeEventListener('change', this._onNarrow);
+        else if (this._narrowMedia.removeListener) this._narrowMedia.removeListener(this._onNarrow);
+      }
     }
 
     attributeChangedCallback (name, oldValue, value) {
@@ -236,32 +331,33 @@
 
     _decorate (svg, src) {
       svg.setAttribute('role', 'group');
-      const box = svg.viewBox && svg.viewBox.baseVal;
-      if (box && box.width && box.height) this._board.style.aspectRatio = box.width + ' / ' + box.height;
+      this._syncBoardBox(svg);
 
-      const title = svg.querySelector('#schedule-title');
-      if (title && this._servers().length > 2) title.textContent += CARET;
-      const zone = svg.querySelector('#schedule-timezone');
-      if (zone) zone.textContent += CARET;
-      const subtitle = svg.querySelector('#schedule-subtitle');
+      if (this._servers().length > 2) {
+        eachHook(svg, 'schedule-title', (title) => { title.textContent += CARET; });
+      }
+      eachHook(svg, 'schedule-timezone', (zone) => { zone.textContent += CARET; });
       const description = this.getAttribute('description');
-      if (subtitle && description) subtitle.textContent = description;
-      const asOf = svg.querySelector('#schedule-asof');
-      if (asOf && this._summary) {
+      if (description) eachHook(svg, 'schedule-subtitle', (subtitle) => refill(subtitle, description));
+      if (this._summary) {
         const events = Array.isArray(this._summary.events) ? this._summary.events.length : 0;
         const servers = Array.isArray(this._summary.guilds) ? this._summary.guilds.length : 0;
         const notes = [plural(events, 'event') + ' across ' + plural(servers, 'server')];
         if (this._summary.stale) notes.push('offline copy');
-        asOf.textContent += ' · ' + notes.join(' · ');
+        const extra = ' · ' + notes.join(' · ');
+        eachHook(svg, 'schedule-asof', (asOf) => refill(asOf, asOf.textContent + extra));
       }
 
-      const legend = svg.querySelector('#schedule-legend');
-      if (legend && box && box.width) {
+      eachHook(svg, 'schedule-legend', (legend) => {
+        const owner = legend.ownerSVGElement;
+        const box = owner && owner.viewBox && owner.viewBox.baseVal;
+        if (!owner || !box || !box.width) return;
         const link = root.document.createElementNS(SVG_NS, 'a');
         link.setAttribute('href', src);
         link.setAttribute('download', 'calendar.svg');
         const text = root.document.createElementNS(SVG_NS, 'text');
-        text.setAttribute('id', 'schedule-download');
+        text.setAttribute('class', 'schedule-download');
+        if (!svg.querySelector('#schedule-download')) text.setAttribute('id', 'schedule-download');
         text.setAttribute('x', String(box.width - Number(legend.getAttribute('x') || 0)));
         text.setAttribute('text-anchor', 'end');
         ['y', 'fill', 'font-family', 'font-size'].forEach((attr) => {
@@ -269,8 +365,26 @@
         });
         text.textContent = 'Download SVG';
         link.appendChild(text);
-        svg.appendChild(link);
+        owner.appendChild(link);
+      });
+    }
+
+    /** Copy the board's wide / stacked sizes onto the frame. The stylesheet picks one. */
+    _syncBoardBox (svg) {
+      const names = ['--board-wide-w', '--board-wide-h', '--board-vertical-w', '--board-vertical-h'];
+      let found = false;
+      for (let i = 0; i < names.length; i++) {
+        const value = (svg.style.getPropertyValue(names[i]) || '').trim();
+        if (!value) continue;
+        found = true;
+        this._board.style.setProperty(names[i], value);
       }
+      if (found) {
+        this._board.style.aspectRatio = '';
+        return;
+      }
+      const box = svg.viewBox && svg.viewBox.baseVal;
+      if (box && box.width && box.height) this._board.style.aspectRatio = box.width + ' / ' + box.height;
     }
 
     _renderServers () {
@@ -312,8 +426,8 @@
 
     _place () {
       const svg = this._board.querySelector('svg');
-      this._placeOver(this._serverPicker, svg && svg.querySelector('#schedule-title'), this._servers().length > 2);
-      this._placeOver(this._zonePicker, svg && svg.querySelector('#schedule-timezone'), true);
+      this._placeOver(this._serverPicker, svg && visibleHook(svg, 'schedule-title'), this._servers().length > 2);
+      this._placeOver(this._zonePicker, svg && visibleHook(svg, 'schedule-timezone'), true);
     }
 
     _placeOver (picker, label, enabled) {
@@ -323,7 +437,7 @@
       }
       const box = label.getBoundingClientRect();
       const wrap = picker.parentNode.getBoundingClientRect();
-      const pad = 4;
+      const pad = this._narrowMedia && this._narrowMedia.matches ? 10 : 4;
       picker.style.display = 'block';
       picker.style.left = (box.left - wrap.left - pad) + 'px';
       picker.style.top = (box.top - wrap.top - pad) + 'px';

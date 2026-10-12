@@ -68,6 +68,27 @@ describe('PERMAFLEET schedule', function () {
     assert.ok(central.includes('>AMERICA/CHICAGO</text>') && central.includes('3:00 PM'));
   });
 
+  it('stacks the week for a narrow viewport', function () {
+    const rows = FIXTURE.map(events.serializeScheduledEvent);
+    const rendered = graphic.renderWeekScheduleSvg({ events: rows, brand: 'permafleet' });
+    const svg = rendered.svg;
+    assert.strictEqual(rendered.verticalWidth, graphic.VERTICAL_WIDTH);
+    assert.ok(rendered.verticalHeight > rendered.verticalWidth, 'stacked board is taller than it is wide');
+    assert.ok(svg.includes(`@media (max-width: ${graphic.VERTICAL_MAX_WIDTH}px)`));
+    assert.ok(svg.includes('class="layout-wide"'));
+    assert.ok(/class="layout-tall"[^>]*viewBox="0 0 440 \d+"/.test(svg));
+    assert.strictEqual(svg.split('id="schedule-title"').length, 2, 'wide board keeps the single title id');
+    const tall = svg.slice(svg.indexOf('class="layout-tall"'), svg.lastIndexOf('</svg>'));
+    assert.ok(tall.includes('MINING MONDAY'));
+    assert.ok(tall.includes('data-hook="schedule-title"'));
+    assert.ok(tall.includes('data-hook="schedule-timezone"'));
+    assert.ok(tall.includes('data-hook="schedule-legend"'));
+    assert.ok(!tall.includes('id="schedule-title"'));
+    const calendar = fs.readFileSync(path.join(__dirname, '../assets/scripts/fabric-calendar.js'), 'utf8');
+    assert.ok(calendar.includes(`const NARROW_MEDIA = '(max-width: ${graphic.VERTICAL_MAX_WIDTH}px)'`));
+    assert.ok(calendar.includes('.layout-tall { display: block !important; }'));
+  });
+
   it('renders the PERMAFLEET board with org chips and goon.vc footer', function () {
     const rows = FIXTURE.map(events.serializeScheduledEvent);
     const rendered = graphic.renderWeekScheduleGraphic({ events: rows, brand: 'permafleet' });

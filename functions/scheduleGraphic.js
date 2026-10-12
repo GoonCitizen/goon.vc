@@ -11,6 +11,7 @@
  *
  * Dark industrial red/black — not the Fabric purple lettermark.
  * PERMAFLEET brand is the same board with alliance org mentions.
+ * Narrow viewports get a second, stacked board (see `boardResponsiveCss`).
  */
 
 const {
@@ -23,6 +24,13 @@ const {
 
 const WIDTH = 1920;
 const HEIGHT = 1080;
+/** Stacked week, sized so type stays readable near a phone width. */
+const VERTICAL_WIDTH = 440;
+/**
+ * Viewport width where the stacked board replaces the 7-column poster.
+ * The calendar element uses the same query (`assets/scripts/fabric-calendar.js`).
+ */
+const VERTICAL_MAX_WIDTH = 760;
 
 const INK = {
   bg: '#0c0c0d',
@@ -347,7 +355,212 @@ function linkBlock (parts, start, url) {
 }
 
 /**
+ * Show the stacked board on a short, narrow viewport.
+ * `min-height` keeps a 16:9 `<img>` on the wide poster: that box cannot be
+ * both ≤760px wide and ≥480px tall. Inline calendars switch with their own
+ * `@media (max-width)` rule, which does not need the height guard.
+ * @returns {string}
+ * @private
+ */
+function boardResponsiveCss () {
+  return [
+    '.layout-wide { display: block; }',
+    '.layout-tall { display: none; }',
+    `@media (max-width: ${VERTICAL_MAX_WIDTH}px) and (min-height: 480px) {`,
+    '  .layout-wide { display: none !important; }',
+    '  .layout-tall { display: block !important; }',
+    '  .schedule-root {',
+    '    width: 100vw;',
+    '    height: calc(100vw * var(--board-vertical-h) / var(--board-vertical-w));',
+    '  }',
+    '}'
+  ].join('\n');
+}
+
+/**
+ * One full-width day after another, for a narrow viewport.
+ * Hooks are `data-hook` (the wide board keeps the element ids).
+ * `data-wrap` / `data-line` / `data-max-lines` tell `<fabric-calendar>` how to
+ * reflow a label when it replaces the text.
+ * @param {object} opts
+ * @returns {{svg:string, width:number, height:number}}
+ * @private
+ */
+function renderVerticalBoard (opts) {
+  const W = VERTICAL_WIDTH;
+  const M = 16;
+  const inner = W - M * 2;
+  const timeZone = opts.timeZone;
+  const schedule = opts.schedule;
+  const SANS = 'Helvetica Neue, Helvetica, Arial, sans-serif';
+  const DISPLAY = 'Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif';
+  const parts = [];
+  const bgAt = 0;
+  parts.push('');
+  parts.push(`<rect x="0" y="0" width="${W}" height="6" fill="${INK.red}"/>`);
+
+  const guildName = String(opts.guildName || '');
+  const titleSize = guildName.length > 18 ? 16 : 22;
+  let y = M + titleSize + 8;
+  parts.push(`<text data-hook="schedule-title" x="${M}" y="${y}" fill="${INK.ink}" font-family="${DISPLAY}" font-size="${titleSize}" letter-spacing="1.2">${escapeXml(guildName)}</text>`);
+
+  y += 22;
+  parts.push(`<text x="${M}" y="${y}" fill="${INK.red}" font-family="${SANS}" font-size="12" font-weight="700" letter-spacing="3">WEEKLY OPS</text>`);
+
+  const subLine = 14;
+  const subMax = 3;
+  const subY = y + 20;
+  const subLines = wrapWords(opts.subtitle || '', 40, subMax);
+  const subSpans = (subLines.length ? subLines : ['']).map((line, i) => (
+    `<tspan x="${M}" y="${subY + i * subLine}">${escapeXml(line)}</tspan>`
+  )).join('');
+  parts.push(`<text data-hook="schedule-subtitle" x="${M}" y="${subY}" data-wrap="40" data-line="${subLine}" data-max-lines="${subMax}" fill="${INK.muted}" font-family="${SANS}" font-size="12">${subSpans}</text>`);
+  y = subY + subLine * (subMax - 1) + 24;
+
+  parts.push(`<text data-hook="schedule-timezone" x="${M}" y="${y}" fill="${INK.cream}" font-family="${SANS}" font-size="14" font-weight="700">${escapeXml(timeZone.replace(/_/g, ' ').toUpperCase())}</text>`);
+
+  const asLine = 13;
+  const asMax = 2;
+  const asY = y + 22;
+  const asText = 'As of ' + asOfLabel(opts.fetchedAt, timeZone);
+  parts.push(`<text data-hook="schedule-asof" x="${M}" y="${asY}" data-wrap="64" data-line="${asLine}" data-max-lines="${asMax}" fill="${INK.muted}" font-family="${SANS}" font-size="11">${escapeXml(asText)}</text>`);
+  y = asY + asLine * (asMax - 1) + 14;
+
+  if (opts.showOrgs && opts.orgs && opts.orgs.length) {
+    const chipH = 24;
+    let cx = M + 48;
+    let cy = y;
+    parts.push(`<text x="${M}" y="${cy + 16}" fill="${INK.faint}" font-family="${SANS}" font-size="10" font-weight="700" letter-spacing="1.4">ORGS</text>`);
+    for (const org of opts.orgs) {
+      const label = String(org).toUpperCase();
+      const bw = Math.round(label.length * 6.6 + 16);
+      if (cx + bw > W - M) {
+        cx = M;
+        cy += chipH + 6;
+      }
+      parts.push(roundRect(cx, cy, bw, chipH, 4, INK.chip, `stroke="${INK.chipStroke}" stroke-width="1"`));
+      parts.push(`<rect x="${cx}" y="${cy}" width="4" height="${chipH}" fill="${INK.red}" rx="1"/>`);
+      parts.push(`<text x="${cx + bw / 2 + 1}" y="${cy + 16}" text-anchor="middle" fill="${INK.cream}" font-family="${SANS}" font-size="10" font-weight="700" letter-spacing="0.4">${escapeXml(label)}</text>`);
+      cx += bw + 6;
+    }
+    y = cy + chipH + 14;
+  }
+
+  const themeH = 100;
+  const emptyThemeH = 68;
+  const slotH = 108;
+  const slotGap = 8;
+  const dayGap = 12;
+
+  for (const name of WEEKDAY) {
+    const day = schedule.days[name];
+    const theme = day.theme;
+    const slots = overlaySlots(day);
+    const monthly = slots.some((slot) => String(slot.cadence || '').toLowerCase().indexOf('monthly') !== -1);
+    const blockH = theme ? themeH : emptyThemeH;
+    const slotsBlock = slots.length
+      ? (8 + slots.length * slotH + (slots.length - 1) * slotGap)
+      : 0;
+    const cardH = 30 + blockH + slotsBlock + 10;
+    const stroke = monthly
+      ? `stroke="${INK.red}" stroke-width="2"`
+      : `stroke="${INK.line}" stroke-width="1"`;
+    parts.push(roundRect(M, y, inner, cardH, 10, INK.panel, stroke));
+
+    const dateSource = (theme && theme.scheduledStartTime) || (slots[0] && slots[0].scheduledStartTime);
+    const dateLabel = dateCt(dateSource, timeZone);
+    parts.push(`<text x="${M + 12}" y="${y + 20}" fill="${INK.faint}" font-family="${SANS}" font-size="12" font-weight="700" letter-spacing="2">${DAY_SHORT[name]}</text>`);
+    if (dateLabel) {
+      parts.push(`<text x="${M + inner - 12}" y="${y + 20}" text-anchor="end" fill="${INK.muted}" font-family="${SANS}" font-size="11">${escapeXml(dateLabel)}</text>`);
+    }
+
+    const tx = M + 10;
+    const tw = inner - 20;
+    const ty = y + 30;
+    if (theme) {
+      const themeStart = parts.length;
+      parts.push(roundRect(tx, ty, tw, themeH, 8, INK.redDark));
+      parts.push(`<rect x="${tx}" y="${ty}" width="6" height="${themeH}" fill="${INK.red}" rx="2"/>`);
+      const themeLines = wrapWords(theme.name, 24, 2);
+      parts.push(`<text fill="${INK.ink}" font-family="${DISPLAY}" font-size="16">${tspans(themeLines, tx + 16, ty + 28, 20)}</text>`);
+      if (String(theme.statusName || '').toLowerCase() === 'active') {
+        const bw = 40;
+        const bx = tx + tw - 10 - bw;
+        parts.push(roundRect(bx, ty + 8, bw, 18, 3, INK.red));
+        parts.push(`<text x="${bx + bw / 2}" y="${ty + 21}" text-anchor="middle" fill="${INK.ink}" font-family="${SANS}" font-size="9" font-weight="700" letter-spacing="0.8">LIVE</text>`);
+      }
+      const tClock = clockCt(theme.scheduledStartTime, timeZone);
+      parts.push(`<text x="${tx + 16}" y="${ty + themeH - 16}" fill="${INK.cream}" font-family="${SANS}" font-size="13" font-weight="700">${escapeXml(tClock || 'All day')}<tspan fill="${INK.muted}" font-weight="400"> · ${escapeXml(theme.cadence || 'weekly')}</tspan></text>`);
+      linkBlock(parts, themeStart, theme.url);
+    } else {
+      parts.push(roundRect(tx, ty, tw, emptyThemeH, 8, INK.panelAlt, `stroke="${INK.line}" stroke-width="1" stroke-dasharray="4 4"`));
+      parts.push(`<text x="${tx + 16}" y="${ty + 28}" fill="${INK.faint}" font-family="${DISPLAY}" font-size="14">NO THEME</text>`);
+      parts.push(`<text x="${tx + 16}" y="${ty + 48}" fill="${INK.muted}" font-family="${SANS}" font-size="12">Open play / training only</text>`);
+    }
+
+    slots.forEach((slot, si) => {
+      const sy = ty + blockH + 8 + si * (slotH + slotGap);
+      const slotStart = parts.length;
+      const badge = badgeFor(slot);
+      const isMonthly = badge === 'MONTHLY';
+      const fill = isMonthly ? '#241111' : INK.panelAlt;
+      const extra = isMonthly
+        ? `stroke="${INK.red}" stroke-width="1.5"`
+        : `stroke="${INK.line}" stroke-width="1"`;
+      parts.push(roundRect(tx, sy, tw, slotH, 8, fill, extra));
+      const edge = slot.kind === 'timed' ? '#3f7d4e' : INK.red;
+      parts.push(`<rect x="${tx}" y="${sy}" width="5" height="${slotH}" fill="${edge}" rx="2"/>`);
+      parts.push(`<text x="${tx + 16}" y="${sy + 22}" fill="${INK.cream}" font-family="${SANS}" font-size="13" font-weight="700">${escapeXml(clockCt(slot.scheduledStartTime, timeZone))}</text>`);
+      if (badge) {
+        const bw = Math.round(badge.length * 7.2 + 12);
+        const bx = tx + tw - 10 - bw;
+        const badgeFill = badge === 'TRAIN'
+          ? '#3f7d4e'
+          : (badge === 'MONTHLY' || badge === 'LIVE' ? INK.red : INK.redMid);
+        parts.push(roundRect(bx, sy + 8, bw, 18, 3, badgeFill));
+        parts.push(`<text x="${bx + bw / 2}" y="${sy + 21}" text-anchor="middle" fill="${INK.ink}" font-family="${SANS}" font-size="9" font-weight="700" letter-spacing="0.8">${escapeXml(badge)}</text>`);
+      }
+      const nameLines = wrapWords(slot.name, 28, 2);
+      parts.push(`<text fill="${INK.ink}" font-family="${SANS}" font-size="14" font-weight="700">${tspans(nameLines, tx + 16, sy + 46, 18)}</text>`);
+      const blurb = oneLine(slot.description, 48);
+      const meta = [
+        dateCt(slot.scheduledStartTime, timeZone),
+        slot.userCount != null && Number.isFinite(Number(slot.userCount))
+          ? (slot.userCount + ' in')
+          : ''
+      ].filter(Boolean).join(' · ');
+      if (blurb) {
+        parts.push(`<text x="${tx + 16}" y="${sy + slotH - 30}" fill="${INK.muted}" font-family="${SANS}" font-size="11">${escapeXml(blurb)}</text>`);
+      }
+      if (meta) {
+        parts.push(`<text x="${tx + 16}" y="${sy + slotH - 14}" fill="${INK.faint}" font-family="${SANS}" font-size="10">${escapeXml(meta)}</text>`);
+      }
+      linkBlock(parts, slotStart, slot.url);
+    });
+
+    y += cardH + dayGap;
+  }
+
+  y += 4;
+  parts.push(`<rect x="${M}" y="${y}" width="${inner}" height="1" fill="${INK.line}"/>`);
+  y += 20;
+  parts.push(`<text data-hook="schedule-legend" x="${M}" y="${y}" fill="${INK.muted}" font-family="${SANS}" font-size="11"><tspan fill="${INK.red}">&#9608;</tspan> Theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="${INK.redMid}">&#9608;</tspan> Special</text>`);
+  y += M;
+
+  parts[bgAt] = `<rect width="${W}" height="${y}" fill="${INK.bg}"/>`;
+  return {
+    svg: `<svg class="layout-tall" x="0" y="0" width="100%" height="100%" viewBox="0 0 ${W} ${y}" preserveAspectRatio="xMidYMid meet" style="display:none">\n${parts.join('\n')}\n</svg>`,
+    width: W,
+    height: y
+  };
+}
+
+/**
  * Render the week board as SVG.
+ * The root holds the 1920×1080 poster (`.layout-wide`) and a stacked week
+ * (`.layout-tall`). A stylesheet media query picks the stacked board when the
+ * SVG is opened on a narrow, tall viewport; `<fabric-calendar>` does the same
+ * from its own stylesheet so the page box matches.
  * @param {object} [opts]
  * @param {object} [opts.schedule]
  * @param {Array<object>} [opts.events]
@@ -358,7 +571,7 @@ function linkBlock (parts, start, url) {
  * @param {string} [opts.subtitle] override the brand subtitle
  * @param {string} [opts.regenerateCommand] footer hint for rebuilding the board ('' hides it)
  * @param {string} [opts.timeZone] IANA zone for days and clocks (default America/Chicago)
- * @returns {{svg:string, width:number, height:number, brand:ScheduleBrand, timeZone:string}}
+ * @returns {{svg:string, width:number, height:number, verticalWidth:number, verticalHeight:number, brand:ScheduleBrand, timeZone:string}}
  */
 function renderWeekScheduleSvg (opts = {}) {
   const events = opts.events || [];
@@ -399,8 +612,7 @@ function renderWeekScheduleSvg (opts = {}) {
   );
 
   const parts = [];
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeXml(guildName)} weekly ops">`);
-  parts.push(`<title>${escapeXml(guildName)} Weekly Ops</title>`);
+  parts.push(`<svg class="layout-wide" x="0" y="0" width="100%" height="100%" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="xMidYMid meet">`);
   parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="${INK.bg}"/>`);
   parts.push(`<rect x="0" y="0" width="${WIDTH}" height="6" fill="${INK.red}"/>`);
 
@@ -521,7 +733,35 @@ function renderWeekScheduleSvg (opts = {}) {
   parts.push(`<text id="schedule-legend" x="${margin + 4}" y="${fy}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan fill="${INK.red}">&#9608;</tspan> Day theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="${INK.redMid}">&#9608;</tspan> Special / ops / monthly   ·   Times in ${escapeXml(zoneLabel(timeZone))}${escapeXml(orgFooter)}${regenerateCommand ? '   ·   ' + escapeXml(regenerateCommand) : ''}</text>`);
 
   parts.push('</svg>');
-  return { svg: parts.join('\n') + '\n', width: WIDTH, height: HEIGHT, brand, timeZone };
+
+  const vertical = renderVerticalBoard({
+    schedule,
+    timeZone,
+    guildName,
+    subtitle: opts.subtitle || brand.subtitle,
+    orgs,
+    showOrgs,
+    fetchedAt
+  });
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" class="schedule-root" width="${WIDTH}" height="${HEIGHT}" role="img" aria-label="${escapeXml(guildName)} weekly ops" style="--board-wide-w:${WIDTH};--board-wide-h:${HEIGHT};--board-vertical-w:${vertical.width};--board-vertical-h:${vertical.height}">`,
+    `<title>${escapeXml(guildName)} Weekly Ops</title>`,
+    '<style type="text/css">',
+    boardResponsiveCss(),
+    '</style>',
+    parts.join('\n'),
+    vertical.svg,
+    '</svg>'
+  ].join('\n');
+  return {
+    svg: svg + '\n',
+    width: WIDTH,
+    height: HEIGHT,
+    verticalWidth: vertical.width,
+    verticalHeight: vertical.height,
+    brand,
+    timeZone
+  };
 }
 
 /**
@@ -545,7 +785,7 @@ function renderWeekScheduleHtml (opts = {}) {
     html, body { margin: 0; padding: 0; background: ${INK.bg}; }
     body { display: flex; justify-content: center; }
     .board { width: ${rendered.width}px; height: ${rendered.height}px; }
-    .board svg { display: block; width: ${rendered.width}px; height: ${rendered.height}px; }
+    .board > svg { display: block; width: ${rendered.width}px; height: ${rendered.height}px; }
   </style>
 </head>
 <body>
@@ -575,6 +815,8 @@ function renderWeekScheduleGraphic (opts = {}) {
 module.exports = {
   WIDTH,
   HEIGHT,
+  VERTICAL_WIDTH,
+  VERTICAL_MAX_WIDTH,
   INK,
   BRANDS,
   PERMAFLEET_ORGS,
