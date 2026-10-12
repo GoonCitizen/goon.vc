@@ -26,6 +26,14 @@ function renderHomeCss () {
       .home-motto { color: #fff; font-family: "Bungee", sans-serif; font-size: 0.85rem; letter-spacing: 0.08em; margin: 1.25rem 0 0; }
       .home-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-start; margin-top: 1.25rem; }
       .home-actions .goon-button { font-size: 0.8em; }
+      .home-subscriptions { border-top: 1px solid #444; margin-top: 1.5rem; padding-top: 1.25rem; }
+      .home-subscriptions[hidden] { display: none; }
+      .home-subscriptions h3 { margin: 0; }
+      .home-subscriptions p { color: #bbb; line-height: 1.5; margin: 0.5rem 0 0; }
+      .home-tiers { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0.9rem 0 0; padding: 0; }
+      .home-tiers li { align-items: center; border: 1px solid #555; border-radius: 999px; color: #eee; display: inline-flex; font-size: 0.85rem; gap: 0.45rem; letter-spacing: 0.04em; padding: 0.3rem 0.8rem; }
+      .home-tiers li::before { background: var(--tier-color, #999); border-radius: 50%; content: ""; height: 0.65rem; width: 0.65rem; }
+      .home-subscriptions .goon-button { font-size: 0.8em; margin-top: 1rem; }
 ${DiscordRoster.styles()}`;
 }
 
@@ -53,7 +61,21 @@ function renderOverviewHtml (overview) {
         ${(overview.paragraphs || []).map((p) => `<p class="home-copy">${p}</p>`).join('\n        ')}
         ${(overview.motto || []).length ? `<p class="home-motto">${overview.motto.map(escapeHtml).join(' · ')}</p>` : ''}
         <div class="home-actions">${(overview.actions || []).map((a) => `<a class="goon-button" href="${escapeHtml(a.href)}">${escapeHtml(a.label)}</a>`).join('')}</div>
+        ${renderSubscriptionsHtml(overview.name)}
       </section>`;
+}
+
+/**
+ * Filled in by renderHomeScript from GET /services/discord/subscriptions.
+ * @param {string} name
+ */
+function renderSubscriptionsHtml (name) {
+  return `<div id="home-subscriptions" class="home-subscriptions" hidden>
+          <h3>Subscribe on Discord</h3>
+          <p>Support ${escapeHtml(name)} with a Discord Server Subscription. Each tier comes with its own role in our server.</p>
+          <ul class="home-tiers" data-tiers></ul>
+          <a class="goon-button" data-subscribe href="#" target="_blank" rel="noopener">See tiers and prices on Discord</a>
+        </div>`;
 }
 
 /**
@@ -89,7 +111,32 @@ function renderHomeMainHtml (props) {
  * @param {string} props.guildId
  */
 function renderHomeScript (props) {
-  return DiscordRoster.script({ guildId: props.guildId, pageId: 'home-page' });
+  return `${DiscordRoster.script({ guildId: props.guildId, pageId: 'home-page' })}
+    <script>
+      (function () {
+        var box = document.getElementById('home-subscriptions');
+        if (!box || !window.fetch) return;
+        window.fetch('/services/discord/subscriptions', { headers: { Accept: 'application/json' } })
+          .then(function (res) {
+            if (!res.ok) throw new Error('subscriptions ' + res.status);
+            return res.json();
+          })
+          .then(function (body) {
+            var tiers = (body && body.tiers) || [];
+            if (!tiers.length || !/^https:\\/\\/discord\\.com\\//.test(body.url || '')) return;
+            var list = box.querySelector('[data-tiers]');
+            tiers.forEach(function (tier) {
+              var li = document.createElement('li');
+              li.textContent = tier.name;
+              if (/^#[0-9a-f]{6}$/i.test(tier.color || '')) li.style.setProperty('--tier-color', tier.color);
+              list.appendChild(li);
+            });
+            box.querySelector('[data-subscribe]').href = body.url;
+            box.hidden = false;
+          })
+          .catch(function () {});
+      })();
+    </script>`;
 }
 
 module.exports = {

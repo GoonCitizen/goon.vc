@@ -42,7 +42,53 @@ function renderResourcesCss () {
       .gooncitizen-section ul { color: #ccc; line-height: 1.5; margin: 0; padding-left: 1.25rem; }
       .gooncitizen-downloads li { margin-bottom: 0.5rem; }
       .gooncitizen-sha { color: #999; font-size: 0.72rem; overflow-wrap: anywhere; }
-      .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }`;
+      .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
+      .gooncitizen-actions .goon-button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
+      .gooncitizen-actions .goon-button[hidden] { display: none; }`;
+}
+
+/**
+ * Installers are gitignored (over GitHub's file limit), so a deploy can ship
+ * the page without them. Once the page is on screen, HEAD each download and
+ * disable the ones this server can't serve; if none can, offer Discord.
+ * @returns {string}
+ */
+function renderGoonCitizenScript () {
+  return `<script>
+    (function () {
+      var page = document.getElementById('gooncitizen-page');
+      if (!page) return;
+      var links = Array.prototype.slice.call(page.querySelectorAll('a[data-download]'));
+      if (!links.length) return;
+      var checked = false;
+
+      function unavailable (link) {
+        link.removeAttribute('href');
+        link.removeAttribute('download');
+        link.setAttribute('aria-disabled', 'true');
+        link.title = 'Not available on this server yet';
+      }
+
+      function check () {
+        if (checked) return;
+        checked = true;
+        Promise.all(links.map(function (link) {
+          return fetch(link.getAttribute('href'), { method: 'HEAD', cache: 'no-store' })
+            .then(function (res) { return res.ok; })
+            .catch(function () { return false; })
+            .then(function (ok) { if (!ok) unavailable(link); return ok; });
+        })).then(function (results) {
+          var fallback = page.querySelector('.gooncitizen-fallback');
+          if (fallback && results.indexOf(true) === -1) fallback.hidden = false;
+        });
+      }
+
+      if (!('IntersectionObserver' in window)) return check();
+      new IntersectionObserver(function (entries) {
+        if (entries.some(function (e) { return e.isIntersecting; })) check();
+      }).observe(page);
+    })();
+  </script>`;
 }
 
 function button (link) {
@@ -102,7 +148,8 @@ function renderIndexHtml (props) {
 function renderGoonCitizenHtml (props) {
   const downloads = props.downloads || [];
   const actions = downloads.length
-    ? downloads.map((d) => `<a class="goon-button" href="${escapeHtml(d.href)}" download>${escapeHtml(d.label)}</a>`).join('')
+    ? downloads.map((d) => `<a class="goon-button" href="${escapeHtml(d.href)}" data-download download>${escapeHtml(d.label)}</a>`).join('')
+      + `<a class="goon-button gooncitizen-fallback" href="${escapeHtml(props.discordUrl)}" target="_blank" rel="noopener" hidden>Get a build on Discord</a>`
     : [{ label: 'Get a build on Discord', href: props.discordUrl }, { label: 'Source on GitHub', href: props.repoUrl }].map(button).join('');
   const version = downloads.find((d) => d.version);
   const note = downloads.length
@@ -144,5 +191,6 @@ module.exports = {
   id: 'resources-page',
   styles: renderResourcesCss,
   render: renderIndexHtml,
-  renderGoonCitizen: renderGoonCitizenHtml
+  renderGoonCitizen: renderGoonCitizenHtml,
+  gooncitizenScript: renderGoonCitizenScript
 };

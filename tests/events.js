@@ -70,6 +70,16 @@ describe('Events', function () {
         })
       ]));
     }
+    if (url === `https://discord.com/api/v10/guilds/${GOON}/roles`) {
+      const listing = (id, purchasable) => Object.assign({ integration_id: '9', subscription_listing_id: id }, purchasable ? { available_for_purchase: null } : {});
+      return Promise.resolve(textResponse(200, [
+        { id: '1', name: '@everyone', color: 0, position: 0, tags: undefined },
+        { id: '2', name: 'Citizen', color: 16764672, position: 3, tags: listing('L1', true) },
+        { id: '3', name: 'ARCHILLECT', color: 12619776, position: 4, tags: listing('L2', false) },
+        { id: '4', name: 'PATRON', color: 13927485, position: 5, tags: listing('L3', true) },
+        { id: '5', name: 'Booster', color: 0, position: 2, tags: { premium_subscriber: null } }
+      ]));
+    }
     if (url === 'https://discord.com/api/v10/oauth2/applications/@me') {
       return Promise.resolve(textResponse(200, { id: '444444444444444444', name: 'GOON BOT' }));
     }
@@ -107,6 +117,26 @@ describe('Events', function () {
     assert.strictEqual(location.searchParams.get('client_id'), '444444444444444444');
     assert.strictEqual(location.searchParams.get('scope'), 'bot');
     assert.strictEqual(location.searchParams.get('permissions'), '1024', 'View Channels only');
+  });
+
+  it('lists the home guild subscription tiers that are for sale', async function () {
+    const res = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      res.end = (body) => { res.body = body; resolve(); };
+      events.middleware()({ method: 'GET', url: '/services/discord/subscriptions' }, res, () => resolve());
+    });
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.body);
+    assert.strictEqual(body.url, `https://discord.com/channels/${GOON}/role-subscriptions`);
+    assert.deepStrictEqual(body.tiers, [
+      { id: '4', name: 'PATRON', color: '#d4843d' },
+      { id: '2', name: 'Citizen', color: '#ffcf00' }
+    ], 'purchasable listings only, top role first; boosters and retired tiers excluded');
+
+    const before = calls.length;
+    const cached = await events.subscriptions();
+    assert.deepStrictEqual(cached.tiers, body.tiers);
+    assert.strictEqual(calls.length, before, 'answered from the Store within ttl');
   });
 
   it('merges upcoming events from every guild the bot is in', async function () {

@@ -33,6 +33,16 @@ zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 the element's contract. The page footer's "Add our bot to your Discord" button
 hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
 application that owns the bot token (scope `bot`, View Channels only).
+Every route is the one built `assets/index.html`; link previews get per-page
+Open Graph / Twitter tags because `services/goon.vc.js` swaps the
+`<!-- page-meta -->` block (and `<title>`) per request from `GoonSPA#pages()`
+(`functions/pageMeta.js`). Add a route there when you add a page; absolute URLs
+use the `siteUrl` site setting (default `https://goon.vc`).
+The home page's "Subscribe on Discord" block lists the G00N guild's purchasable
+Server Subscription tiers from `GET /services/discord/subscriptions` (tier roles
+tagged `subscription_listing_id` + `available_for_purchase`, saved in the events
+Store). Bots cannot read listing prices or perks, so the button links to
+Discord's subscriptions page; the block stays hidden when there are no tiers.
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
 guild's public `widget.json` (no iframe). The PERMAFLEET page lists cross-org

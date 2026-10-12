@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const Store = require('@fabric/core/types/store');
+const startStore = require('../functions/startStore');
 const discordEvents = require('../functions/discordScheduledEvents');
 const scheduleGraphic = require('../functions/scheduleGraphic');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
@@ -9,6 +10,7 @@ const resolveDiscordToken = require('../functions/resolveDiscordToken');
 const BASE = '/services/events';
 const BOARD_PATH = `${BASE}/schedule.svg`;
 const INVITE_PATH = '/services/discord/invite';
+const SUBSCRIPTIONS_PATH = '/services/discord/subscriptions';
 // View Channels: enough to read scheduled events and voice presence; the bot never posts.
 const INVITE_PERMISSIONS = '1024';
 const LATEST_KEY = '/events/latest';
@@ -102,6 +104,32 @@ function guildKey (id) {
   return `/events/guilds/${id}`;
 }
 
+function subscriptionsKey (id) {
+  return `/subscriptions/guilds/${id}`;
+}
+
+function subscriptionsUrl (guildId) {
+  return `https://discord.com/channels/${guildId}/role-subscriptions`;
+}
+
+/**
+ * Server Subscription tiers a visitor can buy, from the guild's roles. Bots
+ * cannot read the listings themselves (prices, perks), only the tier roles.
+ * @param {object[]} roles Discord role objects
+ * @returns {Array<{ id: string, name: string, color: string|null }>}
+ */
+function subscriptionTiers (roles) {
+  return (Array.isArray(roles) ? roles : [])
+    // Discord sends `available_for_purchase: null` for "true" and omits the key for "false".
+    .filter((role) => role && role.tags && role.tags.subscription_listing_id && 'available_for_purchase' in role.tags)
+    .sort((a, b) => (b.position || 0) - (a.position || 0))
+    .map((role) => ({
+      id: String(role.id),
+      name: String(role.name || ''),
+      color: role.color ? `#${Number(role.color).toString(16).padStart(6, '0')}` : null
+    }));
+}
+
 /**
  * Upcoming Discord Guild Scheduled Events across every server the configured
  * bot belongs to, saved per guild in an on-disk `@fabric/core` {@link Store}.
@@ -137,6 +165,12 @@ class Events {
     this._timer = null;
     this._lastBackgroundAt = 0;
     this._applicationId = null;
+    this._subscriptionsRefreshing = null;
+    this._subscriptionsAttemptAt = 0;
+  }
+
+  _homeGuildId () {
+    return String((this.settings.discord && this.settings.discord.guildId) || discordEvents.DEFAULT_GUILD_ID);
   }
 
   async start () {
@@ -146,7 +180,7 @@ class Events {
       persistent: true,
       verbosity: 1
     });
-    await this.store.start();
+    await startStore(this.store);
     if (this.settings.refreshOnStart) this._refreshInBackground();
     if (this.settings.refreshIntervalMs > 0) {
       this._timer = setInterval(() => this._refreshInBackground(), this.settings.refreshIntervalMs);
@@ -159,6 +193,7 @@ class Events {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
     if (this._refreshing) await this._refreshing.catch(() => {});
+    if (this._subscriptionsRefreshing) await this._subscriptionsRefreshing.catch(() => {});
     if (this.store) await this.store.stop();
     return this;
   }
@@ -316,8 +351,7 @@ class Events {
     const server = opts.server && opts.server !== 'all' ? String(opts.server) : null;
     const guild = server ? (snapshot.guilds || []).find((g) => g.id === server) : null;
     const events = (snapshot.events || []).filter((e) => !server || e.guildId === server).map(scheduleRow);
-    const homeGuild = String((this.settings.discord && this.settings.discord.guildId) || discordEvents.DEFAULT_GUILD_ID);
-    const home = server === homeGuild;
+    const home = server === this._homeGuildId();
     return scheduleGraphic.renderWeekScheduleSvg({
       events,
       fetchedAt: snapshot.fetchedAt || undefined,
@@ -357,16 +391,73 @@ class Events {
   }
 
   /**
+   * Fetch the home guild's subscription tiers from Discord and persist them.
+   * Single-flight; failures throw.
+   * @returns {Promise<object>}
+   */
+  refreshSubscriptions () {
+    if (!this._subscriptionsRefreshing) {
+      this._subscriptionsAttemptAt = Date.now();
+      this._subscriptionsRefreshing = (async () => {
+        const auth = this._resolveToken(this.settings.discord);
+        if (!auth || !auth.token) throw new Error('No Discord bot token configured');
+        const guildId = this._homeGuildId();
+        const res = await discordEvents.discordGet(`/guilds/${guildId}/roles`, auth.token, this._discordOpts());
+        if (res.status !== 200 || !Array.isArray(res.json)) {
+          throw new Error((res.json && res.json.message) || res.error || `HTTP ${res.status}`);
+        }
+        const record = {
+          guildId,
+          url: subscriptionsUrl(guildId),
+          fetchedAt: new Date().toISOString(),
+          tiers: subscriptionTiers(res.json)
+        };
+        await this.store.set(subscriptionsKey(guildId), record);
+        return record;
+      })().finally(() => { this._subscriptionsRefreshing = null; });
+    }
+    return this._subscriptionsRefreshing;
+  }
+
+  /**
+   * Home guild Server Subscription tiers, answered from disk like {@link Events#list}.
+   * @returns {Promise<object>}
+   */
+  async subscriptions () {
+    const guildId = this._homeGuildId();
+    const saved = await this.store.get(subscriptionsKey(guildId));
+    if (saved) {
+      const age = Date.now() - Date.parse(saved.fetchedAt || 0);
+      if (age < this.settings.ttlMs) return saved;
+      if (Date.now() - this._subscriptionsAttemptAt >= RETRY_MS) this.refreshSubscriptions().catch(() => {});
+      return Object.assign({}, saved, { stale: true });
+    }
+    try {
+      return await this.refreshSubscriptions();
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      return { guildId, url: subscriptionsUrl(guildId), fetchedAt: null, tiers: [], stale: true, error: message };
+    }
+  }
+
+  /**
    * Express middleware for `GET /services/events`, `GET /services/events/schedule.svg`,
-   * and `GET /services/discord/invite` (redirects to the bot's Discord invite).
+   * `GET /services/discord/invite` (redirects to the bot's Discord invite), and
+   * `GET /services/discord/subscriptions` (home guild subscription tiers).
    * @returns {Function}
    */
   middleware () {
     return (req, res, next) => {
       const url = new URL(req.originalUrl || req.url, 'http://localhost');
       const pathname = (req.path || url.pathname).replace(/\/+$/, '');
-      if (pathname !== BASE && pathname !== BOARD_PATH && pathname !== INVITE_PATH) return next();
+      if (![BASE, BOARD_PATH, INVITE_PATH, SUBSCRIPTIONS_PATH].includes(pathname)) return next();
       if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
+      if (pathname === SUBSCRIPTIONS_PATH) {
+        this.subscriptions().then((body) => sendJson(res, 200, body)).catch((error) => {
+          if (!res.headersSent) sendJson(res, 500, { error: error && error.message ? error.message : 'Subscriptions unavailable' });
+        });
+        return;
+      }
       if (pathname === INVITE_PATH) {
         this.inviteUrl().then((location) => {
           if (!location) return sendJson(res, 503, { error: 'Discord bot is not configured' });
@@ -399,3 +490,4 @@ class Events {
 
 module.exports = Events;
 module.exports.publicEvent = publicEvent;
+module.exports.subscriptionTiers = subscriptionTiers;

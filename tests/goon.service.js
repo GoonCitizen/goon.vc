@@ -112,6 +112,31 @@ describe('goon.vc', function () {
       assert.strictEqual(goon.contract, undefined);
       assert.strictEqual(goon.starcitizen, undefined);
     });
+
+    it('refuses to start when a store cannot be opened', async function () {
+      const fs = require('fs');
+      const os = require('os');
+      const path = require('path');
+      const Store = require('@fabric/core/types/store');
+      const startStore = require('../functions/startStore');
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-locked-'));
+      const holder = await startStore(new Store({ name: 'holder', path: path.join(root, 'events'), persistent: true, verbosity: 0 }));
+      const goon = new GoonVC({
+        listen: false,
+        storePath: path.join(root, 'site'),
+        members: { path: path.join(root, 'members') },
+        events: { path: path.join(root, 'events'), resolveToken: () => ({ token: null, source: null }) },
+        operations: { path: path.join(root, 'operations'), gateway: false }
+      });
+      try {
+        await assert.rejects(goon.start(), /Could not open database at .*events: it is locked by another process/);
+        const members = await startStore(new Store({ name: 'members', path: path.join(root, 'members'), persistent: true, verbosity: 0 }));
+        await members.stop();
+      } finally {
+        await holder.stop();
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
   });
 });
 
@@ -209,6 +234,60 @@ describe('goon.vc HTTP', function () {
       req.end();
     });
   }
+
+  it('serves Open Graph tags for each page', async function () {
+    const meta = (html, key) => {
+      const m = new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)">`).exec(html);
+      return m ? m[1] : null;
+    };
+    const home = await fetchJson('/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(home.status, 200);
+    assert.strictEqual(meta(home.body, 'og:title'), 'GOON SQUAD');
+    assert.strictEqual(meta(home.body, 'og:url'), 'https://goon.vc/');
+    assert.ok(/^G00N SQUAD is a hardcore/.test(meta(home.body, 'og:description')), 'home description');
+    assert.ok(/^https:\/\//.test(meta(home.body, 'og:image')), 'absolute og:image');
+
+    const permafleet = await fetchJson('/operations/PERMAFLEET/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(meta(permafleet.body, 'og:title'), 'PERMAFLEET — GOON SQUAD');
+    assert.strictEqual(meta(permafleet.body, 'og:url'), 'https://goon.vc/operations/PERMAFLEET');
+    assert.strictEqual(meta(permafleet.body, 'og:image'), 'https://goon.vc/hero-quantum.jpg');
+    assert.strictEqual(meta(permafleet.body, 'twitter:card'), 'summary_large_image');
+    assert.ok(permafleet.body.includes('<title>PERMAFLEET — GOON SQUAD</title>'));
+    assert.strictEqual((permafleet.body.match(/property="og:title"/g) || []).length, 1, 'one block per page');
+
+    // Link-preview bots often send Accept: */*.
+    const events = await fetchJson('/events', { headers: { Accept: '*/*', 'User-Agent': 'Discordbot/2.0' } });
+    assert.strictEqual(events.status, 200);
+    assert.strictEqual(meta(events.body, 'og:title'), 'EVENTS — GOON SQUAD');
+
+    const orgs = require('../contracts/organizations.json').organizations;
+    if (orgs.length) {
+      const org = orgs[0];
+      const page = await fetchJson(`/organizations/${org.symbol.toLowerCase()}`, { headers: { Accept: 'text/html' } });
+      assert.strictEqual(meta(page.body, 'og:title'), `${org.displayName || org.name} — GOON SQUAD`.replace(/&/g, '&amp;'));
+    }
+
+    const login = await fetchJson('/sessions', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(meta(login.body, 'og:title'), 'Login — GOON SQUAD');
+    const api = await fetchJson('/sessions', { headers: { Accept: 'application/json' } });
+    assert.ok(!String(api.body).includes('og:title'), 'JSON /sessions still goes to the Hub');
+  });
+
+  it('escapes page metadata', function () {
+    const pageMeta = require('../functions/pageMeta');
+    const tags = pageMeta.renderMetaTags({
+      path: '/x',
+      title: 'A "quoted" <title>',
+      description: '<strong>Bold</strong> &amp; plain',
+      image: '/hero.jpg'
+    }, { origin: 'https://goon.vc', name: 'GOON SQUAD' });
+    assert.ok(tags.includes('content="A &quot;quoted&quot; &lt;title&gt;"'));
+    assert.ok(tags.includes('<meta name="description" content="Bold &amp; plain">'));
+    assert.ok(tags.includes('content="https://goon.vc/hero.jpg"'));
+    const html = pageMeta.injectMeta('<title>Old</title><!-- page-meta -->old<!-- /page-meta -->', tags, 'New & co');
+    assert.ok(html.startsWith('<title>New &amp; co</title>'));
+    assert.ok(!html.includes('-->old<'), 'previous block replaced');
+  });
 
   it('serves the GoonSPA HTML home', async function () {
     const res = await new Promise((resolve, reject) => {
@@ -388,8 +467,12 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('href="https://github.com/GoonCitizen/star-citizen-live"'));
     const manifest = require('../assets/downloads/gooncitizen/index.json');
     for (const file of manifest.files) {
-      assert.ok(res.body.includes(`href="${file.href}" download>`), `${file.platform} download`);
+      assert.ok(res.body.includes(`href="${file.href}" data-download download>`), `${file.platform} download`);
       assert.ok(res.body.includes(`sha256 ${file.sha256}`), `${file.platform} checksum`);
+    }
+    if (manifest.files.length) {
+      assert.ok(res.body.includes('class="goon-button gooncitizen-fallback"'), 'Discord fallback when no installer is on the server');
+      assert.ok(res.body.includes("querySelectorAll('a[data-download]')"), 'availability check');
     }
   });
 
@@ -503,6 +586,17 @@ describe('goon.vc HTTP', function () {
   it('reports the bot invite as unavailable without a Discord bot token', async function () {
     const res = await fetchJson('/services/discord/invite');
     assert.strictEqual(res.status, 503);
+  });
+
+  it('hides subscription tiers without a Discord bot token', async function () {
+    const res = await fetchJson('/services/discord/subscriptions');
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.json.tiers, []);
+    assert.strictEqual(res.json.stale, true);
+    const home = await fetchJson('/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(typeof home.json, 'string');
+    assert.ok(home.json.includes('id="home-subscriptions" class="home-subscriptions" hidden'), 'subscriptions start hidden');
+    assert.ok(home.json.includes("fetch('/services/discord/subscriptions'"), 'home page loads tiers');
   });
 
   it('reports events as unavailable without a Discord bot token', async function () {

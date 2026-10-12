@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const FabricSPA = require('@fabric/http/types/spa');
 const escapeHtml = require('../functions/escapeHtml');
+const pageMeta = require('../functions/pageMeta');
 const HomePage = require('../components/HomePage');
 const SiteHeader = require('../components/SiteHeader');
 const PermafleetOperation = require('../components/PermafleetOperation');
@@ -20,6 +21,10 @@ const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
 
 const DEFAULTS = {
   title: 'GOON SQUAD',
+  // Absolute origin for og:url / og:image (link previews need absolute URLs).
+  siteUrl: 'https://goon.vc',
+  homeDescription: 'G00N SQUAD is a hardcore Star Citizen private military company focused on security and infiltration, and a member of the PERMAFLEET Protectorate.',
+  loginDescription: 'Sign in to GOON SQUAD with Discord, Fabric Passport, or the GoonCitizen desktop app.',
   heading: 'GOON SQUAD<sup>&trade;</sup>',
   joinLabel: 'Join the Squad &raquo;',
   joinUrl: 'https://discord.com/servers/g00n-squad-1190527980120850493',
@@ -134,6 +139,50 @@ function loadDownloads (file) {
 class GoonSPA extends FabricSPA {
   _site (key) {
     return this.settings[key] !== undefined ? this.settings[key] : DEFAULTS[key];
+  }
+
+  /**
+   * Origin and site name for {@link pageMeta.renderMetaTags}.
+   * @returns {{ origin: string, name: string }}
+   */
+  metaSite () {
+    return { origin: this._site('siteUrl'), name: this._site('title') };
+  }
+
+  /**
+   * Link-preview metadata for every route the SPA renders.
+   * @returns {Array<{ path: string, title: string, description: string, image: string|null, imageAlt: string, largeImage: boolean }>}
+   */
+  pages () {
+    const title = this._site('title');
+    const orgData = loadOrganizations(this._site('organizationsFile'));
+    const overviewOrg = orgData.organizations.find((org) => org.symbol === this._site('overviewSymbol')) || {};
+    const hero = this._site('permafleetHeroImage');
+    const logo = { image: overviewOrg.logoUrl || '/apple-touch-icon.png', imageAlt: `${title} logo`, largeImage: false };
+    const permafleet = { image: hero, imageAlt: 'PERMAFLEET', largeImage: true };
+    const page = (path, documentTitle, description, image = logo) => Object.assign({ path, title: documentTitle, description }, image);
+    return [
+      page('/', title, this._site('homeDescription')),
+      page(this._site('loginPath'), this._site('loginDocumentTitle'), this._site('loginDescription')),
+      page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
+      page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
+      page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro')),
+      page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
+      page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
+      page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
+      page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet)
+    ].concat(orgData.organizations.map((org) => {
+      const name = org.displayName || org.name || org.symbol;
+      const image = org.bannerUrl
+        ? { image: org.bannerUrl, imageAlt: `${name} banner`, largeImage: true }
+        : { image: org.logoUrl || logo.image, imageAlt: `${name} logo`, largeImage: false };
+      return page(
+        Organizations.organizationPath(org, this._site('organizationsPath')),
+        `${name} — ${title}`,
+        (org.intro || []).join(' ') || `${name}, a member organization of the PERMAFLEET Protectorate.`,
+        image
+      );
+    }));
   }
 
   /**
@@ -342,7 +391,8 @@ class GoonSPA extends FabricSPA {
 
     return `<html>
   <head>
-    <title>${title}</title>
+    <title>${escapeHtml(title)}</title>
+    ${pageMeta.renderMetaTags(this.pages()[0], this.metaSite())}
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -457,6 +507,7 @@ ${organizationMainsHtml}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
     ${operationsScript}
+    ${Resources.gooncitizenScript()}
     ${permafleetScript}
     ${alphaApplicationScript}
   </body>

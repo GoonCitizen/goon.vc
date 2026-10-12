@@ -1,16 +1,21 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const HTTPServer = require('@fabric/http/types/server');
 const { resolveHttpListenHost } = require('@fabric/http/functions/httpSharedMode');
 const { assertAllowedFabricHub } = require('@fabric/http/functions/fabricHubAllowlist');
 const {
   createHubApiMiddleware,
-  normalizeHubOrigin
+  normalizeHubOrigin,
+  shouldProxyHubApi
 } = require('../functions/hubApiProxy');
 const Members = require('./members');
 const Events = require('./events');
 const Operations = require('./operations');
+const GoonSite = require('../types/GoonSite');
+const pageMeta = require('../functions/pageMeta');
+const { assertStoreOpen } = require('../functions/startStore');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
 const DEFAULT_HTTP_PORT = 8080;
@@ -132,7 +137,57 @@ class GoonVC {
     return allowed.hubBase;
   }
 
+  /**
+   * Serve the built SPA shell with the requested page's Open Graph tags, so
+   * link previews (which never run the client router) describe that page.
+   * @param {string} assets Static root holding index.html.
+   * @returns {Function}
+   */
+  _pageMetaMiddleware (assets) {
+    const spa = new GoonSite(this.settings.site || {}).spa;
+    const site = spa.metaSite();
+    const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
+    const file = path.join(assets, 'index.html');
+    let cached = { mtimeMs: -1, html: null };
+    const shell = () => {
+      const stat = fs.statSync(file);
+      if (stat.mtimeMs !== cached.mtimeMs) cached = { mtimeMs: stat.mtimeMs, html: fs.readFileSync(file, 'utf8') };
+      return cached.html;
+    };
+    return (req, res, next) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      if (shouldProxyHubApi(req)) return next();
+      const page = pageMeta.findPage(pages, req.path);
+      if (!page) return next();
+      let html;
+      try {
+        html = shell();
+      } catch (_) {
+        return next();
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      if (req.method === 'HEAD') return res.end();
+      res.end(pageMeta.injectMeta(html, page.tags, page.title));
+    };
+  }
+
+  /**
+   * Start every service; if any fails (e.g. a store will not open), stop the
+   * ones already running and rethrow so the process exits.
+   * @returns {Promise<GoonVC>}
+   */
   async start () {
+    try {
+      return await this._start();
+    } catch (error) {
+      await this.stop().catch(() => {});
+      throw error;
+    }
+  }
+
+  async _start () {
     const hubOrigin = this._assertHubOrigin();
     const assets = this.settings.assets
       || path.resolve(__dirname, '..', 'assets');
@@ -200,10 +255,13 @@ class GoonVC {
       redirects: this.settings.redirects,
       spaFallback: this.settings.spaFallback !== false,
       spaFallbackExclude: /^\/(services|identity)(\/|$)/,
+      // `/` must reach pageMeta instead of express.static's directory index.
+      static: { index: false },
       jsonRpc: { enabled: false },
       cors: true,
       sitemap: { enabled: true },
       middlewares: {
+        pageMeta: this._pageMetaMiddleware(assets),
         hubApi: createHubApiMiddleware(hubOrigin, {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
         }),
@@ -218,17 +276,22 @@ class GoonVC {
     this.http.on('log', (...parts) => this.emit('log', ...parts));
 
     await this.http.start();
+    await assertStoreOpen(this.http.localStore);
     this.emit('log', 'GOON.VC', `HTML site on ${listenHost}:${port}; Hub APIs → ${hubOrigin}`);
     return this;
   }
 
   async stop () {
-    if (this.http && typeof this.http.stop === 'function') {
-      await this.http.stop();
+    const errors = [];
+    for (const service of [this.http, this.members, this.events, this.operations]) {
+      if (!service || typeof service.stop !== 'function') continue;
+      try {
+        await service.stop();
+      } catch (error) {
+        errors.push(error);
+      }
     }
-    if (this.members) await this.members.stop();
-    if (this.events) await this.events.stop();
-    if (this.operations) await this.operations.stop();
+    if (errors.length) throw errors[0];
     return this;
   }
 }

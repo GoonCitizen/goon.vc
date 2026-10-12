@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Store = require('@fabric/core/types/store');
+const startStore = require('../functions/startStore');
 const MetricsPipeline = require('@fabric/discord/types/metricsPipeline');
 const { voiceActivity, messageActivity, gatewayIntents } = require('@fabric/discord/plugins');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
@@ -114,7 +115,7 @@ class Operations {
       persistent: true,
       verbosity: 1
     });
-    await this.store.start();
+    await startStore(this.store);
     this.pipeline = new MetricsPipeline(Object.assign({
       store: this.store,
       operations: this.operations,

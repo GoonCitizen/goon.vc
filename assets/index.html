@@ -1,6 +1,21 @@
 <html>
   <head>
     <title>GOON SQUAD</title>
+    <!-- page-meta -->
+    <meta name="description" content="G00N SQUAD is a hardcore Star Citizen private military company focused on security and infiltration, and a member of the PERMAFLEET Protectorate.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GOON SQUAD">
+    <meta property="og:title" content="GOON SQUAD">
+    <meta property="og:description" content="G00N SQUAD is a hardcore Star Citizen private military company focused on security and infiltration, and a member of the PERMAFLEET Protectorate.">
+    <meta property="og:url" content="https://goon.vc/">
+    <meta property="og:image" content="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg">
+    <meta property="og:image:alt" content="GOON SQUAD logo">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="GOON SQUAD">
+    <meta name="twitter:description" content="G00N SQUAD is a hardcore Star Citizen private military company focused on security and infiltration, and a member of the PERMAFLEET Protectorate.">
+    <meta name="twitter:image" content="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg">
+    <link rel="canonical" href="https://goon.vc/">
+    <!-- /page-meta -->
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -71,6 +86,14 @@
       .home-motto { color: #fff; font-family: "Bungee", sans-serif; font-size: 0.85rem; letter-spacing: 0.08em; margin: 1.25rem 0 0; }
       .home-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-start; margin-top: 1.25rem; }
       .home-actions .goon-button { font-size: 0.8em; }
+      .home-subscriptions { border-top: 1px solid #444; margin-top: 1.5rem; padding-top: 1.25rem; }
+      .home-subscriptions[hidden] { display: none; }
+      .home-subscriptions h3 { margin: 0; }
+      .home-subscriptions p { color: #bbb; line-height: 1.5; margin: 0.5rem 0 0; }
+      .home-tiers { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0.9rem 0 0; padding: 0; }
+      .home-tiers li { align-items: center; border: 1px solid #555; border-radius: 999px; color: #eee; display: inline-flex; font-size: 0.85rem; gap: 0.45rem; letter-spacing: 0.04em; padding: 0.3rem 0.8rem; }
+      .home-tiers li::before { background: var(--tier-color, #999); border-radius: 50%; content: ""; height: 0.65rem; width: 0.65rem; }
+      .home-subscriptions .goon-button { font-size: 0.8em; margin-top: 1rem; }
 
       .discord-roster {
         background: rgba(0, 0, 0, 0.25);
@@ -634,6 +657,8 @@
       .gooncitizen-downloads li { margin-bottom: 0.5rem; }
       .gooncitizen-sha { color: #999; font-size: 0.72rem; overflow-wrap: anywhere; }
       .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
+      .gooncitizen-actions .goon-button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
+      .gooncitizen-actions .goon-button[hidden] { display: none; }
     </style>
   </head>
   <body>
@@ -656,6 +681,12 @@
         <p class="home-copy">To join G00N SQUAD, apply to ALPHA SQUADRON. The application is required for membership, even if you’re already in PERMAFLEET.</p>
         <p class="home-motto">GOONS TOGETHER STRONK · TALK LOUD FLY BIG SHIP</p>
         <div class="home-actions"><a class="goon-button" href="/operations/PERMAFLEET#alpha-squadron">Apply to ALPHA SQUADRON</a><a class="goon-button" href="/organizations/G00N">Org profile</a><a class="goon-button" href="/events">Events</a></div>
+        <div id="home-subscriptions" class="home-subscriptions" hidden>
+          <h3>Subscribe on Discord</h3>
+          <p>Support G00N SQUAD with a Discord Server Subscription. Each tier comes with its own role in our server.</p>
+          <ul class="home-tiers" data-tiers></ul>
+          <a class="goon-button" data-subscribe href="#" target="_blank" rel="noopener">See tiers and prices on Discord</a>
+        </div>
       </section>
         <div class="home-discord"><section id="discord-roster" class="discord-roster" aria-labelledby="discord-roster-title">
         <div class="dr-head">
@@ -1096,7 +1127,7 @@
         <h1>GoonCitizen</h1>
         <p class="gooncitizen-tagline">The companion app for Star Citizen.</p>
         <p class="gooncitizen-intro">A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.</p>
-        <div class="gooncitizen-actions"><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-Setup-0.1.0-dev.exe" download>Windows</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-arm64.dmg" download>macOS (Apple silicon)</a><a class="goon-button" href="/downloads/gooncitizen/gooncitizen_0.1.0-dev_amd64.deb" download>Linux (.deb)</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-debug.apk" download>Android (test build)</a></div>
+        <div class="gooncitizen-actions"><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-Setup-0.1.0-dev.exe" data-download download>Windows</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-arm64.dmg" data-download download>macOS (Apple silicon)</a><a class="goon-button" href="/downloads/gooncitizen/gooncitizen_0.1.0-dev_amd64.deb" data-download download>Linux (.deb)</a><a class="goon-button" href="/downloads/gooncitizen/GoonCitizen-0.1.0-dev-debug.apk" data-download download>Android (test build)</a><a class="goon-button gooncitizen-fallback" href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener" hidden>Get a build on Discord</a></div>
         <p class="gooncitizen-note">Pre-release 0.1.0-dev. Future builds will be published to the Fabric network. Free and open source (MIT).</p>
       </section>
       <section class="gooncitizen-features" aria-label="Features">
@@ -1595,6 +1626,31 @@
           });
       })();
     </script>
+    <script>
+      (function () {
+        var box = document.getElementById('home-subscriptions');
+        if (!box || !window.fetch) return;
+        window.fetch('/services/discord/subscriptions', { headers: { Accept: 'application/json' } })
+          .then(function (res) {
+            if (!res.ok) throw new Error('subscriptions ' + res.status);
+            return res.json();
+          })
+          .then(function (body) {
+            var tiers = (body && body.tiers) || [];
+            if (!tiers.length || !/^https:\/\/discord\.com\//.test(body.url || '')) return;
+            var list = box.querySelector('[data-tiers]');
+            tiers.forEach(function (tier) {
+              var li = document.createElement('li');
+              li.textContent = tier.name;
+              if (/^#[0-9a-f]{6}$/i.test(tier.color || '')) li.style.setProperty('--tier-color', tier.color);
+              list.appendChild(li);
+            });
+            box.querySelector('[data-subscribe]').href = body.url;
+            box.hidden = false;
+          })
+          .catch(function () {});
+      })();
+    </script>
     <script src="/scripts/fabric-calendar.js" defer></script>
     <script>
     (function () {
@@ -1680,6 +1736,41 @@
         if (now && !visible) load();
         visible = now;
         schedule();
+      }).observe(page);
+    })();
+  </script>
+    <script>
+    (function () {
+      var page = document.getElementById('gooncitizen-page');
+      if (!page) return;
+      var links = Array.prototype.slice.call(page.querySelectorAll('a[data-download]'));
+      if (!links.length) return;
+      var checked = false;
+
+      function unavailable (link) {
+        link.removeAttribute('href');
+        link.removeAttribute('download');
+        link.setAttribute('aria-disabled', 'true');
+        link.title = 'Not available on this server yet';
+      }
+
+      function check () {
+        if (checked) return;
+        checked = true;
+        Promise.all(links.map(function (link) {
+          return fetch(link.getAttribute('href'), { method: 'HEAD', cache: 'no-store' })
+            .then(function (res) { return res.ok; })
+            .catch(function () { return false; })
+            .then(function (ok) { if (!ok) unavailable(link); return ok; });
+        })).then(function (results) {
+          var fallback = page.querySelector('.gooncitizen-fallback');
+          if (fallback && results.indexOf(true) === -1) fallback.hidden = false;
+        });
+      }
+
+      if (!('IntersectionObserver' in window)) return check();
+      new IntersectionObserver(function (entries) {
+        if (entries.some(function (e) { return e.isIntersecting; })) check();
       }).observe(page);
     })();
   </script>
