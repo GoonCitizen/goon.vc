@@ -17,6 +17,7 @@ const IdleRPGPage = require('../components/IdleRPGPage');
 const Organizations = require('../components/Organizations');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
+const DrillsPage = require('../components/DrillsPage');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -65,6 +66,20 @@ const DEFAULTS = {
   resourcesDocumentTitle: 'RESOURCES — GOON SQUAD',
   // Extra index entries beyond GoonCitizen: [{ name, path, tagline, summary, links: [{ label, href }] }].
   resources: [],
+  // Flight-training drills: /drills index + one page per drill hosting its Web Component.
+  drillsPath: '/drills',
+  drillsHeading: 'DRILLS',
+  drillsIntro: 'Interactive flight-training drills. Run them on a second screen while you fly.',
+  drillsDocumentTitle: 'DRILLS — GOON SQUAD',
+  // [{ id, name, tagline?, summary?, element, script, attributes?: { name: value } }]
+  drills: [{
+    id: 'melee-rotation',
+    name: 'Melee Rotation Drill',
+    tagline: 'Evader, attacker, shadow. Splash and rotate.',
+    summary: 'Three ships fly a chase chain: the evader runs, the attacker hunts, the shadow tails the attacker with guns cold. Splash the evader and everyone moves up one role while the next pilot on deck joins the tail.',
+    element: 'melee-rotation-drill',
+    script: '/scripts/melee-rotation-drill.js'
+  }],
   gooncitizenPath: '/resources/gooncitizen',
   gooncitizenTagline: 'The companion app for Star Citizen.',
   gooncitizenSummary: 'A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.',
@@ -177,6 +192,12 @@ class GoonSPA extends FabricSPA {
       page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro')),
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
+      page(this._site('drillsPath'), this._site('drillsDocumentTitle'), this._site('drillsIntro')),
+      ...DrillsPage.validDrills(this._site('drills')).map((drill) => page(
+        DrillsPage.drillPath(drill, this._site('drillsPath')),
+        `${drill.name} — ${title}`,
+        drill.summary || drill.tagline || drill.name
+      )),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet)
     ].concat(orgData.organizations.map((org) => {
@@ -219,6 +240,8 @@ class GoonSPA extends FabricSPA {
     const resourcesTitleJson = JSON.stringify(this._site('resourcesDocumentTitle'));
     const gooncitizenPath = this._site('gooncitizenPath');
     const gooncitizenTitleJson = JSON.stringify(this._site('gooncitizenDocumentTitle'));
+    const drillsPath = this._site('drillsPath');
+    const drillsTitleJson = JSON.stringify(this._site('drillsDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
     const permafleetInviteUrl = this._site('permafleetInviteUrl');
@@ -335,6 +358,11 @@ class GoonSPA extends FabricSPA {
         tagline: this._site('gooncitizenTagline'),
         summary: this._site('gooncitizenSummary'),
         links: [{ label: 'Source on GitHub', href: this._site('gooncitizenRepoUrl') }]
+      }, {
+        name: 'Drills',
+        path: drillsPath,
+        tagline: 'Flight training you can run on a second screen.',
+        summary: this._site('drillsIntro')
       }].concat(this._site('resources') || []),
       loginPath,
       loginLabel,
@@ -355,6 +383,20 @@ class GoonSPA extends FabricSPA {
       alliance,
       copyright
     });
+    const drillsProps = {
+      heading: escapeHtml(this._site('drillsHeading')),
+      intro: escapeHtml(this._site('drillsIntro')),
+      basePath: drillsPath,
+      drills: this._site('drills'),
+      siteTitle: title,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    };
+    const drillsMainHtml = DrillsPage.render(drillsProps);
+    const drillMainsHtml = DrillsPage.renderDrills(drillsProps);
+    const drillsScript = DrillsPage.script(drillsProps);
     const orgProps = {
       heading: escapeHtml(this._site('organizationsHeading')),
       intro: escapeHtml(this._site('organizationsIntro')),
@@ -459,6 +501,7 @@ ${OperationsIndex.styles()}
 ${IdleRPGPage.styles()}
 ${Organizations.styles()}
 ${Resources.styles()}
+${DrillsPage.styles()}
     </style>
   </head>
   <body>
@@ -472,6 +515,8 @@ ${Resources.styles()}
 ${organizationMainsHtml}
     ${resourcesMainHtml}
     ${gooncitizenMainHtml}
+    ${drillsMainHtml}
+${drillMainsHtml}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
     <script type="text/javascript">
@@ -489,6 +534,11 @@ ${organizationMainsHtml}
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === ${JSON.stringify(resourcesPath.toLowerCase())};
         var isGoonCitizen = path.toLowerCase() === ${JSON.stringify(gooncitizenPath.toLowerCase())};
+        var isDrills = path.toLowerCase() === ${JSON.stringify(drillsPath.toLowerCase())};
+        var drillEl = null;
+        document.querySelectorAll('.drill-page').forEach(function (el) {
+          if (el.getAttribute('data-path') === path.toLowerCase()) drillEl = el;
+        });
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var home = document.getElementById('home-page');
@@ -499,7 +549,7 @@ ${organizationMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isPermafleet && !isSchedule) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isPermafleet && !isSchedule) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -515,6 +565,11 @@ ${organizationMainsHtml}
         var gooncitizenEl = document.getElementById('gooncitizen-page');
         if (resourcesEl) resourcesEl.style.display = isResources ? 'block' : 'none';
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
+        var drillsEl = document.getElementById('drills-page');
+        if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
+        document.querySelectorAll('.drill-page').forEach(function (el) {
+          el.style.display = el === drillEl ? 'block' : 'none';
+        });
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -527,6 +582,8 @@ ${organizationMainsHtml}
         else if (isOrganizations) document.title = ${organizationsTitleJson};
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
+        else if (isDrills) document.title = ${drillsTitleJson};
+        else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
@@ -540,6 +597,7 @@ ${organizationMainsHtml}
     ${operationsScript}
     ${idlerpgScript}
     ${Resources.gooncitizenScript()}
+    ${drillsScript}
     ${permafleetScript}
     ${alphaApplicationScript}
   </body>

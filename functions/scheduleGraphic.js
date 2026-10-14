@@ -392,7 +392,7 @@ function renderVerticalBoard (opts) {
   const parts = [];
   const bgAt = 0;
   parts.push('');
-  parts.push(`<rect x="0" y="0" width="${W}" height="6" fill="${INK.red}"/>`);
+  parts.push(`<rect class="schedule-accent" x="0" y="0" width="${W}" height="6" fill="${INK.red}"/>`);
 
   const guildName = String(opts.guildName || '');
   const titleSize = guildName.length > 18 ? 16 : 22;
@@ -542,7 +542,7 @@ function renderVerticalBoard (opts) {
   parts.push(`<text data-hook="schedule-legend" x="${M}" y="${y}" fill="${INK.muted}" font-family="${SANS}" font-size="11"><tspan fill="${INK.red}">&#9608;</tspan> Theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="${INK.redMid}">&#9608;</tspan> Special</text>`);
   y += M;
 
-  parts[bgAt] = `<rect width="${W}" height="${y}" fill="${INK.bg}"/>`;
+  parts[bgAt] = `<rect class="schedule-bg" width="${W}" height="${y}" fill="${INK.bg}"/>`;
   return {
     svg: `<svg class="layout-tall" x="0" y="0" width="100%" height="100%" viewBox="0 0 ${W} ${y}" preserveAspectRatio="xMidYMid meet" style="display:none">\n${parts.join('\n')}\n</svg>`,
     width: W,
@@ -608,8 +608,8 @@ function renderWeekScheduleSvg (opts = {}) {
 
   const parts = [];
   parts.push(`<svg class="layout-wide" x="0" y="0" width="100%" height="100%" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="xMidYMid meet">`);
-  parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="${INK.bg}"/>`);
-  parts.push(`<rect x="0" y="0" width="${WIDTH}" height="6" fill="${INK.red}"/>`);
+  parts.push(`<rect class="schedule-bg" width="${WIDTH}" height="${HEIGHT}" fill="${INK.bg}"/>`);
+  parts.push(`<rect class="schedule-accent" x="0" y="0" width="${WIDTH}" height="6" fill="${INK.red}"/>`);
 
   parts.push(`<text id="schedule-title" x="${margin + 4}" y="${margin + 42}" fill="${INK.ink}" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="38" letter-spacing="4">${escapeXml(guildName)}</text>`);
   parts.push(`<text x="${margin + 4}" y="${margin + 74}" fill="${INK.red}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="6">WEEKLY OPS</text>`);

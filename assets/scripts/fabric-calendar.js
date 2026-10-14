@@ -23,6 +23,8 @@
  * Board SVG contract (all optional; a missing hook just drops that control):
  *   #schedule-title, #schedule-subtitle, #schedule-timezone, #schedule-asof, #schedule-legend
  * A stacked copy of the same labels may use `data-hook` instead of an id.
+ * A backdrop `rect.schedule-bg` is drawn transparent so the page shows through,
+ * and a poster trim `.schedule-accent` is hidden.
  * `@media (max-width: 760px)` shows that copy (`.layout-tall`) and gives the
  * board its taller box. Keep the width in sync with `VERTICAL_MAX_WIDTH` in
  * `functions/scheduleGraphic.js`.
@@ -42,11 +44,13 @@
     .wrap { position: relative; }
     .board {
       aspect-ratio: var(--board-wide-w, 16) / var(--board-wide-h, 9);
-      background: #0c0c0d;
-      border: 1px solid #2c2c30;
+      background: transparent;
       position: relative;
     }
     .board > svg { display: block; height: 100%; inset: 0; position: absolute; width: 100%; }
+    /* The page shows through; downloads keep the board's own backdrop. */
+    .board .schedule-bg { fill: transparent; }
+    .board .schedule-accent { display: none; }
     .board a:hover rect { filter: brightness(1.35); }
     .board a:hover #schedule-download,
     .board a:hover .schedule-download { fill: #fff; text-decoration: underline; }

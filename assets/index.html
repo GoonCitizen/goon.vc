@@ -691,6 +691,11 @@
       .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
       .gooncitizen-actions .goon-button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
       .gooncitizen-actions .goon-button[hidden] { display: none; }
+
+      .drills-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .drills-page > h1, .drills-page > .operations-intro { text-align: center; }
+      .drill-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 0 3em; }
+      .drill-page .drill-element { background: none; }
     </style>
   </head>
   <body>
@@ -1197,6 +1202,12 @@
           <p class="operation-summary">A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.</p>
           <div class="operation-links"><a class="goon-button" href="/resources/gooncitizen">Open</a><a class="goon-button" href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">Source on GitHub</a></div>
         </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/drills">Drills</a></h2>
+          <p class="operation-tagline">Flight training you can run on a second screen.</p>
+          <p class="operation-summary">Interactive flight-training drills. Run them on a second screen while you fly.</p>
+          <div class="operation-links"><a class="goon-button" href="/drills">Open</a></div>
+        </article>
       </div>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
@@ -1234,6 +1245,32 @@
         <ul class="gooncitizen-downloads"><li><strong>Windows</strong> · 122 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 e7ba929ab6be5d16484a23f4a7d0245bef1b0d6d6280a5f8132501b54a1581a3</code></li><li><strong>macOS (Apple silicon)</strong> · 132 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 21f18167955d9f3ff54299a042a707a32cdbdc9310560df0bdf397940d0d850a</code></li><li><strong>Linux (.deb)</strong> · 120 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 8d88b8147fc25ec5321f25cc8307d5000c2b3483b2be3b7646720c7164b62c51</code></li><li><strong>Android (test build)</strong> · 247 MB · built 2026-08-20<br><code class="gooncitizen-sha">sha256 f01d6ba663eb7a3d530d49a28e9cae093c72bd80bb29558e2516c7ecef37c5af</code></li></ul>
         <p class="gooncitizen-note">Source: <a href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">GitHub</a>. Pre-release builds are not code-signed. Windows: choose More info → Run anyway if SmartScreen warns. macOS: if the app is blocked, open System Settings → Privacy &amp; Security and choose Open Anyway. Android: allow installs from unknown sources to sideload.</p>
       </section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="drills-page" class="drills-page">
+      <h1>DRILLS</h1>
+      <p class="operations-intro">Interactive flight-training drills. Run them on a second screen while you fly.</p>
+      <div class="operations-grid">
+        <article class="operation-card">
+          <h2 class="operation-name"><a href="/drills/melee-rotation">Melee Rotation Drill</a></h2>
+          <p class="operation-tagline">Evader, attacker, shadow. Splash and rotate.</p>
+          <p class="operation-summary">Three ships fly a chase chain: the evader runs, the attacker hunts, the shadow tails the attacker with guns cold. Splash the evader and everyone moves up one role while the next pilot on deck joins the tail.</p>
+          <div class="operation-links"><a class="goon-button" href="/drills/melee-rotation">Fly the drill</a></div>
+        </article>
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="drill-page" id="drill-melee-rotation" data-path="/drills/melee-rotation" data-title="Melee Rotation Drill — GOON SQUAD">
+      <p class="page-back"><a href="/drills">&larr; Drills</a></p>
+      <melee-rotation-drill class="drill-element" heading="Melee Rotation Drill"></melee-rotation-drill>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -1347,6 +1384,11 @@
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === "/resources";
         var isGoonCitizen = path.toLowerCase() === "/resources/gooncitizen";
+        var isDrills = path.toLowerCase() === "/drills";
+        var drillEl = null;
+        document.querySelectorAll('.drill-page').forEach(function (el) {
+          if (el.getAttribute('data-path') === path.toLowerCase()) drillEl = el;
+        });
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var home = document.getElementById('home-page');
@@ -1357,7 +1399,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isPermafleet && !isSchedule) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isPermafleet && !isSchedule) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -1373,6 +1415,11 @@
         var gooncitizenEl = document.getElementById('gooncitizen-page');
         if (resourcesEl) resourcesEl.style.display = isResources ? 'block' : 'none';
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
+        var drillsEl = document.getElementById('drills-page');
+        if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
+        document.querySelectorAll('.drill-page').forEach(function (el) {
+          el.style.display = el === drillEl ? 'block' : 'none';
+        });
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -1385,6 +1432,8 @@
         else if (isOrganizations) document.title = "ORGANIZATIONS — GOON SQUAD";
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
+        else if (isDrills) document.title = "DRILLS — GOON SQUAD";
+        else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
@@ -2023,6 +2072,7 @@
       }).observe(page);
     })();
   </script>
+    <script src="/scripts/melee-rotation-drill.js" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');

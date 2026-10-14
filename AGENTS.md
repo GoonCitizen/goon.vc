@@ -97,6 +97,15 @@ GoonCitizen desktop app. `npm run build:downloads` copies the latest builds from
 over GitHub's 100 MB limit; only `index.json` is tracked) and the page renders
 buttons + sha256 from that manifest. Interim only: future builds publish to the
 Fabric network.
+`/drills` indexes interactive training drills from `GoonSPA` `drills` (`id`,
+`name`, `tagline`, `summary`, `element`, `script`, optional `attributes`); each
+renders at `/drills/<id>` as its standalone Web Component
+(`components/DrillsPage.js`). `<melee-rotation-drill>`
+(`assets/scripts/melee-rotation-drill.js`, shadow DOM, no goon.vc dependencies)
+runs only while visible, takes `heading` / `eyebrow` / `description` /
+`pilots` / `storage-key` / `auto-every` / `fonts="none"` attributes,
+and emits `splash` + `rosterchange`. Add a drill = a new element script plus a
+`drills` entry. The old `/drills/melee-rotation-drill.html` redirects.
 `/sessions` is the single login page (Discord, Passport, GoonCitizen desktop),
 backed by the members Store under `/services/members`; `/members/login`
 redirects there. The HTML client probes `OPTIONS /services/rpc` and

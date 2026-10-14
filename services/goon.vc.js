@@ -97,7 +97,8 @@ class GoonVC {
         '/permafleet/schedule': '/operations/PERMAFLEET/schedule',
         '/members/login': '/sessions',
         '/idlerpg': '/services/idlerpg',
-        '/idlerpg/': '/services/idlerpg'
+        '/idlerpg/': '/services/idlerpg',
+        '/drills/melee-rotation-drill.html': '/drills/melee-rotation'
       },
       spaFallback: true
     }, settings);

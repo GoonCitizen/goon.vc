@@ -452,6 +452,27 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.json.count, 0);
   });
 
+  it('serves the drills index and the melee rotation drill component at /drills', async function () {
+    const index = await fetchJson('/drills', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('id="drills-page"'));
+    assert.ok(index.body.includes('href="/drills/melee-rotation"'), 'index links to the drill');
+    assert.ok(index.body.includes('<meta property="og:title" content="DRILLS — GOON SQUAD">'));
+
+    const drill = await fetchJson('/drills/melee-rotation', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(drill.status, 200);
+    assert.ok(drill.body.includes('<melee-rotation-drill class="drill-element" heading="Melee Rotation Drill"></melee-rotation-drill>'));
+    assert.ok(drill.body.includes('<script src="/scripts/melee-rotation-drill.js" defer></script>'));
+    assert.ok(drill.body.includes('<meta property="og:title" content="Melee Rotation Drill — GOON SQUAD">'), 'per-drill Open Graph');
+
+    const script = await fetchJson('/scripts/melee-rotation-drill.js');
+    assert.strictEqual(script.status, 200);
+    assert.ok(script.body.includes("customElements.define('melee-rotation-drill'"));
+
+    const old = await fetchJson('/drills/melee-rotation-drill.html', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(old.status, 302);
+  });
+
   it('redirects the old IdleRPG URLs to /services/idlerpg', async function () {
     const old = await fetchJson('/idlerpg', { headers: { Accept: 'text/html' } });
     assert.strictEqual(old.status, 302);
