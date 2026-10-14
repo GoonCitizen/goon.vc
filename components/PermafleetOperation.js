@@ -480,7 +480,7 @@ function renderPermafleetMainHtml (opts) {
             </div>
             <p class="op-server-online" id="permafleet-online"></p>
           </section>
-          <p class="op-resource-link"><a href="${escapeHtml(opts.schedulePath)}">Weekly ops schedule &raquo;</a></p>
+          <p class="op-resource-link"><a href="${escapeHtml(opts.schedulePath)}">Weekly ops schedule &raquo;</a> · <a href="${escapeHtml(opts.organizationsPath || '/organizations')}">Member organizations &raquo;</a></p>
           <p class="op-hotline"><strong>Hotline:</strong> #embassy chat on the <a href="${escapeHtml(opts.hotlineUrl)}" target="_blank" rel="noopener noreferrer">GOON SQUAD Discord &raquo;</a></p>
           <section class="op-pillars" aria-label="What PERMAFLEET offers">
 ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2><p>${p.body}</p></article>`).join('\n')}

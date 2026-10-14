@@ -5,6 +5,7 @@ const path = require('path');
 const FabricSPA = require('@fabric/http/types/spa');
 const escapeHtml = require('../functions/escapeHtml');
 const pageMeta = require('../functions/pageMeta');
+const { FEATURES } = require('../constants');
 const HomePage = require('../components/HomePage');
 const SiteHeader = require('../components/SiteHeader');
 const PermafleetOperation = require('../components/PermafleetOperation');
@@ -12,6 +13,7 @@ const PermafleetSchedule = require('../components/PermafleetSchedule');
 const Login = require('../components/Login');
 const EventsPage = require('../components/EventsPage');
 const OperationsIndex = require('../components/OperationsIndex');
+const IdleRPGPage = require('../components/IdleRPGPage');
 const Organizations = require('../components/Organizations');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
@@ -44,8 +46,13 @@ const DEFAULTS = {
   operations: [],
   // Operations with Discord metrics (PERMAFLEET's card merges its entry); same file services/operations reads.
   operationsFile: OPERATIONS_FILE,
+  // IdleRPG: card on /operations + dedicated players & statistics page (data from /services/idlerpg).
+  idlerpgPath: '/services/idlerpg',
+  idlerpgHeading: 'IDLERPG',
+  idlerpgTagline: 'Presence is progress.',
+  idlerpgIntro: 'The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.',
+  idlerpgDocumentTitle: 'IDLERPG — GOON SQUAD',
   organizationsPath: '/organizations',
-  organizationsLabel: 'ORGANIZATIONS',
   organizationsHeading: 'ORGANIZATIONS',
   organizationsIntro: 'Member organizations of the PERMAFLEET Protectorate. Each links to its RSI page, where you can apply.',
   organizationsDocumentTitle: 'ORGANIZATIONS — GOON SQUAD',
@@ -166,6 +173,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('loginPath'), this._site('loginDocumentTitle'), this._site('loginDescription')),
       page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
+      page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
       page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro')),
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
@@ -201,6 +209,8 @@ class GoonSPA extends FabricSPA {
     const eventsPath = this._site('eventsPath');
     const eventsTitleJson = JSON.stringify(this._site('eventsDocumentTitle'));
     const operationsPath = this._site('operationsPath');
+    const idlerpgPath = this._site('idlerpgPath');
+    const idlerpgTitleJson = JSON.stringify(this._site('idlerpgDocumentTitle'));
     const organizationsPath = this._site('organizationsPath');
     const organizationsTitleJson = JSON.stringify(this._site('organizationsDocumentTitle'));
     const orgData = loadOrganizations(this._site('organizationsFile'));
@@ -224,11 +234,10 @@ class GoonSPA extends FabricSPA {
       heading,
       nav: [
         { href: eventsPath, label: escapeHtml(this._site('eventsLabel')) },
-        { href: organizationsPath, label: escapeHtml(this._site('organizationsLabel')) },
         { href: operationsPath, label: escapeHtml(this._site('operationsLabel')) },
         { href: resourcesPath, label: escapeHtml(this._site('resourcesLabel')) },
-        { href: loginPath, label: 'Login' }
-      ]
+        FEATURES.headerLogin ? { href: loginPath, label: 'Login' } : null
+      ].filter(Boolean)
     });
     const overviewOrg = orgData.organizations.find((org) => org.symbol === this._site('overviewSymbol')) || {};
     const homeMainHtml = HomePage.render({
@@ -296,11 +305,27 @@ class GoonSPA extends FabricSPA {
         links: op.links,
         metrics: hasMetrics(op)
       })), this._site('operations') || []),
+      idlerpg: {
+        path: idlerpgPath,
+        name: this._site('idlerpgHeading'),
+        tagline: this._site('idlerpgTagline'),
+        summary: this._site('idlerpgIntro')
+      },
       loginPath,
       loginLabel,
       alliance,
       copyright
     });
+    const idlerpgMainHtml = IdleRPGPage.render({
+      heading: escapeHtml(this._site('idlerpgHeading')),
+      intro: escapeHtml(this._site('idlerpgIntro')),
+      operationsPath,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    });
+    const idlerpgScript = IdleRPGPage.script();
     const resourcesMainHtml = Resources.render({
       heading: escapeHtml(this._site('resourcesHeading')),
       intro: escapeHtml(this._site('resourcesIntro')),
@@ -431,6 +456,7 @@ ${PermafleetSchedule.styles()}
 ${Login.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
+${IdleRPGPage.styles()}
 ${Organizations.styles()}
 ${Resources.styles()}
     </style>
@@ -441,6 +467,7 @@ ${Resources.styles()}
     ${loginMainHtml}
     ${eventsMainHtml}
     ${operationsMainHtml}
+    ${idlerpgMainHtml}
     ${organizationsMainHtml}
 ${organizationMainsHtml}
     ${resourcesMainHtml}
@@ -456,6 +483,7 @@ ${organizationMainsHtml}
         var isLogin = path === loginPath;
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
+        var isIdleRPG = path.toLowerCase() === ${JSON.stringify(idlerpgPath.toLowerCase())};
         var isOrganizations = path.toLowerCase() === ${JSON.stringify(organizationsPath.toLowerCase())};
         var orgMatch = new RegExp(${JSON.stringify(orgPathPattern)}, 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
@@ -471,11 +499,13 @@ ${organizationMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isPermafleet && !isSchedule) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isPermafleet && !isSchedule) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
+        var idlerpgEl = document.getElementById('idlerpg-page');
+        if (idlerpgEl) idlerpgEl.style.display = isIdleRPG ? 'block' : 'none';
         var organizationsEl = document.getElementById('organizations-page');
         if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
         document.querySelectorAll('.organization-page').forEach(function (el) {
@@ -493,6 +523,7 @@ ${organizationMainsHtml}
         if (isLogin) document.title = ${loginTitleJson};
         else if (isEvents) document.title = ${eventsTitleJson};
         else if (isOperations) document.title = ${operationsTitleJson};
+        else if (isIdleRPG) document.title = ${idlerpgTitleJson};
         else if (isOrganizations) document.title = ${organizationsTitleJson};
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
@@ -507,6 +538,7 @@ ${organizationMainsHtml}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
     ${operationsScript}
+    ${idlerpgScript}
     ${Resources.gooncitizenScript()}
     ${permafleetScript}
     ${alphaApplicationScript}

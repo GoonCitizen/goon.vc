@@ -200,6 +200,11 @@ describe('goon.vc HTTP', function () {
         path: path.join(os.tmpdir(), `goonvc-operations-test-${process.pid}`),
         gateway: false
       },
+      presence: {
+        path: path.join(os.tmpdir(), `goonvc-presence-test-${process.pid}`),
+        tickMs: 0,
+        gateway: false
+      },
       listen: true
     });
     await site.start();
@@ -310,6 +315,9 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('favicon.svg'));
     assert.ok(res.body.includes('#4C1D95'));
     assert.ok(!/Star Citizen relay API/i.test(res.body));
+    assert.strictEqual(require('../constants').FEATURES.headerLogin, false);
+    const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(res.body)[1];
+    assert.ok(!nav.includes('href="/sessions"'), 'no Login link in the header');
     const home = res.body.slice(res.body.indexOf('id="home-page"'), res.body.indexOf('</main>', res.body.indexOf('id="home-page"')));
     assert.ok(!home.includes('<iframe'), 'Discord widget iframe replaced');
     assert.ok(home.includes('id="discord-roster"'));
@@ -415,6 +423,48 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.json.operations.length, 1);
   });
 
+  it('reports global presence aggregates at /services/idlerpg', async function () {
+    const res = await fetchJson('/services/idlerpg');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.json.gateway.status, 'disabled');
+    assert.strictEqual(res.json.presentNow, 0);
+    assert.strictEqual(res.json.uniquePlayers, 0);
+    assert.strictEqual(typeof res.json.totalPresentHours, 'number');
+    assert.ok(!('players' in res.json) && !('users' in res.json), 'aggregates only');
+    const page = await fetchJson('/operations', { headers: { Accept: 'text/html' } });
+    assert.ok(page.body.includes('id="idlerpg-card"'), 'IdleRPG card on /operations');
+    assert.ok(page.body.includes('id="presence-strip"'), 'presence metrics on the IdleRPG card');
+    assert.ok(page.body.includes('href="/services/idlerpg"'), 'links to the IdleRPG application');
+    assert.ok(page.body.includes('"/services/idlerpg"'));
+  });
+
+  it('mounts the IdleRPG application at /services/idlerpg (page for browsers, JSON for clients)', async function () {
+    const page = await fetchJson('/services/idlerpg', { headers: { Accept: 'text/html,application/xhtml+xml,*/*;q=0.8' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('id="idlerpg-page"'));
+    assert.ok(page.body.includes('id="idlerpg-players"'));
+    assert.ok(page.body.includes('<meta property="og:title" content="IDLERPG — GOON SQUAD">'), 'per-page Open Graph');
+    assert.ok(page.body.includes('<link rel="canonical" href="https://goon.vc/services/idlerpg">'));
+    assert.ok(page.body.includes('"/services/idlerpg/players"'));
+    const res = await fetchJson('/services/idlerpg/players?limit=10');
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.json.players, []);
+    assert.strictEqual(res.json.count, 0);
+  });
+
+  it('redirects the old IdleRPG URLs to /services/idlerpg', async function () {
+    const old = await fetchJson('/idlerpg', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(old.status, 302);
+    const api = await new Promise((resolve, reject) => {
+      http.get({ hostname: '127.0.0.1', port: sitePort, path: '/services/presence/players?limit=5' }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(api.status, 308);
+    assert.strictEqual(api.location, '/services/idlerpg/players?limit=5');
+  });
+
   it('serves the /organizations index and a page per member org', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
@@ -433,7 +483,8 @@ describe('goon.vc HTTP', function () {
     });
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('id="organizations-page"'));
-    assert.ok(res.body.includes('<a href="/organizations">ORGANIZATIONS</a>'));
+    assert.ok(!res.body.includes('<a href="/organizations">ORGANIZATIONS</a>'), 'not in the site header');
+    assert.ok(/id="operation-permafleet"[\s\S]*?Weekly ops schedule &raquo;<\/a> · <a href="\/organizations">Member organizations &raquo;<\/a>/.test(res.body), 'linked from PERMAFLEET');
     for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
       assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
       assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);

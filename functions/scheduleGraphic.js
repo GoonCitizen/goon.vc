@@ -49,20 +49,15 @@ const INK = {
 };
 
 /**
- * Alliance member orgs called out on the PERMAFLEET board
- * (contracts/org.dot + Turtle Brigade rank path).
+ * PERMAFLEET member orgs called out on the board, as listed on /organizations
+ * (`contracts/organizations.json`, refreshed by `npm run build:organizations`).
  * @type {readonly string[]}
  */
-const PERMAFLEET_ORGS = Object.freeze([
-  'G00N SQUAD',
-  'Infinity Industries',
-  'RAT',
-  'Transgalactic Trade',
-  'LEGACY',
-  'Black Exodus',
-  'Turtle Brigade',
-  'STARJUMP'
-]);
+const PERMAFLEET_ORGS = Object.freeze(
+  (require('../contracts/organizations.json').organizations || [])
+    .map((org) => org.displayName || org.name)
+    .filter(Boolean)
+);
 
 /**
  * @typedef {object} ScheduleBrand

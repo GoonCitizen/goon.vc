@@ -61,6 +61,14 @@ module.exports = {
     gateway: process.env.GOON_OPERATIONS_GATEWAY !== '0'
   },
 
+  // /services/idlerpg: global IdleRPG presence statistic (Doorman in-process,
+  // fed by the operations gateway client; Fabric Store).
+  presence: {
+    path: process.env.GOON_PRESENCE_STORE || 'stores/presence',
+    tickMs: Number(process.env.GOON_PRESENCE_TICK_MS || 600000) || 600000,
+    channels: [] // empty = every voice channel the bot can see counts
+  },
+
   site: {
     title: 'GOON SQUAD',
     heading: 'GOON SQUAD<sup>&trade;</sup>',

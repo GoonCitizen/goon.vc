@@ -94,7 +94,10 @@ describe('PERMAFLEET schedule', function () {
     const rendered = graphic.renderWeekScheduleGraphic({ events: rows, brand: 'permafleet' });
     assert.strictEqual(rendered.baseName, 'permafleet-schedule');
     assert.ok(rendered.svg.includes('WEEKLY OPS'));
-    assert.ok(rendered.svg.includes('TURTLE BRIGADE'));
+    const members = require('../contracts/organizations.json').organizations.map((org) => org.displayName);
+    assert.deepStrictEqual(graphic.PERMAFLEET_ORGS, members, 'chips are the PERMAFLEET member orgs');
+    for (const name of members) assert.ok(rendered.svg.includes(`>${graphic.escapeXml(name.toUpperCase())}</text>`), name);
+    assert.ok(!rendered.svg.includes('TURTLE BRIGADE') && !rendered.svg.includes('BLACK EXODUS'));
     assert.ok(rendered.svg.includes('npm run build:schedule -- --brand permafleet'));
     assert.ok(rendered.html.startsWith('<!DOCTYPE html>'));
   });

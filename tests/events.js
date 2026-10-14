@@ -172,7 +172,7 @@ describe('Events', function () {
     const home = await events.board({ server: GOON });
     assert.ok(home.startsWith('<svg'));
     assert.ok(home.includes('>PERMAFLEET</text>'), 'home guild uses the PERMAFLEET brand');
-    assert.ok(home.includes('TURTLE BRIGADE'));
+    assert.ok(home.includes('INFINITY INDUSTRIES'));
     assert.ok(home.includes(`<a href="https://discord.com/events/${GOON}/11"`), 'events link to Discord');
     assert.ok(home.includes('FIGHTER FRIDAY'));
     assert.ok(!home.includes('Ally meetup'));
@@ -181,7 +181,7 @@ describe('Events', function () {
     const ally = await events.board({ server: ALLY });
     assert.ok(ally.includes('>ALLY ORG</text>'));
     assert.ok(ally.includes('Ally meetup'));
-    assert.ok(!ally.includes('TURTLE BRIGADE'), 'no alliance chips on other servers');
+    assert.ok(!ally.includes('INFINITY INDUSTRIES'), 'no alliance chips on other servers');
 
     const all = await events.board({ server: 'all' });
     assert.ok(all.includes('>ALL SERVERS</text>'));

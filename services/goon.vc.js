@@ -13,6 +13,7 @@ const {
 const Members = require('./members');
 const Events = require('./events');
 const Operations = require('./operations');
+const Presence = require('./presence');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
@@ -94,7 +95,9 @@ class GoonVC {
         '/permafleet': '/operations/PERMAFLEET',
         '/permafleet/': '/operations/PERMAFLEET',
         '/permafleet/schedule': '/operations/PERMAFLEET/schedule',
-        '/members/login': '/sessions'
+        '/members/login': '/sessions',
+        '/idlerpg': '/services/idlerpg',
+        '/idlerpg/': '/services/idlerpg'
       },
       spaFallback: true
     }, settings);
@@ -157,6 +160,9 @@ class GoonVC {
     return (req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
       if (shouldProxyHubApi(req)) return next();
+      // Applications mounted under /services answer browsers with the page
+      // and fetch() / API clients with JSON at the same URL.
+      if (/^\/services(\/|$)/.test(req.path) && !/text\/html/i.test(String(req.headers.accept || ''))) return next();
       const page = pageMeta.findPage(pages, req.path);
       if (!page) return next();
       let html;
@@ -242,6 +248,22 @@ class GoonVC {
     this.operations.on('error', (...parts) => this.emit('error', ...parts));
     await this.operations.start();
 
+    const presenceSettings = this.settings.presence || {};
+    this.presence = new Presence({
+      path: presenceSettings.path || './stores/presence',
+      tickMs: presenceSettings.tickMs,
+      luck: presenceSettings.luck,
+      channels: presenceSettings.channels,
+      gateway: presenceSettings.gateway,
+      operations: this.operations,
+      Doorman: presenceSettings.Doorman,
+      IdleRPG: presenceSettings.IdleRPG,
+      DoormanDiscord: presenceSettings.DoormanDiscord
+    });
+    this.presence.on('log', (...parts) => this.emit('log', ...parts));
+    this.presence.on('error', (...parts) => this.emit('error', ...parts));
+    await this.presence.start();
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -267,7 +289,8 @@ class GoonVC {
         }),
         members: this.members.middleware(),
         events: this.events.middleware(),
-        operations: this.operations.middleware()
+        operations: this.operations.middleware(),
+        presence: this.presence.middleware()
       }
     });
 
@@ -283,7 +306,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.members, this.events, this.operations]) {
+    for (const service of [this.http, this.members, this.events, this.presence, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

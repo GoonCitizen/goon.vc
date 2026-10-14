@@ -148,6 +148,9 @@ class Operations {
     this.pipeline.attach(discord);
     this.discord = discord;
     this.gateway = { status: 'connecting', error: null };
+    // Other in-process consumers (e.g. services/presence.js) share this one
+    // gateway client instead of opening a second connection.
+    this.emit('gateway', discord);
     try {
       await discord.start();
     } catch (error) {
