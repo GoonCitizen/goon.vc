@@ -485,6 +485,13 @@ function renderPermafleetMainHtml (opts) {
           <section class="op-pillars" aria-label="What PERMAFLEET offers">
 ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2><p>${p.body}</p></article>`).join('\n')}
           </section>
+          <section class="op-charter" aria-labelledby="permafleet-charter">
+            <h2 id="permafleet-charter">Charter</h2>
+            <p>${CHARTER}</p>
+            <ul class="op-orgs">${(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name }))).map((org) => `<li>${org.href ? `<a href="${escapeHtml(org.href)}">${escapeHtml(org.name)}</a>` : escapeHtml(org.name)}</li>`).join('')}</ul>
+            ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
+            <p class="op-laws">Members shall enjoy their freedoms.</p>
+          </section>
           <section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
             <h2 id="permafleet-squadrons">Cross-org squadrons</h2>
             <p class="op-squadrons-intro">Squadrons draw members from every PERMAFLEET org. Most are selected by leadership once you reach Prospect IV; ALPHA SQUADRON takes applications.</p>
@@ -499,13 +506,6 @@ ${SQUADRONS.map((s) => `              <article class="op-squadron${s.id === 'alp
                 </div>` : ''}
               </article>`).join('\n')}
             </div>
-          </section>
-          <section class="op-charter" aria-labelledby="permafleet-charter">
-            <h2 id="permafleet-charter">Charter</h2>
-            <p>${CHARTER}</p>
-            <ul class="op-orgs">${(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name }))).map((org) => `<li>${org.href ? `<a href="${escapeHtml(org.href)}">${escapeHtml(org.name)}</a>` : escapeHtml(org.name)}</li>`).join('')}</ul>
-            ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
-            <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
         </div>
         <footer class="op-footer">

@@ -39,7 +39,8 @@ const DEFAULTS = {
   eventsIntro: 'Upcoming scheduled events from every Discord server we fly with.',
   eventsDocumentTitle: 'EVENTS — GOON SQUAD',
   operationsPath: '/operations',
-  operationsLabel: 'OPERATIONS',
+  // Header link to the PERMAFLEET page.
+  allianceLabel: 'PERMAFLEET',
   operationsHeading: 'OPERATIONS',
   operationsIntro: 'Standing operations the Squad flies, runs, or supports.',
   operationsDocumentTitle: 'OPERATIONS — GOON SQUAD',
@@ -257,8 +258,8 @@ class GoonSPA extends FabricSPA {
       heading,
       nav: [
         { href: eventsPath, label: escapeHtml(this._site('eventsLabel')) },
-        { href: operationsPath, label: escapeHtml(this._site('operationsLabel')) },
         { href: resourcesPath, label: escapeHtml(this._site('resourcesLabel')) },
+        { href: permafleetPath, label: escapeHtml(this._site('allianceLabel')) },
         FEATURES.headerLogin ? { href: loginPath, label: 'Login' } : null
       ].filter(Boolean)
     });
@@ -328,12 +329,6 @@ class GoonSPA extends FabricSPA {
         links: op.links,
         metrics: hasMetrics(op)
       })), this._site('operations') || []),
-      idlerpg: {
-        path: idlerpgPath,
-        name: this._site('idlerpgHeading'),
-        tagline: this._site('idlerpgTagline'),
-        summary: this._site('idlerpgIntro')
-      },
       loginPath,
       loginLabel,
       alliance,
@@ -342,7 +337,7 @@ class GoonSPA extends FabricSPA {
     const idlerpgMainHtml = IdleRPGPage.render({
       heading: escapeHtml(this._site('idlerpgHeading')),
       intro: escapeHtml(this._site('idlerpgIntro')),
-      operationsPath,
+      resourcesPath,
       loginPath,
       loginLabel,
       alliance,
@@ -363,6 +358,14 @@ class GoonSPA extends FabricSPA {
         path: drillsPath,
         tagline: 'Flight training you can run on a second screen.',
         summary: this._site('drillsIntro')
+      }, {
+        id: 'idlerpg-card',
+        name: this._site('idlerpgHeading'),
+        path: idlerpgPath,
+        tagline: this._site('idlerpgTagline'),
+        summary: this._site('idlerpgIntro'),
+        openLabel: 'Players & statistics',
+        presence: true
       }].concat(this._site('resources') || []),
       loginPath,
       loginLabel,
@@ -597,6 +600,7 @@ ${drillMainsHtml}
     ${operationsScript}
     ${idlerpgScript}
     ${Resources.gooncitizenScript()}
+    ${Resources.presenceScript()}
     ${drillsScript}
     ${permafleetScript}
     ${alphaApplicationScript}

@@ -34,6 +34,8 @@ class Presence {
    * @param {number} [settings.tickMs] IdleRPG tick interval (default 10 minutes).
    * @param {number} [settings.luck] Encounter chance per rewarded tick.
    * @param {Array<string>} [settings.channels] Channel allowlist (empty = every voice channel counts).
+   * @param {Array<string>} [settings.announcements] Discord text channel ids that receive game
+   *   announcements. The only thing the bot ever posts; commands are never answered.
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
    * @param {boolean} [settings.gateway] Attach to the Discord gateway when available (default true).
    * @param {Function} [settings.Doorman] Injected for tests; defaults to @fabric/doorman.
@@ -46,12 +48,14 @@ class Presence {
       tickMs: 10 * 60 * 1000,
       luck: 0.05,
       channels: [],
+      announcements: [],
       operations: null,
       gateway: true
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.doorman = null;
     this.game = null;
     this.adapter = null;
+    this.discord = null;
     this.gateway = { status: 'disabled', error: null };
     this._listeners = {};
     this._onGateway = (discord) => this.attach(discord);
@@ -82,11 +86,15 @@ class Presence {
       tickMs: this.settings.tickMs,
       luck: this.settings.luck,
       channels: this.settings.channels,
+      announcements: this.announcementTargets(),
       persistent: true,
       verbosity: 1
     });
     this.game = this.doorman.plugins.idlerpg;
     this.game.on('error', (error) => this.emit('error', 'presence game', errorMessage(error)));
+    this.game.on('message', (message) => {
+      this.announce(message).catch((error) => this.emit('error', 'presence announce', errorMessage(error)));
+    });
     // Doorman#start() resolves once every plugin has started (Store open,
     // prior state restored).
     await this.doorman.start();
@@ -104,6 +112,30 @@ class Presence {
   }
 
   /**
+   * Configured announcement channels as Doorman targets (`discord/channels/<id>`).
+   * @returns {Array<string>}
+   */
+  announcementTargets () {
+    return (this.settings.announcements || [])
+      .map((entry) => String(entry).trim().replace(/^discord\/channels\//, ''))
+      .filter((id) => /^\d+$/.test(id))
+      .map((id) => `discord/channels/${id}`);
+  }
+
+  /**
+   * Post a game announcement when it targets a configured announcement channel.
+   * @param {Object} message `{ object, target }` from the game
+   * @returns {Promise<Object|null>}
+   */
+  async announce (message) {
+    if (!message || !this.announcementTargets().includes(message.target)) return null;
+    const discord = this.discord;
+    if (!discord || typeof discord.postToChannel !== 'function') return null;
+    if (discord.client && typeof discord.client.isReady === 'function' && !discord.client.isReady()) return null;
+    return discord.postToChannel(message.target.split('/').pop(), String(message.object));
+  }
+
+  /**
    * Feed Doorman from an `@fabric/discord` client the process already runs.
    * @param {Object} discord
    * @returns {Presence}
@@ -111,6 +143,7 @@ class Presence {
   attach (discord) {
     if (!discord || this.adapter) return this;
     const DoormanDiscord = this.settings.DoormanDiscord || require('@fabric/doorman/services/discord');
+    this.discord = discord;
     this.adapter = new DoormanDiscord({ client: discord, replies: false });
     this.doorman.enable('discord', this.adapter);
     this.gateway = { status: 'attached', error: null };

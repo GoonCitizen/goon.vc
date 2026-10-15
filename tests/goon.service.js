@@ -349,7 +349,11 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('id="operation-permafleet"'));
     assert.ok(res.body.includes('/operations/PERMAFLEET'));
     assert.ok(res.body.includes('/hero-quantum.jpg'));
-    const squadrons = res.body.slice(res.body.indexOf('id="squadrons"'), res.body.indexOf('id="permafleet-charter"'));
+    const permafleet = res.body.slice(res.body.indexOf('id="operation-permafleet"'));
+    const charterAt = permafleet.indexOf('id="permafleet-charter"');
+    const squadronsAt = permafleet.indexOf('id="squadrons"');
+    assert.ok(permafleet.indexOf('class="op-pillars"') < charterAt && charterAt < squadronsAt, 'member orgs sit above the squadrons');
+    const squadrons = permafleet.slice(squadronsAt, permafleet.indexOf('<footer class="op-footer">'));
     for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'turtle-brigade']) {
       assert.ok(squadrons.includes(`id="${id}"`), id);
     }
@@ -431,11 +435,18 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.json.uniquePlayers, 0);
     assert.strictEqual(typeof res.json.totalPresentHours, 'number');
     assert.ok(!('players' in res.json) && !('users' in res.json), 'aggregates only');
-    const page = await fetchJson('/operations', { headers: { Accept: 'text/html' } });
-    assert.ok(page.body.includes('id="idlerpg-card"'), 'IdleRPG card on /operations');
-    assert.ok(page.body.includes('id="presence-strip"'), 'presence metrics on the IdleRPG card');
-    assert.ok(page.body.includes('href="/services/idlerpg"'), 'links to the IdleRPG application');
+    const page = await fetchJson('/resources', { headers: { Accept: 'text/html' } });
+    const section = (id) => {
+      const start = page.body.indexOf(`<main id="${id}"`);
+      return page.body.slice(start, page.body.indexOf('</main>', start));
+    };
+    const resources = section('resources-page');
+    assert.ok(resources.includes('id="idlerpg-card"'), 'IdleRPG card on /resources');
+    assert.ok(resources.includes('id="presence-strip"'), 'presence metrics on the IdleRPG card');
+    assert.ok(resources.includes('href="/services/idlerpg"'), 'links to the IdleRPG application');
     assert.ok(page.body.includes('"/services/idlerpg"'));
+    assert.ok(!section('operations-page').includes('idlerpg'), 'IdleRPG is no longer on /operations');
+    assert.ok(section('idlerpg-page').includes('<a href="/resources">&larr; Resources</a>'));
   });
 
   it('mounts the IdleRPG application at /services/idlerpg (page for browsers, JSON for clients)', async function () {
@@ -641,8 +652,10 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(element.status, 200);
     assert.ok(element.body.includes("customElements.define('fabric-calendar'"));
     assert.ok(res.body.includes('<a href="/events">EVENTS</a>'));
-    assert.ok(res.body.includes('<a href="/operations">OPERATIONS</a>'));
     const header = res.body.slice(res.body.indexOf('id="site-header"'), res.body.indexOf('</header>'));
+    assert.ok(header.includes('<a href="/operations/PERMAFLEET">PERMAFLEET</a>'), 'links straight to PERMAFLEET');
+    assert.ok(!header.includes('OPERATIONS'), 'no OPERATIONS link in the header');
+    assert.ok(header.indexOf('EVENTS') < header.indexOf('RESOURCES') && header.indexOf('RESOURCES') < header.indexOf('>PERMAFLEET<'), 'PERMAFLEET is the rightmost link');
     assert.ok(!header.includes('PERMAFLEET PROTECTORATE'), 'alliance line moved out of the header');
     const alliances = res.body.match(/<footer>[\s\S]*?<\/footer>/g).filter((f) => f.includes('THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a>'));
     assert.ok(alliances.length >= 6, 'alliance line in every page footer');

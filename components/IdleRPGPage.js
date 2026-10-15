@@ -46,7 +46,7 @@ function renderIdleRPGCss () {
  * @param {Object} props
  * @param {string} props.heading Trusted HTML.
  * @param {string} props.intro Trusted HTML.
- * @param {string} props.operationsPath
+ * @param {string} props.resourcesPath
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} [props.alliance] Trusted HTML.
@@ -90,7 +90,7 @@ function renderIdleRPGHtml (props) {
         </ol>
       </section>
       <p class="idlerpg-gateway" id="idlerpg-gateway" hidden></p>
-      <p class="page-back"><a href="${escapeHtml(props.operationsPath)}">&larr; Operations</a></p>
+      <p class="page-back"><a href="${escapeHtml(props.resourcesPath)}">&larr; Resources</a></p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="${escapeHtml(props.loginPath)}">${props.loginLabel}</a></div>
         ${props.alliance || ''}

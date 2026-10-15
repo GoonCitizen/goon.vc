@@ -28,8 +28,6 @@ function renderOperationsCss () {
       .operation-metric-label { color: #888; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
       .operation-metric-live .operation-metric-value { color: #3ddc84; }
       .operations-metrics-note { color: #777; font-size: 0.75rem; margin: 1.5rem 0 0; text-align: center; }
-      .operation-card-idlerpg { border-color: #4C1D95; border-style: dashed; }
-      .operation-card-idlerpg .operation-name a { color: #c4b5fd; }
       .operations-empty { color: #888; padding: 2em 0; text-align: center; }`;
 }
 
@@ -38,19 +36,11 @@ function renderOperationsCss () {
  * @param {string} props.heading Trusted HTML.
  * @param {string} props.intro Trusted HTML.
  * @param {Array<{ id?: string, name: string, path: string, tagline?: string, summary?: string, links?: Array<{ label: string, href: string }>, metrics?: boolean }>} props.operations Plain text. `metrics` reserves a strip filled from /services/operations by `id`.
- * @param {{ path: string, name?: string, tagline?: string, summary?: string }} [props.idlerpg] Adds the IdleRPG card (metrics from /services/idlerpg).
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
  */
 function renderOperationsHtml (props) {
-  const idlerpg = props.idlerpg ? `<article class="operation-card operation-card-idlerpg" id="idlerpg-card">
-          <h2 class="operation-name"><a href="${escapeHtml(props.idlerpg.path)}">${escapeHtml(props.idlerpg.name || 'IdleRPG')}</a></h2>
-          <p class="operation-tagline">${escapeHtml(props.idlerpg.tagline || 'Presence is progress.')}</p>
-          <p class="operation-summary">${escapeHtml(props.idlerpg.summary || 'Every pilot in an alliance voice channel earns experience and credits for each tick they stay. Talking in the game channel is penalized; silence levels you up.')}</p>
-          <ul class="operation-metrics" id="presence-strip" aria-label="IdleRPG presence" hidden></ul>
-          <div class="operation-links"><a class="goon-button" href="${escapeHtml(props.idlerpg.path)}">Players &amp; statistics</a></div>
-        </article>` : '';
   const cards = props.operations.map((op) => {
     const links = [{ label: 'Briefing', href: op.path }].concat(op.links || [])
       .map((link) => {
@@ -75,7 +65,6 @@ function renderOperationsHtml (props) {
       <p class="operations-intro">${props.intro}</p>
       <div class="operations-grid">
         ${cards || '<p class="operations-empty">No operations yet.</p>'}
-        ${idlerpg}
       </div>
       ${hasMetrics ? '<p class="operations-metrics-note" id="operations-metrics-note" hidden>Activity from Discord voice and text channels, last 7 days.</p>' : ''}
       <footer>
@@ -87,15 +76,13 @@ function renderOperationsHtml (props) {
 }
 
 /**
- * Fills each card's metrics strip from GET /services/operations and the
- * page-level presence strip from GET /services/idlerpg while the operations
- * page is on screen (polls every minute).
- * @param {{ endpoint?: string, presenceEndpoint?: string, refreshMs?: number }} [opts]
+ * Fills each card's metrics strip from GET /services/operations while the
+ * operations page is on screen (polls every minute).
+ * @param {{ endpoint?: string, refreshMs?: number }} [opts]
  * @returns {string}
  */
 function renderOperationsScript (opts = {}) {
   const endpoint = JSON.stringify(opts.endpoint || '/services/operations');
-  const presenceEndpoint = JSON.stringify(opts.presenceEndpoint || '/services/idlerpg');
   const refreshMs = Number(opts.refreshMs) > 0 ? Number(opts.refreshMs) : 60000;
   return `<script>
     (function () {
@@ -124,8 +111,7 @@ function renderOperationsScript (opts = {}) {
         return li;
       }
 
-      // /services/operations lists operations most active first; the IdleRPG
-      // card is not an operation and stays last.
+      // /services/operations lists operations most active first.
       function reorder (cards) {
         var grid = page.querySelector('.operations-grid');
         if (!grid || !cards.length) return;
@@ -134,8 +120,6 @@ function renderOperationsScript (opts = {}) {
           if (!anchor && cards.indexOf(child) !== -1) anchor = child;
         });
         cards.forEach(function (card) { grid.insertBefore(card, anchor); anchor = card.nextSibling; });
-        var idlerpg = document.getElementById('idlerpg-card');
-        if (idlerpg) grid.appendChild(idlerpg);
       }
 
       function render (data) {
@@ -166,32 +150,11 @@ function renderOperationsScript (opts = {}) {
         if (note) note.hidden = !shown;
       }
 
-      // IdleRPG card (global presence via Doorman): aggregates only.
-      function renderPresence (data) {
-        var strip = document.getElementById('presence-strip');
-        if (!strip || !data) return;
-        var items = [];
-        if (data.presentNow > 0) items.push(metric(String(data.presentNow), 'playing now', 'operation-metric-live'));
-        if (data.uniquePlayers > 0) items.push(metric(String(data.uniquePlayers), 'players'));
-        if (data.totalPresentHours > 0) items.push(metric(fmt(data.totalPresentHours), 'hours idled'));
-        if (data.last7Days && data.last7Days.peak > 0) items.push(metric(String(data.last7Days.peak), 'peak, 7 days'));
-        var top = Object.keys(data.levels || {}).map(Number).filter(function (n) { return n > 0; });
-        if (top.length) items.push(metric(String(Math.max.apply(null, top)), 'top level'));
-        strip.textContent = '';
-        items.forEach(function (item) { strip.appendChild(item); });
-        strip.hidden = !items.length;
-      }
-
       function load () {
-        if (page.querySelector('.operation-metrics')) {
-          fetch(${endpoint}, { headers: { Accept: 'application/json' } })
-            .then(function (res) { return res.ok ? res.json() : null; })
-            .then(function (data) { if (data) render(data); })
-            .catch(function () {});
-        }
-        fetch(${presenceEndpoint}, { headers: { Accept: 'application/json' } })
+        if (!page.querySelector('.operation-metrics')) return;
+        fetch(${endpoint}, { headers: { Accept: 'application/json' } })
           .then(function (res) { return res.ok ? res.json() : null; })
-          .then(renderPresence)
+          .then(function (data) { if (data) render(data); })
           .catch(function () {});
       }
 

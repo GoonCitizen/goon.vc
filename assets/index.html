@@ -605,8 +605,6 @@
       .operation-metric-label { color: #888; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
       .operation-metric-live .operation-metric-value { color: #3ddc84; }
       .operations-metrics-note { color: #777; font-size: 0.75rem; margin: 1.5rem 0 0; text-align: center; }
-      .operation-card-idlerpg { border-color: #4C1D95; border-style: dashed; }
-      .operation-card-idlerpg .operation-name a { color: #c4b5fd; }
       .operations-empty { color: #888; padding: 2em 0; text-align: center; }
 
       .idlerpg-page { display: none; margin: 0 auto; max-width: 42em; padding: 0 1em 3em; text-align: left; }
@@ -691,6 +689,8 @@
       .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
       .gooncitizen-actions .goon-button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
       .gooncitizen-actions .goon-button[hidden] { display: none; }
+      #idlerpg-card { border-color: #4C1D95; border-style: dashed; }
+      #idlerpg-card .operation-name a { color: #c4b5fd; }
 
       .drills-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .drills-page > h1, .drills-page > .operations-intro { text-align: center; }
@@ -701,7 +701,7 @@
   <body>
     <header id="site-header" class="site-header">
       <h1><a href="/">GOON SQUAD<sup>&trade;</sup></a></h1>
-      <p class="site-nav"><span class="site-nav-item"><a href="/events">EVENTS</a></span><span class="site-nav-item"><a href="/operations">OPERATIONS</a></span><span class="site-nav-item"><a href="/resources">RESOURCES</a></span></p>
+      <p class="site-nav"><span class="site-nav-item"><a href="/events">EVENTS</a></span><span class="site-nav-item"><a href="/resources">RESOURCES</a></span><span class="site-nav-item"><a href="/operations/PERMAFLEET">PERMAFLEET</a></span></p>
     </header>
     <main id="home-page" class="home-page">
       <div class="home-columns">
@@ -790,13 +790,6 @@
           <ul class="operation-metrics" data-operation="permafleet" aria-label="PERMAFLEET activity" hidden></ul>
           <div class="operation-links"><a class="goon-button" href="/operations/PERMAFLEET">Briefing</a><a class="goon-button" href="/operations/PERMAFLEET/schedule">Weekly schedule</a><a class="goon-button" href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener">Join on Discord</a></div>
         </article>
-        <article class="operation-card operation-card-idlerpg" id="idlerpg-card">
-          <h2 class="operation-name"><a href="/services/idlerpg">IDLERPG</a></h2>
-          <p class="operation-tagline">Presence is progress.</p>
-          <p class="operation-summary">The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.</p>
-          <ul class="operation-metrics" id="presence-strip" aria-label="IdleRPG presence" hidden></ul>
-          <div class="operation-links"><a class="goon-button" href="/services/idlerpg">Players &amp; statistics</a></div>
-        </article>
       </div>
       <p class="operations-metrics-note" id="operations-metrics-note" hidden>Activity from Discord voice and text channels, last 7 days.</p>
       <footer>
@@ -842,7 +835,7 @@
         </ol>
       </section>
       <p class="idlerpg-gateway" id="idlerpg-gateway" hidden></p>
-      <p class="page-back"><a href="/operations">&larr; Operations</a></p>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -1200,13 +1193,22 @@
           <h2 class="operation-name"><a href="/resources/gooncitizen">GoonCitizen</a></h2>
           <p class="operation-tagline">The companion app for Star Citizen.</p>
           <p class="operation-summary">A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.</p>
+          
           <div class="operation-links"><a class="goon-button" href="/resources/gooncitizen">Open</a><a class="goon-button" href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">Source on GitHub</a></div>
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/drills">Drills</a></h2>
           <p class="operation-tagline">Flight training you can run on a second screen.</p>
           <p class="operation-summary">Interactive flight-training drills. Run them on a second screen while you fly.</p>
+          
           <div class="operation-links"><a class="goon-button" href="/drills">Open</a></div>
+        </article>
+<article class="operation-card" id="idlerpg-card">
+          <h2 class="operation-name"><a href="/services/idlerpg">IDLERPG</a></h2>
+          <p class="operation-tagline">Presence is progress.</p>
+          <p class="operation-summary">The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.</p>
+          <ul class="operation-metrics" id="presence-strip" aria-label="IdleRPG presence" hidden></ul>
+          <div class="operation-links"><a class="goon-button" href="/services/idlerpg">Players &amp; statistics</a></div>
         </article>
       </div>
       <footer>
@@ -1311,6 +1313,13 @@
             <article class="op-pillar"><h2>Industry &amp; Logistics</h2><p>With dedicated industry and logistics, PERMAFLEET keeps its members supplied with the highest-quality goods and materials. Help with fleet orders by mining, salvaging, and more. Steady workload!</p></article>
             <article class="op-pillar"><h2>Weekly Events</h2><p>Join us on weekly adventures during our scheduled events, from <strong>Boxing Night on the 890</strong> to <strong>spicy PvP fighter training</strong>.</p></article>
           </section>
+          <section class="op-charter" aria-labelledby="permafleet-charter">
+            <h2 id="permafleet-charter">Charter</h2>
+            <p>The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.</p>
+            <ul class="op-orgs"><li><a href="/organizations/G00N">G00N SQUAD</a></li><li><a href="/organizations/INFN">Infinity Industries</a></li><li><a href="/organizations/TRDE">Trans-Galactic Trade</a></li><li><a href="/organizations/LCRP">Legacy Corporation</a></li><li><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></li><li><a href="/organizations/4MCONTRACT">4M Contractors</a></li><li><a href="/organizations/AIMOS">A.I.M.O.S.</a></li></ul>
+            <p class="op-resource-link"><a href="/organizations">Member organizations &raquo;</a></p>
+            <p class="op-laws">Members shall enjoy their freedoms.</p>
+          </section>
           <section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
             <h2 id="permafleet-squadrons">Cross-org squadrons</h2>
             <p class="op-squadrons-intro">Squadrons draw members from every PERMAFLEET org. Most are selected by leadership once you reach Prospect IV; ALPHA SQUADRON takes applications.</p>
@@ -1349,13 +1358,6 @@
                 <p>Basic infantry training. The best go on to <strong>SHELLBACK</strong>, the elite infantry unit.</p>
               </article>
             </div>
-          </section>
-          <section class="op-charter" aria-labelledby="permafleet-charter">
-            <h2 id="permafleet-charter">Charter</h2>
-            <p>The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.</p>
-            <ul class="op-orgs"><li><a href="/organizations/G00N">G00N SQUAD</a></li><li><a href="/organizations/INFN">Infinity Industries</a></li><li><a href="/organizations/TRDE">Trans-Galactic Trade</a></li><li><a href="/organizations/LCRP">Legacy Corporation</a></li><li><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></li><li><a href="/organizations/4MCONTRACT">4M Contractors</a></li><li><a href="/organizations/AIMOS">A.I.M.O.S.</a></li></ul>
-            <p class="op-resource-link"><a href="/organizations">Member organizations &raquo;</a></p>
-            <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
         </div>
         <footer class="op-footer">
@@ -1815,8 +1817,7 @@
         return li;
       }
 
-      // /services/operations lists operations most active first; the IdleRPG
-      // card is not an operation and stays last.
+      // /services/operations lists operations most active first.
       function reorder (cards) {
         var grid = page.querySelector('.operations-grid');
         if (!grid || !cards.length) return;
@@ -1825,8 +1826,6 @@
           if (!anchor && cards.indexOf(child) !== -1) anchor = child;
         });
         cards.forEach(function (card) { grid.insertBefore(card, anchor); anchor = card.nextSibling; });
-        var idlerpg = document.getElementById('idlerpg-card');
-        if (idlerpg) grid.appendChild(idlerpg);
       }
 
       function render (data) {
@@ -1857,32 +1856,11 @@
         if (note) note.hidden = !shown;
       }
 
-      // IdleRPG card (global presence via Doorman): aggregates only.
-      function renderPresence (data) {
-        var strip = document.getElementById('presence-strip');
-        if (!strip || !data) return;
-        var items = [];
-        if (data.presentNow > 0) items.push(metric(String(data.presentNow), 'playing now', 'operation-metric-live'));
-        if (data.uniquePlayers > 0) items.push(metric(String(data.uniquePlayers), 'players'));
-        if (data.totalPresentHours > 0) items.push(metric(fmt(data.totalPresentHours), 'hours idled'));
-        if (data.last7Days && data.last7Days.peak > 0) items.push(metric(String(data.last7Days.peak), 'peak, 7 days'));
-        var top = Object.keys(data.levels || {}).map(Number).filter(function (n) { return n > 0; });
-        if (top.length) items.push(metric(String(Math.max.apply(null, top)), 'top level'));
-        strip.textContent = '';
-        items.forEach(function (item) { strip.appendChild(item); });
-        strip.hidden = !items.length;
-      }
-
       function load () {
-        if (page.querySelector('.operation-metrics')) {
-          fetch("/services/operations", { headers: { Accept: 'application/json' } })
-            .then(function (res) { return res.ok ? res.json() : null; })
-            .then(function (data) { if (data) render(data); })
-            .catch(function () {});
-        }
-        fetch("/services/idlerpg", { headers: { Accept: 'application/json' } })
+        if (!page.querySelector('.operation-metrics')) return;
+        fetch("/services/operations", { headers: { Accept: 'application/json' } })
           .then(function (res) { return res.ok ? res.json() : null; })
-          .then(renderPresence)
+          .then(function (data) { if (data) render(data); })
           .catch(function () {});
       }
 
@@ -2069,6 +2047,65 @@
       if (!('IntersectionObserver' in window)) return check();
       new IntersectionObserver(function (entries) {
         if (entries.some(function (e) { return e.isIntersecting; })) check();
+      }).observe(page);
+    })();
+  </script>
+    <script>
+    (function () {
+      var page = document.getElementById('resources-page');
+      var strip = document.getElementById('presence-strip');
+      if (!page || !strip) return;
+      var timer = null;
+      var visible = false;
+
+      function fmt (n) {
+        if (!(n > 0)) return '0';
+        if (n >= 100) return String(Math.round(n));
+        return String(Math.round(n * 10) / 10);
+      }
+
+      function metric (value, label, cls) {
+        var li = document.createElement('li');
+        li.className = 'operation-metric' + (cls ? ' ' + cls : '');
+        var v = document.createElement('span');
+        v.className = 'operation-metric-value';
+        v.textContent = value;
+        var l = document.createElement('span');
+        l.className = 'operation-metric-label';
+        l.textContent = label;
+        li.appendChild(v);
+        li.appendChild(l);
+        return li;
+      }
+
+      function render (data) {
+        if (!data) return;
+        var items = [];
+        if (data.presentNow > 0) items.push(metric(String(data.presentNow), 'playing now', 'operation-metric-live'));
+        if (data.uniquePlayers > 0) items.push(metric(String(data.uniquePlayers), 'players'));
+        if (data.totalPresentHours > 0) items.push(metric(fmt(data.totalPresentHours), 'hours idled'));
+        if (data.last7Days && data.last7Days.peak > 0) items.push(metric(String(data.last7Days.peak), 'peak, 7 days'));
+        var top = Object.keys(data.levels || {}).map(Number).filter(function (n) { return n > 0; });
+        if (top.length) items.push(metric(String(Math.max.apply(null, top)), 'top level'));
+        strip.textContent = '';
+        items.forEach(function (item) { strip.appendChild(item); });
+        strip.hidden = !items.length;
+      }
+
+      function load () {
+        fetch("/services/idlerpg", { headers: { Accept: 'application/json' } })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(render)
+          .catch(function () {});
+      }
+
+      if (!('IntersectionObserver' in window)) { load(); return; }
+      new IntersectionObserver(function (entries) {
+        var now = entries.some(function (e) { return e.isIntersecting; });
+        if (now && !visible) load();
+        visible = now;
+        if (timer) clearInterval(timer);
+        timer = visible ? setInterval(load, 60000) : null;
       }).observe(page);
     })();
   </script>

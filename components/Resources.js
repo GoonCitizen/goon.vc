@@ -44,7 +44,9 @@ function renderResourcesCss () {
       .gooncitizen-sha { color: #999; font-size: 0.72rem; overflow-wrap: anywhere; }
       .gooncitizen-section .gooncitizen-note { margin: 0.75rem 0 0; text-align: left; }
       .gooncitizen-actions .goon-button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
-      .gooncitizen-actions .goon-button[hidden] { display: none; }`;
+      .gooncitizen-actions .goon-button[hidden] { display: none; }
+      #idlerpg-card { border-color: #4C1D95; border-style: dashed; }
+      #idlerpg-card .operation-name a { color: #c4b5fd; }`;
 }
 
 /**
@@ -91,6 +93,76 @@ function renderGoonCitizenScript () {
   </script>`;
 }
 
+/**
+ * Fills the IdleRPG stats strip from GET /services/idlerpg (aggregates only)
+ * while the resources page is on screen (polls every minute).
+ * @param {{ endpoint?: string, refreshMs?: number }} [opts]
+ * @returns {string}
+ */
+function renderPresenceScript (opts = {}) {
+  const endpoint = JSON.stringify(opts.endpoint || '/services/idlerpg');
+  const refreshMs = Number(opts.refreshMs) > 0 ? Number(opts.refreshMs) : 60000;
+  return `<script>
+    (function () {
+      var page = document.getElementById('resources-page');
+      var strip = document.getElementById('presence-strip');
+      if (!page || !strip) return;
+      var timer = null;
+      var visible = false;
+
+      function fmt (n) {
+        if (!(n > 0)) return '0';
+        if (n >= 100) return String(Math.round(n));
+        return String(Math.round(n * 10) / 10);
+      }
+
+      function metric (value, label, cls) {
+        var li = document.createElement('li');
+        li.className = 'operation-metric' + (cls ? ' ' + cls : '');
+        var v = document.createElement('span');
+        v.className = 'operation-metric-value';
+        v.textContent = value;
+        var l = document.createElement('span');
+        l.className = 'operation-metric-label';
+        l.textContent = label;
+        li.appendChild(v);
+        li.appendChild(l);
+        return li;
+      }
+
+      function render (data) {
+        if (!data) return;
+        var items = [];
+        if (data.presentNow > 0) items.push(metric(String(data.presentNow), 'playing now', 'operation-metric-live'));
+        if (data.uniquePlayers > 0) items.push(metric(String(data.uniquePlayers), 'players'));
+        if (data.totalPresentHours > 0) items.push(metric(fmt(data.totalPresentHours), 'hours idled'));
+        if (data.last7Days && data.last7Days.peak > 0) items.push(metric(String(data.last7Days.peak), 'peak, 7 days'));
+        var top = Object.keys(data.levels || {}).map(Number).filter(function (n) { return n > 0; });
+        if (top.length) items.push(metric(String(Math.max.apply(null, top)), 'top level'));
+        strip.textContent = '';
+        items.forEach(function (item) { strip.appendChild(item); });
+        strip.hidden = !items.length;
+      }
+
+      function load () {
+        fetch(${endpoint}, { headers: { Accept: 'application/json' } })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(render)
+          .catch(function () {});
+      }
+
+      if (!('IntersectionObserver' in window)) { load(); return; }
+      new IntersectionObserver(function (entries) {
+        var now = entries.some(function (e) { return e.isIntersecting; });
+        if (now && !visible) load();
+        visible = now;
+        if (timer) clearInterval(timer);
+        timer = visible ? setInterval(load, ${refreshMs}) : null;
+      }).observe(page);
+    })();
+  </script>`;
+}
+
 function button (link) {
   const external = /^https?:/i.test(link.href);
   return `<a class="goon-button" href="${escapeHtml(link.href)}"${external ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(link.label)}</a>`;
@@ -108,18 +180,19 @@ function renderFooter (props) {
  * @param {Object} props
  * @param {string} props.heading Trusted HTML.
  * @param {string} props.intro Trusted HTML.
- * @param {Array<{ name: string, path: string, tagline?: string, summary?: string, links?: Array<{ label: string, href: string }> }>} props.resources Plain text.
+ * @param {Array<{ id?: string, name: string, path: string, tagline?: string, summary?: string, openLabel?: string, presence?: boolean, links?: Array<{ label: string, href: string }> }>} props.resources Plain text. `presence` reserves the IdleRPG stats strip filled from /services/idlerpg.
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
  */
 function renderIndexHtml (props) {
   const cards = props.resources.map((item) => {
-    const links = [{ label: 'Open', href: item.path }].concat(item.links || []).map(button).join('');
-    return `<article class="operation-card">
+    const links = [{ label: item.openLabel || 'Open', href: item.path }].concat(item.links || []).map(button).join('');
+    return `<article class="operation-card"${item.id ? ` id="${escapeHtml(item.id)}"` : ''}>
           <h2 class="operation-name"><a href="${escapeHtml(item.path)}">${escapeHtml(item.name)}</a></h2>
           ${item.tagline ? `<p class="operation-tagline">${escapeHtml(item.tagline)}</p>` : ''}
           ${item.summary ? `<p class="operation-summary">${escapeHtml(item.summary)}</p>` : ''}
+          ${item.presence ? '<ul class="operation-metrics" id="presence-strip" aria-label="IdleRPG presence" hidden></ul>' : ''}
           <div class="operation-links">${links}</div>
         </article>`;
   }).join('\n');
@@ -192,5 +265,6 @@ module.exports = {
   styles: renderResourcesCss,
   render: renderIndexHtml,
   renderGoonCitizen: renderGoonCitizenHtml,
-  gooncitizenScript: renderGoonCitizenScript
+  gooncitizenScript: renderGoonCitizenScript,
+  presenceScript: renderPresenceScript
 };

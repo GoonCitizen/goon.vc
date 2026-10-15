@@ -255,6 +255,7 @@ class GoonVC {
       tickMs: presenceSettings.tickMs,
       luck: presenceSettings.luck,
       channels: presenceSettings.channels,
+      announcements: presenceSettings.announcements,
       gateway: presenceSettings.gateway,
       operations: this.operations,
       Doorman: presenceSettings.Doorman,

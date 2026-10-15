@@ -71,8 +71,11 @@ runs `@fabric/doorman` **in-process** (`http: false`, no `local` adapter) with t
 `idlerpg` plugin (`IdleRPG` core Service, Fabric Store `stores/presence`), and
 Doorman's Discord adapter is **attached** to the same `@fabric/discord` client
 `services/operations.js` already runs (`Operations` emits `gateway`; the adapter
-has `replies: false` and never logs in or posts). There is still exactly one
-gateway client. IdleRPG credits every member present in a voice channel the bot
+has `replies: false`, never logs in, and never answers commands). There is still
+exactly one gateway client. The only thing it posts is IdleRPG game
+announcements (welcomes, level-ups, finds, penalties), and only to the text
+channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
+View Channel + Send Messages there. IdleRPG credits every member present in a voice channel the bot
 can see (`presence.channels` narrows it) once per `presence.tickMs` and keeps UTC
 day buckets; the route returns aggregates only (`presentNow`, `uniquePlayers`,
 `totalPresentHours`, `last7Days`/`last30Days`, 30-day `history`, level
@@ -80,7 +83,7 @@ histogram) and `GET /services/idlerpg/players?limit=` the public leaderboard
 (Discord display names — already public via the home-page widget — plus level /
 XP / credits / hours / online flag) — never member ids or messages. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
-one-time `Presence#backfillNames` on gateway ready. `/operations` ends with an
+one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
 IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,

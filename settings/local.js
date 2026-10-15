@@ -66,7 +66,8 @@ module.exports = {
   presence: {
     path: process.env.GOON_PRESENCE_STORE || 'stores/presence',
     tickMs: Number(process.env.GOON_PRESENCE_TICK_MS || 600000) || 600000,
-    channels: [] // empty = every voice channel the bot can see counts
+    channels: [], // empty = every voice channel the bot can see counts
+    announcements: ['1560112808283086929'] // G00N SQUAD #idlerpg
   },
 
   site: {
