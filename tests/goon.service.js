@@ -143,6 +143,7 @@ describe('goon.vc', function () {
 describe('goon.vc HTTP', function () {
   this.timeout(30000);
 
+  const fs = require('fs');
   const net = require('net');
   const os = require('os');
   const path = require('path');
@@ -205,6 +206,7 @@ describe('goon.vc HTTP', function () {
         tickMs: 0,
         gateway: false
       },
+      tournaments: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournaments-test-')) },
       listen: true
     });
     await site.start();
@@ -249,7 +251,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(home.status, 200);
     assert.strictEqual(meta(home.body, 'og:title'), 'GOON SQUAD');
     assert.strictEqual(meta(home.body, 'og:url'), 'https://goon.vc/');
-    assert.ok(/^G00N SQUAD is a Star Citizen paramilitary organization/.test(meta(home.body, 'og:description')), 'home description');
+    assert.ok(/^G00N SQUAD: Star Citizen security and infiltration/.test(meta(home.body, 'og:description')), 'home description');
     assert.ok(/^https:\/\//.test(meta(home.body, 'og:image')), 'absolute og:image');
 
     const permafleet = await fetchJson('/operations/PERMAFLEET/', { headers: { Accept: 'text/html' } });
@@ -326,8 +328,14 @@ describe('goon.vc HTTP', function () {
     assert.ok(home.includes('id="home-overview-title">G00N SQUAD</h2>'));
     assert.ok(home.includes('PMC · Security / Infiltration · Recruiting'));
     assert.ok(!/hardcore/i.test(home), 'no "hardcore" on the front page');
-    assert.ok(home.includes('Membership is by invitation only.'));
-    assert.ok(home.includes('href="/operations/PERMAFLEET#alpha-squadron">Apply to ALPHA SQUADRON</a>'));
+    assert.ok(home.includes('Membership is by invitation only'));
+    assert.ok(home.includes('<a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>'));
+    const copy = [...home.matchAll(/<p class="home-copy">([\s\S]*?)<\/p>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
+    assert.ok(copy.join(' ').split(/\s+/).length <= 80, 'front-page overview stays short');
+    assert.ok(!copy.join(' ').includes('Esse quam videri'), 'the creed is not in the copy');
+    assert.ok(/<\/p>\s*<p class="home-creed">Esse quam videri\.<\/p>/.test(home), 'creed on its own line after the copy');
+    assert.ok(home.includes('href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron</a>'));
+    assert.ok(!home.includes('apply to ALPHA'), 'ALPHA is earned, not applied for');
     assert.ok(home.includes('href="/organizations/G00N"'));
   });
 
@@ -355,20 +363,82 @@ describe('goon.vc HTTP', function () {
     const charterAt = permafleet.indexOf('id="permafleet-charter"');
     const squadronsAt = permafleet.indexOf('id="squadrons"');
     assert.ok(permafleet.indexOf('class="op-pillars"') < charterAt && charterAt < squadronsAt, 'member orgs sit above the squadrons');
-    const squadrons = permafleet.slice(squadronsAt, permafleet.indexOf('<footer class="op-footer">'));
-    for (const id of ['alpha-squadron', 'bravo-squadron', 'rat-squadron', 'turtle-brigade']) {
-      assert.ok(squadrons.includes(`id="${id}"`), id);
+    const teaser = permafleet.slice(squadronsAt, permafleet.indexOf('<footer class="op-footer">'));
+    assert.ok(teaser.includes('<h2 id="permafleet-squadrons">Your path to membership</h2>'));
+    assert.ok(teaser.includes('<a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a>'));
+    for (const id of ['bravo-squadron', 'rat-squadron', 'turtle-brigade', 'alpha-squadron', 'shellback']) {
+      assert.ok(teaser.includes(`href="/operations/PERMAFLEET/squadrons/${id}"`), id);
     }
-    assert.ok(!/ghost/i.test(squadrons), 'GHOST SQUADRON is not public');
-    assert.ok(!squadrons.includes('id="permafleet"'), 'PERMAFLEET is the operation, not a squadron');
+    assert.ok(!teaser.includes('<form'), 'the squadron application lives on the squadrons page');
     assert.strictEqual(res.body.split('id="operation-permafleet"').length, 2, 'unique id');
-    const form = squadrons.slice(squadrons.indexOf('id="alpha-squadron-form"'), squadrons.indexOf('</form>'));
+    assert.ok(res.body.includes("var movedSquadron = document.getElementById('squadron-' + window.location.hash.slice(1).toLowerCase());"), 'old #squadron links move to their pages');
+  });
+
+  it('breaks PERMAFLEET squadrons out into their own pages', async function () {
+    const meta = (html, key) => {
+      const m = new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)">`).exec(html);
+      return m ? m[1] : null;
+    };
+    const index = await fetchJson('/operations/PERMAFLEET/squadrons', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.strictEqual(meta(index.body, 'og:title'), 'PERMAFLEET Squadrons — GOON SQUAD');
+    const page = index.body.slice(index.body.indexOf('<main id="squadrons-page"'));
+    const squadrons = page.slice(0, page.indexOf('</main>'));
+    assert.ok(squadrons.includes('<h1>Your path to membership</h1>'));
+    const steps = [...squadrons.slice(squadrons.indexOf('<ol class="pf-path">'), squadrons.indexOf('</ol>')).matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
+    assert.deepStrictEqual(steps, ['Join PERMAFLEET', 'Fly with the fleet', 'Get selected', 'Make the elite']);
+    assert.ok(squadrons.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'apply on RSI');
+    assert.ok(!/Prospect (IV|V|VI)\b/.test(squadrons), 'no rank gate on selection');
+    const picksAt = squadrons.indexOf('id="squadron-picks"');
+    assert.ok(picksAt > squadrons.indexOf('</ol>'), 'the squadrons follow the path');
+    const applyAt = squadrons.indexOf('id="squadron-apply"');
+    const eliteAt = squadrons.indexOf('id="squadron-elite"');
+    const order = ['bravo-squadron', 'rat-squadron', 'turtle-brigade'].map((id) => squadrons.indexOf(`id="${id}"`));
+    assert.ok(order.every((at, i) => at > picksAt && at < applyAt && (i === 0 || at > order[i - 1])), 'entry squadrons, then the application');
+    assert.ok(applyAt < eliteAt, 'elite units follow the application');
+    for (const id of ['alpha-squadron', 'shellback']) {
+      assert.ok(squadrons.indexOf(`<article class="pf-squadron pf-squadron-elite" id="${id}">`) > eliteAt, id);
+    }
+    assert.ok(/id="bravo-squadron">\s*<p class="pf-squadron-entry">Selected by leadership<\/p>/.test(squadrons));
+    assert.ok(/id="alpha-squadron">\s*<p class="pf-squadron-entry">Earned by performance<\/p>/.test(squadrons));
+    assert.ok(!/apply (to|for) (ALPHA|SHELLBACK)/i.test(squadrons), 'elite units are earned, not applied for');
+    assert.ok(!/ghost/i.test(squadrons), 'GHOST SQUADRON is not public');
+    const application = squadrons.slice(applyAt, eliteAt);
+    assert.ok(application.includes('<h2 id="squadron-apply-heading">Apply for a squadron</h2>'));
+    assert.ok(application.includes('One application covers every squadron.'));
+    const form = application.slice(application.indexOf('id="squadron-application-form"'), application.indexOf('</form>'));
     assert.ok(form.includes('action="https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse"'));
-    assert.ok(form.includes('target="alpha-squadron-sink"'));
+    assert.ok(form.includes('target="squadron-application-sink"'));
     assert.ok(/<input[^>]+name="entry\.1263490172"[^>]+required/.test(form), 'IGN');
     assert.ok(/<textarea[^>]+name="entry\.1476806575"[^>]+required/.test(form), 'reason');
-    assert.ok(squadrons.includes('name="alpha-squadron-sink"'));
-    assert.ok(squadrons.includes('href="https://forms.gle/GvUx3o1MuWtxJifT9"'));
+    assert.ok(application.includes('name="squadron-application-sink"'));
+    assert.ok(application.includes('href="https://forms.gle/GvUx3o1MuWtxJifT9"'));
+    assert.strictEqual(index.body.split('action="https://docs.google.com/forms/').length, 2, 'one squadron application on the site');
+
+    const alpha = await fetchJson('/operations/PERMAFLEET/squadrons/alpha-squadron', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(alpha.status, 200);
+    assert.strictEqual(meta(alpha.body, 'og:title'), 'ALPHA SQUADRON — GOON SQUAD');
+    assert.ok(meta(alpha.body, 'og:description').startsWith('Elite fighters · run by G00N SQUAD. The tip of the spear'));
+    const alphaPage = alpha.body.slice(alpha.body.indexOf('<main id="squadron-alpha-squadron"'));
+    const alphaMain = alphaPage.slice(0, alphaPage.indexOf('</main>'));
+    assert.ok(alphaMain.includes('data-path="/operations/PERMAFLEET/squadrons/alpha-squadron"'));
+    assert.ok(alphaMain.includes('<dt>How you get in</dt><dd>Earned by performance</dd>'));
+    assert.ok(alphaMain.includes('<dt>Drawn from</dt><dd><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">BRAVO SQUADRON</a></dd>'));
+    assert.ok(!alphaMain.includes('<form'), 'no ALPHA-only application');
+
+    const shellbackPage = index.body.slice(index.body.indexOf('<main id="squadron-shellback"'));
+    const shellbackMain = shellbackPage.slice(0, shellbackPage.indexOf('</main>'));
+    assert.ok(shellbackMain.includes('<dt>Drawn from</dt><dd><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">TURTLE BRIGADE</a></dd>'));
+
+    const bravoPage = index.body.slice(index.body.indexOf('<main id="squadron-bravo-squadron"'));
+    const bravoMain = bravoPage.slice(0, bravoPage.indexOf('</main>'));
+    assert.ok(bravoMain.includes('<dt>How you get in</dt><dd>Selected by leadership</dd>'));
+    assert.ok(bravoMain.includes('<dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></dd>'));
+    assert.ok(bravoMain.includes('<a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a>'));
+    assert.ok(bravoMain.includes('Not in PERMAFLEET yet?'));
+    assert.ok(index.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);"));
+    const ids = [...index.body.matchAll(/\sid="([^"$]+)"/g)].map((m) => m[1]);
+    assert.deepStrictEqual(ids.filter((id, i) => ids.indexOf(id) !== i), [], 'element ids are unique');
   });
 
   it('serves the PERMAFLEET schedule page via SPA fallback', async function () {
@@ -484,6 +554,83 @@ describe('goon.vc HTTP', function () {
 
     const old = await fetchJson('/drills/melee-rotation-drill.html', { headers: { Accept: 'text/html' } });
     assert.strictEqual(old.status, 302);
+
+    const slash = await new Promise((resolve, reject) => {
+      http.get({ hostname: '127.0.0.1', port: sitePort, path: '/drills/', headers: { Accept: 'text/html' } }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(slash.status, 302);
+    assert.strictEqual(slash.location, '/drills');
+  });
+
+  it('serves the tournaments index, created tournaments, and their records', async function () {
+    const index = await fetchJson('/tournaments', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('id="tournaments-page"'));
+    assert.ok(!index.body.includes('saturday-1v1'), 'no built-in tournament pages');
+    assert.ok(index.body.includes('id="tournament-create-form"'), 'anyone can create a tournament');
+    assert.ok(index.body.includes('<meta property="og:title" content="TOURNAMENTS — GOON SQUAD">'));
+    assert.ok(index.body.includes('<script src="/scripts/tournament-bracket.js" defer></script>'));
+    assert.ok(index.body.includes('<script src="/scripts/tournaments.js" defer></script>'));
+
+    const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
+    assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/tournaments"'), 'listed on /resources');
+
+    const listing = await fetchJson('/services/tournaments');
+    assert.strictEqual(listing.status, 200);
+    assert.deepStrictEqual(listing.json.tournaments, []);
+
+    const post = (pathname, body, method = 'POST') => fetchJson(pathname, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const created = await post('/services/tournaments', {
+      name: 'Saturday 1v1',
+      format: 'double-elimination',
+      bestOf: 3,
+      startsAt: '2026-10-18T01:00:00Z',
+      timeZone: 'America/Chicago',
+      players: ['VIPER', 'KESTREL']
+    });
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual(created.json.id, 'saturday-1v1/2026-10-17');
+    assert.strictEqual((await post('/services/tournaments/saturday-1v1', {})).status, 405, 'tournaments are created from the index only');
+    const record = `/services/tournaments/saturday-1v1/${created.json.slug}`;
+    for (let i = 0; i < 2; i++) assert.strictEqual((await post(`${record}/games`, { match: 'W1-1', side: 0, players: [0, 1] })).status, 200);
+    const late = await post(`${record}/players`, { name: 'NOMAD' });
+    assert.strictEqual(late.status, 409, 'a two-player bracket has no open seat');
+    assert.match(late.json.error, /bracket is full/);
+    for (const match of ['F1-1', 'F1-1']) await post(`${record}/games`, { match, side: 0 });
+    const final = await fetchJson(record);
+    assert.strictEqual(final.json.status, 'complete');
+    assert.strictEqual(final.json.results.champion, 'VIPER');
+    assert.strictEqual((await post(`${record}/undo`, { match: 'F1-1' })).status, 409, 'results are permanent');
+    assert.strictEqual((await fetchJson('/services/tournaments/saturday-1v1/2020-01-01')).status, 404);
+    assert.strictEqual((await fetchJson('/services/tournaments/nope')).status, 404);
+    assert.strictEqual((await fetchJson('/services/tournaments/saturday-1v1')).json.tournaments.length, 1);
+
+    const recordPage = await fetchJson(`/tournaments/saturday-1v1/${created.json.slug}`, { headers: { Accept: 'text/html' } });
+    assert.strictEqual(recordPage.status, 200);
+    assert.ok(recordPage.body.includes('<meta property="og:title" content="Saturday 1v1 — 2026-10-17 — GOON SQUAD">'));
+    assert.ok(recordPage.body.includes('Champion: VIPER; runner-up: KESTREL.'), 'link previews name the winners');
+    const seriesPage = await fetchJson('/tournaments/saturday-1v1', { headers: { Accept: 'text/html' } });
+    assert.ok(seriesPage.body.includes('<meta property="og:title" content="Saturday 1v1 — GOON SQUAD">'));
+
+    const script = await fetchJson('/scripts/tournament-bracket.js');
+    assert.strictEqual(script.status, 200);
+    assert.ok(script.body.includes("customElements.define('tournament-bracket'"));
+
+    const slash = await new Promise((resolve, reject) => {
+      http.get({ hostname: '127.0.0.1', port: sitePort, path: '/tournaments/', headers: { Accept: 'text/html' } }, (incoming) => {
+        incoming.resume();
+        resolve({ status: incoming.statusCode, location: incoming.headers.location });
+      }).on('error', reject);
+    });
+    assert.strictEqual(slash.status, 302);
+    assert.strictEqual(slash.location, '/tournaments');
   });
 
   it('redirects the old IdleRPG URLs to /services/idlerpg', async function () {
@@ -499,32 +646,53 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(api.location, '/services/idlerpg/players?limit=5');
   });
 
-  it('serves the /organizations index and a page per member org', async function () {
-    const res = await new Promise((resolve, reject) => {
-      http.get({
-        hostname: '127.0.0.1',
-        port: sitePort,
-        path: '/organizations/AIMOS',
-        headers: { Accept: 'text/html' }
-      }, (incoming) => {
-        const chunks = [];
-        incoming.on('data', (c) => chunks.push(c));
-        incoming.on('end', () => resolve({
-          status: incoming.statusCode,
-          body: Buffer.concat(chunks).toString('utf8')
-        }));
-      }).on('error', reject);
-    });
+  it('serves the organizations index and a page per member org in the PERMAFLEET section', async function () {
+    const base = '/organizations';
+    const res = await fetchJson(`${base}/AIMOS`, { headers: { Accept: 'text/html' } });
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('id="organizations-page"'));
-    assert.ok(!res.body.includes('<a href="/organizations">ORGANIZATIONS</a>'), 'not in the site header');
-    assert.ok(/id="operation-permafleet"[\s\S]*?Weekly ops schedule &raquo;<\/a> · <a href="\/organizations">Member organizations &raquo;<\/a>/.test(res.body), 'linked from PERMAFLEET');
+    const siteNav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(res.body)[1];
+    assert.ok(!siteNav.includes('Organizations') && !siteNav.includes('ORGANIZATIONS'), 'not in the site header');
+    assert.ok(new RegExp(`id="operation-permafleet"[\\s\\S]*?Weekly ops schedule &raquo;</a> · <a href="${base}">Member organizations &raquo;</a>`).test(res.body), 'linked from PERMAFLEET');
     for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
       assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
       assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);
-      assert.ok(res.body.includes(`<li><a href="/organizations/${symbol}">`), `${symbol} charter chip`);
+      assert.ok(res.body.includes(`<li><a href="${base}/${symbol}">`), `${symbol} charter chip`);
     }
     assert.ok(res.body.includes('>Apply on RSI</a>'));
+    assert.ok(res.body.includes('pf-section'), 'organizations pages are part of the PERMAFLEET section');
+
+    const index = await fetchJson(base, { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('<meta property="og:title" content="PERMAFLEET Organizations — GOON SQUAD">'));
+    assert.ok(index.body.includes('<meta property="og:image" content="https://goon.vc/hero-quantum.jpg">'));
+    const orgIndex = index.body.slice(index.body.indexOf('<main id="organizations-page"'));
+    const cta = orgIndex.slice(orgIndex.indexOf('<section class="org-roster-cta"'), orgIndex.indexOf('</section>'));
+    assert.ok(cta.includes('<h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>'));
+    const hotline = /#embassy chat on the <a href="([^"]+)"/.exec(index.body)[1];
+    assert.ok(cta.includes(`<a class="goon-button" href="${hotline}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>`), 'same Discord as the #embassy hotline');
+    assert.ok(orgIndex.indexOf('org-roster-cta') < orgIndex.indexOf('</main>'), 'on the index');
+    assert.strictEqual(index.body.split('class="org-roster-cta"').length, 2, 'index only, not each org profile');
+  });
+
+  it('gives the PERMAFLEET section its own header menu', async function () {
+    const res = await fetchJson('/operations/PERMAFLEET', { headers: { Accept: 'text/html' } });
+    const start = res.body.indexOf('id="permafleet-header"');
+    assert.ok(start > 0, 'PERMAFLEET header');
+    assert.strictEqual(res.body.split('id="permafleet-header"').length, 2, 'one shared PERMAFLEET header');
+    const header = res.body.slice(start, res.body.indexOf('</header>', start));
+    assert.ok(header.includes('<a class="pf-header-home" href="/">&larr; GOON SQUAD</a>'));
+    assert.ok(header.includes('<a class="pf-header-name" href="/operations/PERMAFLEET">PERMAFLEET</a>'));
+    const labels = [...header.matchAll(/<a [^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map((m) => `${m[2]} ${m[1]}`);
+    assert.deepStrictEqual(labels.slice(2), [
+      'Overview /operations/PERMAFLEET',
+      'Schedule /operations/PERMAFLEET/schedule',
+      'Squadrons /operations/PERMAFLEET/squadrons',
+      'Organizations /organizations',
+      'Join https://discord.com/invite/M4h9bBWq'
+    ]);
+    assert.ok(!res.body.includes('class="op-nav"') && !res.body.includes('class="schedule-nav"'), 'replaces the per-page crumbs');
+    assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);"));
   });
 
   it('serves /resources with a dedicated GoonCitizen page', async function () {

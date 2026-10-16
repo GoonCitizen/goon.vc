@@ -10,6 +10,8 @@ const HomePage = require('../components/HomePage');
 const SiteHeader = require('../components/SiteHeader');
 const PermafleetOperation = require('../components/PermafleetOperation');
 const PermafleetSchedule = require('../components/PermafleetSchedule');
+const PermafleetHeader = require('../components/PermafleetHeader');
+const PermafleetSquadrons = require('../components/PermafleetSquadrons');
 const Login = require('../components/Login');
 const EventsPage = require('../components/EventsPage');
 const OperationsIndex = require('../components/OperationsIndex');
@@ -18,6 +20,7 @@ const Organizations = require('../components/Organizations');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
 const DrillsPage = require('../components/DrillsPage');
+const TournamentsPage = require('../components/TournamentsPage');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -26,7 +29,7 @@ const DEFAULTS = {
   title: 'GOON SQUAD',
   // Absolute origin for og:url / og:image (link previews need absolute URLs).
   siteUrl: 'https://goon.vc',
-  homeDescription: 'G00N SQUAD is a Star Citizen paramilitary organization with a strong pedigree in security and infiltration, and a core member of the PERMAFLEET Protectorate. Membership is by invitation only.',
+  homeDescription: 'G00N SQUAD: Star Citizen security and infiltration, with friends in most corners of the ’verse. A core member of the PERMAFLEET Protectorate. Membership is by invitation only.',
   loginDescription: 'Sign in to GOON SQUAD with Discord, Fabric Passport, or the GoonCitizen desktop app.',
   heading: 'GOON SQUAD<sup>&trade;</sup>',
   joinLabel: 'Join the Squad &raquo;',
@@ -57,7 +60,7 @@ const DEFAULTS = {
   organizationsPath: '/organizations',
   organizationsHeading: 'ORGANIZATIONS',
   organizationsIntro: 'Member organizations of the PERMAFLEET Protectorate. Each links to its RSI page, where you can apply.',
-  organizationsDocumentTitle: 'ORGANIZATIONS — GOON SQUAD',
+  organizationsDocumentTitle: 'PERMAFLEET Organizations — GOON SQUAD',
   // Output of `npm run build:organizations`.
   organizationsFile: ORGANIZATIONS_FILE,
   resourcesPath: '/resources',
@@ -81,6 +84,12 @@ const DEFAULTS = {
     element: 'melee-rotation-drill',
     script: '/scripts/melee-rotation-drill.js'
   }],
+  // Tournaments: /tournaments index, /tournaments/<series>, /tournaments/<series>/<date>
+  // (records in the tournaments Store, services/tournaments.js).
+  tournamentsPath: '/tournaments',
+  tournamentsHeading: 'TOURNAMENTS',
+  tournamentsIntro: 'Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.',
+  tournamentsDocumentTitle: 'TOURNAMENTS — GOON SQUAD',
   gooncitizenPath: '/resources/gooncitizen',
   gooncitizenTagline: 'The companion app for Star Citizen.',
   gooncitizenSummary: 'A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.',
@@ -99,6 +108,9 @@ const DEFAULTS = {
   permafleetChannelName: 'permafleet',
   permafleetInviteUrl: 'https://discord.com/invite/M4h9bBWq',
   permafleetHeroImage: '/hero-quantum.jpg',
+  permafleetSquadronsPath: '/operations/PERMAFLEET/squadrons',
+  permafleetSquadronsDocumentTitle: 'PERMAFLEET Squadrons — GOON SQUAD',
+  permafleetSquadronsDescription: 'Your path to PERMAFLEET membership: join, fly with the fleet, and get selected for a cross-org squadron.',
   permafleetSchedulePath: '/operations/PERMAFLEET/schedule',
   permafleetScheduleImage: '/permafleet-schedule.svg',
   permafleetScheduleHtml: '/permafleet-schedule.html',
@@ -108,12 +120,13 @@ const DEFAULTS = {
   // Front-page overview; facts, logo, and motto come from the G00N record in organizationsFile.
   overviewSymbol: 'G00N',
   overviewParagraphs: [
-    'G00N SQUAD is a paramilitary organization with a strong pedigree in security and infiltration, and a core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>. Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere in the ’verse, at any hour.',
-    'Membership is by invitation only. Invitations go through <strong>ALPHA SQUADRON</strong> — the tip of the spear for PERMAFLEET, drawn from the best of BRAVO SQUADRON.',
-    'To be considered, apply to ALPHA SQUADRON. The application is required for membership, even if you already fly with PERMAFLEET. <em>Esse quam videri.</em>'
+    'Friends in most corners of the ’verse, and ears in the rest. We work across the Star Citizen community, mostly out of sight. A core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>.',
+    'Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere, at any hour. Most of the time, you won’t even see us.',
+    'Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET.'
   ],
-  // Google Form behind the ALPHA SQUADRON application (fields: entry ids from the live form).
-  alphaSquadronForm: {
+  overviewCreed: 'Esse quam videri.',
+  // Google Form behind the one application for every PERMAFLEET squadron (fields: entry ids from the live form).
+  squadronApplicationForm: {
     action: 'https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse',
     viewUrl: 'https://forms.gle/GvUx3o1MuWtxJifT9',
     fields: [
@@ -190,7 +203,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
       page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
-      page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro')),
+      page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro'), permafleet),
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
       page(this._site('drillsPath'), this._site('drillsDocumentTitle'), this._site('drillsIntro')),
@@ -199,8 +212,16 @@ class GoonSPA extends FabricSPA {
         `${drill.name} — ${title}`,
         drill.summary || drill.tagline || drill.name
       )),
+      page(this._site('tournamentsPath'), this._site('tournamentsDocumentTitle'), this._site('tournamentsIntro')),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
-      page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet)
+      page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
+      page(this._site('permafleetSquadronsPath'), this._site('permafleetSquadronsDocumentTitle'), this._site('permafleetSquadronsDescription'), permafleet),
+      ...PermafleetSquadrons.pageEntries(this._site('permafleetSquadronsPath')).map((entry) => page(
+        entry.path,
+        `${entry.name} — ${title}`,
+        entry.description,
+        permafleet
+      ))
     ].concat(orgData.organizations.map((org) => {
       const name = org.displayName || org.name || org.symbol;
       const image = org.bannerUrl
@@ -243,11 +264,15 @@ class GoonSPA extends FabricSPA {
     const gooncitizenTitleJson = JSON.stringify(this._site('gooncitizenDocumentTitle'));
     const drillsPath = this._site('drillsPath');
     const drillsTitleJson = JSON.stringify(this._site('drillsDocumentTitle'));
+    const tournamentsPath = this._site('tournamentsPath');
+    const tournamentsTitleJson = JSON.stringify(this._site('tournamentsDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
     const permafleetInviteUrl = this._site('permafleetInviteUrl');
     const schedulePath = this._site('permafleetSchedulePath');
     const scheduleTitleJson = JSON.stringify(this._site('permafleetScheduleDocumentTitle'));
+    const squadronsPath = this._site('permafleetSquadronsPath');
+    const squadronsTitleJson = JSON.stringify(this._site('permafleetSquadronsDocumentTitle'));
     const titleJson = JSON.stringify(title);
     const widgetId = this._site('discordWidgetId');
     const bitcoinAddress = this._site('bitcoinAddress');
@@ -274,9 +299,10 @@ class GoonSPA extends FabricSPA {
           overviewOrg.recruiting ? 'Recruiting' : null
         ],
         paragraphs: this._site('overviewParagraphs'),
+        creed: this._site('overviewCreed'),
         motto: [].concat(overviewOrg.manifesto || [], overviewOrg.charter || []).slice(0, 2),
         actions: [
-          { label: 'Apply to ALPHA SQUADRON', href: `${permafleetPath}#alpha-squadron` },
+          { label: 'Apply for a squadron', href: PermafleetSquadrons.applyPath(squadronsPath) },
           overviewOrg.symbol ? { label: 'Org profile', href: Organizations.organizationPath(overviewOrg, organizationsPath) } : null,
           { label: 'Events', href: eventsPath }
         ].filter(Boolean)
@@ -358,6 +384,12 @@ class GoonSPA extends FabricSPA {
         tagline: 'Flight training you can run on a second screen.',
         summary: this._site('drillsIntro')
       }, {
+        name: 'Tournaments',
+        path: tournamentsPath,
+        tagline: 'Single and double elimination brackets, best of n, with every result on record.',
+        summary: this._site('tournamentsIntro'),
+        openLabel: 'Tournaments'
+      }, {
         id: 'idlerpg-card',
         name: this._site('idlerpgHeading'),
         path: idlerpgPath,
@@ -399,12 +431,26 @@ class GoonSPA extends FabricSPA {
     const drillsMainHtml = DrillsPage.render(drillsProps);
     const drillMainsHtml = DrillsPage.renderDrills(drillsProps);
     const drillsScript = DrillsPage.script(drillsProps);
+    const tournamentsProps = {
+      heading: escapeHtml(this._site('tournamentsHeading')),
+      intro: escapeHtml(this._site('tournamentsIntro')),
+      basePath: tournamentsPath,
+      siteTitle: title,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    };
+    const tournamentsMainHtml = TournamentsPage.render(tournamentsProps);
+    const tournamentMainsHtml = TournamentsPage.renderTournaments(tournamentsProps);
+    const tournamentsScript = TournamentsPage.script(tournamentsProps);
     const orgProps = {
       heading: escapeHtml(this._site('organizationsHeading')),
       intro: escapeHtml(this._site('organizationsIntro')),
       basePath: organizationsPath,
       organizations: orgData.organizations,
       fetchedAt: orgData.fetchedAt,
+      embassyUrl: joinUrl,
       allianceName: this._site('permafleetHeading'),
       alliancePath: permafleetPath,
       loginPath,
@@ -416,18 +462,29 @@ class GoonSPA extends FabricSPA {
     const organizationMainsHtml = orgData.organizations
       .map((org) => Organizations.renderOrganization(org, orgProps))
       .join('\n');
-    const alphaApplicationHtml = SquadronApplication.render({
-      id: 'alpha-squadron',
-      form: this._site('alphaSquadronForm')
+    const applicationHtml = SquadronApplication.render({
+      id: 'squadron-application',
+      form: this._site('squadronApplicationForm')
     });
-    const alphaApplicationScript = alphaApplicationHtml
+    const applicationScript = applicationHtml
       ? SquadronApplication.script({
-        id: 'alpha-squadron',
-        successText: 'Application sent. G00N SQUAD leadership reviews every application; watch Discord for a reply.'
+        id: 'squadron-application',
+        successText: 'Application sent. Leadership reviews every application; watch Discord for a reply.'
       })
       : '';
+    const squadronProps = {
+      basePath: squadronsPath,
+      inviteUrl: permafleetInviteUrl,
+      schedulePath,
+      title,
+      applicationHtml
+    };
+    const squadronsMainHtml = PermafleetSquadrons.render(squadronProps);
+    const squadronMainsHtml = PermafleetSquadrons.SQUADRONS
+      .map((squadron) => PermafleetSquadrons.renderSquadron(squadron, squadronProps))
+      .join('\n');
     const permafleetMainHtml = PermafleetOperation.render({
-      alphaApplicationHtml,
+      squadronsPath,
       memberOrgs: orgData.organizations.length
         ? orgData.organizations.map((org) => ({
           name: org.displayName || org.name,
@@ -447,9 +504,16 @@ class GoonSPA extends FabricSPA {
     const scheduleMainHtml = PermafleetSchedule.render({
       title: 'PERMAFLEET',
       imageSrc: this._site('permafleetScheduleImage'),
-      htmlSrc: this._site('permafleetScheduleHtml'),
-      operationPath: permafleetPath,
-      joinUrl: permafleetInviteUrl
+      htmlSrc: this._site('permafleetScheduleHtml')
+    });
+    const permafleetHeaderHtml = PermafleetHeader.render({
+      heading: escapeHtml(this._site('permafleetHeading')),
+      homeLabel: escapeHtml(title),
+      permafleetPath,
+      schedulePath,
+      squadronsPath,
+      organizationsPath,
+      inviteUrl: permafleetInviteUrl
     });
     const permafleetScript = PermafleetOperation.script({
       guildId: widgetId,
@@ -494,9 +558,11 @@ class GoonSPA extends FabricSPA {
       .goon-button:disabled { cursor: default; opacity: 0.45; }
       .page-back { text-align: center; margin-bottom: 1.5em; }
 ${SiteHeader.styles()}
+${PermafleetHeader.styles()}
 ${HomePage.styles()}
 ${PermafleetOperation.styles({ heroImage: this._site('permafleetHeroImage') })}
 ${PermafleetSchedule.styles()}
+${PermafleetSquadrons.styles()}
 ${Login.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
@@ -504,10 +570,12 @@ ${IdleRPGPage.styles()}
 ${Organizations.styles()}
 ${Resources.styles()}
 ${DrillsPage.styles()}
+${TournamentsPage.styles()}
     </style>
   </head>
   <body>
     ${headerHtml}
+    ${permafleetHeaderHtml}
     ${homeMainHtml}
     ${loginMainHtml}
     ${eventsMainHtml}
@@ -519,14 +587,26 @@ ${organizationMainsHtml}
     ${gooncitizenMainHtml}
     ${drillsMainHtml}
 ${drillMainsHtml}
+    ${tournamentsMainHtml}
+${tournamentMainsHtml}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
+    ${squadronsMainHtml}
+${squadronMainsHtml}
     <script type="text/javascript">
       (function () {
         var loginPath = ${JSON.stringify(loginPath)};
         var permafleetPath = ${JSON.stringify(permafleetPath)};
         var schedulePath = ${JSON.stringify(schedulePath)};
+        var squadronsPath = ${JSON.stringify(squadronsPath)};
         var path = (window.location.pathname || '/').replace(/\\/+$/, '') || '/';
+        if (path.toLowerCase() === permafleetPath.toLowerCase() && /^#[a-z0-9-]+$/i.test(window.location.hash)) {
+          var movedSquadron = document.getElementById('squadron-' + window.location.hash.slice(1).toLowerCase());
+          if (movedSquadron) {
+            window.location.replace(movedSquadron.getAttribute('data-path'));
+            return;
+          }
+        }
         var isLogin = path === loginPath;
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
@@ -541,8 +621,17 @@ ${drillMainsHtml}
         document.querySelectorAll('.drill-page').forEach(function (el) {
           if (el.getAttribute('data-path') === path.toLowerCase()) drillEl = el;
         });
+        var isTournaments = path.toLowerCase() === ${JSON.stringify(tournamentsPath.toLowerCase())};
+        var tournamentEl = path.toLowerCase().indexOf(${JSON.stringify(tournamentsPath.toLowerCase() + '/')}) === 0
+          ? document.getElementById('tournament-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
+        var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var squadronEl = null;
+        document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
+          if (el.getAttribute('data-path').toLowerCase() === path.toLowerCase()) squadronEl = el;
+        });
         var home = document.getElementById('home-page');
         var login = document.getElementById('login-page');
         var eventsEl = document.getElementById('events-page');
@@ -551,7 +640,7 @@ ${drillMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isPermafleet && !isSchedule) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -572,10 +661,20 @@ ${drillMainsHtml}
         document.querySelectorAll('.drill-page').forEach(function (el) {
           el.style.display = el === drillEl ? 'block' : 'none';
         });
+        var tournamentsEl = document.getElementById('tournaments-page');
+        if (tournamentsEl) tournamentsEl.style.display = isTournaments ? 'block' : 'none';
+        var tournamentPageEl = document.getElementById('tournament-page');
+        if (tournamentPageEl) tournamentPageEl.style.display = tournamentEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
         document.body.classList.toggle('schedule-active', isSchedule);
+        var squadronsEl = document.getElementById('squadrons-page');
+        if (squadronsEl) squadronsEl.style.display = isSquadrons ? 'block' : 'none';
+        document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
+          el.style.display = el === squadronEl ? 'block' : 'none';
+        });
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = ${loginTitleJson};
         else if (isEvents) document.title = ${eventsTitleJson};
@@ -586,13 +685,18 @@ ${drillMainsHtml}
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
         else if (isDrills) document.title = ${drillsTitleJson};
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
+        else if (isTournaments) document.title = ${tournamentsTitleJson};
+        else if (tournamentEl) document.title = ${tournamentsTitleJson};
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
+        else if (isSquadrons) document.title = ${squadronsTitleJson};
+        else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
         else document.title = ${titleJson};
       })();
     </script>
     ${SiteHeader.script()}
+    ${PermafleetHeader.script()}
     ${loginScript}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
@@ -601,8 +705,9 @@ ${drillMainsHtml}
     ${Resources.gooncitizenScript()}
     ${Resources.presenceScript()}
     ${drillsScript}
+    ${tournamentsScript}
     ${permafleetScript}
-    ${alphaApplicationScript}
+    ${applicationScript}
   </body>
 </html>
 `;

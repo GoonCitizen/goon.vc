@@ -2,17 +2,17 @@
   <head>
     <title>GOON SQUAD</title>
     <!-- page-meta -->
-    <meta name="description" content="G00N SQUAD is a Star Citizen paramilitary organization with a strong pedigree in security and infiltration, and a core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
+    <meta name="description" content="G00N SQUAD: Star Citizen security and infiltration, with friends in most corners of the ’verse. A core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GOON SQUAD">
     <meta property="og:title" content="GOON SQUAD">
-    <meta property="og:description" content="G00N SQUAD is a Star Citizen paramilitary organization with a strong pedigree in security and infiltration, and a core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
+    <meta property="og:description" content="G00N SQUAD: Star Citizen security and infiltration, with friends in most corners of the ’verse. A core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
     <meta property="og:url" content="https://goon.vc/">
     <meta property="og:image" content="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg">
     <meta property="og:image:alt" content="GOON SQUAD logo">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="GOON SQUAD">
-    <meta name="twitter:description" content="G00N SQUAD is a Star Citizen paramilitary organization with a strong pedigree in security and infiltration, and a core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
+    <meta name="twitter:description" content="G00N SQUAD: Star Citizen security and infiltration, with friends in most corners of the ’verse. A core member of the PERMAFLEET Protectorate. Membership is by invitation only.">
     <meta name="twitter:image" content="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg">
     <link rel="canonical" href="https://goon.vc/">
     <!-- /page-meta -->
@@ -62,8 +62,56 @@
       .site-nav a:hover, .site-nav a[aria-current="page"] { border-bottom-color: #fff; }
       .site-nav a[aria-current="page"] { border-bottom-width: 2px; }
       .site-nav-item + .site-nav-item::before { content: "·"; margin: 0 0.4em; }
-      body.op-active .site-header, body.schedule-active .site-header { display: none; }
       .site-alliance { font-family: "Bungee", sans-serif; }
+
+      body.pf-section { margin: 0; background: #050A18; }
+      body.pf-section .site-header { display: none; }
+      .pf-header { display: none; }
+      body.pf-section .pf-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem 1.25rem;
+        padding: 0.6rem 1.25rem;
+        background: rgba(5, 12, 28, 0.82);
+        border-bottom: 1px solid rgba(142, 191, 208, 0.28);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        font-family: "Rajdhani", sans-serif;
+        text-align: left;
+      }
+      .pf-header a { color: #8EBFD0; text-decoration: none; }
+      .pf-header a:hover { color: #fff; }
+      .pf-header-brand { display: flex; align-items: baseline; gap: 0.75rem; }
+      .pf-header-home { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+      .pf-header-brand .pf-header-name { font-family: "Bungee", sans-serif; font-size: 1.2rem; letter-spacing: 0.04em; color: #fff; }
+      .pf-header-menu { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.1rem; margin: 0; padding: 0; list-style: none; }
+      .pf-header-menu a {
+        display: inline-block;
+        padding: 0.2rem 0;
+        border-bottom: 2px solid transparent;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .pf-header-menu a[aria-current="page"] { color: #fff; border-bottom-color: #00D4FF; }
+      .pf-header-menu a.pf-header-join {
+        padding: 0.3rem 0.8rem;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #050A18;
+        background: linear-gradient(180deg, #7FE9FF 0%, #00D4FF 100%);
+      }
+      .pf-header-menu a.pf-header-join:hover { color: #050A18; filter: brightness(1.08); }
+      @media (max-width: 640px) {
+        body.pf-section .pf-header { padding: 0.5rem 0.9rem; }
+        .pf-header-menu { gap: 0.25rem 0.85rem; }
+        .pf-header-menu a { font-size: 0.85rem; letter-spacing: 0.1em; }
+      }
 
       .home-page { display: block; margin: 0 auto; max-width: 900px; }
       .home-columns { display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr) 350px; }
@@ -83,6 +131,7 @@
       .home-overview-head h2 { margin: 0; }
       .home-facts { color: #bbb; font-size: 0.9rem; letter-spacing: 0.04em; margin: 0.35rem 0 0; }
       .home-overview p.home-copy { color: #ddd; line-height: 1.5; margin: 1rem 0 0; }
+      .home-creed { color: #fff; font-size: 1.1rem; font-style: italic; letter-spacing: 0.02em; margin: 1.1rem 0 0; }
       .home-motto { color: #fff; font-family: "Bungee", sans-serif; font-size: 0.85rem; letter-spacing: 0.08em; margin: 1.25rem 0 0; }
       .home-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-start; margin-top: 1.25rem; }
       .home-actions .goon-button { font-size: 0.8em; }
@@ -182,15 +231,6 @@
         width: 100%;
         height: 100%;
         pointer-events: none;
-      }
-      .op-nav {
-        position: relative;
-        z-index: 3;
-        padding: 1rem 1.25rem 0;
-        font-size: 0.9rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        text-align: center;
       }
       .op-content {
         position: relative;
@@ -440,7 +480,7 @@
       .op-orgs a { color: inherit; text-decoration: none; }
       .op-orgs a:hover { color: var(--op-signal); }
       .op-charter .op-resource-link { margin-top: 1rem; }
-      .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: left; scroll-margin-top: 1rem; }
+      .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
         margin: 0;
         font-family: "Bungee", sans-serif;
@@ -451,55 +491,9 @@
         color: #fff;
         text-align: center;
       }
+      .op-squadrons-eyebrow { margin: 0 0 0.35rem; text-align: center; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--op-signal); }
       .op-squadrons-intro { margin: 0.5rem auto 1.1rem; max-width: 38rem; text-align: center; color: var(--op-muted); line-height: 1.45; }
-      .op-squadron-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
-      .op-squadron {
-        padding: 1.1rem 1.15rem 1.2rem;
-        background: var(--op-glass);
-        border: 1px solid rgba(142, 191, 208, 0.22);
-        border-left: 3px solid var(--op-accent);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        scroll-margin-top: 1rem;
-      }
-      .op-squadron-apply { grid-column: 1 / -1; border-left-color: #ff3b3b; }
-      .op-squadron h3 { margin: 0; font-family: "Bungee", sans-serif; font-weight: 400; font-size: 1.1rem; letter-spacing: 0.04em; color: #fff; }
-      .op-squadron-role { margin: 0.2rem 0 0.55rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--op-signal); }
-      .op-squadron p { margin: 0; line-height: 1.45; color: var(--op-muted); }
-      .op-squadron strong { color: var(--op-text); }
-      .op-application { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid rgba(142, 191, 208, 0.22); }
-      .op-application h4 { margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--op-text); }
-      .squadron-form { display: grid; gap: 0.85rem; max-width: 36rem; }
-      .squadron-field { display: grid; gap: 0.35rem; font-weight: 600; color: var(--op-text); }
-      .squadron-field em { color: #ff3b3b; font-style: normal; }
-      .squadron-field input, .squadron-field textarea {
-        width: 100%;
-        padding: 0.6rem 0.7rem;
-        font: inherit;
-        font-weight: 500;
-        color: var(--op-text);
-        background: rgba(5, 10, 24, 0.75);
-        border: 1px solid rgba(142, 191, 208, 0.35);
-        border-radius: 4px;
-      }
-      .squadron-field input:focus, .squadron-field textarea:focus { outline: 2px solid var(--op-cyan); outline-offset: 1px; }
-      .squadron-field textarea { resize: vertical; }
-      .squadron-submit {
-        justify-self: start;
-        padding: 0.7rem 1.4rem;
-        font-family: "Rajdhani", sans-serif;
-        font-size: 1.05rem;
-        font-weight: 700;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--op-void);
-        background: linear-gradient(180deg, var(--op-cyan-soft) 0%, var(--op-cyan) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        cursor: pointer;
-      }
-      .squadron-submit:disabled { cursor: default; opacity: 0.6; }
-      .squadron-status { margin: 0; min-height: 1.2em; color: var(--op-signal); font-weight: 600; }
-      .squadron-fallback { margin: 0; font-size: 0.85rem; color: var(--op-muted); }
+      .op-squadrons .op-squadron-chips { justify-content: center; }
       .op-charter .op-laws { margin-top: 0.9rem; font-style: italic; }
       .op-footer {
         position: relative;
@@ -546,12 +540,8 @@
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       }
       .schedule-page a { color: #e8dcc8; }
-      .schedule-nav {
-        font-family: "Bungee", sans-serif;
-        letter-spacing: 0.06em;
-        margin: 1em 0;
-      }
       .schedule-board {
+        margin-top: 1em;
         display: block;
         width: 100%;
         height: auto;
@@ -560,6 +550,149 @@
         background: #0c0c0d;
       }
       .schedule-links { color: #9a9488; font-size: 0.85rem; margin-top: 0.85em; }
+
+      .pf-page {
+        --pf-void: #050A18;
+        --pf-text: #E8F4FF;
+        --pf-muted: #8AA4B8;
+        --pf-accent: #8EBFD0;
+        --pf-cyan: #00D4FF;
+        --pf-cyan-soft: #7FE9FF;
+        --pf-signal: #78ECFF;
+        --pf-glass: rgba(10, 18, 40, 0.72);
+        --pf-line: rgba(142, 191, 208, 0.22);
+        display: none;
+        max-width: 62rem;
+        margin: 0 auto;
+        padding: 1.75rem 1rem 3rem;
+        color: var(--pf-text);
+        text-align: left;
+      }
+      .pf-page *, .pf-page *::before, .pf-page *::after { box-sizing: border-box; }
+      .pf-page a { color: var(--pf-accent); }
+      .pf-page a:hover { color: #fff; }
+      .pf-page h1, .pf-page h2 { margin: 0; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; text-align: center; }
+      .pf-page h1 { font-size: clamp(1.6rem, 4.5vw, 2.3rem); }
+      .pf-page h2 { margin-top: 2.25rem; font-size: 1.2rem; scroll-margin-top: 5rem; }
+      .pf-eyebrow { margin: 0 0 0.4rem; text-align: center; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pf-signal); }
+      .pf-intro { margin: 0.6rem auto 1.25rem; max-width: 38rem; text-align: center; color: var(--pf-muted); line-height: 1.45; }
+      .pf-path {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: pf-path;
+      }
+      .pf-path li {
+        position: relative;
+        padding: 2.6rem 1.1rem 1.1rem;
+        background: var(--pf-glass);
+        border: 1px solid var(--pf-line);
+        border-top: 3px solid var(--pf-cyan);
+        counter-increment: pf-path;
+      }
+      .pf-path li::before {
+        content: counter(pf-path, decimal-leading-zero);
+        position: absolute;
+        top: 0.7rem;
+        left: 1.1rem;
+        font-family: "Bungee", sans-serif;
+        font-size: 1.2rem;
+        color: var(--pf-cyan);
+      }
+      .pf-path h3 { margin: 0 0 0.4rem; font-family: "Rajdhani", sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; }
+      .pf-path p, .pf-squadron p { margin: 0; line-height: 1.45; color: var(--pf-muted); }
+      .pf-path strong, .pf-squadron strong, .pf-lede strong { color: var(--pf-text); }
+      .pf-page .pf-links { margin-top: 0.6rem; font-weight: 700; }
+      .pf-links a { color: var(--pf-signal); text-decoration: none; }
+      .pf-links a:hover { text-decoration: underline; }
+      .pf-squadron-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+      .pf-squadron {
+        display: flex;
+        flex-direction: column;
+        padding: 1.1rem 1.15rem 1.2rem;
+        background: var(--pf-glass);
+        border: 1px solid var(--pf-line);
+        border-left: 3px solid var(--pf-accent);
+        scroll-margin-top: 5rem;
+      }
+      .pf-squadron-elite { border-left-color: #ff3b3b; }
+      .pf-page .pf-squadron-entry {
+        align-self: flex-start;
+        margin: 0 0 0.6rem;
+        padding: 0.15rem 0.5rem;
+        border: 1px solid rgba(142, 191, 208, 0.35);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pf-text);
+      }
+      .pf-page .pf-squadron-elite .pf-squadron-entry { border-color: rgba(255, 59, 59, 0.6); color: #ff8a8a; }
+      .pf-squadron h3 { margin: 0; font-size: 1.1rem; letter-spacing: 0.04em; }
+      .pf-squadron h3 a { color: #fff; text-decoration: none; }
+      .pf-squadron h3 a:hover { color: var(--pf-signal); }
+      .pf-page .pf-squadron-role { margin: 0.2rem 0 0.55rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pf-signal); }
+      .pf-squadron .pf-squadron-next { margin-top: auto; padding-top: 0.75rem; color: var(--pf-text); font-weight: 600; }
+      .pf-squadron-next span { margin-right: 0.35rem; font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pf-signal); }
+      .pf-squadron-page h1 { text-align: left; }
+      .pf-squadron-page .pf-eyebrow, .pf-squadron-page .pf-squadron-role { text-align: left; }
+      .pf-squadron-page .page-back { text-align: left; }
+      .pf-lede { margin: 0.9rem 0 0; max-width: 42rem; font-size: 1.1rem; line-height: 1.5; color: var(--pf-text); }
+      .pf-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: 1.5rem 0 0; }
+      .pf-facts div { padding: 0.85rem 1rem; background: var(--pf-glass); border: 1px solid var(--pf-line); border-left: 3px solid var(--pf-accent); }
+      .pf-facts dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pf-signal); }
+      .pf-facts dd { margin: 0.3rem 0 0; font-weight: 600; line-height: 1.4; }
+      .pf-squadron-page .pf-links { margin-top: 1.5rem; }
+      .pf-application {
+        margin-top: 1.75rem;
+        padding: 1.25rem 1.2rem 1.4rem;
+        background: var(--pf-glass);
+        border: 1px solid var(--pf-line);
+        border-left: 3px solid var(--pf-cyan);
+        scroll-margin-top: 5rem;
+      }
+      .pf-page .pf-application h2 { margin: 0 0 0.5rem; text-align: left; font-family: "Rajdhani", sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.16em; }
+      .pf-application > p { margin: 0 0 0.9rem; max-width: 36rem; line-height: 1.45; color: var(--pf-muted); }
+      .squadron-form { display: grid; gap: 0.85rem; max-width: 36rem; }
+      .squadron-field { display: grid; gap: 0.35rem; font-weight: 600; color: var(--pf-text); }
+      .squadron-field em { color: #ff3b3b; font-style: normal; }
+      .squadron-field input, .squadron-field textarea {
+        width: 100%;
+        padding: 0.6rem 0.7rem;
+        font: inherit;
+        font-weight: 500;
+        color: var(--pf-text);
+        background: rgba(5, 10, 24, 0.75);
+        border: 1px solid rgba(142, 191, 208, 0.35);
+        border-radius: 4px;
+      }
+      .squadron-field input:focus, .squadron-field textarea:focus { outline: 2px solid var(--pf-cyan); outline-offset: 1px; }
+      .squadron-field textarea { resize: vertical; }
+      .squadron-submit {
+        justify-self: start;
+        padding: 0.7rem 1.4rem;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pf-void);
+        background: linear-gradient(180deg, var(--pf-cyan-soft) 0%, var(--pf-cyan) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        cursor: pointer;
+      }
+      .squadron-submit:disabled { cursor: default; opacity: 0.6; }
+      .squadron-status { margin: 0; min-height: 1.2em; color: var(--pf-signal); font-weight: 600; }
+      .squadron-fallback { margin: 0; font-size: 0.85rem; color: var(--pf-muted); }
+      @media (max-width: 900px) {
+        .pf-path { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 480px) {
+        .pf-path { grid-template-columns: 1fr; }
+      }
 
       .login-page { display: none; margin: 3em auto; max-width: 30em; padding: 0 1em; }
       .login-intro { color: #bbb; line-height: 1.45; }
@@ -637,39 +770,45 @@
       .idlerpg-rules b { color: #ddd; }
       .idlerpg-gateway { color: #777; font-size: 0.75rem; margin: 1.5rem 0 0; text-align: center; }
 
-      .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 1.5em 1em 3em; text-align: left; color: #E8F4FF; }
       .organizations-page > h1, .organizations-intro { text-align: center; }
-      .organizations-intro { color: #bbb; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
+      .organizations-page > h1 { color: #fff; margin-top: 0.5em; }
+      .organizations-intro { color: #8AA4B8; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
       .organizations-grid { display: flex; flex-direction: column; gap: 1.25rem; }
       .org-card, .org-profile {
-        background: rgba(0, 0, 0, 0.22);
-        border: 1px solid #555;
-        border-radius: 10px;
+        background: rgba(10, 18, 40, 0.72);
+        border: 1px solid rgba(142, 191, 208, 0.28);
+        border-left: 3px solid #8EBFD0;
         overflow: hidden;
       }
+      .organization-page .page-back a, .organizations-page footer a:not(.footer-login-button), .organization-page footer a:not(.footer-login-button) { color: #8EBFD0; }
       .org-card { display: flex; gap: 1rem; padding: 1rem 1.15rem; }
       .org-logo { flex: 0 0 auto; height: 72px; object-fit: contain; width: 72px; }
       .org-card-body { flex: 1 1 auto; min-width: 0; }
       .org-name { font-size: 1.2rem; margin: 0 0 0.25rem; }
       .org-name a { border-bottom: 1px solid rgba(255, 255, 255, 0.25); text-decoration: none; }
       .org-name a:hover { border-bottom-color: #fff; }
-      .org-meta { color: #c9c9c9; font-size: 0.88rem; margin: 0 0 0.35rem; }
+      .org-meta { color: #8AA4B8; font-size: 0.88rem; margin: 0 0 0.35rem; }
       .org-symbol { color: #fff; font-weight: 700; letter-spacing: 0.08em; }
-      .org-focus { color: #aaa; font-size: 0.85rem; margin: 0 0 0.6rem; }
-      .org-summary { color: #ddd; line-height: 1.4; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
+      .org-focus { color: #8AA4B8; font-size: 0.85rem; margin: 0 0 0.6rem; }
+      .org-summary { color: #E8F4FF; line-height: 1.4; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
       .org-links { display: flex; flex-wrap: wrap; gap: 0.5em; }
       .org-links .goon-button { font-size: 0.75em; padding: 0.35em 0.75em; }
-      .org-banner { aspect-ratio: 4 / 1; background: #222; display: block; object-fit: cover; width: 100%; }
+      .org-banner { aspect-ratio: 4 / 1; background: rgba(142, 191, 208, 0.08); display: block; object-fit: cover; width: 100%; }
       .org-profile-head { align-items: center; display: flex; gap: 1rem; padding: 1rem 1.15rem 0; }
       .org-profile-head h1 { font-size: 1.6rem; margin: 0; }
       .org-profile-body { padding: 0.75rem 1.15rem 1.15rem; }
       .org-profile-body p { line-height: 1.45; overflow-wrap: anywhere; }
       .org-actions { display: flex; flex-wrap: wrap; gap: 0.6em; margin: 1rem 0; }
-      .org-section { border-top: 1px solid #444; padding: 0.6rem 0; }
+      .org-section { border-top: 1px solid rgba(142, 191, 208, 0.22); padding: 0.6rem 0; }
       .org-section summary { cursor: pointer; font-family: "Bungee", sans-serif; letter-spacing: 0.05em; }
-      .org-section p { color: #ccc; font-size: 0.95rem; margin: 0.6rem 0; }
-      .org-source { color: #888; font-size: 0.78rem; margin-top: 1rem; text-align: center; }
-      .organizations-empty { color: #888; padding: 2em 0; text-align: center; }
+      .org-section p { color: #c9d6e0; font-size: 0.95rem; margin: 0.6rem 0; }
+      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; text-align: center; }
+      .org-roster-cta h2 { color: #fff; font-size: 1.15rem; margin: 0 0 0.4rem; }
+      .org-roster-cta p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
+      .org-roster-cta strong { color: #E8F4FF; }
+      .org-source { color: rgba(138, 164, 184, 0.75); font-size: 0.78rem; margin-top: 1rem; text-align: center; }
+      .organizations-empty { color: #8AA4B8; padding: 2em 0; text-align: center; }
 
       .resources-page, .gooncitizen-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .resources-page > h1, .resources-page > .operations-intro { text-align: center; }
@@ -696,12 +835,57 @@
       .drills-page > h1, .drills-page > .operations-intro { text-align: center; }
       .drill-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 0 3em; }
       .drill-page .drill-element { background: none; }
+
+      .tournaments-page { display: none; margin: 0 auto; max-width: 42em; padding: 0 1em 3em; text-align: left; }
+      .tournaments-page > h1, .tournaments-page > .operations-intro { text-align: center; }
+      .tournament-section { margin-top: 2.5em; }
+      .tournament-section h2 { font-size: 1.1em; letter-spacing: 0.06em; margin: 0 0 0.75em; }
+      .tournament-results { border-collapse: collapse; width: 100%; }
+      .tournament-results th, .tournament-results td { border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 0.45em 0.5em; text-align: left; vertical-align: top; }
+      .tournament-results th { color: #bbb; font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+      .tournament-results .champion { color: #fff; font-weight: 700; }
+      .tournament-muted { color: #aaa; }
+      .tournament-form { display: grid; gap: 0.85em; }
+      .tournament-form label { display: grid; gap: 0.3em; font-weight: 600; color: #fff; }
+      .tournament-form .tournament-row { display: flex; flex-wrap: wrap; gap: 0.85em; }
+      .tournament-form .tournament-row label { flex: 1 1 10em; }
+      .tournament-form input, .tournament-form select, .tournament-form textarea {
+        background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 4px;
+        color: #fff; font: inherit; font-weight: 500; padding: 0.5em 0.6em; width: 100%; box-sizing: border-box;
+      }
+      .tournament-form textarea { min-height: 7em; resize: vertical; }
+      .tournament-form .goon-button { justify-self: start; }
+      .tournament-form-note { margin: 0; min-height: 1.2em; }
+      .tournament-form-note.error { color: #ff7b7b; }
+      .tournament-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 0 3em; }
+      .tournament-view { margin: 0 auto; max-width: 42em; padding: 0 1em; text-align: left; }
+      .tournament-view.wide { max-width: none; padding: 0; }
+      .tournament-view > h1 { text-align: center; }
+      .tournament-log { margin: 2em auto 0; max-width: 42em; padding: 0 1em; text-align: left; }
+      .tournament-log ol { margin: 0; padding-left: 1.4em; }
+      .tournament-log li { margin: 0.2em 0; }
+      .tournament-log time { color: #aaa; font-size: 0.9em; margin-right: 0.5em; }
     </style>
   </head>
   <body>
     <header id="site-header" class="site-header">
       <h1><a href="/">GOON SQUAD<sup>&trade;</sup></a></h1>
       <p class="site-nav"><span class="site-nav-item"><a href="/events">EVENTS</a></span><span class="site-nav-item"><a href="/resources">RESOURCES</a></span><span class="site-nav-item"><a href="/operations/PERMAFLEET">PERMAFLEET</a></span></p>
+    </header>
+    <header id="permafleet-header" class="pf-header">
+      <div class="pf-header-brand">
+        <a class="pf-header-home" href="/">&larr; GOON SQUAD</a>
+        <a class="pf-header-name" href="/operations/PERMAFLEET">PERMAFLEET</a>
+      </div>
+      <nav aria-label="PERMAFLEET">
+        <ul class="pf-header-menu">
+          <li><a href="/operations/PERMAFLEET" data-match="exact">Overview</a></li>
+          <li><a href="/operations/PERMAFLEET/schedule" data-match="exact">Schedule</a></li>
+          <li><a href="/operations/PERMAFLEET/squadrons" data-match="prefix">Squadrons</a></li>
+          <li><a href="/organizations" data-match="prefix">Organizations</a></li>
+          <li><a class="pf-header-join" href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join</a></li>
+        </ul>
+      </nav>
     </header>
     <main id="home-page" class="home-page">
       <div class="home-columns">
@@ -713,14 +897,15 @@
             <p class="home-facts">PMC · Security / Infiltration · Recruiting</p>
           </div>
         </div>
-        <p class="home-copy">G00N SQUAD is a paramilitary organization with a strong pedigree in security and infiltration, and a core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>. Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere in the ’verse, at any hour.</p>
-        <p class="home-copy">Membership is by invitation only. Invitations go through <strong>ALPHA SQUADRON</strong> — the tip of the spear for PERMAFLEET, drawn from the best of BRAVO SQUADRON.</p>
-        <p class="home-copy">To be considered, apply to ALPHA SQUADRON. The application is required for membership, even if you already fly with PERMAFLEET. <em>Esse quam videri.</em></p>
+        <p class="home-copy">Friends in most corners of the ’verse, and ears in the rest. We work across the Star Citizen community, mostly out of sight. A core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>.</p>
+        <p class="home-copy">Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere, at any hour. Most of the time, you won’t even see us.</p>
+        <p class="home-copy">Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET.</p>
+        <p class="home-creed">Esse quam videri.</p>
         <p class="home-motto">GOONS TOGETHER STRONK · TALK LOUD FLY BIG SHIP</p>
-        <div class="home-actions"><a class="goon-button" href="/operations/PERMAFLEET#alpha-squadron">Apply to ALPHA SQUADRON</a><a class="goon-button" href="/organizations/G00N">Org profile</a><a class="goon-button" href="/events">Events</a></div>
+        <div class="home-actions"><a class="goon-button" href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron</a><a class="goon-button" href="/organizations/G00N">Org profile</a><a class="goon-button" href="/events">Events</a></div>
         <div id="home-subscriptions" class="home-subscriptions" hidden>
           <h3>Subscribe on Discord</h3>
-          <p>Support G00N SQUAD with a Discord Server Subscription. Each tier comes with its own role in our server.</p>
+          <p>Each tier carries its own role in our server.</p>
           <ul class="home-tiers" data-tiers></ul>
           <a class="goon-button" data-subscribe href="#" target="_blank" rel="noopener">See tiers and prices on Discord</a>
         </div>
@@ -917,6 +1102,11 @@
           </div>
         </article>
       </div>
+      <section class="org-roster-cta" aria-labelledby="org-roster-cta-title">
+        <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
+        <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
+        <a class="goon-button" href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>
+      </section>
       <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
@@ -1203,6 +1393,13 @@
           
           <div class="operation-links"><a class="goon-button" href="/drills">Open</a></div>
         </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/tournaments">Tournaments</a></h2>
+          <p class="operation-tagline">Single and double elimination brackets, best of n, with every result on record.</p>
+          <p class="operation-summary">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/tournaments">Tournaments</a></div>
+        </article>
 <article class="operation-card" id="idlerpg-card">
           <h2 class="operation-name"><a href="/services/idlerpg">IDLERPG</a></h2>
           <p class="operation-tagline">Presence is progress.</p>
@@ -1279,12 +1476,61 @@
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+    <main id="tournaments-page" class="tournaments-page" data-api="/services/tournaments" data-base="/tournaments">
+      <h1>TOURNAMENTS</h1>
+      <p class="operations-intro">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
+      <section class="tournament-section">
+        <h2>Results</h2>
+        <div id="tournament-history"><p class="tournament-muted">Loading results…</p></div>
+      </section>
+      <section class="tournament-section">
+        <h2>New tournament</h2>
+        <p class="tournament-muted">Pick a name, format, and start time. The bracket and every result are kept on record.</p>
+        <form class="tournament-form" id="tournament-create-form">
+          <label>Name <input name="name" maxlength="48" required placeholder="Gladius Cup"></label>
+          <label>Tagline <input name="tagline" maxlength="120"></label>
+          <label>Summary <textarea name="summary" maxlength="600"></textarea></label>
+          <div class="tournament-row">
+            <label>Format <select name="format">
+              <option value="single-elimination">Single elimination</option>
+              <option value="double-elimination">Double elimination</option>
+            </select></label>
+            <label>Sets <select name="bestOf">
+              <option value="1">Best of 1</option>
+              <option value="3" selected>Best of 3</option>
+              <option value="5">Best of 5</option>
+              <option value="7">Best of 7</option>
+              <option value="9">Best of 9</option>
+            </select></label>
+          </div>
+          <label>Date and time (your time) <input name="startsAt" type="datetime-local" required></label>
+          <label>Players <span class="tournament-muted">best seed first, one per line; optional — add players until the first game, and latecomers after</span>
+            <textarea name="players" spellcheck="false" autocomplete="off"></textarea></label>
+          <button class="goon-button" type="submit">Create tournament</button>
+          <p class="tournament-form-note" role="status"></p>
+        </form>
+      </section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="tournament-page" class="tournament-page" data-api="/services/tournaments" data-base="/tournaments" data-site-title="GOON SQUAD">
+      <p class="page-back"><a id="tournament-back" href="/tournaments">&larr; Tournaments</a></p>
+      <div class="tournament-view" id="tournament-view"><p class="tournament-muted">Loading…</p></div>
+      <section class="tournament-log" id="tournament-log" hidden></section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
     <main id="operation-permafleet" class="op-page">
       <div class="op-shell">
         <div class="op-hero-bg" aria-hidden="true"></div>
         <div class="op-hero-scrim" aria-hidden="true"></div>
         <canvas id="permafleet-particles" class="op-particles" aria-hidden="true"></canvas>
-        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="/organizations">Organizations</a></nav>
         <div class="op-content">
           <p class="op-eyebrow">The PERMAFLEET Protectorate</p>
           <h1 class="op-brand">PERMAFLEET</h1>
@@ -1321,43 +1567,11 @@
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
           <section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
-            <h2 id="permafleet-squadrons">Cross-org squadrons</h2>
-            <p class="op-squadrons-intro">Squadrons draw members from every PERMAFLEET org. Most are selected by leadership once you reach Prospect IV; ALPHA SQUADRON takes applications.</p>
-            <div class="op-squadron-grid">
-              <article class="op-squadron op-squadron-apply" id="alpha-squadron">
-                <h3>ALPHA SQUADRON</h3>
-                <p class="op-squadron-role">Elite fighters · run by G00N SQUAD</p>
-                <p>The tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON. Applications are open below. Signing up is also how you join <span class="op-goon">G00N SQUAD</span>, even if you’re already in PERMAFLEET.</p>
-                <div class="op-application">
-                  <h4>Apply to ALPHA SQUADRON</h4>
-                  <form id="alpha-squadron-form" class="squadron-form" method="POST" action="https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse" target="alpha-squadron-sink" accept-charset="UTF-8">
-            <label class="squadron-field" for="alpha-squadron-field-0"><span>What is your in-game name (IGN)? <em aria-hidden="true">*</em></span><input id="alpha-squadron-field-0" name="entry.1263490172" type="text" maxlength="200" autocomplete="off" required></label>
-            <label class="squadron-field" for="alpha-squadron-field-1"><span>Why would you like to apply? <em aria-hidden="true">*</em></span><textarea id="alpha-squadron-field-1" name="entry.1476806575" rows="4" maxlength="4000" required></textarea></label>
-            <input type="hidden" name="fvv" value="1">
-            <input type="hidden" name="pageHistory" value="0">
-            <button type="submit" class="squadron-submit">Submit application</button>
-            <p class="squadron-status" id="alpha-squadron-status" role="status" aria-live="polite"></p>
-            <p class="squadron-fallback">Trouble submitting? <a href="https://forms.gle/GvUx3o1MuWtxJifT9" target="_blank" rel="noopener noreferrer">Open the form on Google Forms</a>.</p>
-          </form>
-          <iframe name="alpha-squadron-sink" id="alpha-squadron-sink" title="Application response" hidden></iframe>
-                </div>
-              </article>
-              <article class="op-squadron" id="bravo-squadron">
-                <h3>BRAVO SQUADRON</h3>
-                <p class="op-squadron-role">Fighter squadron</p>
-                <p>Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on <strong>Friday Night Fights</strong>.</p>
-              </article>
-              <article class="op-squadron" id="rat-squadron">
-                <h3>RAT SQUADRON</h3>
-                <p class="op-squadron-role">Piracy unit</p>
-                <p>PERMAFLEET’s pirates. Members are selected by leadership.</p>
-              </article>
-              <article class="op-squadron" id="turtle-brigade">
-                <h3>TURTLE BRIGADE</h3>
-                <p class="op-squadron-role">Infantry</p>
-                <p>Basic infantry training. The best go on to <strong>SHELLBACK</strong>, the elite infantry unit.</p>
-              </article>
-            </div>
+            <p class="op-squadrons-eyebrow">Cross-org squadrons</p>
+            <h2 id="permafleet-squadrons">Your path to membership</h2>
+            <p class="op-squadrons-intro">Join PERMAFLEET, fly with the fleet, and get selected for a squadron that draws from every member org.</p>
+            <ul class="op-orgs op-squadron-chips"><li><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">BRAVO SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/rat-squadron">RAT SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">TURTLE BRIGADE</a></li><li><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/shellback">SHELLBACK</a></li></ul>
+            <p class="op-resource-link"><a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a></p>
           </section>
         </div>
         <footer class="op-footer">
@@ -1367,16 +1581,168 @@
       </div>
     </main>
     <main id="permafleet-schedule" class="schedule-page">
-      <p class="schedule-nav"><a href="/">&larr; Home</a> · <a href="/operations/PERMAFLEET">PERMAFLEET</a> · <a href="https://discord.com/invite/M4h9bBWq" rel="noopener noreferrer">Discord</a></p>
       <a href="/permafleet-schedule.html"><img class="schedule-board" src="/permafleet-schedule.svg" width="1920" height="1080" alt="PERMAFLEET weekly ops schedule" loading="lazy"></a>
       <p class="schedule-links">Generated from Discord scheduled events · Times in Central · <a href="/permafleet-schedule.html">Full size</a> · <a href="/permafleet-schedule.svg">SVG</a></p>
+    </main>
+    <main id="squadrons-page" class="pf-page">
+      <p class="pf-eyebrow">Cross-org squadrons</p>
+      <h1>Your path to membership</h1>
+      <p class="pf-intro">Every PERMAFLEET member org flies in the same squadrons. Here’s how you get from your first flight to a seat in one.</p>
+      <ol class="pf-path">
+        <li>
+          <h3>Join PERMAFLEET</h3>
+          <p>Hop into the Discord and apply to the PERMAFLEET org on RSI. You start at <strong>Prospect I</strong>.</p>
+          <p class="pf-links"><a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Discord &raquo;</a> · <a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI &raquo;</a></p>
+        </li>
+        <li>
+          <h3>Fly with the fleet</h3>
+          <p>Show up for weekly ops. Leadership promotes Prospects up the ranks.</p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/schedule">Weekly ops schedule &raquo;</a></p>
+        </li>
+        <li>
+          <h3>Get selected</h3>
+          <p>Apply for a squadron. Leadership selects Prospects for a cross-org squadron or officer training.</p>
+          <p class="pf-links"><a href="#squadron-apply">Apply &darr;</a> · <a href="#squadron-picks">See the squadrons &darr;</a></p>
+        </li>
+        <li>
+          <h3>Make the elite</h3>
+          <p>Perform and you go further: the top of BRAVO SQUADRON make <strong>ALPHA SQUADRON</strong>, and the best of TURTLE BRIGADE make <strong>SHELLBACK</strong>.</p>
+          <p class="pf-links"><a href="#squadron-elite">Elite units &darr;</a></p>
+        </li>
+      </ol>
+      <h2 id="squadron-picks">Pick your squadron</h2>
+      <p class="pf-intro">Each squadron focuses on one kind of gameplay.</p>
+      <div class="pf-squadron-grid">
+        <article class="pf-squadron" id="bravo-squadron">
+          <p class="pf-squadron-entry">Selected by leadership</p>
+          <h3><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">BRAVO SQUADRON</a></h3>
+          <p class="pf-squadron-role">Fighter squadron</p>
+          <p>Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on <strong>Friday Night Fights</strong>.</p>
+          <p class="pf-squadron-next"><span>Leads to</span> <a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">About BRAVO SQUADRON &raquo;</a></p>
+        </article>
+        <article class="pf-squadron" id="rat-squadron">
+          <p class="pf-squadron-entry">Selected by leadership</p>
+          <h3><a href="/operations/PERMAFLEET/squadrons/rat-squadron">RAT SQUADRON</a></h3>
+          <p class="pf-squadron-role">Piracy unit</p>
+          <p>PERMAFLEET’s pirates.</p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons/rat-squadron">About RAT SQUADRON &raquo;</a></p>
+        </article>
+        <article class="pf-squadron" id="turtle-brigade">
+          <p class="pf-squadron-entry">Selected by leadership</p>
+          <h3><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">TURTLE BRIGADE</a></h3>
+          <p class="pf-squadron-role">Infantry</p>
+          <p>PERMAFLEET’s infantry, starting with basic infantry training.</p>
+          <p class="pf-squadron-next"><span>Leads to</span> <a href="/operations/PERMAFLEET/squadrons/shellback">SHELLBACK, the elite infantry unit</a></p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">About TURTLE BRIGADE &raquo;</a></p>
+        </article>
+      </div>
+      <section class="pf-application" id="squadron-apply" aria-labelledby="squadron-apply-heading">
+        <h2 id="squadron-apply-heading">Apply for a squadron</h2>
+        <p>One application covers every squadron. It’s also required to join G00N SQUAD, even if you already fly with PERMAFLEET.</p>
+        <form id="squadron-application-form" class="squadron-form" method="POST" action="https://docs.google.com/forms/d/e/1FAIpQLSdNqMmrcUJSSjzzTNzDQBIJ_foCL5m-EBp5nEQNIrlLNXMXVw/formResponse" target="squadron-application-sink" accept-charset="UTF-8">
+            <label class="squadron-field" for="squadron-application-field-0"><span>What is your in-game name (IGN)? <em aria-hidden="true">*</em></span><input id="squadron-application-field-0" name="entry.1263490172" type="text" maxlength="200" autocomplete="off" required></label>
+            <label class="squadron-field" for="squadron-application-field-1"><span>Why would you like to apply? <em aria-hidden="true">*</em></span><textarea id="squadron-application-field-1" name="entry.1476806575" rows="4" maxlength="4000" required></textarea></label>
+            <input type="hidden" name="fvv" value="1">
+            <input type="hidden" name="pageHistory" value="0">
+            <button type="submit" class="squadron-submit">Submit application</button>
+            <p class="squadron-status" id="squadron-application-status" role="status" aria-live="polite"></p>
+            <p class="squadron-fallback">Trouble submitting? <a href="https://forms.gle/GvUx3o1MuWtxJifT9" target="_blank" rel="noopener noreferrer">Open the form on Google Forms</a>.</p>
+          </form>
+          <iframe name="squadron-application-sink" id="squadron-application-sink" title="Application response" hidden></iframe>
+      </section>
+      <h2 id="squadron-elite">Earned by performance</h2>
+      <p class="pf-intro">Elite units aren’t applied for. Leadership selects the best pilots from each squadron.</p>
+      <div class="pf-squadron-grid">
+        <article class="pf-squadron pf-squadron-elite" id="alpha-squadron">
+          <p class="pf-squadron-entry">Earned by performance</p>
+          <h3><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON</a></h3>
+          <p class="pf-squadron-role">Elite fighters · run by G00N SQUAD</p>
+          <p>The tip of the spear for PERMAFLEET: the top 5% of BRAVO SQUADRON, selected on performance.</p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">About ALPHA SQUADRON &raquo;</a></p>
+        </article>
+        <article class="pf-squadron pf-squadron-elite" id="shellback">
+          <p class="pf-squadron-entry">Earned by performance</p>
+          <h3><a href="/operations/PERMAFLEET/squadrons/shellback">SHELLBACK</a></h3>
+          <p class="pf-squadron-role">Elite infantry</p>
+          <p>PERMAFLEET’s elite infantry unit, selected from the best of TURTLE BRIGADE.</p>
+          <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons/shellback">About SHELLBACK &raquo;</a></p>
+        </article>
+      </div>
+    </main>
+<main id="squadron-bravo-squadron" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/bravo-squadron" data-title="BRAVO SQUADRON — GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/squadrons">&larr; Path to membership</a></p>
+      <p class="pf-eyebrow">Cross-org squadron</p>
+      <h1>BRAVO SQUADRON</h1>
+      <p class="pf-squadron-role">Fighter squadron</p>
+      <p class="pf-lede">Fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on <strong>Friday Night Fights</strong>.</p>
+      <dl class="pf-facts">
+        <div><dt>How you get in</dt><dd>Selected by leadership</dd></div>
+        <div><dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
+    </main>
+<main id="squadron-rat-squadron" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/rat-squadron" data-title="RAT SQUADRON — GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/squadrons">&larr; Path to membership</a></p>
+      <p class="pf-eyebrow">Cross-org squadron</p>
+      <h1>RAT SQUADRON</h1>
+      <p class="pf-squadron-role">Piracy unit</p>
+      <p class="pf-lede">PERMAFLEET’s pirates.</p>
+      <dl class="pf-facts">
+        <div><dt>How you get in</dt><dd>Selected by leadership</dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
+    </main>
+<main id="squadron-turtle-brigade" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/turtle-brigade" data-title="TURTLE BRIGADE — GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/squadrons">&larr; Path to membership</a></p>
+      <p class="pf-eyebrow">Cross-org squadron</p>
+      <h1>TURTLE BRIGADE</h1>
+      <p class="pf-squadron-role">Infantry</p>
+      <p class="pf-lede">PERMAFLEET’s infantry, starting with basic infantry training.</p>
+      <dl class="pf-facts">
+        <div><dt>How you get in</dt><dd>Selected by leadership</dd></div>
+        <div><dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/shellback">SHELLBACK, the elite infantry unit</a></dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
+    </main>
+<main id="squadron-alpha-squadron" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/alpha-squadron" data-title="ALPHA SQUADRON — GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/squadrons">&larr; Path to membership</a></p>
+      <p class="pf-eyebrow">Elite squadron</p>
+      <h1>ALPHA SQUADRON</h1>
+      <p class="pf-squadron-role">Elite fighters · run by G00N SQUAD</p>
+      <p class="pf-lede">The tip of the spear for PERMAFLEET: the top 5% of BRAVO SQUADRON, selected on performance.</p>
+      <dl class="pf-facts">
+        <div><dt>How you get in</dt><dd>Earned by performance</dd></div>
+        <div><dt>Drawn from</dt><dd><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">BRAVO SQUADRON</a></dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
+    </main>
+<main id="squadron-shellback" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/shellback" data-title="SHELLBACK — GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/squadrons">&larr; Path to membership</a></p>
+      <p class="pf-eyebrow">Elite squadron</p>
+      <h1>SHELLBACK</h1>
+      <p class="pf-squadron-role">Elite infantry</p>
+      <p class="pf-lede">PERMAFLEET’s elite infantry unit, selected from the best of TURTLE BRIGADE.</p>
+      <dl class="pf-facts">
+        <div><dt>How you get in</dt><dd>Earned by performance</dd></div>
+        <div><dt>Drawn from</dt><dd><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">TURTLE BRIGADE</a></dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
     </main>
     <script type="text/javascript">
       (function () {
         var loginPath = "/sessions";
         var permafleetPath = "/operations/PERMAFLEET";
         var schedulePath = "/operations/PERMAFLEET/schedule";
+        var squadronsPath = "/operations/PERMAFLEET/squadrons";
         var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+        if (path.toLowerCase() === permafleetPath.toLowerCase() && /^#[a-z0-9-]+$/i.test(window.location.hash)) {
+          var movedSquadron = document.getElementById('squadron-' + window.location.hash.slice(1).toLowerCase());
+          if (movedSquadron) {
+            window.location.replace(movedSquadron.getAttribute('data-path'));
+            return;
+          }
+        }
         var isLogin = path === loginPath;
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
@@ -1391,8 +1757,17 @@
         document.querySelectorAll('.drill-page').forEach(function (el) {
           if (el.getAttribute('data-path') === path.toLowerCase()) drillEl = el;
         });
+        var isTournaments = path.toLowerCase() === "/tournaments";
+        var tournamentEl = path.toLowerCase().indexOf("/tournaments/") === 0
+          ? document.getElementById('tournament-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
+        var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var squadronEl = null;
+        document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
+          if (el.getAttribute('data-path').toLowerCase() === path.toLowerCase()) squadronEl = el;
+        });
         var home = document.getElementById('home-page');
         var login = document.getElementById('login-page');
         var eventsEl = document.getElementById('events-page');
@@ -1401,7 +1776,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isPermafleet && !isSchedule) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -1422,23 +1797,37 @@
         document.querySelectorAll('.drill-page').forEach(function (el) {
           el.style.display = el === drillEl ? 'block' : 'none';
         });
+        var tournamentsEl = document.getElementById('tournaments-page');
+        if (tournamentsEl) tournamentsEl.style.display = isTournaments ? 'block' : 'none';
+        var tournamentPageEl = document.getElementById('tournament-page');
+        if (tournamentPageEl) tournamentPageEl.style.display = tournamentEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
         document.body.classList.toggle('schedule-active', isSchedule);
+        var squadronsEl = document.getElementById('squadrons-page');
+        if (squadronsEl) squadronsEl.style.display = isSquadrons ? 'block' : 'none';
+        document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
+          el.style.display = el === squadronEl ? 'block' : 'none';
+        });
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = "Login — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG) document.title = "IDLERPG — GOON SQUAD";
-        else if (isOrganizations) document.title = "ORGANIZATIONS — GOON SQUAD";
+        else if (isOrganizations) document.title = "PERMAFLEET Organizations — GOON SQUAD";
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
         else if (isDrills) document.title = "DRILLS — GOON SQUAD";
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
+        else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
+        else if (tournamentEl) document.title = "TOURNAMENTS — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
+        else if (isSquadrons) document.title = "PERMAFLEET Squadrons — GOON SQUAD";
+        else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
         else document.title = "GOON SQUAD";
       })();
     </script>
@@ -1448,6 +1837,16 @@
         document.querySelectorAll('.site-nav a[href^="/"]').forEach(function (a) {
           var href = a.getAttribute('href').toLowerCase();
           if (path === href || path.indexOf(href + '/') === 0) a.setAttribute('aria-current', 'page');
+        });
+      })();
+    </script>
+    <script type="text/javascript">
+      (function () {
+        var path = ((window.location.pathname || '/').replace(/\/+$/, '') || '/').toLowerCase();
+        document.querySelectorAll('#permafleet-header a[data-match]').forEach(function (a) {
+          var href = a.getAttribute('href').toLowerCase();
+          var match = a.getAttribute('data-match');
+          if ((match !== 'none' && path === href) || (match === 'prefix' && path.indexOf(href + '/') === 0)) a.setAttribute('aria-current', 'page');
         });
       })();
     </script>
@@ -2110,6 +2509,8 @@
     })();
   </script>
     <script src="/scripts/melee-rotation-drill.js" defer></script>
+    <script src="/scripts/tournament-bracket.js" defer></script>
+    <script src="/scripts/tournaments.js" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');
@@ -2398,9 +2799,9 @@
     </script>
     <script type="text/javascript">
       (function () {
-        var form = document.getElementById("alpha-squadron-form");
-        var sink = document.getElementById("alpha-squadron-sink");
-        var status = document.getElementById("alpha-squadron-status");
+        var form = document.getElementById("squadron-application-form");
+        var sink = document.getElementById("squadron-application-sink");
+        var status = document.getElementById("squadron-application-status");
         if (!form || !sink) return;
         var button = form.querySelector('button[type="submit"]');
         var pending = false;
@@ -2411,7 +2812,7 @@
           clearTimeout(timer);
           button.disabled = false;
           status.textContent = ok
-            ? "Application sent. G00N SQUAD leadership reviews every application; watch Discord for a reply."
+            ? "Application sent. Leadership reviews every application; watch Discord for a reply."
             : 'We could not confirm your application. Please use the Google Forms link below.';
           if (ok) form.reset();
         }

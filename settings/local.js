@@ -70,6 +70,11 @@ module.exports = {
     announcements: ['1560112808283086929'] // G00N SQUAD #idlerpg
   },
 
+  // /tournaments: templates and every tournament run from one (Fabric Store, kept forever).
+  tournaments: {
+    path: process.env.GOON_TOURNAMENTS_STORE || 'stores/tournaments'
+  },
+
   site: {
     title: 'GOON SQUAD',
     heading: 'GOON SQUAD<sup>&trade;</sup>',

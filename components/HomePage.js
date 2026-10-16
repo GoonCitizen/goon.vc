@@ -23,6 +23,7 @@ function renderHomeCss () {
       .home-overview-head h2 { margin: 0; }
       .home-facts { color: #bbb; font-size: 0.9rem; letter-spacing: 0.04em; margin: 0.35rem 0 0; }
       .home-overview p.home-copy { color: #ddd; line-height: 1.5; margin: 1rem 0 0; }
+      .home-creed { color: #fff; font-size: 1.1rem; font-style: italic; letter-spacing: 0.02em; margin: 1.1rem 0 0; }
       .home-motto { color: #fff; font-family: "Bungee", sans-serif; font-size: 0.85rem; letter-spacing: 0.08em; margin: 1.25rem 0 0; }
       .home-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-start; margin-top: 1.25rem; }
       .home-actions .goon-button { font-size: 0.8em; }
@@ -43,6 +44,7 @@ ${DiscordRoster.styles()}`;
  * @param {string} [overview.logoUrl]
  * @param {string[]} overview.facts
  * @param {string[]} overview.paragraphs Trusted HTML.
+ * @param {string} [overview.creed] Shown on its own line after the paragraphs.
  * @param {string[]} [overview.motto]
  * @param {Array<{ href: string, label: string }>} overview.actions
  */
@@ -59,20 +61,20 @@ function renderOverviewHtml (overview) {
           </div>
         </div>
         ${(overview.paragraphs || []).map((p) => `<p class="home-copy">${p}</p>`).join('\n        ')}
+        ${overview.creed ? `<p class="home-creed">${escapeHtml(overview.creed)}</p>` : ''}
         ${(overview.motto || []).length ? `<p class="home-motto">${overview.motto.map(escapeHtml).join(' · ')}</p>` : ''}
         <div class="home-actions">${(overview.actions || []).map((a) => `<a class="goon-button" href="${escapeHtml(a.href)}">${escapeHtml(a.label)}</a>`).join('')}</div>
-        ${renderSubscriptionsHtml(overview.name)}
+        ${renderSubscriptionsHtml()}
       </section>`;
 }
 
 /**
  * Filled in by renderHomeScript from GET /services/discord/subscriptions.
- * @param {string} name
  */
-function renderSubscriptionsHtml (name) {
+function renderSubscriptionsHtml () {
   return `<div id="home-subscriptions" class="home-subscriptions" hidden>
           <h3>Subscribe on Discord</h3>
-          <p>Support ${escapeHtml(name)} with a Discord Server Subscription. Each tier comes with its own role in our server.</p>
+          <p>Each tier carries its own role in our server.</p>
           <ul class="home-tiers" data-tiers></ul>
           <a class="goon-button" data-subscribe href="#" target="_blank" rel="noopener">See tiers and prices on Discord</a>
         </div>`;

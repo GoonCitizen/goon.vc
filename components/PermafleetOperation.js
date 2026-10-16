@@ -29,9 +29,18 @@ const PILLARS = Object.freeze([
 
 const CHARTER = 'The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.';
 
-// role / body are trusted HTML.
-const SQUADRONS = Object.freeze(require('../contracts/squadrons.json').squadrons
-  .map(({ id, name, role, body }) => Object.freeze({ id, name, role, body })));
+const PermafleetSquadrons = require('./PermafleetSquadrons');
+
+function renderSquadronsHtml (opts) {
+  const basePath = opts.squadronsPath;
+  return `<section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
+            <p class="op-squadrons-eyebrow">Cross-org squadrons</p>
+            <h2 id="permafleet-squadrons">Your path to membership</h2>
+            <p class="op-squadrons-intro">Join PERMAFLEET, fly with the fleet, and get selected for a squadron that draws from every member org.</p>
+            <ul class="op-orgs op-squadron-chips">${PermafleetSquadrons.SQUADRONS.map((s) => `<li><a href="${escapeHtml(PermafleetSquadrons.squadronPath(s, basePath))}">${s.name}</a></li>`).join('')}</ul>
+            <p class="op-resource-link"><a href="${escapeHtml(basePath)}">Your path to membership &raquo;</a></p>
+          </section>`;
+}
 
 const MEMBER_ORGS = Object.freeze([
   'G00N SQUAD',
@@ -99,15 +108,6 @@ function renderPermafleetCss (props) {
         width: 100%;
         height: 100%;
         pointer-events: none;
-      }
-      .op-nav {
-        position: relative;
-        z-index: 3;
-        padding: 1rem 1.25rem 0;
-        font-size: 0.9rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        text-align: center;
       }
       .op-content {
         position: relative;
@@ -357,7 +357,7 @@ function renderPermafleetCss (props) {
       .op-orgs a { color: inherit; text-decoration: none; }
       .op-orgs a:hover { color: var(--op-signal); }
       .op-charter .op-resource-link { margin-top: 1rem; }
-      .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: left; scroll-margin-top: 1rem; }
+      .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
         margin: 0;
         font-family: "Bungee", sans-serif;
@@ -368,55 +368,9 @@ function renderPermafleetCss (props) {
         color: #fff;
         text-align: center;
       }
+      .op-squadrons-eyebrow { margin: 0 0 0.35rem; text-align: center; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--op-signal); }
       .op-squadrons-intro { margin: 0.5rem auto 1.1rem; max-width: 38rem; text-align: center; color: var(--op-muted); line-height: 1.45; }
-      .op-squadron-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
-      .op-squadron {
-        padding: 1.1rem 1.15rem 1.2rem;
-        background: var(--op-glass);
-        border: 1px solid rgba(142, 191, 208, 0.22);
-        border-left: 3px solid var(--op-accent);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        scroll-margin-top: 1rem;
-      }
-      .op-squadron-apply { grid-column: 1 / -1; border-left-color: #ff3b3b; }
-      .op-squadron h3 { margin: 0; font-family: "Bungee", sans-serif; font-weight: 400; font-size: 1.1rem; letter-spacing: 0.04em; color: #fff; }
-      .op-squadron-role { margin: 0.2rem 0 0.55rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--op-signal); }
-      .op-squadron p { margin: 0; line-height: 1.45; color: var(--op-muted); }
-      .op-squadron strong { color: var(--op-text); }
-      .op-application { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid rgba(142, 191, 208, 0.22); }
-      .op-application h4 { margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--op-text); }
-      .squadron-form { display: grid; gap: 0.85rem; max-width: 36rem; }
-      .squadron-field { display: grid; gap: 0.35rem; font-weight: 600; color: var(--op-text); }
-      .squadron-field em { color: #ff3b3b; font-style: normal; }
-      .squadron-field input, .squadron-field textarea {
-        width: 100%;
-        padding: 0.6rem 0.7rem;
-        font: inherit;
-        font-weight: 500;
-        color: var(--op-text);
-        background: rgba(5, 10, 24, 0.75);
-        border: 1px solid rgba(142, 191, 208, 0.35);
-        border-radius: 4px;
-      }
-      .squadron-field input:focus, .squadron-field textarea:focus { outline: 2px solid var(--op-cyan); outline-offset: 1px; }
-      .squadron-field textarea { resize: vertical; }
-      .squadron-submit {
-        justify-self: start;
-        padding: 0.7rem 1.4rem;
-        font-family: "Rajdhani", sans-serif;
-        font-size: 1.05rem;
-        font-weight: 700;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--op-void);
-        background: linear-gradient(180deg, var(--op-cyan-soft) 0%, var(--op-cyan) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        cursor: pointer;
-      }
-      .squadron-submit:disabled { cursor: default; opacity: 0.6; }
-      .squadron-status { margin: 0; min-height: 1.2em; color: var(--op-signal); font-weight: 600; }
-      .squadron-fallback { margin: 0; font-size: 0.85rem; color: var(--op-muted); }
+      .op-squadrons .op-squadron-chips { justify-content: center; }
       .op-charter .op-laws { margin-top: 0.9rem; font-style: italic; }
       .op-footer {
         position: relative;
@@ -460,7 +414,6 @@ function renderPermafleetMainHtml (opts) {
         <div class="op-hero-bg" aria-hidden="true"></div>
         <div class="op-hero-scrim" aria-hidden="true"></div>
         <canvas id="permafleet-particles" class="op-particles" aria-hidden="true"></canvas>
-        <nav class="op-nav"><a href="/">&larr; Home</a> · <a href="${escapeHtml(opts.organizationsPath || '/organizations')}">Organizations</a></nav>
         <div class="op-content">
           <p class="op-eyebrow">The PERMAFLEET Protectorate</p>
           <h1 class="op-brand">${opts.heading}</h1>
@@ -492,21 +445,7 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
             ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
-          <section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
-            <h2 id="permafleet-squadrons">Cross-org squadrons</h2>
-            <p class="op-squadrons-intro">Squadrons draw members from every PERMAFLEET org. Most are selected by leadership once you reach Prospect IV; ALPHA SQUADRON takes applications.</p>
-            <div class="op-squadron-grid">
-${SQUADRONS.map((s) => `              <article class="op-squadron${s.id === 'alpha-squadron' && opts.alphaApplicationHtml ? ' op-squadron-apply' : ''}" id="${s.id}">
-                <h3>${s.name}</h3>
-                <p class="op-squadron-role">${s.role}</p>
-                <p>${s.body}</p>${s.id === 'alpha-squadron' && opts.alphaApplicationHtml ? `
-                <div class="op-application">
-                  <h4>Apply to ALPHA SQUADRON</h4>
-                  ${opts.alphaApplicationHtml}
-                </div>` : ''}
-              </article>`).join('\n')}
-            </div>
-          </section>
+          ${renderSquadronsHtml(opts)}
         </div>
         <footer class="op-footer">
           <div><a href="bitcoin:${escapeHtml(opts.bitcoinAddress)}"><code>${escapeHtml(opts.bitcoinAddress)}</code></a></div>
@@ -813,6 +752,5 @@ module.exports = {
   id: 'operation-permafleet',
   styles: renderPermafleetCss,
   render: renderPermafleetMainHtml,
-  script: renderPermafleetScript,
-  SQUADRONS
+  script: renderPermafleetScript
 };

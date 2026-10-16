@@ -10,39 +10,45 @@ const SECTIONS = [
 
 function renderOrganizationsCss () {
   return `
-      .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 1.5em 1em 3em; text-align: left; color: #E8F4FF; }
       .organizations-page > h1, .organizations-intro { text-align: center; }
-      .organizations-intro { color: #bbb; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
+      .organizations-page > h1 { color: #fff; margin-top: 0.5em; }
+      .organizations-intro { color: #8AA4B8; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
       .organizations-grid { display: flex; flex-direction: column; gap: 1.25rem; }
       .org-card, .org-profile {
-        background: rgba(0, 0, 0, 0.22);
-        border: 1px solid #555;
-        border-radius: 10px;
+        background: rgba(10, 18, 40, 0.72);
+        border: 1px solid rgba(142, 191, 208, 0.28);
+        border-left: 3px solid #8EBFD0;
         overflow: hidden;
       }
+      .organization-page .page-back a, .organizations-page footer a:not(.footer-login-button), .organization-page footer a:not(.footer-login-button) { color: #8EBFD0; }
       .org-card { display: flex; gap: 1rem; padding: 1rem 1.15rem; }
       .org-logo { flex: 0 0 auto; height: 72px; object-fit: contain; width: 72px; }
       .org-card-body { flex: 1 1 auto; min-width: 0; }
       .org-name { font-size: 1.2rem; margin: 0 0 0.25rem; }
       .org-name a { border-bottom: 1px solid rgba(255, 255, 255, 0.25); text-decoration: none; }
       .org-name a:hover { border-bottom-color: #fff; }
-      .org-meta { color: #c9c9c9; font-size: 0.88rem; margin: 0 0 0.35rem; }
+      .org-meta { color: #8AA4B8; font-size: 0.88rem; margin: 0 0 0.35rem; }
       .org-symbol { color: #fff; font-weight: 700; letter-spacing: 0.08em; }
-      .org-focus { color: #aaa; font-size: 0.85rem; margin: 0 0 0.6rem; }
-      .org-summary { color: #ddd; line-height: 1.4; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
+      .org-focus { color: #8AA4B8; font-size: 0.85rem; margin: 0 0 0.6rem; }
+      .org-summary { color: #E8F4FF; line-height: 1.4; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
       .org-links { display: flex; flex-wrap: wrap; gap: 0.5em; }
       .org-links .goon-button { font-size: 0.75em; padding: 0.35em 0.75em; }
-      .org-banner { aspect-ratio: 4 / 1; background: #222; display: block; object-fit: cover; width: 100%; }
+      .org-banner { aspect-ratio: 4 / 1; background: rgba(142, 191, 208, 0.08); display: block; object-fit: cover; width: 100%; }
       .org-profile-head { align-items: center; display: flex; gap: 1rem; padding: 1rem 1.15rem 0; }
       .org-profile-head h1 { font-size: 1.6rem; margin: 0; }
       .org-profile-body { padding: 0.75rem 1.15rem 1.15rem; }
       .org-profile-body p { line-height: 1.45; overflow-wrap: anywhere; }
       .org-actions { display: flex; flex-wrap: wrap; gap: 0.6em; margin: 1rem 0; }
-      .org-section { border-top: 1px solid #444; padding: 0.6rem 0; }
+      .org-section { border-top: 1px solid rgba(142, 191, 208, 0.22); padding: 0.6rem 0; }
       .org-section summary { cursor: pointer; font-family: "Bungee", sans-serif; letter-spacing: 0.05em; }
-      .org-section p { color: #ccc; font-size: 0.95rem; margin: 0.6rem 0; }
-      .org-source { color: #888; font-size: 0.78rem; margin-top: 1rem; text-align: center; }
-      .organizations-empty { color: #888; padding: 2em 0; text-align: center; }`;
+      .org-section p { color: #c9d6e0; font-size: 0.95rem; margin: 0.6rem 0; }
+      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; text-align: center; }
+      .org-roster-cta h2 { color: #fff; font-size: 1.15rem; margin: 0 0 0.4rem; }
+      .org-roster-cta p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
+      .org-roster-cta strong { color: #E8F4FF; }
+      .org-source { color: rgba(138, 164, 184, 0.75); font-size: 0.78rem; margin-top: 1rem; text-align: center; }
+      .organizations-empty { color: #8AA4B8; padding: 2em 0; text-align: center; }`;
 }
 
 function externalLink (href, label, extra = '') {
@@ -92,6 +98,15 @@ function renderFooter (props) {
       </footer>`;
 }
 
+function renderRosterCta (props) {
+  if (!props.embassyUrl) return '';
+  return `<section class="org-roster-cta" aria-labelledby="org-roster-cta-title">
+        <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
+        <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
+        <a class="goon-button" href="${escapeHtml(props.embassyUrl)}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>
+      </section>`;
+}
+
 function renderSource (props) {
   if (!props.fetchedAt) return '';
   const date = String(props.fetchedAt).slice(0, 10);
@@ -105,6 +120,7 @@ function renderSource (props) {
  * @param {string} props.basePath
  * @param {Array<Object>} props.organizations Plain-text records.
  * @param {string} [props.fetchedAt]
+ * @param {string} [props.embassyUrl] Discord invite for the #embassy roster call to action.
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
@@ -130,6 +146,7 @@ function renderIndexHtml (props) {
       <div class="organizations-grid">
         ${cards || '<p class="organizations-empty">No member organizations listed.</p>'}
       </div>
+      ${renderRosterCta(props)}
       ${renderSource(props)}
       ${renderFooter(props)}
     </main>`;

@@ -45,10 +45,21 @@ Store). Bots cannot read listing prices or perks, so the button links to
 Discord's subscriptions page; the block stays hidden when there are no tiers.
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
-guild's public `widget.json` (no iframe). The PERMAFLEET page lists cross-org
-squadrons (`contracts/squadrons.json`); ALPHA SQUADRON's application is a native form posting to its Google
-Form (`alphaSquadronForm`: `formResponse` URL + `entry.*` ids). Signing up there
-is required for G00N SQUAD membership, even for PERMAFLEET members.
+guild's public `widget.json` (no iframe). PERMAFLEET detail lives under
+`/operations/PERMAFLEET/*`; the overview keeps a short teaser.
+`/operations/PERMAFLEET/squadrons` is "Your path to membership" (join → Prospect
+ranks → selected by leadership → elite units; never name a rank as the
+selection point — members can pass Prospect IV without being selected), then
+the cross-org squadrons (`contracts/squadrons.json`, `tier` `entry` | `elite`,
+`next` for the unit the best go on to). Each squadron has its own page at
+`/operations/PERMAFLEET/squadrons/<id>` (`components/PermafleetSquadrons.js`);
+old `/operations/PERMAFLEET#<id>` links are sent there by the router.
+One application covers every squadron: the squadrons page carries it
+(`#squadron-apply`), a native form posting to its Google Form
+(`squadronApplicationForm`: `formResponse` URL + `entry.*` ids). It is also
+required for G00N SQUAD membership, even for PERMAFLEET members. Elite units
+(ALPHA SQUADRON, SHELLBACK) are earned by performance — mention them as what
+the best go on to, never as something to apply to.
 `/operations` lists the operations in `contracts/operations.json` — currently
 only PERMAFLEET, whose **metrics** count the public PERMAFLEET voice channel.
 Each entry names the Discord channels its metrics count (channel id, exact
@@ -91,6 +102,10 @@ DocumentTitle}` in `GoonSPA`.
 Settings: `presence.{path,tickMs,luck,channels,gateway}` (`GOON_PRESENCE_STORE`,
 `GOON_PRESENCE_TICK_MS`); `gateway: false` keeps serving stored stats. `npm run
 link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`.
+The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule` and
+`/squadrons[/<id>]`, and `/organizations`) swaps the site header for its own menu bar
+(`components/PermafleetHeader.js`: Overview, Schedule, Squadrons,
+Organizations, Join), shown while the router sets `body.pf-section`.
 `/organizations` (plus `/organizations/<SYMBOL>`) lists PERMAFLEET member orgs
 from `contracts/organizations.json`, a plain-text snapshot of public RSI org
 pages refreshed by `npm run build:organizations` (never fetched at serve time).
@@ -109,6 +124,34 @@ runs only while visible, takes `heading` / `eyebrow` / `description` /
 `pilots` / `storage-key` / `auto-every` / `fonts="none"` attributes,
 and emits `splash` + `rosterchange`. Add a drill = a new element script plus a
 `drills` entry. The old `/drills/melee-rotation-drill.html` redirects.
+`/tournaments` is the permanent tournament record (`services/tournaments.js`,
+Fabric Store `stores/tournaments`, `GOON_TOURNAMENTS_STORE`, routes under
+`/services/tournaments`). Nothing is built in: anyone creates a tournament
+from the index (`POST /services/tournaments` with `name`, optional `tagline` /
+`summary`, `format`: `single-elimination` | `double-elimination`, `bestOf`:
+odd n, `startsAt`, the creator's `timeZone`, optional `players`). Tournaments
+with the same name share a **series** id (the name slug), so a weekly event
+like the Saturday 1v1 is just a tournament created each week. A **tournament**
+lives at `/tournaments/<series>/<YYYY-MM-DD>` (local date in the creator's
+zone; `-2`… for the same day); `/tournaments/<series>` lists that name's
+results (one tournament redirects to it). Each keeps its players, every game,
+and a `log`
+of each change (who, when — the signed-in member's display name when there is
+one). Anyone may write for now (private tournaments come later); nothing is
+deleted, undo is logged, and once the champion is recorded the tournament is
+`complete` and locked with `results { champion, runnerUp, third, completedAt }`.
+Seeds can be edited until the first game; after that a **latecomer** takes an
+open first-round bye (lowest seed number first, only while nothing scored
+depends on it), so they fight the same number of sets to the final as everyone
+else — a full bracket refuses latecomers. Link previews for series and
+tournament pages come from the Store (`Tournaments#page`, wired in
+`_pageMetaMiddleware`). The bracket is `<tournament-bracket>`
+(`assets/scripts/tournament-bracket.js`, shadow DOM, no goon.vc dependencies):
+with `src` it loads and saves a record through that API, without it it keeps a
+bracket in `localStorage`. `assets/scripts/tournaments.js` drives the index,
+series, and record pages (`components/TournamentsPage.js`). In Node the
+bracket script exports its pure engine, shared with the service
+(`tests/tournament.js`, `tests/tournaments.service.js`).
 `/sessions` is the single login page (Discord, Passport, GoonCitizen desktop),
 backed by the members Store under `/services/members`; `/members/login`
 redirects there. The HTML client probes `OPTIONS /services/rpc` and

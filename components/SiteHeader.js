@@ -18,7 +18,6 @@ function renderHeaderCss () {
       .site-nav a:hover, .site-nav a[aria-current="page"] { border-bottom-color: #fff; }
       .site-nav a[aria-current="page"] { border-bottom-width: 2px; }
       .site-nav-item + .site-nav-item::before { content: "·"; margin: 0 0.4em; }
-      body.op-active .site-header, body.schedule-active .site-header { display: none; }
       .site-alliance { font-family: "Bungee", sans-serif; }`;
 }
 
