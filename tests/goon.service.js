@@ -344,7 +344,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(home.includes('Membership is by invitation only'));
     assert.ok(home.includes('<a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>'));
     const copy = [...home.matchAll(/<p class="home-copy">([\s\S]*?)<\/p>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
-    assert.ok(copy.join(' ').split(/\s+/).length <= 80, 'front-page overview stays short');
+    assert.ok(home.includes('join PERMAFLEET directly by <a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer">applying on RSI</a>'), 'direct path into PERMAFLEET');
+    assert.ok(copy.join(' ').split(/\s+/).length <= 90, 'front-page overview stays short');
     assert.ok(!copy.join(' ').includes('Esse quam videri'), 'the creed is not in the copy');
     assert.ok(/<\/p>\s*<p class="home-creed">Esse quam videri\.<\/p>/.test(home), 'creed on its own line after the copy');
     assert.ok(home.includes('href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron</a>'));

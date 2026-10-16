@@ -131,7 +131,7 @@ const DEFAULTS = {
   overviewParagraphs: [
     'Friends in most corners of the ’verse, and ears in the rest. We work across the Star Citizen community, mostly out of sight. A core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>.',
     'Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere, at any hour. Most of the time, you won’t even see us.',
-    'Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET.'
+    'Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET, or join PERMAFLEET directly by <a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer">applying on RSI</a>.'
   ],
   overviewCreed: 'Esse quam videri.',
   // Google Form behind the one application for every PERMAFLEET squadron (fields: entry ids from the live form).
