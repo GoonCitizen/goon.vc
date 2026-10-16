@@ -265,7 +265,9 @@ describe('goon.vc HTTP', function () {
     assert.ok(/^G00N SQUAD: Star Citizen security and infiltration/.test(meta(home.body, 'og:description')), 'home description');
     assert.ok(/^https:\/\//.test(meta(home.body, 'og:image')), 'absolute og:image');
 
-    const permafleet = await fetchJson('/operations/PERMAFLEET/', { headers: { Accept: 'text/html' } });
+    const slashed = await fetchJson('/operations/PERMAFLEET/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(slashed.status, 301);
+    const permafleet = await fetchJson('/operations/PERMAFLEET', { headers: { Accept: 'text/html' } });
     assert.strictEqual(meta(permafleet.body, 'og:title'), 'PERMAFLEET — GOON SQUAD');
     assert.strictEqual(meta(permafleet.body, 'og:url'), 'https://goon.vc/operations/PERMAFLEET');
     assert.strictEqual(meta(permafleet.body, 'og:image'), 'https://goon.vc/hero-quantum.jpg');
@@ -572,7 +574,7 @@ describe('goon.vc HTTP', function () {
         resolve({ status: incoming.statusCode, location: incoming.headers.location });
       }).on('error', reject);
     });
-    assert.strictEqual(slash.status, 302);
+    assert.strictEqual(slash.status, 301);
     assert.strictEqual(slash.location, '/drills');
   });
 
@@ -640,7 +642,7 @@ describe('goon.vc HTTP', function () {
         resolve({ status: incoming.statusCode, location: incoming.headers.location });
       }).on('error', reject);
     });
-    assert.strictEqual(slash.status, 302);
+    assert.strictEqual(slash.status, 301);
     assert.strictEqual(slash.location, '/tournaments');
   });
 
@@ -931,5 +933,76 @@ describe('goon.vc HTTP', function () {
     assert.notStrictEqual(res.status, 200);
     const blob = JSON.stringify(res.json) + res.body;
     assert.ok(!/signed ingest/i.test(blob));
+  });
+});
+
+describe('goon.vc page paths', function () {
+  this.timeout(30000);
+
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  let root;
+  let site;
+  let port;
+
+  before(async function () {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-paths-'));
+    const assets = path.join(root, 'assets');
+    // Leftover directories named like pages, as on a server that once shipped them.
+    fs.mkdirSync(path.join(assets, 'drills'), { recursive: true });
+    fs.mkdirSync(path.join(assets, 'tournaments'));
+    fs.copyFileSync(path.join(__dirname, '../assets/index.html'), path.join(assets, 'index.html'));
+    const tokenless = { resolveToken: () => ({ token: null, source: null }) };
+    site = new GoonVC({
+      assets,
+      hub: { origin: 'http://127.0.0.1:9' },
+      http: { port: 0, interface: '127.0.0.1', hostname: '127.0.0.1' },
+      storePath: path.join(root, 'site'),
+      members: { path: path.join(root, 'members') },
+      events: Object.assign({ path: path.join(root, 'events') }, tokenless),
+      operations: { path: path.join(root, 'operations'), gateway: false },
+      presence: { path: path.join(root, 'presence'), tickMs: 0, gateway: false },
+      tournaments: { path: path.join(root, 'tournaments') },
+      leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
+      listen: true
+    });
+    await site.start();
+    port = site.http.settings.port;
+  });
+
+  after(async function () {
+    if (site) await site.stop();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  function get (pathname) {
+    return new Promise((resolve, reject) => {
+      http.get({ hostname: '127.0.0.1', port, path: pathname, headers: { Accept: 'text/html' } }, (res) => {
+        res.resume();
+        res.on('end', () => resolve({ status: res.statusCode, location: res.headers.location }));
+      }).on('error', reject);
+    });
+  }
+
+  it('serves a page even when assets has a directory of the same name', async function () {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/resources/1v1-leaderboard']) {
+      assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
+    }
+  });
+
+  it('sends trailing-slash page URLs to the canonical path once', async function () {
+    assert.deepStrictEqual(await get('/drills/'), { status: 301, location: '/drills' });
+    assert.deepStrictEqual(await get('/drills/melee-rotation/'), { status: 301, location: '/drills/melee-rotation' });
+    assert.deepStrictEqual(await get('/tournaments//?from=discord'), { status: 301, location: '/tournaments?from=discord' });
+    assert.deepStrictEqual(await get('/tournaments/saturday-1v1/2026-10-17/'), { status: 301, location: '/tournaments/saturday-1v1/2026-10-17' });
+    assert.deepStrictEqual(await get('/operations/PERMAFLEET/squadrons/'), { status: 301, location: '/operations/PERMAFLEET/squadrons' });
+  });
+
+  it('keeps the configured redirects', async function () {
+    assert.deepStrictEqual(await get('/permafleet/'), { status: 302, location: '/operations/PERMAFLEET' });
+    assert.deepStrictEqual(await get('/idlerpg/'), { status: 302, location: '/services/idlerpg' });
+    assert.deepStrictEqual(await get('/drills/melee-rotation-drill.html'), { status: 302, location: '/drills/melee-rotation' });
   });
 });

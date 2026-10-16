@@ -100,8 +100,6 @@ class GoonVC {
         '/members/login': '/sessions',
         '/idlerpg': '/services/idlerpg',
         '/idlerpg/': '/services/idlerpg',
-        '/drills/': '/drills',
-        '/tournaments/': '/tournaments',
         '/drills/melee-rotation-drill.html': '/drills/melee-rotation'
       },
       spaFallback: true
@@ -194,6 +192,47 @@ class GoonVC {
       const page = pageMeta.findPage(pages, req.path);
       if (page) return serve(page);
       storedPage(req.path).then(serve, () => next());
+    };
+  }
+
+  /**
+   * Page paths have no trailing slash. Mounted ahead of express.static, which
+   * would otherwise answer a page path that is also a directory under assets
+   * (e.g. a leftover assets/drills/) with a redirect to the trailing-slash URL.
+   * Such requests reach static with the slash (static then falls through)
+   * and get the original URL back from {@link GoonVC#_restorePathMiddleware}.
+   * @returns {Function}
+   */
+  _canonicalPathMiddleware () {
+    const spa = new GoonSite(this.settings.site || {}).spa;
+    const pages = spa.pages();
+    const tournamentsPrefix = `${spa._site('tournamentsPath').toLowerCase()}/`;
+    const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
+      || pathname.toLowerCase().startsWith(tournamentsPrefix);
+    return (req, res, next) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      if (shouldProxyHubApi(req) || /^\/(services|identity)(\/|$)/.test(req.path)) return next();
+      const query = req.url.slice(req.path.length);
+      if (req.path.length > 1 && req.path.endsWith('/')) {
+        const target = req.path.replace(/\/+$/, '') || '/';
+        if (isPage(target)) return res.redirect(301, target + query);
+        return next();
+      }
+      if (req.path !== '/' && isPage(req.path)) {
+        req.goonPageUrl = req.url;
+        req.url = `${req.path}/${query}`;
+      }
+      return next();
+    };
+  }
+
+  _restorePathMiddleware () {
+    return (req, res, next) => {
+      if (req.goonPageUrl) {
+        req.url = req.goonPageUrl;
+        delete req.goonPageUrl;
+      }
+      return next();
     };
   }
 
@@ -329,6 +368,7 @@ class GoonVC {
       cors: true,
       sitemap: { enabled: true },
       middlewares: {
+        restorePath: this._restorePathMiddleware(),
         pageMeta: this._pageMetaMiddleware(assets),
         hubApi: createHubApiMiddleware(hubOrigin, {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
@@ -342,6 +382,8 @@ class GoonVC {
       }
     });
 
+    // HTTPServer mounts its own middleware (and express.static) in start().
+    this.http.express.use(this._canonicalPathMiddleware());
     this.http.on('debug', (...parts) => this.emit('debug', ...parts));
     this.http.on('error', (...parts) => this.emit('error', ...parts));
     this.http.on('log', (...parts) => this.emit('log', ...parts));

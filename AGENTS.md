@@ -36,7 +36,10 @@ application that owns the bot token (scope `bot`, View Channels only).
 Every route is the one built `assets/index.html`; link previews get per-page
 Open Graph / Twitter tags because `services/goon.vc.js` swaps the
 `<!-- page-meta -->` block (and `<title>`) per request from `GoonSPA#pages()`
-(`functions/pageMeta.js`). Add a route there when you add a page; absolute URLs
+(`functions/pageMeta.js`). Page paths have no trailing slash: `/x/` gets one 301
+to `/x` (`GoonVC#_canonicalPathMiddleware`, mounted ahead of `express.static` so
+a directory under `assets/` named like a page — e.g. a leftover `drills/` —
+can't redirect it to `/x/`). Add a route there when you add a page; absolute URLs
 use the `siteUrl` site setting (default `https://goon.vc`).
 The home page's "Subscribe on Discord" block lists the G00N guild's purchasable
 Server Subscription tiers from `GET /services/discord/subscriptions` (tier roles
