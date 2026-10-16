@@ -257,6 +257,7 @@ ${elite.map((s) => renderCard(s, props)).join('\n')}
  * @param {string} props.inviteUrl
  * @param {string} props.title Site title, for the document title.
  * @param {string} [props.applicationHtml] Present when the index carries the squadron application.
+ * @param {Object<string, string>} [props.extras] Trusted HTML appended to a squadron's page, by squadron id.
  * @returns {string}
  */
 function renderSquadronHtml (squadron, props) {
@@ -276,7 +277,8 @@ function renderSquadronHtml (squadron, props) {
       <p class="pf-lede">${squadron.body}</p>
       <dl class="pf-facts">
 ${facts.map(([term, value]) => `        <div><dt>${term}</dt><dd>${value}</dd></div>`).join('\n')}
-      </dl>
+      </dl>${props.extras && props.extras[squadron.id] ? `
+      ${props.extras[squadron.id]}` : ''}
       ${renderNextSteps(props)}
     </main>`;
 }

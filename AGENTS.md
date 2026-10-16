@@ -110,7 +110,18 @@ Organizations, Join), shown while the router sets `body.pf-section`.
 from `contracts/organizations.json`, a plain-text snapshot of public RSI org
 pages refreshed by `npm run build:organizations` (never fetched at serve time).
 `/resources` indexes guides and tools; `/resources/gooncitizen` describes the
-GoonCitizen desktop app. `npm run build:downloads` copies the latest builds from
+GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder
+synced from the pinned `# LEADERBOARD` message in G00N SQUAD #1v1-challenges
+(`services/leaderboard.js`, Fabric Store `stores/leaderboard`,
+`GOON_LEADERBOARD_STORE`; parser `functions/duelLeaderboard.js`). Discord REST
+only: the pin is polled every 15 minutes and requests are answered from disk; a
+failed poll or an unreadable pin keeps the last saved ladder (served `stale`).
+`N. <@id>` lines become ranks as written (ties and gaps kept) with the name
+Discord shows (server nickname, then display name; cached a day); `### Rules`
+items come along. `GET /services/leaderboards/1v1` returns names and ranks only
+— never Discord ids. The bot needs View Channel + Read Message History there
+and the Message Content intent. The top 10 also shows on the squadron pages in
+`GoonSPA` `leaderboardSquadrons` (BRAVO SQUADRON). `npm run build:downloads` copies the latest builds from
 `../star-citizen-live` into `assets/downloads/gooncitizen/` (binaries gitignored —
 over GitHub's 100 MB limit; only `index.json` is tracked) and the page renders
 buttons + sha256 from that manifest. Interim only: future builds publish to the

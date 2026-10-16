@@ -43,7 +43,7 @@ function renderOrganizationsCss () {
       .org-section { border-top: 1px solid rgba(142, 191, 208, 0.22); padding: 0.6rem 0; }
       .org-section summary { cursor: pointer; font-family: "Bungee", sans-serif; letter-spacing: 0.05em; }
       .org-section p { color: #c9d6e0; font-size: 0.95rem; margin: 0.6rem 0; }
-      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; text-align: center; }
+      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; scroll-margin-top: 5rem; text-align: center; }
       .org-roster-cta h2 { color: #fff; font-size: 1.15rem; margin: 0 0 0.4rem; }
       .org-roster-cta p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
       .org-roster-cta strong { color: #E8F4FF; }
@@ -100,7 +100,7 @@ function renderFooter (props) {
 
 function renderRosterCta (props) {
   if (!props.embassyUrl) return '';
-  return `<section class="org-roster-cta" aria-labelledby="org-roster-cta-title">
+  return `<section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
         <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
         <a class="goon-button" href="${escapeHtml(props.embassyUrl)}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>

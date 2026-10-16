@@ -207,6 +207,17 @@ describe('goon.vc HTTP', function () {
         gateway: false
       },
       tournaments: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournaments-test-')) },
+      leaderboard: {
+        path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-leaderboard-test-')),
+        refreshOnStart: false,
+        resolveToken: () => ({ token: 'test-token', source: 'test' }),
+        fetch: async (url) => {
+          const body = /\/pins$/.test(url)
+            ? [{ id: '9', content: '# LEADERBOARD\n### CURRENT CHAMPION: 1. <@111>\n2. @latecomer', mentions: [{ id: '111', username: 'ace', global_name: 'Ace' }] }]
+            : /\/members\/111$/.test(url) ? { nick: '[G00N] Ace', user: { id: '111', username: 'ace' } } : { message: 'Unknown' };
+          return { status: /\/pins$|\/members\/111$/.test(url) ? 200 : 404, headers: { get: () => null }, text: async () => JSON.stringify(body) };
+        }
+      },
       listen: true
     });
     await site.start();
@@ -657,8 +668,15 @@ describe('goon.vc HTTP', function () {
     for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
       assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
       assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);
-      assert.ok(res.body.includes(`<li><a href="${base}/${symbol}">`), `${symbol} charter chip`);
+      assert.ok(res.body.includes(`<li><a class="op-member" href="${base}/${symbol}">`), `${symbol} charter tile`);
     }
+    const charter = res.body.slice(res.body.indexOf('id="permafleet-charter"'), res.body.indexOf('</section>', res.body.indexOf('id="permafleet-charter"')));
+    assert.ok(charter.includes('<img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">'), 'charter tiles carry org logos');
+    assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 19 members</span>'));
+    assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 8, 'every tile is badged as a member');
+    const tiles = [...charter.matchAll(/<li><a class="([^"]+)" href="([^"]+)">/g)].map((m) => `${m[1]} ${m[2]}`);
+    assert.strictEqual(tiles[tiles.length - 1], `op-member op-member-add ${base}#add-your-organization`, 'last tile invites new orgs');
+    assert.ok(charter.includes('<span class="op-member-name">Your org here</span>'));
     assert.ok(res.body.includes('>Apply on RSI</a>'));
     assert.ok(res.body.includes('pf-section'), 'organizations pages are part of the PERMAFLEET section');
 
@@ -667,7 +685,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(index.body.includes('<meta property="og:title" content="PERMAFLEET Organizations — GOON SQUAD">'));
     assert.ok(index.body.includes('<meta property="og:image" content="https://goon.vc/hero-quantum.jpg">'));
     const orgIndex = index.body.slice(index.body.indexOf('<main id="organizations-page"'));
-    const cta = orgIndex.slice(orgIndex.indexOf('<section class="org-roster-cta"'), orgIndex.indexOf('</section>'));
+    const cta = orgIndex.slice(orgIndex.indexOf('<section class="org-roster-cta" id="add-your-organization"'), orgIndex.indexOf('</section>'));
+    assert.ok(cta.length > 0, 'roster call to action is anchored');
     assert.ok(cta.includes('<h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>'));
     const hotline = /#embassy chat on the <a href="([^"]+)"/.exec(index.body)[1];
     assert.ok(cta.includes(`<a class="goon-button" href="${hotline}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>`), 'same Discord as the #embassy hotline');
@@ -727,6 +746,27 @@ describe('goon.vc HTTP', function () {
       assert.ok(res.body.includes('class="goon-button gooncitizen-fallback"'), 'Discord fallback when no installer is on the server');
       assert.ok(res.body.includes("querySelectorAll('a[data-download]')"), 'availability check');
     }
+  });
+
+  it('serves the 1v1 leaderboard under /resources and on the BRAVO SQUADRON page', async function () {
+    const page = await fetchJson('/resources/1v1-leaderboard', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('<title>1v1 Leaderboard — GOON SQUAD</title>'));
+    assert.ok(page.body.includes('<h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>'), 'resources card');
+    assert.ok(page.body.includes('<main id="leaderboard-page" class="leaderboard-page">'));
+    assert.ok(page.body.includes('href="https://discord.com/channels/1190527980120850493/1229937640116064276"'), 'challenge link to #1v1-challenges');
+    const bravo = page.body.slice(page.body.indexOf('id="squadron-bravo-squadron"'));
+    const bravoPage = bravo.slice(0, bravo.indexOf('</main>'));
+    assert.ok(bravoPage.includes('<section class="pf-duels" aria-labelledby="bravo-squadron-duels-heading">'), 'BRAVO shows the ladder');
+    assert.ok(bravoPage.includes('data-duel-board data-limit="10"'));
+    assert.ok(bravoPage.includes('href="/resources/1v1-leaderboard"'));
+    assert.strictEqual(page.body.split('class="pf-duels"').length, 2, 'only BRAVO SQUADRON');
+
+    const res = await fetchJson('/services/leaderboards/1v1');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.json.champion, '[G00N] Ace');
+    assert.deepStrictEqual(res.json.ladder, [{ rank: 1, name: '[G00N] Ace' }, { rank: 2, name: 'latecomer' }]);
+    assert.ok(!res.body.includes('"111"'), 'no Discord ids');
   });
 
   it('redirects /permafleet to the PERMAFLEET operation page', async function () {

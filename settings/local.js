@@ -75,6 +75,14 @@ module.exports = {
     path: process.env.GOON_TOURNAMENTS_STORE || 'stores/tournaments'
   },
 
+  // /services/leaderboards/1v1: the ladder pinned in G00N SQUAD #1v1-challenges (Fabric Store).
+  // The bot needs View Channel + Read Message History there, and the Message Content intent.
+  leaderboard: {
+    path: process.env.GOON_LEADERBOARD_STORE || 'stores/leaderboard',
+    channelId: '1229937640116064276',
+    channelName: '1v1-challenges'
+  },
+
   site: {
     title: 'GOON SQUAD',
     heading: 'GOON SQUAD<sup>&trade;</sup>',

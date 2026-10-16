@@ -15,6 +15,7 @@ const Events = require('./events');
 const Operations = require('./operations');
 const Presence = require('./presence');
 const Tournaments = require('./tournaments');
+const Leaderboard = require('./leaderboard');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
@@ -112,6 +113,7 @@ class GoonVC {
     this.events = null;
     this.operations = null;
     this.tournaments = null;
+    this.leaderboard = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
     this._listeners = {};
@@ -294,6 +296,20 @@ class GoonVC {
     });
     await this.tournaments.start();
 
+    const leaderboardSettings = this.settings.leaderboard || {};
+    this.leaderboard = new Leaderboard({
+      path: leaderboardSettings.path || './stores/leaderboard',
+      discord,
+      channelId: leaderboardSettings.channelId,
+      channelName: leaderboardSettings.channelName,
+      messageId: leaderboardSettings.messageId,
+      ttlMs: leaderboardSettings.ttlMs,
+      refreshOnStart: leaderboardSettings.refreshOnStart,
+      fetch: leaderboardSettings.fetch,
+      resolveToken: leaderboardSettings.resolveToken
+    });
+    await this.leaderboard.start();
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -321,7 +337,8 @@ class GoonVC {
         events: this.events.middleware(),
         operations: this.operations.middleware(),
         presence: this.presence.middleware(),
-        tournaments: this.tournaments.middleware()
+        tournaments: this.tournaments.middleware(),
+        leaderboard: this.leaderboard.middleware()
       }
     });
 
@@ -337,7 +354,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.tournaments, this.members, this.events, this.presence, this.operations]) {
+    for (const service of [this.http, this.tournaments, this.leaderboard, this.members, this.events, this.presence, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

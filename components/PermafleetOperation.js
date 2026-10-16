@@ -52,6 +52,40 @@ const MEMBER_ORGS = Object.freeze([
   'A.I.M.O.S.'
 ]);
 
+function renderMemberOrgsHtml (orgs, organizationsPath) {
+  const tiles = orgs.map((org) => {
+    const name = escapeHtml(org.name);
+    const mark = org.logoUrl
+      ? `<img class="op-member-logo" src="${escapeHtml(org.logoUrl)}" alt="" width="64" height="64" loading="lazy">`
+      : `<span class="op-member-logo op-member-initial" aria-hidden="true">${escapeHtml(String(org.name).charAt(0))}</span>`;
+    const meta = [
+      org.symbol ? `[${escapeHtml(org.symbol)}]` : '',
+      Number.isFinite(org.members) ? `${org.members} ${org.members === 1 ? 'member' : 'members'}` : ''
+    ].filter(Boolean).join(' · ');
+    const body = `<span class="op-member-tag" aria-hidden="true">Member</span>
+              ${mark}
+              <span class="op-member-name">${name}</span>${meta ? `
+              <span class="op-member-meta">${meta}</span>` : ''}`;
+    return org.href
+      ? `<li><a class="op-member" href="${escapeHtml(org.href)}">
+              ${body}
+            </a></li>`
+      : `<li><span class="op-member">
+              ${body}
+            </span></li>`;
+  });
+  if (organizationsPath) {
+    tiles.push(`<li><a class="op-member op-member-add" href="${escapeHtml(organizationsPath)}#add-your-organization">
+              <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
+              <span class="op-member-name">Your org here</span>
+              <span class="op-member-meta">Add your organization &raquo;</span>
+            </a></li>`);
+  }
+  return `<ul class="op-members" aria-label="Member organizations">
+            ${tiles.join('\n            ')}
+          </ul>`;
+}
+
 function renderPermafleetCss (props) {
   const heroImage = props.heroImage;
   return `
@@ -356,6 +390,83 @@ function renderPermafleetCss (props) {
       }
       .op-orgs a { color: inherit; text-decoration: none; }
       .op-orgs a:hover { color: var(--op-signal); }
+      .op-members {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+        gap: 0.75rem;
+        list-style: none;
+        margin: 1.1rem 0 0;
+        padding: 0;
+      }
+      .op-member {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.45rem;
+        height: 100%;
+        padding: 1.1rem 0.75rem 0.9rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--op-text);
+        background: rgba(5, 10, 24, 0.55);
+        border: 1px solid rgba(142, 191, 208, 0.22);
+        transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
+      }
+      .op-member-logo {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 6px;
+        filter: grayscale(0.85) brightness(0.8);
+        transition: filter 0.2s, transform 0.2s;
+      }
+      .op-member-initial {
+        display: grid;
+        place-items: center;
+        font-family: "Bungee", sans-serif;
+        font-size: 1.6rem;
+        color: var(--op-accent);
+        border: 1px solid rgba(142, 191, 208, 0.35);
+      }
+      .op-member-add { border-style: dashed; border-color: rgba(142, 191, 208, 0.45); }
+      .op-member-add .op-member-initial { border-style: dashed; filter: none; }
+      .op-member-add .op-member-meta { color: var(--op-signal); font-weight: 700; }
+      .op-member-name { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.25; text-transform: uppercase; }
+      .op-member-meta { font-size: 0.75rem; letter-spacing: 0.04em; color: var(--op-muted); }
+      .op-member-tag {
+        position: absolute;
+        top: 0.45rem;
+        right: 0.45rem;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--op-void);
+        background: var(--op-signal);
+        opacity: 0;
+        transform: translateY(-0.2rem);
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      a.op-member:hover, a.op-member:focus-visible {
+        outline: none;
+        border-color: var(--op-signal);
+        box-shadow: 0 0 0 1px var(--op-signal), 0 0 22px rgba(120, 236, 255, 0.25);
+        transform: translateY(-2px);
+      }
+      .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { filter: none; transform: scale(1.06); }
+      .op-member:hover .op-member-tag, .op-member:focus-visible .op-member-tag { opacity: 1; transform: none; }
+      .op-members:hover .op-member:not(:hover) { opacity: 0.55; }
+      @media (hover: none) {
+        .op-member-logo { filter: none; }
+        .op-member-tag { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .op-member, .op-member-logo, .op-member-tag { transition: none; }
+        a.op-member:hover, a.op-member:focus-visible { transform: none; }
+        .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { transform: none; }
+      }
       .op-charter .op-resource-link { margin-top: 1rem; }
       .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
@@ -441,7 +552,7 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>${CHARTER}</p>
-            <ul class="op-orgs">${(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name }))).map((org) => `<li>${org.href ? `<a href="${escapeHtml(org.href)}">${escapeHtml(org.name)}</a>` : escapeHtml(org.name)}</li>`).join('')}</ul>
+            ${renderMemberOrgsHtml(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name })), opts.organizationsPath)}
             ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>

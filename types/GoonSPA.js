@@ -21,6 +21,7 @@ const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
 const DrillsPage = require('../components/DrillsPage');
 const TournamentsPage = require('../components/TournamentsPage');
+const DuelLeaderboard = require('../components/DuelLeaderboard');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -90,6 +91,14 @@ const DEFAULTS = {
   tournamentsHeading: 'TOURNAMENTS',
   tournamentsIntro: 'Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.',
   tournamentsDocumentTitle: 'TOURNAMENTS — GOON SQUAD',
+  // 1v1 ladder from the pinned message in G00N SQUAD #1v1-challenges (services/leaderboard.js).
+  leaderboardPath: '/resources/1v1-leaderboard',
+  leaderboardEndpoint: '/services/leaderboards/1v1',
+  leaderboardDocumentTitle: '1v1 Leaderboard — GOON SQUAD',
+  leaderboardDescription: 'The G00N SQUAD 1v1 dogfight ladder. Anyone can challenge anyone in #1v1-challenges on Discord, including pilots from other orgs.',
+  leaderboardChannelUrl: 'https://discord.com/channels/1190527980120850493/1229937640116064276',
+  // Squadron pages that show the top of the ladder.
+  leaderboardSquadrons: ['bravo-squadron'],
   gooncitizenPath: '/resources/gooncitizen',
   gooncitizenTagline: 'The companion app for Star Citizen.',
   gooncitizenSummary: 'A desktop app that tracks your in-game statistics and lets you coordinate with your friends through groups: shared chat, missions, and fleets.',
@@ -206,6 +215,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro'), permafleet),
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
+      page(this._site('leaderboardPath'), this._site('leaderboardDocumentTitle'), this._site('leaderboardDescription')),
       page(this._site('drillsPath'), this._site('drillsDocumentTitle'), this._site('drillsIntro')),
       ...DrillsPage.validDrills(this._site('drills')).map((drill) => page(
         DrillsPage.drillPath(drill, this._site('drillsPath')),
@@ -262,6 +272,9 @@ class GoonSPA extends FabricSPA {
     const resourcesTitleJson = JSON.stringify(this._site('resourcesDocumentTitle'));
     const gooncitizenPath = this._site('gooncitizenPath');
     const gooncitizenTitleJson = JSON.stringify(this._site('gooncitizenDocumentTitle'));
+    const leaderboardPath = this._site('leaderboardPath');
+    const leaderboardTitleJson = JSON.stringify(this._site('leaderboardDocumentTitle'));
+    const leaderboardChannelUrl = this._site('leaderboardChannelUrl');
     const drillsPath = this._site('drillsPath');
     const drillsTitleJson = JSON.stringify(this._site('drillsDocumentTitle'));
     const tournamentsPath = this._site('tournamentsPath');
@@ -390,6 +403,13 @@ class GoonSPA extends FabricSPA {
         summary: this._site('tournamentsIntro'),
         openLabel: 'Tournaments'
       }, {
+        name: '1v1 Leaderboard',
+        path: leaderboardPath,
+        tagline: 'The standing dogfight ladder, synced from #1v1-challenges.',
+        summary: 'Anyone can challenge anyone, including pilots from other orgs.',
+        openLabel: 'Leaderboard',
+        links: [{ label: 'Challenge someone', href: leaderboardChannelUrl }]
+      }, {
         id: 'idlerpg-card',
         name: this._site('idlerpgHeading'),
         path: idlerpgPath,
@@ -412,6 +432,17 @@ class GoonSPA extends FabricSPA {
         : loadDownloads(this._site('gooncitizenManifest')),
       repoUrl: this._site('gooncitizenRepoUrl'),
       discordUrl: joinUrl,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    });
+    const leaderboardMainHtml = DuelLeaderboard.render({
+      path: leaderboardPath,
+      resourcesPath,
+      channelUrl: leaderboardChannelUrl,
+      joinUrl,
+      tournamentsPath,
       loginPath,
       loginLabel,
       alliance,
@@ -477,7 +508,12 @@ class GoonSPA extends FabricSPA {
       inviteUrl: permafleetInviteUrl,
       schedulePath,
       title,
-      applicationHtml
+      applicationHtml,
+      extras: Object.fromEntries((this._site('leaderboardSquadrons') || []).map((id) => [id, DuelLeaderboard.renderEmbed({
+        id,
+        path: leaderboardPath,
+        channelUrl: leaderboardChannelUrl
+      })]))
     };
     const squadronsMainHtml = PermafleetSquadrons.render(squadronProps);
     const squadronMainsHtml = PermafleetSquadrons.SQUADRONS
@@ -488,6 +524,9 @@ class GoonSPA extends FabricSPA {
       memberOrgs: orgData.organizations.length
         ? orgData.organizations.map((org) => ({
           name: org.displayName || org.name,
+          symbol: org.symbol,
+          logoUrl: org.logoUrl,
+          members: org.members,
           href: Organizations.organizationPath(org, organizationsPath)
         }))
         : null,
@@ -571,6 +610,7 @@ ${Organizations.styles()}
 ${Resources.styles()}
 ${DrillsPage.styles()}
 ${TournamentsPage.styles()}
+${DuelLeaderboard.styles()}
     </style>
   </head>
   <body>
@@ -585,6 +625,7 @@ ${TournamentsPage.styles()}
 ${organizationMainsHtml}
     ${resourcesMainHtml}
     ${gooncitizenMainHtml}
+    ${leaderboardMainHtml}
     ${drillsMainHtml}
 ${drillMainsHtml}
     ${tournamentsMainHtml}
@@ -616,6 +657,7 @@ ${squadronMainsHtml}
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === ${JSON.stringify(resourcesPath.toLowerCase())};
         var isGoonCitizen = path.toLowerCase() === ${JSON.stringify(gooncitizenPath.toLowerCase())};
+        var isLeaderboard = path.toLowerCase() === ${JSON.stringify(leaderboardPath.toLowerCase())};
         var isDrills = path.toLowerCase() === ${JSON.stringify(drillsPath.toLowerCase())};
         var drillEl = null;
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -640,7 +682,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -656,6 +698,8 @@ ${squadronMainsHtml}
         var gooncitizenEl = document.getElementById('gooncitizen-page');
         if (resourcesEl) resourcesEl.style.display = isResources ? 'block' : 'none';
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
+        var leaderboardEl = document.getElementById('leaderboard-page');
+        if (leaderboardEl) leaderboardEl.style.display = isLeaderboard ? 'block' : 'none';
         var drillsEl = document.getElementById('drills-page');
         if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -683,6 +727,7 @@ ${squadronMainsHtml}
         else if (isOrganizations) document.title = ${organizationsTitleJson};
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
+        else if (isLeaderboard) document.title = ${leaderboardTitleJson};
         else if (isDrills) document.title = ${drillsTitleJson};
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = ${tournamentsTitleJson};
@@ -704,6 +749,7 @@ ${squadronMainsHtml}
     ${idlerpgScript}
     ${Resources.gooncitizenScript()}
     ${Resources.presenceScript()}
+    ${DuelLeaderboard.script({ endpoint: this._site('leaderboardEndpoint') })}
     ${drillsScript}
     ${tournamentsScript}
     ${permafleetScript}

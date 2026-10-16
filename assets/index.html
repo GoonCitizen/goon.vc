@@ -479,6 +479,83 @@
       }
       .op-orgs a { color: inherit; text-decoration: none; }
       .op-orgs a:hover { color: var(--op-signal); }
+      .op-members {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+        gap: 0.75rem;
+        list-style: none;
+        margin: 1.1rem 0 0;
+        padding: 0;
+      }
+      .op-member {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.45rem;
+        height: 100%;
+        padding: 1.1rem 0.75rem 0.9rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--op-text);
+        background: rgba(5, 10, 24, 0.55);
+        border: 1px solid rgba(142, 191, 208, 0.22);
+        transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
+      }
+      .op-member-logo {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 6px;
+        filter: grayscale(0.85) brightness(0.8);
+        transition: filter 0.2s, transform 0.2s;
+      }
+      .op-member-initial {
+        display: grid;
+        place-items: center;
+        font-family: "Bungee", sans-serif;
+        font-size: 1.6rem;
+        color: var(--op-accent);
+        border: 1px solid rgba(142, 191, 208, 0.35);
+      }
+      .op-member-add { border-style: dashed; border-color: rgba(142, 191, 208, 0.45); }
+      .op-member-add .op-member-initial { border-style: dashed; filter: none; }
+      .op-member-add .op-member-meta { color: var(--op-signal); font-weight: 700; }
+      .op-member-name { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1.25; text-transform: uppercase; }
+      .op-member-meta { font-size: 0.75rem; letter-spacing: 0.04em; color: var(--op-muted); }
+      .op-member-tag {
+        position: absolute;
+        top: 0.45rem;
+        right: 0.45rem;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--op-void);
+        background: var(--op-signal);
+        opacity: 0;
+        transform: translateY(-0.2rem);
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      a.op-member:hover, a.op-member:focus-visible {
+        outline: none;
+        border-color: var(--op-signal);
+        box-shadow: 0 0 0 1px var(--op-signal), 0 0 22px rgba(120, 236, 255, 0.25);
+        transform: translateY(-2px);
+      }
+      .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { filter: none; transform: scale(1.06); }
+      .op-member:hover .op-member-tag, .op-member:focus-visible .op-member-tag { opacity: 1; transform: none; }
+      .op-members:hover .op-member:not(:hover) { opacity: 0.55; }
+      @media (hover: none) {
+        .op-member-logo { filter: none; }
+        .op-member-tag { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .op-member, .op-member-logo, .op-member-tag { transition: none; }
+        a.op-member:hover, a.op-member:focus-visible { transform: none; }
+        .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { transform: none; }
+      }
       .op-charter .op-resource-link { margin-top: 1rem; }
       .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
@@ -803,7 +880,7 @@
       .org-section { border-top: 1px solid rgba(142, 191, 208, 0.22); padding: 0.6rem 0; }
       .org-section summary { cursor: pointer; font-family: "Bungee", sans-serif; letter-spacing: 0.05em; }
       .org-section p { color: #c9d6e0; font-size: 0.95rem; margin: 0.6rem 0; }
-      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; text-align: center; }
+      .org-roster-cta { background: rgba(10, 18, 40, 0.72); border: 1px solid rgba(142, 191, 208, 0.28); border-top: 3px solid #8EBFD0; margin-top: 2rem; padding: 1.25rem 1.15rem; scroll-margin-top: 5rem; text-align: center; }
       .org-roster-cta h2 { color: #fff; font-size: 1.15rem; margin: 0 0 0.4rem; }
       .org-roster-cta p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
       .org-roster-cta strong { color: #E8F4FF; }
@@ -865,6 +942,29 @@
       .tournament-log ol { margin: 0; padding-left: 1.4em; }
       .tournament-log li { margin: 0.2em 0; }
       .tournament-log time { color: #aaa; font-size: 0.9em; margin-right: 0.5em; }
+
+      .leaderboard-page { display: none; margin: 0 auto; max-width: 34em; padding: 0 1em 3em; text-align: left; }
+      .leaderboard-page > h1, .leaderboard-page > .leaderboard-intro { text-align: center; }
+      .leaderboard-intro { color: #bbb; line-height: 1.45; margin: 0 auto 1.5em; max-width: 30em; }
+      .leaderboard-section { background: rgba(0, 0, 0, 0.22); border: 1px solid #555; border-radius: 10px; margin: 0 0 1.25rem; padding: 1rem 1.15rem; }
+      .leaderboard-section h2 { font-size: 1.05rem; letter-spacing: 0.06em; margin: 0 0 0.75rem; text-transform: uppercase; }
+      .leaderboard-actions { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; margin: 0 0 1.5rem; }
+      .duel-ladder { list-style: none; margin: 0; padding: 0; }
+      .duel-ladder li { align-items: baseline; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 0.75rem; padding: 0.4rem 0.25rem; }
+      .duel-ladder li:last-child { border-bottom: 0; }
+      .duel-rank { color: #888; flex: 0 0 2.25rem; font-variant-numeric: tabular-nums; text-align: right; }
+      .duel-name { color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+      .duel-ladder li.duel-champion { background: linear-gradient(90deg, rgba(255, 196, 0, 0.16), transparent); border-radius: 6px; }
+      .duel-ladder li.duel-champion .duel-rank { color: #ffc400; }
+      .duel-ladder li.duel-champion .duel-name::after { color: #ffc400; content: 'Champion'; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; margin-left: 0.6rem; text-transform: uppercase; }
+      .duel-ladder li.duel-podium .duel-rank { color: #ddd; }
+      .duel-meta, .duel-empty { color: #888; font-size: 0.8rem; margin: 0.6rem 0 0; }
+      .duel-rules { color: #bbb; line-height: 1.5; margin: 0; padding-left: 1.3em; }
+      .pf-page .pf-duels { margin-top: 1.75rem; padding: 1.1rem 1.15rem 1.2rem; background: var(--pf-glass); border: 1px solid var(--pf-line); border-left: 3px solid var(--pf-cyan); }
+      .pf-page .pf-duels h2 { margin: 0 0 0.35rem; text-align: left; font-family: "Rajdhani", sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.16em; }
+      .pf-duels > p { margin: 0 0 0.75rem; color: var(--pf-muted); line-height: 1.45; }
+      .pf-page .pf-duels .duel-ladder li { border-bottom-color: var(--pf-line); }
+      .pf-page .pf-duels .duel-meta { color: var(--pf-muted); }
     </style>
   </head>
   <body>
@@ -1102,7 +1202,7 @@
           </div>
         </article>
       </div>
-      <section class="org-roster-cta" aria-labelledby="org-roster-cta-title">
+      <section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
         <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
         <a class="goon-button" href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>
@@ -1400,6 +1500,13 @@
           
           <div class="operation-links"><a class="goon-button" href="/tournaments">Tournaments</a></div>
         </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
+          <p class="operation-tagline">The standing dogfight ladder, synced from #1v1-challenges.</p>
+          <p class="operation-summary">Anyone can challenge anyone, including pilots from other orgs.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/1v1-leaderboard">Leaderboard</a><a class="goon-button" href="https://discord.com/channels/1190527980120850493/1229937640116064276" target="_blank" rel="noopener">Challenge someone</a></div>
+        </article>
 <article class="operation-card" id="idlerpg-card">
           <h2 class="operation-name"><a href="/services/idlerpg">IDLERPG</a></h2>
           <p class="operation-tagline">Presence is progress.</p>
@@ -1444,6 +1551,33 @@
         <ul class="gooncitizen-downloads"><li><strong>Windows</strong> · 122 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 e7ba929ab6be5d16484a23f4a7d0245bef1b0d6d6280a5f8132501b54a1581a3</code></li><li><strong>macOS (Apple silicon)</strong> · 132 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 21f18167955d9f3ff54299a042a707a32cdbdc9310560df0bdf397940d0d850a</code></li><li><strong>Linux (.deb)</strong> · 120 MB · built 2026-09-22<br><code class="gooncitizen-sha">sha256 8d88b8147fc25ec5321f25cc8307d5000c2b3483b2be3b7646720c7164b62c51</code></li><li><strong>Android (test build)</strong> · 247 MB · built 2026-08-20<br><code class="gooncitizen-sha">sha256 f01d6ba663eb7a3d530d49a28e9cae093c72bd80bb29558e2516c7ecef37c5af</code></li></ul>
         <p class="gooncitizen-note">Source: <a href="https://github.com/GoonCitizen/star-citizen-live" target="_blank" rel="noopener">GitHub</a>. Pre-release builds are not code-signed. Windows: choose More info → Run anyway if SmartScreen warns. macOS: if the app is blocked, open System Settings → Privacy &amp; Security and choose Open Anyway. Android: allow installs from unknown sources to sideload.</p>
       </section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="leaderboard-page" class="leaderboard-page">
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <h1>1V1 LEADERBOARD</h1>
+      <p class="leaderboard-intro">The Squad’s standing dogfight ladder. Anyone can challenge anyone in <strong>#1v1-challenges</strong>, including pilots from other orgs.</p>
+      <div class="leaderboard-actions">
+        <a class="goon-button" href="https://discord.com/channels/1190527980120850493/1229937640116064276" target="_blank" rel="noopener">Challenge someone &raquo;</a>
+        <a class="goon-button" href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener">Join the Discord</a>
+      </div>
+      <section class="leaderboard-section" aria-labelledby="leaderboard-ladder-heading">
+        <h2 id="leaderboard-ladder-heading">Ladder</h2>
+        <div class="duel-board" data-duel-board data-limit="0">
+          <ol class="duel-ladder" aria-label="1v1 ladder" hidden></ol>
+          <p class="duel-empty">Loading the ladder…</p>
+          <p class="duel-meta" hidden></p>
+        </div>
+      </section>
+      <section class="leaderboard-section" aria-labelledby="leaderboard-rules-heading" data-duel-rules-section hidden>
+        <h2 id="leaderboard-rules-heading">Rules</h2>
+        <ol class="duel-rules" data-duel-rules></ol>
+      </section>
+      <p class="duel-meta">Synced from the pinned message in #1v1-challenges. Looking for a bracket instead? See <a href="/tournaments">Tournaments</a>.</p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -1562,7 +1696,55 @@
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.</p>
-            <ul class="op-orgs"><li><a href="/organizations/G00N">G00N SQUAD</a></li><li><a href="/organizations/INFN">Infinity Industries</a></li><li><a href="/organizations/TRDE">Trans-Galactic Trade</a></li><li><a href="/organizations/LCRP">Legacy Corporation</a></li><li><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></li><li><a href="/organizations/4MCONTRACT">4M Contractors</a></li><li><a href="/organizations/AIMOS">A.I.M.O.S.</a></li></ul>
+            <ul class="op-members" aria-label="Member organizations">
+            <li><a class="op-member" href="/organizations/G00N">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">G00N SQUAD</span>
+              <span class="op-member-meta">[G00N] · 19 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/INFN">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/syndicate.jpg" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">Infinity Industries</span>
+              <span class="op-member-meta">[INFN] · 15 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/TRDE">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/o6rxr78fbjcj7r/logo/TRDE-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">Trans-Galactic Trade</span>
+              <span class="op-member-meta">[TRDE] · 56 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/LCRP">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/t411fijq0tppor/logo/LCRP-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">Legacy Corporation</span>
+              <span class="op-member-meta">[LCRP] · 36 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/DOUBLEDOGZ">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/corp.jpg" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">DoubleDog Delivery, Inc.</span>
+              <span class="op-member-meta">[DOUBLEDOGZ] · 15 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/4MCONTRACT">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/qhn3ydociar7xr/logo/4MCONTRACT-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">4M Contractors</span>
+              <span class="op-member-meta">[4MCONTRACT] · 82 members</span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/AIMOS">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">A.I.M.O.S.</span>
+              <span class="op-member-meta">[AIMOS] · 146 members</span>
+            </a></li>
+            <li><a class="op-member op-member-add" href="/organizations#add-your-organization">
+              <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
+              <span class="op-member-name">Your org here</span>
+              <span class="op-member-meta">Add your organization &raquo;</span>
+            </a></li>
+          </ul>
             <p class="op-resource-link"><a href="/organizations">Member organizations &raquo;</a></p>
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
@@ -1680,6 +1862,16 @@
         <div><dt>How you get in</dt><dd>Selected by leadership</dd></div>
         <div><dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></dd></div>
       </dl>
+      <section class="pf-duels" aria-labelledby="bravo-squadron-duels-heading">
+        <h2 id="bravo-squadron-duels-heading">1v1 leaderboard</h2>
+        <p>The Squad’s standing dogfight ladder. Challenge anyone in #1v1-challenges to climb it.</p>
+        <div class="duel-board" data-duel-board data-limit="10">
+          <ol class="duel-ladder" aria-label="1v1 ladder" hidden></ol>
+          <p class="duel-empty">Loading the ladder…</p>
+          <p class="duel-meta" hidden></p>
+        </div>
+        <p class="pf-links"><a href="/resources/1v1-leaderboard">Full leaderboard &raquo;</a> · <a href="https://discord.com/channels/1190527980120850493/1229937640116064276" target="_blank" rel="noopener noreferrer">Challenge someone &raquo;</a></p>
+      </section>
       <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.com/invite/M4h9bBWq" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
     </main>
 <main id="squadron-rat-squadron" class="pf-page pf-squadron-page" data-path="/operations/PERMAFLEET/squadrons/rat-squadron" data-title="RAT SQUADRON — GOON SQUAD">
@@ -1752,6 +1944,7 @@
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === "/resources";
         var isGoonCitizen = path.toLowerCase() === "/resources/gooncitizen";
+        var isLeaderboard = path.toLowerCase() === "/resources/1v1-leaderboard";
         var isDrills = path.toLowerCase() === "/drills";
         var drillEl = null;
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -1776,7 +1969,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -1792,6 +1985,8 @@
         var gooncitizenEl = document.getElementById('gooncitizen-page');
         if (resourcesEl) resourcesEl.style.display = isResources ? 'block' : 'none';
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
+        var leaderboardEl = document.getElementById('leaderboard-page');
+        if (leaderboardEl) leaderboardEl.style.display = isLeaderboard ? 'block' : 'none';
         var drillsEl = document.getElementById('drills-page');
         if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -1819,6 +2014,7 @@
         else if (isOrganizations) document.title = "PERMAFLEET Organizations — GOON SQUAD";
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
+        else if (isLeaderboard) document.title = "1v1 Leaderboard — GOON SQUAD";
         else if (isDrills) document.title = "DRILLS — GOON SQUAD";
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
@@ -2506,6 +2702,90 @@
         if (timer) clearInterval(timer);
         timer = visible ? setInterval(load, 60000) : null;
       }).observe(page);
+    })();
+  </script>
+    <script>
+    (function () {
+      var boards = Array.prototype.slice.call(document.querySelectorAll('[data-duel-board]'));
+      if (!boards.length) return;
+      var visible = [];
+      var timer = null;
+
+      function el (tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      function when (iso) {
+        var t = Date.parse(iso || '');
+        if (!isFinite(t)) return '';
+        return new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+
+      function renderBoard (board, data) {
+        var list = board.querySelector('.duel-ladder');
+        var empty = board.querySelector('.duel-empty');
+        var meta = board.querySelector('.duel-meta');
+        var limit = Number(board.getAttribute('data-limit')) || 0;
+        var ladder = (data && data.ladder) || [];
+        var rows = limit ? ladder.slice(0, limit) : ladder;
+        list.textContent = '';
+        rows.forEach(function (row) {
+          var li = el('li', row.rank === 1 ? 'duel-champion' : (row.rank <= 3 ? 'duel-podium' : ''));
+          li.appendChild(el('span', 'duel-rank', String(row.rank)));
+          li.appendChild(el('span', 'duel-name', row.name));
+          list.appendChild(li);
+        });
+        list.hidden = !rows.length;
+        empty.hidden = !!rows.length;
+        if (!rows.length) empty.textContent = 'The ladder is unavailable right now.';
+        var parts = [];
+        if (limit && ladder.length > rows.length) parts.push('Top ' + rows.length + ' of ' + ladder.length + ' pilots.');
+        if (data && data.updatedAt) parts.push('Updated ' + when(data.updatedAt) + '.');
+        if (data && data.stale && rows.length) parts.push('Saved copy; Discord is unreachable.');
+        meta.textContent = parts.join(' ');
+        meta.hidden = !parts.length;
+      }
+
+      function renderRules (data) {
+        var list = document.querySelector('[data-duel-rules]');
+        var section = document.querySelector('[data-duel-rules-section]');
+        if (!list || !section) return;
+        var rules = (data && data.rules) || [];
+        list.textContent = '';
+        rules.forEach(function (rule) { list.appendChild(el('li', '', rule)); });
+        section.hidden = !rules.length;
+      }
+
+      function load () {
+        fetch("/services/leaderboards/1v1", { headers: { Accept: 'application/json' } })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .catch(function () { return null; })
+          .then(function (data) {
+            boards.forEach(function (board) { renderBoard(board, data); });
+            renderRules(data);
+          });
+      }
+
+      function schedule () {
+        if (timer) clearInterval(timer);
+        timer = visible.length ? setInterval(load, 300000) : null;
+      }
+
+      if (!('IntersectionObserver' in window)) { load(); return; }
+      var observer = new IntersectionObserver(function (entries) {
+        var wasVisible = visible.length > 0;
+        entries.forEach(function (e) {
+          var i = visible.indexOf(e.target);
+          if (e.isIntersecting && i === -1) visible.push(e.target);
+          if (!e.isIntersecting && i !== -1) visible.splice(i, 1);
+        });
+        if (visible.length && !wasVisible) load();
+        schedule();
+      });
+      boards.forEach(function (board) { observer.observe(board); });
     })();
   </script>
     <script src="/scripts/melee-rotation-drill.js" defer></script>
