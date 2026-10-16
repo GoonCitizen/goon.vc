@@ -26,7 +26,7 @@ const DEFAULTS = {
   title: 'GOON SQUAD',
   // Absolute origin for og:url / og:image (link previews need absolute URLs).
   siteUrl: 'https://goon.vc',
-  homeDescription: 'G00N SQUAD is a hardcore Star Citizen private military company focused on security and infiltration, and a member of the PERMAFLEET Protectorate.',
+  homeDescription: 'G00N SQUAD is a Star Citizen paramilitary organization with a strong pedigree in security and infiltration, and a core member of the PERMAFLEET Protectorate. Membership is by invitation only.',
   loginDescription: 'Sign in to GOON SQUAD with Discord, Fabric Passport, or the GoonCitizen desktop app.',
   heading: 'GOON SQUAD<sup>&trade;</sup>',
   joinLabel: 'Join the Squad &raquo;',
@@ -108,9 +108,9 @@ const DEFAULTS = {
   // Front-page overview; facts, logo, and motto come from the G00N record in organizationsFile.
   overviewSymbol: 'G00N',
   overviewParagraphs: [
-    'G00N SQUAD is a hardcore private military company focused on security and infiltration, and a member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>. We keep PERMAFLEET members safe across the ’verse, around the clock.',
-    'We run <strong>ALPHA SQUADRON</strong>, an elite unit dedicated to being the tip of the spear for PERMAFLEET, drawn from the top of BRAVO SQUADRON.',
-    'To join G00N SQUAD, apply to ALPHA SQUADRON. The application is required for membership, even if you’re already in PERMAFLEET.'
+    'G00N SQUAD is a paramilitary organization with a strong pedigree in security and infiltration, and a core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>. Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere in the ’verse, at any hour.',
+    'Membership is by invitation only. Invitations go through <strong>ALPHA SQUADRON</strong> — the tip of the spear for PERMAFLEET, drawn from the best of BRAVO SQUADRON.',
+    'To be considered, apply to ALPHA SQUADRON. The application is required for membership, even if you already fly with PERMAFLEET. <em>Esse quam videri.</em>'
   ],
   // Google Form behind the ALPHA SQUADRON application (fields: entry ids from the live form).
   alphaSquadronForm: {
@@ -270,7 +270,6 @@ class GoonSPA extends FabricSPA {
         logoUrl: overviewOrg.logoUrl,
         facts: [
           overviewOrg.model,
-          overviewOrg.commitment,
           overviewOrg.focus && [overviewOrg.focus.primary, overviewOrg.focus.secondary].filter(Boolean).join(' / '),
           overviewOrg.recruiting ? 'Recruiting' : null
         ],

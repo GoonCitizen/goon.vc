@@ -249,7 +249,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(home.status, 200);
     assert.strictEqual(meta(home.body, 'og:title'), 'GOON SQUAD');
     assert.strictEqual(meta(home.body, 'og:url'), 'https://goon.vc/');
-    assert.ok(/^G00N SQUAD is a hardcore/.test(meta(home.body, 'og:description')), 'home description');
+    assert.ok(/^G00N SQUAD is a Star Citizen paramilitary organization/.test(meta(home.body, 'og:description')), 'home description');
     assert.ok(/^https:\/\//.test(meta(home.body, 'og:image')), 'absolute og:image');
 
     const permafleet = await fetchJson('/operations/PERMAFLEET/', { headers: { Accept: 'text/html' } });
@@ -324,7 +324,9 @@ describe('goon.vc HTTP', function () {
     assert.ok(/<a href="bitcoin:bc1q\w+"><code>bc1q\w+<\/code><\/a>/.test(home), 'footer address is a bitcoin: link');
     assert.ok(res.body.includes("'https://discord.com/api/guilds/' + \"1190527980120850493\" + '/widget.json'"));
     assert.ok(home.includes('id="home-overview-title">G00N SQUAD</h2>'));
-    assert.ok(home.includes('PMC · Hardcore · Security / Infiltration · Recruiting'));
+    assert.ok(home.includes('PMC · Security / Infiltration · Recruiting'));
+    assert.ok(!/hardcore/i.test(home), 'no "hardcore" on the front page');
+    assert.ok(home.includes('Membership is by invitation only.'));
     assert.ok(home.includes('href="/operations/PERMAFLEET#alpha-squadron">Apply to ALPHA SQUADRON</a>'));
     assert.ok(home.includes('href="/organizations/G00N"'));
   });
