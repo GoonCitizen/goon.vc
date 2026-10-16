@@ -54,6 +54,7 @@ curl -s -X POST https://goon.vc/sessions \
   -H 'Content-Type: application/json' -H 'Origin: https://goon.vc' \
   -d '{"origin":"https://goon.vc"}'     # proxied Hub session create
 journalctl -u goonvc -f
+curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # presentNow / uniquePlayers
 ```
 
 ## Configuration
@@ -64,6 +65,7 @@ journalctl -u goonvc -f
 | `FABRIC_HUB_PORT` | HTTP listen (default `8080`). Caddy proxies here. |
 | `FABRIC_HUB_INTERFACE` | Bind address (default `127.0.0.1`). |
 | `FABRIC_HUB_HOSTNAME` | Host header / sitemap host (default `goon.vc`). |
+| `DISCORD_BOT_TOKEN` | Bot token for `/events`, `/operations` metrics, and IdleRPG. The bot posts IdleRPG announcements to `presence.announcements` (G00N SQUAD `#idlerpg`) and needs View Channel + Send Messages there. |
 
 No Fabric mnemonic is required on this host. Identity stays on Hub and on
 user wallets (Passport / GoonCitizen).
