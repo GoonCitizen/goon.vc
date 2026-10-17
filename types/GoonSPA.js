@@ -21,6 +21,7 @@ const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
 const DrillsPage = require('../components/DrillsPage');
 const TournamentsPage = require('../components/TournamentsPage');
+const LeaguesPage = require('../components/LeaguesPage');
 const DuelLeaderboard = require('../components/DuelLeaderboard');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
@@ -56,7 +57,7 @@ const DEFAULTS = {
   idlerpgPath: '/services/idlerpg',
   idlerpgHeading: 'IDLERPG',
   idlerpgTagline: 'Presence is progress.',
-  idlerpgIntro: 'The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.',
+  idlerpgIntro: 'The alliance idle game. Every pilot in a voice channel the bot can see levels up, fights, and loots just by being there — across every PERMAFLEET server at once.',
   idlerpgDocumentTitle: 'IDLERPG — GOON SQUAD',
   organizationsPath: '/organizations',
   organizationsHeading: 'ORGANIZATIONS',
@@ -91,6 +92,11 @@ const DEFAULTS = {
   tournamentsHeading: 'TOURNAMENTS',
   tournamentsIntro: 'Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.',
   tournamentsDocumentTitle: 'TOURNAMENTS — GOON SQUAD',
+  // Leagues: /leagues index and /leagues/<id> (Elo-rated duels, services/leagues.js).
+  leaguesPath: '/leagues',
+  leaguesHeading: 'LEAGUES',
+  leaguesIntro: 'Standing duel leagues with Elo ratings. Start a perpetual ladder or a seasonal one, log each duel, and the ratings update.',
+  leaguesDocumentTitle: 'LEAGUES — GOON SQUAD',
   // 1v1 ladder from the pinned message in G00N SQUAD #1v1-challenges (services/leaderboard.js).
   leaderboardPath: '/resources/1v1-leaderboard',
   leaderboardEndpoint: '/services/leaderboards/1v1',
@@ -223,6 +229,7 @@ class GoonSPA extends FabricSPA {
         drill.summary || drill.tagline || drill.name
       )),
       page(this._site('tournamentsPath'), this._site('tournamentsDocumentTitle'), this._site('tournamentsIntro')),
+      page(this._site('leaguesPath'), this._site('leaguesDocumentTitle'), this._site('leaguesIntro')),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
       page(this._site('permafleetSquadronsPath'), this._site('permafleetSquadronsDocumentTitle'), this._site('permafleetSquadronsDescription'), permafleet),
@@ -279,6 +286,8 @@ class GoonSPA extends FabricSPA {
     const drillsTitleJson = JSON.stringify(this._site('drillsDocumentTitle'));
     const tournamentsPath = this._site('tournamentsPath');
     const tournamentsTitleJson = JSON.stringify(this._site('tournamentsDocumentTitle'));
+    const leaguesPath = this._site('leaguesPath');
+    const leaguesTitleJson = JSON.stringify(this._site('leaguesDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
     const permafleetInviteUrl = this._site('permafleetInviteUrl');
@@ -403,6 +412,12 @@ class GoonSPA extends FabricSPA {
         summary: this._site('tournamentsIntro'),
         openLabel: 'Tournaments'
       }, {
+        name: 'Leagues',
+        path: leaguesPath,
+        tagline: 'Perpetual and seasonal duel ladders, Elo-rated.',
+        summary: this._site('leaguesIntro'),
+        openLabel: 'Leagues'
+      }, {
         name: '1v1 Leaderboard',
         path: leaderboardPath,
         tagline: 'The standing dogfight ladder, synced from #1v1-challenges.',
@@ -475,6 +490,19 @@ class GoonSPA extends FabricSPA {
     const tournamentsMainHtml = TournamentsPage.render(tournamentsProps);
     const tournamentMainsHtml = TournamentsPage.renderTournaments(tournamentsProps);
     const tournamentsScript = TournamentsPage.script(tournamentsProps);
+    const leaguesProps = {
+      heading: escapeHtml(this._site('leaguesHeading')),
+      intro: escapeHtml(this._site('leaguesIntro')),
+      basePath: leaguesPath,
+      siteTitle: title,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    };
+    const leaguesMainHtml = LeaguesPage.render(leaguesProps);
+    const leagueMainHtml = LeaguesPage.renderLeague(leaguesProps);
+    const leaguesScript = LeaguesPage.script(leaguesProps);
     const orgProps = {
       heading: escapeHtml(this._site('organizationsHeading')),
       intro: escapeHtml(this._site('organizationsIntro')),
@@ -610,6 +638,7 @@ ${Organizations.styles()}
 ${Resources.styles()}
 ${DrillsPage.styles()}
 ${TournamentsPage.styles()}
+${LeaguesPage.styles()}
 ${DuelLeaderboard.styles()}
     </style>
   </head>
@@ -630,6 +659,8 @@ ${organizationMainsHtml}
 ${drillMainsHtml}
     ${tournamentsMainHtml}
 ${tournamentMainsHtml}
+    ${leaguesMainHtml}
+    ${leagueMainHtml}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
@@ -667,6 +698,10 @@ ${squadronMainsHtml}
         var tournamentEl = path.toLowerCase().indexOf(${JSON.stringify(tournamentsPath.toLowerCase() + '/')}) === 0
           ? document.getElementById('tournament-page')
           : null;
+        var isLeagues = path.toLowerCase() === ${JSON.stringify(leaguesPath.toLowerCase())};
+        var leagueEl = path.toLowerCase().indexOf(${JSON.stringify(leaguesPath.toLowerCase() + '/')}) === 0
+          ? document.getElementById('league-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -682,7 +717,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -709,6 +744,10 @@ ${squadronMainsHtml}
         if (tournamentsEl) tournamentsEl.style.display = isTournaments ? 'block' : 'none';
         var tournamentPageEl = document.getElementById('tournament-page');
         if (tournamentPageEl) tournamentPageEl.style.display = tournamentEl ? 'block' : 'none';
+        var leaguesEl = document.getElementById('leagues-page');
+        if (leaguesEl) leaguesEl.style.display = isLeagues ? 'block' : 'none';
+        var leaguePageEl = document.getElementById('league-page');
+        if (leaguePageEl) leaguePageEl.style.display = leagueEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -732,6 +771,7 @@ ${squadronMainsHtml}
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = ${tournamentsTitleJson};
         else if (tournamentEl) document.title = ${tournamentsTitleJson};
+        else if (isLeagues || leagueEl) document.title = ${leaguesTitleJson};
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
@@ -752,6 +792,7 @@ ${squadronMainsHtml}
     ${DuelLeaderboard.script({ endpoint: this._site('leaderboardEndpoint') })}
     ${drillsScript}
     ${tournamentsScript}
+    ${leaguesScript}
     ${permafleetScript}
     ${applicationScript}
   </body>

@@ -15,6 +15,7 @@ const Events = require('./events');
 const Operations = require('./operations');
 const Presence = require('./presence');
 const Tournaments = require('./tournaments');
+const Leagues = require('./leagues');
 const Leaderboard = require('./leaderboard');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
@@ -111,6 +112,7 @@ class GoonVC {
     this.events = null;
     this.operations = null;
     this.tournaments = null;
+    this.leagues = null;
     this.leaderboard = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
@@ -155,12 +157,18 @@ class GoonVC {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const site = spa.metaSite();
     const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
-    const tournamentsPage = pageMeta.findPage(pages, spa._site('tournamentsPath'));
+    const stores = [
+      [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
+      [() => this.leagues, pageMeta.findPage(pages, spa._site('leaguesPath'))]
+    ];
     const storedPage = async (pathname) => {
-      const found = this.tournaments && tournamentsPage ? await this.tournaments.page(pathname) : null;
-      if (!found) return null;
-      const page = Object.assign({}, tournamentsPage, found, { title: `${found.title} — ${spa._site('title')}` });
-      return Object.assign(page, { tags: pageMeta.renderMetaTags(page, site) });
+      for (const [service, index] of stores) {
+        const found = service() && index ? await service().page(pathname) : null;
+        if (!found) continue;
+        const page = Object.assign({}, index, found, { title: `${found.title} — ${spa._site('title')}` });
+        return Object.assign(page, { tags: pageMeta.renderMetaTags(page, site) });
+      }
+      return null;
     };
     const file = path.join(assets, 'index.html');
     let cached = { mtimeMs: -1, html: null };
@@ -206,9 +214,9 @@ class GoonVC {
   _canonicalPathMiddleware () {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const pages = spa.pages();
-    const tournamentsPrefix = `${spa._site('tournamentsPath').toLowerCase()}/`;
+    const prefixes = ['tournamentsPath', 'leaguesPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
     const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
-      || pathname.toLowerCase().startsWith(tournamentsPrefix);
+      || prefixes.some((prefix) => pathname.toLowerCase().startsWith(prefix));
     return (req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
       if (shouldProxyHubApi(req) || /^\/(services|identity)(\/|$)/.test(req.path)) return next();
@@ -324,16 +332,25 @@ class GoonVC {
 
     const tournamentSettings = this.settings.tournaments || {};
     const spa = new GoonSite(this.settings.site || {}).spa;
+    const identify = async (req) => {
+      const current = await this.members._sessionFromRequest(req);
+      const member = current && await this.members.getMember(current.session.memberId);
+      return (member && member.displayName) || null;
+    };
     this.tournaments = new Tournaments({
       path: tournamentSettings.path || './stores/tournaments',
       basePath: spa._site('tournamentsPath'),
-      identify: async (req) => {
-        const current = await this.members._sessionFromRequest(req);
-        const member = current && await this.members.getMember(current.session.memberId);
-        return (member && member.displayName) || null;
-      }
+      identify
     });
     await this.tournaments.start();
+
+    const leagueSettings = this.settings.leagues || {};
+    this.leagues = new Leagues({
+      path: leagueSettings.path || './stores/leagues',
+      basePath: spa._site('leaguesPath'),
+      identify
+    });
+    await this.leagues.start();
 
     const leaderboardSettings = this.settings.leaderboard || {};
     this.leaderboard = new Leaderboard({
@@ -378,6 +395,7 @@ class GoonVC {
         operations: this.operations.middleware(),
         presence: this.presence.middleware(),
         tournaments: this.tournaments.middleware(),
+        leagues: this.leagues.middleware(),
         leaderboard: this.leaderboard.middleware()
       }
     });
@@ -396,7 +414,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.tournaments, this.leaderboard, this.members, this.events, this.presence, this.operations]) {
+    for (const service of [this.http, this.tournaments, this.leagues, this.leaderboard, this.members, this.events, this.presence, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

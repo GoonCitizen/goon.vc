@@ -207,6 +207,7 @@ describe('goon.vc HTTP', function () {
         gateway: false
       },
       tournaments: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournaments-test-')) },
+      leagues: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-leagues-test-')) },
       leaderboard: {
         path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-leaderboard-test-')),
         refreshOnStart: false,
@@ -520,6 +521,9 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.json.presentNow, 0);
     assert.strictEqual(res.json.uniquePlayers, 0);
     assert.strictEqual(typeof res.json.totalPresentHours, 'number');
+    assert.deepStrictEqual(res.json.battles, { won: 0, lost: 0, total: 0 });
+    assert.strictEqual(res.json.kills, 0);
+    assert.deepStrictEqual(res.json.slain, []);
     assert.ok(!('players' in res.json) && !('users' in res.json), 'aggregates only');
     const page = await fetchJson('/resources', { headers: { Accept: 'text/html' } });
     const section = (id) => {
@@ -540,6 +544,8 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(page.status, 200);
     assert.ok(page.body.includes('id="idlerpg-page"'));
     assert.ok(page.body.includes('id="idlerpg-players"'));
+    assert.ok(page.body.includes('id="idlerpg-battles"'), 'battle statistics');
+    assert.ok(page.body.includes('<th class="num">Kills</th><th>Weapon</th>'), 'kills and weapon columns');
     assert.ok(page.body.includes('<meta property="og:title" content="IDLERPG — GOON SQUAD">'), 'per-page Open Graph');
     assert.ok(page.body.includes('<link rel="canonical" href="https://goon.vc/services/idlerpg">'));
     assert.ok(page.body.includes('"/services/idlerpg/players"'));
@@ -645,6 +651,51 @@ describe('goon.vc HTTP', function () {
     });
     assert.strictEqual(slash.status, 301);
     assert.strictEqual(slash.location, '/tournaments');
+  });
+
+  it('serves leagues: create, log duels, and Elo standings', async function () {
+    const index = await fetchJson('/leagues', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('id="leagues-page"'));
+    assert.ok(index.body.includes('id="league-create-form"'), 'anyone can create a league');
+    assert.ok(index.body.includes('<meta property="og:title" content="LEAGUES — GOON SQUAD">'));
+    assert.ok(index.body.includes('<script src="/scripts/leagues.js" defer></script>'));
+    const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
+    assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/leagues"'), 'listed on /resources');
+
+    assert.deepStrictEqual((await fetchJson('/services/leagues')).json.leagues.map((league) => [league.id, league.kind]), [['open-league', 'perpetual']], 'one open league by default');
+    const send = (pathname, body, method = 'POST') => fetchJson(pathname, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const created = await send('/services/leagues', { name: 'Friday Ladder', kind: 'seasonal', bestOf: 3 });
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual(created.json.id, 'friday-ladder');
+    const api = '/services/leagues/friday-ladder';
+    const bad = await send(`${api}/duels`, { winner: 'VIPER', loser: 'KESTREL', bestOf: 3, score: [1, 0] });
+    assert.strictEqual(bad.status, 400);
+    assert.match(bad.json.error, /best of 3 ends 2–0 to 2–1/);
+    const duel = await send(`${api}/duels`, { winner: 'VIPER', loser: 'KESTREL', bestOf: 3, score: [2, 1] });
+    assert.strictEqual(duel.status, 201);
+    assert.strictEqual(duel.json.seasons[0].standings[0].name, 'VIPER');
+    assert.ok(duel.json.seasons[0].standings[0].rating > 1000);
+    assert.strictEqual((await send(`${api}/duels/d1/void`, { reason: 'test' })).json.duels[0].voided.reason, 'test');
+    assert.strictEqual((await send(`${api}/duels/d1/restore`, {})).json.leader.name, 'VIPER');
+    assert.strictEqual((await send(api, { tagline: 'Fridays at 8' }, 'PATCH')).json.tagline, 'Fridays at 8');
+    const season = await send(`${api}/seasons`, { name: 'Season 2' });
+    assert.strictEqual(season.status, 201);
+    assert.strictEqual(season.json.seasons[0].champion, 'VIPER');
+    assert.strictEqual((await fetchJson('/services/leagues/nope')).status, 404);
+    assert.strictEqual((await send(`${api}/standings`, {})).status, 405);
+
+    const page = await fetchJson('/leagues/friday-ladder', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('id="league-page"'));
+    assert.ok(page.body.includes('<meta property="og:title" content="Friday Ladder — GOON SQUAD">'));
+    assert.ok(page.body.includes('Season 2 of a seasonal league · 2 pilots'), 'link previews describe the league');
+    const script = await fetchJson('/scripts/leagues.js');
+    assert.strictEqual(script.status, 200);
   });
 
   it('redirects the old IdleRPG URLs to /services/idlerpg', async function () {
@@ -954,18 +1005,28 @@ describe('goon.vc page paths', function () {
     // Leftover directories named like pages, as on a server that once shipped them.
     fs.mkdirSync(path.join(assets, 'drills'), { recursive: true });
     fs.mkdirSync(path.join(assets, 'tournaments'));
+    fs.mkdirSync(path.join(assets, 'leagues'));
     fs.copyFileSync(path.join(__dirname, '../assets/index.html'), path.join(assets, 'index.html'));
     const tokenless = { resolveToken: () => ({ token: null, source: null }) };
+    const free = await new Promise((resolve, reject) => {
+      const probe = require('net').createServer();
+      probe.listen(0, '127.0.0.1', () => {
+        const { port: open } = probe.address();
+        probe.close((err) => (err ? reject(err) : resolve(open)));
+      });
+      probe.on('error', reject);
+    });
     site = new GoonVC({
       assets,
       hub: { origin: 'http://127.0.0.1:9' },
-      http: { port: 0, interface: '127.0.0.1', hostname: '127.0.0.1' },
+      http: { port: free, interface: '127.0.0.1', hostname: '127.0.0.1' },
       storePath: path.join(root, 'site'),
       members: { path: path.join(root, 'members') },
       events: Object.assign({ path: path.join(root, 'events') }, tokenless),
       operations: { path: path.join(root, 'operations'), gateway: false },
       presence: { path: path.join(root, 'presence'), tickMs: 0, gateway: false },
       tournaments: { path: path.join(root, 'tournaments') },
+      leagues: { path: path.join(root, 'leagues') },
       leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
       listen: true
     });
@@ -988,7 +1049,7 @@ describe('goon.vc page paths', function () {
   }
 
   it('serves a page even when assets has a directory of the same name', async function () {
-    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/resources/1v1-leaderboard']) {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/leagues', '/resources/1v1-leaderboard']) {
       assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
     }
   });
@@ -999,6 +1060,8 @@ describe('goon.vc page paths', function () {
     assert.deepStrictEqual(await get('/tournaments//?from=discord'), { status: 301, location: '/tournaments?from=discord' });
     assert.deepStrictEqual(await get('/tournaments/saturday-1v1/2026-10-17/'), { status: 301, location: '/tournaments/saturday-1v1/2026-10-17' });
     assert.deepStrictEqual(await get('/operations/PERMAFLEET/squadrons/'), { status: 301, location: '/operations/PERMAFLEET/squadrons' });
+    assert.deepStrictEqual(await get('/leagues/'), { status: 301, location: '/leagues' });
+    assert.deepStrictEqual(await get('/leagues/gladius-ladder/?season=2'), { status: 301, location: '/leagues/gladius-ladder?season=2' });
   });
 
   it('keeps the configured redirects', async function () {

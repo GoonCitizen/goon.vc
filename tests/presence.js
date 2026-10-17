@@ -65,6 +65,33 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     await presence.stop();
   });
 
+  it('fights @fabric/rpg encounters and reports battles without ids', async function () {
+    const ANNOUNCE = '1560112808283086929';
+    const operations = new FakeOperations();
+    const presence = new Presence({ path: path.join(dir, 'store'), tickMs: 0, luck: 1, operations, announcements: [ANNOUNCE] });
+    await presence.start();
+    const discord = operations.connect();
+    const posted = [];
+    discord.postToChannel = async (channel, text) => { posted.push({ channel, text }); return {}; };
+
+    discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: null, newChannelId: VOICE, channelName: 'PERMAFLEET' });
+    await new Promise((resolve) => setImmediate(resolve));
+    for (let i = 0; i < 30; i++) await presence.game.tick();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const report = await presence.report();
+    assert.ok(report.battles.total > 0, 'battles fought');
+    assert.strictEqual(report.kills, report.battles.won);
+    assert.ok(report.slain.every((row) => typeof row.name === 'string' && row.count > 0));
+    const board = await presence.players(10);
+    assert.ok(board.players[0].kills > 0);
+    assert.ok(posted.length > 1 && posted.every((p) => p.channel === ANNOUNCE));
+    const everything = JSON.stringify([report, board, posted]);
+    assert.ok(!everything.includes('111111111111111111'), 'no member ids');
+    assert.ok(!everything.includes('discord/users'), 'no namespaced ids');
+    await presence.stop();
+  });
+
   it('attaches to the operations gateway and counts voice presence without ids', async function () {
     const operations = new FakeOperations();
     const presence = new Presence({ path: path.join(dir, 'store'), tickMs: 0, operations });
@@ -99,7 +126,7 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     const board = await presence.players(10);
     assert.strictEqual(board.count, 2);
     assert.strictEqual(board.players.length, 2);
-    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'lastSeen', 'level', 'name', 'online', 'rank', 'ticks', 'wealth']);
+    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'kills', 'lastSeen', 'level', 'name', 'online', 'rank', 'ticks', 'wealth', 'weapon']);
     assert.strictEqual(board.players[0].rank, 1);
     assert.strictEqual(board.players[0].online, true);
     assert.ok(!JSON.stringify(board).includes('111111111111111111'), 'leaderboard carries no ids');

@@ -835,7 +835,10 @@
       .idlerpg-levels { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
       .idlerpg-levels li { background: rgba(76, 29, 149, 0.35); border: 1px solid #4C1D95; border-radius: 6px; color: #ddd; font-size: 0.8rem; padding: 0.25rem 0.6rem; }
       .idlerpg-levels li b { color: #fff; }
+      .idlerpg-table-wrap { overflow-x: auto; }
       .idlerpg-table { border-collapse: collapse; font-size: 0.88rem; width: 100%; }
+      .idlerpg-table td.weapon { color: #bbb; white-space: nowrap; }
+      .idlerpg-subhead { color: #888; font-size: 0.68rem; letter-spacing: 0.08em; margin: 1rem 0 0.5rem; text-transform: uppercase; }
       .idlerpg-table th, .idlerpg-table td { border-bottom: 1px solid #444; padding: 0.4rem 0.5rem; text-align: left; vertical-align: middle; }
       .idlerpg-table th { color: #888; font-size: 0.68rem; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; }
       .idlerpg-table td.num, .idlerpg-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
@@ -943,6 +946,23 @@
       .tournament-log li { margin: 0.2em 0; }
       .tournament-log time { color: #aaa; font-size: 0.9em; margin-right: 0.5em; }
 
+      .league-page { display: none; margin: 0 auto; max-width: 46em; padding: 0 1em 3em; text-align: left; }
+      .league-page > h1, .league-page > .operations-intro, .league-view > h1, .league-view > .league-tagline { text-align: center; }
+      .league-meta { color: #bbb; font-size: 0.9em; letter-spacing: 0.04em; margin: 0.25em 0 0; text-align: center; }
+      .league-seasons { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; margin: 1.25em 0 0; padding: 0; list-style: none; }
+      .league-seasons a { border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; color: #ddd; display: inline-block; font-size: 0.85em; padding: 0.2em 0.8em; text-decoration: none; }
+      .league-seasons a[aria-current="page"] { background: #fff; border-color: #fff; color: #111; font-weight: 700; }
+      .league-standings td.num, .league-standings th.num { text-align: right; white-space: nowrap; }
+      .league-standings .rating { color: #fff; font-weight: 700; }
+      .league-duels li { align-items: baseline; display: flex; flex-wrap: wrap; gap: 0.25em 0.75em; margin: 0.35em 0; }
+      .league-duels li.void .league-duel-text { color: #888; text-decoration: line-through; }
+      .league-delta { color: #bbb; font-size: 0.9em; white-space: nowrap; }
+      .league-duels button { background: none; border: 0; color: #aaa; cursor: pointer; font: inherit; font-size: 0.85em; padding: 0; text-decoration: underline; }
+      .league-duels button:hover { color: #fff; }
+      .league-page details > summary { cursor: pointer; font-weight: 600; }
+      .league-page details[open] > summary { margin-bottom: 0.85em; }
+      .league-page [hidden] { display: none !important; }
+
       .leaderboard-page { display: none; margin: 0 auto; max-width: 34em; padding: 0 1em 3em; text-align: left; }
       .leaderboard-page > h1, .leaderboard-page > .leaderboard-intro { text-align: center; }
       .leaderboard-intro { color: #bbb; line-height: 1.45; margin: 0 auto 1.5em; max-width: 30em; }
@@ -999,7 +1019,7 @@
         </div>
         <p class="home-copy">Friends in most corners of the ’verse, and ears in the rest. We work across the Star Citizen community, mostly out of sight. A core member of the <a href="/operations/PERMAFLEET">PERMAFLEET Protectorate</a>.</p>
         <p class="home-copy">Wear the <code>[PERMAFLEET]</code> tag and you fly under our watch — anywhere, at any hour. Most of the time, you won’t even see us.</p>
-        <p class="home-copy">Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET, or join PERMAFLEET directly by <a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer">applying to the org on RSI</a>.</p>
+        <p class="home-copy">Membership is by invitation only, and we notice who performs. Start with a <a href="/operations/PERMAFLEET/squadrons#squadron-apply">squadron application</a>, even if you already fly PERMAFLEET, or join PERMAFLEET directly by <a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer">applying on RSI</a>.</p>
         <p class="home-creed">Esse quam videri.</p>
         <p class="home-motto">GOONS TOGETHER STRONK · TALK LOUD FLY BIG SHIP</p>
         <div class="home-actions"><a class="goon-button" href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron</a><a class="goon-button" href="/organizations/G00N">Org profile</a><a class="goon-button" href="/events">Events</a></div>
@@ -1085,7 +1105,7 @@
     </main>
     <main id="idlerpg-page" class="idlerpg-page">
       <h1>IDLERPG</h1>
-      <p class="idlerpg-intro">The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.</p>
+      <p class="idlerpg-intro">The alliance idle game. Every pilot in a voice channel the bot can see levels up, fights, and loots just by being there — across every PERMAFLEET server at once.</p>
       <section class="idlerpg-section" aria-labelledby="idlerpg-stats-heading">
         <h2 id="idlerpg-stats-heading">Statistics</h2>
         <ul class="idlerpg-stats" id="idlerpg-stats"></ul>
@@ -1101,12 +1121,21 @@
         <ul class="idlerpg-levels" id="idlerpg-levels"></ul>
         <p class="idlerpg-empty" id="idlerpg-levels-empty">Nobody has leveled yet.</p>
       </section>
+      <section class="idlerpg-section" aria-labelledby="idlerpg-battles-heading">
+        <h2 id="idlerpg-battles-heading">Battles</h2>
+        <ul class="idlerpg-stats" id="idlerpg-battles"></ul>
+        <h3 class="idlerpg-subhead" id="idlerpg-slain-heading" hidden>Most slain</h3>
+        <ul class="idlerpg-levels" id="idlerpg-slain" aria-labelledby="idlerpg-slain-heading"></ul>
+        <p class="idlerpg-empty" id="idlerpg-battles-empty">No battles fought yet.</p>
+      </section>
       <section class="idlerpg-section" aria-labelledby="idlerpg-players-heading">
         <h2 id="idlerpg-players-heading">Players</h2>
-        <table class="idlerpg-table" id="idlerpg-players" hidden>
-          <thead><tr><th class="rank">#</th><th>Pilot</th><th class="num">Level</th><th class="num">XP</th><th class="num">Credits</th><th class="num">Hours</th><th>Last seen</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="idlerpg-table-wrap">
+          <table class="idlerpg-table" id="idlerpg-players" hidden>
+            <thead><tr><th class="rank">#</th><th>Pilot</th><th class="num">Level</th><th class="num">XP</th><th class="num">Kills</th><th>Weapon</th><th class="num">Credits</th><th class="num">Hours</th><th>Last seen</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <p class="idlerpg-empty" id="idlerpg-players-empty">No players yet — join an alliance voice channel.</p>
         <p class="idlerpg-note">Display names as shown on Discord. A green dot means the pilot is in voice right now.</p>
       </section>
@@ -1114,9 +1143,12 @@
         <h2 id="idlerpg-rules-heading">How it works</h2>
         <ol class="idlerpg-rules">
           <li><b>Be present.</b> Every pilot in an alliance voice channel the bot can see is a player. Each tick you stay earns experience and credits.</li>
-          <li><b>Level up.</b> Levels cost more experience as you climb; the leaderboard ranks by experience, then hours.</li>
+          <li><b>Level up.</b> There is no level cap. Each level takes a little longer than the last, and level 100 is about three months of steady presence away. The leaderboard ranks by experience, then hours.</li>
           <li><b>Keep the peace.</b> Chatting in the game channel halves your credits and starts a cooldown — idling is the game.</li>
-          <li><b>Encounters.</b> Occasionally the ’verse rolls an encounter for someone present; outcomes are announced in Discord.</li>
+          <li><b>Grow.</b> Each level adds a point to strength, dexterity, or constitution in turn.</li>
+          <li><b>Encounters.</b> Now and then someone present meets something: a creature from the land their channel lies in (near their own level and a little above it: centered a tenth of your level higher, at most 15 levels, and spread two levels or a tenth either way; lair beasts run a few levels higher still). Goblins, wolves, and wisps turn up from the start; orcs, griffins, ogres, yetis, and wyverns only once you have grown into them. Or it is a piece of gear made for about their level, a hidden cache, or a blessing. Battles fight themselves. Win and you take experience and loot, and better gear is equipped on the spot. Lose and you drop a tenth of your credits. Every encounter is announced in Discord.</li>
+          <li><b>What creatures wear.</b> A creature's shape decides its gear. Bandits, orcs, goblins, skeletons, and trolls carry weapons and armor and drop them when they fall, and a lich carries a staff and its jewelry. War hounds wear spiked collars and sometimes barding. Birds, serpents, spiders, elementals, treants, and dragons carry nothing but teeth, claws, and branches. Collars and barding don't fit you, so they go in your bag to sell.</li>
+          <li><b>Rare gear.</b> Now and then a drop carries a prefix or a suffix (“Keen Sword”, “Leather Helmet of the Owl”) that adds damage, armor, or attributes. Very rarely it carries both (“Keen Sword of the Bear”) — a legendary piece. Lair beasts guard hoards where both are likelier.</li>
         </ol>
       </section>
       <p class="idlerpg-gateway" id="idlerpg-gateway" hidden></p>
@@ -1501,6 +1533,13 @@
           <div class="operation-links"><a class="goon-button" href="/tournaments">Tournaments</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/leagues">Leagues</a></h2>
+          <p class="operation-tagline">Perpetual and seasonal duel ladders, Elo-rated.</p>
+          <p class="operation-summary">Standing duel leagues with Elo ratings. Start a perpetual ladder or a seasonal one, log each duel, and the ratings update.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/leagues">Leagues</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
           <p class="operation-tagline">The standing dogfight ladder, synced from #1v1-challenges.</p>
           <p class="operation-summary">Anyone can challenge anyone, including pilots from other orgs.</p>
@@ -1510,7 +1549,7 @@
 <article class="operation-card" id="idlerpg-card">
           <h2 class="operation-name"><a href="/services/idlerpg">IDLERPG</a></h2>
           <p class="operation-tagline">Presence is progress.</p>
-          <p class="operation-summary">The alliance idle game. Every pilot in a voice channel the bot can see levels up just by being there — across every PERMAFLEET server at once.</p>
+          <p class="operation-summary">The alliance idle game. Every pilot in a voice channel the bot can see levels up, fights, and loots just by being there — across every PERMAFLEET server at once.</p>
           <ul class="operation-metrics" id="presence-strip" aria-label="IdleRPG presence" hidden></ul>
           <div class="operation-links"><a class="goon-button" href="/services/idlerpg">Players &amp; statistics</a></div>
         </article>
@@ -1654,6 +1693,71 @@
       <p class="page-back"><a id="tournament-back" href="/tournaments">&larr; Tournaments</a></p>
       <div class="tournament-view" id="tournament-view"><p class="tournament-muted">Loading…</p></div>
       <section class="tournament-log" id="tournament-log" hidden></section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="leagues-page" class="league-page" data-api="/services/leagues" data-base="/leagues">
+      <h1>LEAGUES</h1>
+      <p class="operations-intro">Standing duel leagues with Elo ratings. Start a perpetual ladder or a seasonal one, log each duel, and the ratings update.</p>
+      <section class="tournament-section">
+        <h2>Leagues</h2>
+        <div id="league-list"><p class="tournament-muted">Loading leagues…</p></div>
+      </section>
+      <section class="tournament-section">
+        <h2>New league</h2>
+        <form class="tournament-form" id="league-create-form">
+          <label>Name <input name="name" maxlength="48" required placeholder="Gladius Ladder"></label>
+          <label>Tagline <input name="tagline" maxlength="120"></label>
+          <label>Summary <textarea name="summary" maxlength="600"></textarea></label>
+          <div class="tournament-row">
+            <label>Kind <select name="kind">
+              <option value="perpetual">Perpetual: one ladder, forever</option>
+              <option value="seasonal">Seasonal: ratings restart each season</option>
+            </select></label>
+            <label>Usual set <select name="bestOf"><option value="1">Best of 1</option><option value="3" selected>Best of 3</option><option value="5">Best of 5</option><option value="7">Best of 7</option><option value="9">Best of 9</option></select></label>
+          </div>
+          <div class="tournament-row" data-seasonal hidden>
+            <label>First season <input name="seasonName" maxlength="32" placeholder="Season 1"></label>
+            <label>Planned end (optional) <input name="seasonEndsAt" type="date"></label>
+          </div>
+          <label>Pilots <span class="tournament-muted">optional, one per line; anyone who duels joins</span>
+            <textarea name="players" spellcheck="false" autocomplete="off"></textarea></label>
+          <details>
+            <summary>Rating settings</summary>
+            <div class="tournament-row">
+              <label>K <input name="k" type="number" min="4" max="100" step="1" value="32"></label>
+              <label>Starting rating <input name="initialRating" type="number" min="100" max="3000" step="1" value="1000"></label>
+            </div>
+          </details>
+          <button class="goon-button" type="submit">Create league</button>
+          <p class="tournament-form-note" role="status"></p>
+        </form>
+      </section>
+      <section class="tournament-section league-help">
+        <h2>How ratings work</h2>
+        <p>Everyone starts at <span data-league-initial>1000</span>. Each duel moves rating from the loser to the winner: a little for an expected win, a lot for an upset.</p>
+        <p>Longer sets count for more. A duel is worth K × √(best of) at most, with K = <span data-league-k>32</span>, so a best of 3 moves ratings about 1.7× as much as a best of 1, and a best of 5 about 2.2×. The set score goes on record but doesn’t change the rating.</p>
+        <p>In a <strong>perpetual</strong> league the ladder never resets. In a <strong>seasonal</strong> league everyone starts again each season, and a finished season’s standings stay on record.</p>
+      </section>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="league-page" class="league-page" data-api="/services/leagues" data-base="/leagues" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/leagues">&larr; Leagues</a></p>
+      <div class="league-view" id="league-view"><p class="tournament-muted">Loading…</p></div>
+      <div id="league-help" hidden><section class="tournament-section league-help">
+        <h2>How ratings work</h2>
+        <p>Everyone starts at <span data-league-initial>1000</span>. Each duel moves rating from the loser to the winner: a little for an expected win, a lot for an upset.</p>
+        <p>Longer sets count for more. A duel is worth K × √(best of) at most, with K = <span data-league-k>32</span>, so a best of 3 moves ratings about 1.7× as much as a best of 1, and a best of 5 about 2.2×. The set score goes on record but doesn’t change the rating.</p>
+        <p>In a <strong>perpetual</strong> league the ladder never resets. In a <strong>seasonal</strong> league everyone starts again each season, and a finished season’s standings stay on record.</p>
+      </section></div>
+      <section class="tournament-log" id="league-log" hidden></section>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -1954,6 +2058,10 @@
         var tournamentEl = path.toLowerCase().indexOf("/tournaments/") === 0
           ? document.getElementById('tournament-page')
           : null;
+        var isLeagues = path.toLowerCase() === "/leagues";
+        var leagueEl = path.toLowerCase().indexOf("/leagues/") === 0
+          ? document.getElementById('league-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -1969,7 +2077,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -1996,6 +2104,10 @@
         if (tournamentsEl) tournamentsEl.style.display = isTournaments ? 'block' : 'none';
         var tournamentPageEl = document.getElementById('tournament-page');
         if (tournamentPageEl) tournamentPageEl.style.display = tournamentEl ? 'block' : 'none';
+        var leaguesEl = document.getElementById('leagues-page');
+        if (leaguesEl) leaguesEl.style.display = isLeagues ? 'block' : 'none';
+        var leaguePageEl = document.getElementById('league-page');
+        if (leaguePageEl) leaguePageEl.style.display = leagueEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -2019,6 +2131,7 @@
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
         else if (tournamentEl) document.title = "TOURNAMENTS — GOON SQUAD";
+        else if (isLeagues || leagueEl) document.title = "LEAGUES — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
@@ -2549,6 +2662,31 @@
         if (empty) empty.hidden = keys.length > 0;
       }
 
+      function renderBattles (data) {
+        var list = document.getElementById('idlerpg-battles');
+        var slain = document.getElementById('idlerpg-slain');
+        var heading = document.getElementById('idlerpg-slain-heading');
+        var empty = document.getElementById('idlerpg-battles-empty');
+        var battles = data.battles || { won: 0, lost: 0, total: 0 };
+        var top = data.slain || [];
+        list.textContent = '';
+        slain.textContent = '';
+        if (battles.total > 0) {
+          list.appendChild(stat(int(battles.total), 'battles'));
+          list.appendChild(stat(int(battles.won), 'won'));
+          list.appendChild(stat(int(battles.lost), 'lost'));
+          list.appendChild(stat(Math.round(battles.won / battles.total * 100) + '%', 'win rate'));
+        }
+        top.forEach(function (c) {
+          var li = el('li', '');
+          li.appendChild(el('b', '', c.name));
+          li.appendChild(document.createTextNode(' \u00d7 ' + int(c.count)));
+          slain.appendChild(li);
+        });
+        if (heading) heading.hidden = !top.length;
+        if (empty) empty.hidden = battles.total > 0;
+      }
+
       function renderGateway (data) {
         var note = document.getElementById('idlerpg-gateway');
         if (!note) return;
@@ -2573,6 +2711,8 @@
           tr.appendChild(el('td', 'name', p.name));
           tr.appendChild(el('td', 'num', String(p.level)));
           tr.appendChild(el('td', 'num', int(p.experience)));
+          tr.appendChild(el('td', 'num', int(p.kills)));
+          tr.appendChild(el('td', 'weapon', p.weapon || '\u2014'));
           tr.appendChild(el('td', 'num', int(p.wealth)));
           tr.appendChild(el('td', 'num', fmt(p.hours)));
           tr.appendChild(el('td', '', p.online ? 'now' : (p.lastSeen || '\u2014')));
@@ -2587,7 +2727,7 @@
           .then(function (res) { return res.ok ? res.json() : null; })
           .then(function (data) {
             if (!data) return;
-            renderStats(data); renderHistory(data); renderLevels(data); renderGateway(data);
+            renderStats(data); renderHistory(data); renderLevels(data); renderBattles(data); renderGateway(data);
           })
           .catch(function () {});
         fetch("/services/idlerpg/players" + '?limit=100', { headers: { Accept: 'application/json' } })
@@ -2791,6 +2931,7 @@
     <script src="/scripts/melee-rotation-drill.js" defer></script>
     <script src="/scripts/tournament-bracket.js" defer></script>
     <script src="/scripts/tournaments.js" defer></script>
+    <script src="/scripts/leagues.js" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');

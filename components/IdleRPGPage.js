@@ -3,8 +3,9 @@
 /**
  * IdleRPG players & statistics page. Everything on it is filled client-side
  * from `GET /services/idlerpg` (aggregates + 30-day history + level
- * histogram) and `GET /services/idlerpg/players` (display names and game
- * numbers only — never Discord ids or messages).
+ * histogram + battle totals and most-slain creatures) and
+ * `GET /services/idlerpg/players` (display names and game numbers only —
+ * never Discord ids or messages).
  */
 
 const escapeHtml = require('../functions/escapeHtml');
@@ -29,7 +30,10 @@ function renderIdleRPGCss () {
       .idlerpg-levels { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
       .idlerpg-levels li { background: rgba(76, 29, 149, 0.35); border: 1px solid #4C1D95; border-radius: 6px; color: #ddd; font-size: 0.8rem; padding: 0.25rem 0.6rem; }
       .idlerpg-levels li b { color: #fff; }
+      .idlerpg-table-wrap { overflow-x: auto; }
       .idlerpg-table { border-collapse: collapse; font-size: 0.88rem; width: 100%; }
+      .idlerpg-table td.weapon { color: #bbb; white-space: nowrap; }
+      .idlerpg-subhead { color: #888; font-size: 0.68rem; letter-spacing: 0.08em; margin: 1rem 0 0.5rem; text-transform: uppercase; }
       .idlerpg-table th, .idlerpg-table td { border-bottom: 1px solid #444; padding: 0.4rem 0.5rem; text-align: left; vertical-align: middle; }
       .idlerpg-table th { color: #888; font-size: 0.68rem; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; }
       .idlerpg-table td.num, .idlerpg-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
@@ -71,12 +75,21 @@ function renderIdleRPGHtml (props) {
         <ul class="idlerpg-levels" id="idlerpg-levels"></ul>
         <p class="idlerpg-empty" id="idlerpg-levels-empty">Nobody has leveled yet.</p>
       </section>
+      <section class="idlerpg-section" aria-labelledby="idlerpg-battles-heading">
+        <h2 id="idlerpg-battles-heading">Battles</h2>
+        <ul class="idlerpg-stats" id="idlerpg-battles"></ul>
+        <h3 class="idlerpg-subhead" id="idlerpg-slain-heading" hidden>Most slain</h3>
+        <ul class="idlerpg-levels" id="idlerpg-slain" aria-labelledby="idlerpg-slain-heading"></ul>
+        <p class="idlerpg-empty" id="idlerpg-battles-empty">No battles fought yet.</p>
+      </section>
       <section class="idlerpg-section" aria-labelledby="idlerpg-players-heading">
         <h2 id="idlerpg-players-heading">Players</h2>
-        <table class="idlerpg-table" id="idlerpg-players" hidden>
-          <thead><tr><th class="rank">#</th><th>Pilot</th><th class="num">Level</th><th class="num">XP</th><th class="num">Credits</th><th class="num">Hours</th><th>Last seen</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="idlerpg-table-wrap">
+          <table class="idlerpg-table" id="idlerpg-players" hidden>
+            <thead><tr><th class="rank">#</th><th>Pilot</th><th class="num">Level</th><th class="num">XP</th><th class="num">Kills</th><th>Weapon</th><th class="num">Credits</th><th class="num">Hours</th><th>Last seen</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <p class="idlerpg-empty" id="idlerpg-players-empty">No players yet — join an alliance voice channel.</p>
         <p class="idlerpg-note">Display names as shown on Discord. A green dot means the pilot is in voice right now.</p>
       </section>
@@ -84,9 +97,12 @@ function renderIdleRPGHtml (props) {
         <h2 id="idlerpg-rules-heading">How it works</h2>
         <ol class="idlerpg-rules">
           <li><b>Be present.</b> Every pilot in an alliance voice channel the bot can see is a player. Each tick you stay earns experience and credits.</li>
-          <li><b>Level up.</b> Levels cost more experience as you climb; the leaderboard ranks by experience, then hours.</li>
+          <li><b>Level up.</b> There is no level cap. Each level takes a little longer than the last, and level 100 is about three months of steady presence away. The leaderboard ranks by experience, then hours.</li>
           <li><b>Keep the peace.</b> Chatting in the game channel halves your credits and starts a cooldown — idling is the game.</li>
-          <li><b>Encounters.</b> Occasionally the ’verse rolls an encounter for someone present; outcomes are announced in Discord.</li>
+          <li><b>Grow.</b> Each level adds a point to strength, dexterity, or constitution in turn.</li>
+          <li><b>Encounters.</b> Now and then someone present meets something: a creature from the land their channel lies in (near their own level and a little above it: centered a tenth of your level higher, at most 15 levels, and spread two levels or a tenth either way; lair beasts run a few levels higher still). Goblins, wolves, and wisps turn up from the start; orcs, griffins, ogres, yetis, and wyverns only once you have grown into them. Or it is a piece of gear made for about their level, a hidden cache, or a blessing. Battles fight themselves. Win and you take experience and loot, and better gear is equipped on the spot. Lose and you drop a tenth of your credits. Every encounter is announced in Discord.</li>
+          <li><b>What creatures wear.</b> A creature's shape decides its gear. Bandits, orcs, goblins, skeletons, and trolls carry weapons and armor and drop them when they fall, and a lich carries a staff and its jewelry. War hounds wear spiked collars and sometimes barding. Birds, serpents, spiders, elementals, treants, and dragons carry nothing but teeth, claws, and branches. Collars and barding don't fit you, so they go in your bag to sell.</li>
+          <li><b>Rare gear.</b> Now and then a drop carries a prefix or a suffix (“Keen Sword”, “Leather Helmet of the Owl”) that adds damage, armor, or attributes. Very rarely it carries both (“Keen Sword of the Bear”) — a legendary piece. Lair beasts guard hoards where both are likelier.</li>
         </ol>
       </section>
       <p class="idlerpg-gateway" id="idlerpg-gateway" hidden></p>
@@ -186,6 +202,31 @@ function renderIdleRPGScript (opts = {}) {
         if (empty) empty.hidden = keys.length > 0;
       }
 
+      function renderBattles (data) {
+        var list = document.getElementById('idlerpg-battles');
+        var slain = document.getElementById('idlerpg-slain');
+        var heading = document.getElementById('idlerpg-slain-heading');
+        var empty = document.getElementById('idlerpg-battles-empty');
+        var battles = data.battles || { won: 0, lost: 0, total: 0 };
+        var top = data.slain || [];
+        list.textContent = '';
+        slain.textContent = '';
+        if (battles.total > 0) {
+          list.appendChild(stat(int(battles.total), 'battles'));
+          list.appendChild(stat(int(battles.won), 'won'));
+          list.appendChild(stat(int(battles.lost), 'lost'));
+          list.appendChild(stat(Math.round(battles.won / battles.total * 100) + '%', 'win rate'));
+        }
+        top.forEach(function (c) {
+          var li = el('li', '');
+          li.appendChild(el('b', '', c.name));
+          li.appendChild(document.createTextNode(' \\u00d7 ' + int(c.count)));
+          slain.appendChild(li);
+        });
+        if (heading) heading.hidden = !top.length;
+        if (empty) empty.hidden = battles.total > 0;
+      }
+
       function renderGateway (data) {
         var note = document.getElementById('idlerpg-gateway');
         if (!note) return;
@@ -210,6 +251,8 @@ function renderIdleRPGScript (opts = {}) {
           tr.appendChild(el('td', 'name', p.name));
           tr.appendChild(el('td', 'num', String(p.level)));
           tr.appendChild(el('td', 'num', int(p.experience)));
+          tr.appendChild(el('td', 'num', int(p.kills)));
+          tr.appendChild(el('td', 'weapon', p.weapon || '\\u2014'));
           tr.appendChild(el('td', 'num', int(p.wealth)));
           tr.appendChild(el('td', 'num', fmt(p.hours)));
           tr.appendChild(el('td', '', p.online ? 'now' : (p.lastSeen || '\\u2014')));
@@ -224,7 +267,7 @@ function renderIdleRPGScript (opts = {}) {
           .then(function (res) { return res.ok ? res.json() : null; })
           .then(function (data) {
             if (!data) return;
-            renderStats(data); renderHistory(data); renderLevels(data); renderGateway(data);
+            renderStats(data); renderHistory(data); renderLevels(data); renderBattles(data); renderGateway(data);
           })
           .catch(function () {});
         fetch(${playersEndpoint} + '?limit=${limit}', { headers: { Accept: 'application/json' } })

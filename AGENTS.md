@@ -39,7 +39,8 @@ Open Graph / Twitter tags because `services/goon.vc.js` swaps the
 (`functions/pageMeta.js`). Page paths have no trailing slash: `/x/` gets one 301
 to `/x` (`GoonVC#_canonicalPathMiddleware`, mounted ahead of `express.static` so
 a directory under `assets/` named like a page — e.g. a leftover `drills/` —
-can't redirect it to `/x/`). Add a route there when you add a page; absolute URLs
+can't redirect it to `/x/`; Store-backed pages under `/tournaments/` and
+`/leagues/` are matched by prefix). Add a route there when you add a page; absolute URLs
 use the `siteUrl` site setting (default `https://goon.vc`).
 The home page's "Subscribe on Discord" block lists the G00N guild's purchasable
 Server Subscription tiers from `GET /services/discord/subscriptions` (tier roles
@@ -87,24 +88,39 @@ Doorman's Discord adapter is **attached** to the same `@fabric/discord` client
 `services/operations.js` already runs (`Operations` emits `gateway`; the adapter
 has `replies: false`, never logs in, and never answers commands). There is still
 exactly one gateway client. The only thing it posts is IdleRPG game
-announcements (welcomes, level-ups, finds, penalties), and only to the text
+announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
 channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
 View Channel + Send Messages there. IdleRPG credits every member present in a voice channel the bot
 can see (`presence.channels` narrows it) once per `presence.tickMs` and keeps UTC
-day buckets; the route returns aggregates only (`presentNow`, `uniquePlayers`,
+day buckets. Its world comes from `@fabric/rpg` (a dependency of `idlerpg`,
+not of this tree): the tick is the rpg `WorldClock`, each tick a present
+player may meet (`presence.luck`) a creature from their voice channel's biome
+(near their level; 72 animals and fantasy creatures, tougher ones gated by
+`minLevel`), gear, a cache, or a blessing; battles fight themselves,
+wins pay XP and loot (better gear is equipped; gear rolls a prefix or suffix
+for rare, both for legendary), losses cost 10% of credits. A creature's body
+plan sets its slots and its equipment table what it wears (humanoids the
+player's kit, quadrupeds collar + barding, others nothing); players are
+humanoid and bag beast gear. No level cap; idlerpg's own curve (`100 * n^1.65`)
+puts level 100 about three months of presence away, with monsters centered a
+tenth of the player's level above it (at most 15). Gear,
+creatures, and armor scale with level (balanced with idlerpg's
+`npm run simulate`). The route returns aggregates only (`presentNow`, `uniquePlayers`,
 `totalPresentHours`, `last7Days`/`last30Days`, 30-day `history`, level
-histogram) and `GET /services/idlerpg/players?limit=` the public leaderboard
+histogram, `battles { won, lost, total }`, `kills`, top-5 `slain` creatures)
+and `GET /services/idlerpg/players?limit=` the public leaderboard
 (Discord display names — already public via the home-page widget — plus level /
-XP / credits / hours / online flag) — never member ids or messages. Names come
+XP / kills / weapon / credits / hours / online flag) — never member ids or messages. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
 one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
 IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
-histogram, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
+histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
 DocumentTitle}` in `GoonSPA`.
 Settings: `presence.{path,tickMs,luck,channels,gateway}` (`GOON_PRESENCE_STORE`,
 `GOON_PRESENCE_TICK_MS`); `gateway: false` keeps serving stored stats. `npm run
-link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`.
+link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`; with a
+linked `idlerpg`, run its own `npm run link:rpg` to use `../rpg`.
 The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule` and
 `/squadrons[/<id>]`, and `/organizations`) swaps the site header for its own menu bar
 (`components/PermafleetHeader.js`: Overview, Schedule, Squadrons,
@@ -166,6 +182,27 @@ bracket in `localStorage`. `assets/scripts/tournaments.js` drives the index,
 series, and record pages (`components/TournamentsPage.js`). In Node the
 bracket script exports its pure engine, shared with the service
 (`tests/tournament.js`, `tests/tournaments.service.js`).
+`/leagues` holds standing duel leagues (`services/leagues.js`, Fabric Store
+`stores/leagues`, `GOON_LEAGUES_STORE`, routes under `/services/leagues`).
+One is built in: the perpetual **Open League** (`open-league`, open rules — no
+ship class restrictions; `Leagues` `defaults`, created on start only while
+its id is free, so renames and restarts never duplicate it).
+Anyone creates more (`POST /services/leagues`: `name`, `kind` `perpetual` |
+`seasonal`, usual `bestOf`, optional `k` (default 32) and `initialRating`
+(default 1000), fixed at creation). A league lives at `/leagues/<id>` (name
+slug, `-2`… when taken). Logging a duel (`POST …/<id>/duels`: `winner`,
+`loser`, `bestOf`, `score` `[won, lost]`, where the winner took (n + 1) / 2)
+joins new names to the roster. Ratings are never stored: `functions/elo.js`
+replays the season's duels in logged order, and each duel moves
+K × √(best of) × (1 − expected) from loser to winner (the set score is kept but
+doesn't change the rating). Nothing is deleted: a wrong duel is voided (and can be
+restored) with `POST …/duels/<duelId>/void|restore`, and every change is in
+the league `log`. Seasonal leagues roll over with `POST …/<id>/seasons`, which
+closes the current season, freezes its `standings` + `champion`, and starts
+everyone at the initial rating again; a closed season's duels are final.
+`PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
+`components/LeaguesPage.js` + `assets/scripts/leagues.js` (`?season=<n>` shows
+a past season); link previews come from `Leagues#page`.
 `/sessions` is the single login page (Discord, Passport, GoonCitizen desktop),
 backed by the members Store under `/services/members`; `/members/login`
 redirects there. The HTML client probes `OPTIONS /services/rpc` and

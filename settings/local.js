@@ -74,6 +74,10 @@ module.exports = {
   tournaments: {
     path: process.env.GOON_TOURNAMENTS_STORE || 'stores/tournaments'
   },
+  // /leagues: perpetual and seasonal Elo duel leagues (Fabric Store, kept forever).
+  leagues: {
+    path: process.env.GOON_LEAGUES_STORE || 'stores/leagues'
+  },
 
   // /services/leaderboards/1v1: the ladder pinned in G00N SQUAD #1v1-challenges (Fabric Store).
   // The bot needs View Channel + Read Message History there, and the Message Content intent.
