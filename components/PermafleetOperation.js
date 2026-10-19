@@ -579,14 +579,12 @@ function renderPermafleetScript (opts) {
         var GUILD_ID = ${JSON.stringify(String(opts.guildId))};
         var PERMAFLEET_ID = ${JSON.stringify(String(opts.channelId))};
         var PERMAFLEET_NAME = ${JSON.stringify(String(opts.channelName).toLowerCase())};
-        var FALLBACK_INVITE = ${JSON.stringify(opts.inviteUrl)};
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');
         var listEl = document.getElementById('permafleet-voice-list');
         var emptyEl = document.getElementById('permafleet-empty');
         var serverEl = document.getElementById('permafleet-online');
-        var ctaEl = document.getElementById('permafleet-join');
 
         function resolveChannelId (channels) {
           if (!channels || !channels.length) return PERMAFLEET_ID;
@@ -625,7 +623,6 @@ function renderPermafleetScript (opts) {
           if (typeof data.presence_count === 'number') {
             serverEl.textContent = data.presence_count + ' online on server';
           }
-          ctaEl.href = data.instant_invite || FALLBACK_INVITE;
         }
 
         function renderFallback () {
@@ -633,7 +630,6 @@ function renderPermafleetScript (opts) {
           listEl.innerHTML = '';
           emptyEl.hidden = false;
           serverEl.textContent = '';
-          ctaEl.href = FALLBACK_INVITE;
         }
 
         window.fetch('https://discord.com/api/guilds/' + GUILD_ID + '/widget.json')

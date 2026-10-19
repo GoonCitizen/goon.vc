@@ -62,6 +62,7 @@ curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # prese
 | Var | Purpose |
 |-----|---------|
 | `FABRIC_HUB_ORIGIN` | Upstream Hub (`https://hub.fabric.pub`). Loopback allowed for local Hub. |
+| `FABRIC_HUB_SEEDS` | More Hubs, comma separated, tried in order when the ones before can't be reached (default `https://hub.goon.vc`; empty for none; ignored behind a loopback Hub). |
 | `FABRIC_HUB_PORT` | HTTP listen (default `8080`). Caddy proxies here. |
 | `FABRIC_HUB_INTERFACE` | Bind address (default `127.0.0.1`). |
 | `FABRIC_HUB_HOSTNAME` | Host header / sitemap host (default `goon.vc`). |

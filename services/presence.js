@@ -4,6 +4,22 @@ const { assertStoreOpen } = require('../functions/startStore');
 
 const BASE = '/services/idlerpg';
 const LEGACY_BASE = '/services/presence';
+const DEFAULT_SOURCES = ['voice'];
+
+// IdleRPG's `status` source is never used here: the Doorman Discord adapter
+// marks anyone who posts as online, which would pay text under another name.
+const GAME_SOURCES = { voice: 'channel', text: 'text' };
+
+/**
+ * IdleRPG presence sources for goon.vc's (`voice`, `text`).
+ * @param {Array<string>|string} sources List or comma-separated string.
+ * @returns {Array<string>}
+ */
+function gameSources (sources) {
+  const list = typeof sources === 'string' ? sources.split(',') : [].concat(sources || []);
+  const mapped = list.map((source) => GAME_SOURCES[String(source).trim().toLowerCase()]).filter(Boolean);
+  return [...new Set(mapped)];
+}
 
 function sendJson (res, status, body) {
   res.statusCode = status;
@@ -33,7 +49,9 @@ class Presence {
    * @param {string} [settings.path] Store directory for the game state.
    * @param {number} [settings.tickMs] IdleRPG tick interval (default 10 minutes).
    * @param {number} [settings.luck] Encounter chance per rewarded tick.
-   * @param {Array<string>} [settings.channels] Channel allowlist (empty = every voice channel counts).
+   * @param {Array<string>} [settings.sources] What earns: `voice` (in a voice channel) and/or
+   *   `text` (posting, for the game's text window afterwards). Default voice only.
+   * @param {Array<string>} [settings.channels] Channel allowlist (empty = every channel counts).
    * @param {Array<string>} [settings.announcements] Discord text channel ids that receive game
    *   announcements. The only thing the bot ever posts; commands are never answered.
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
@@ -47,6 +65,7 @@ class Presence {
       path: './stores/presence',
       tickMs: 10 * 60 * 1000,
       luck: 0.05,
+      sources: DEFAULT_SOURCES,
       channels: [],
       announcements: [],
       operations: null,
@@ -85,6 +104,7 @@ class Presence {
       path: this.settings.path,
       tickMs: this.settings.tickMs,
       luck: this.settings.luck,
+      sources: gameSources(this.settings.sources),
       channels: this.settings.channels,
       announcements: this.announcementTargets(),
       persistent: true,
@@ -254,3 +274,5 @@ class Presence {
 }
 
 module.exports = Presence;
+module.exports.DEFAULT_SOURCES = DEFAULT_SOURCES;
+module.exports.gameSources = gameSources;

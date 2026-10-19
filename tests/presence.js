@@ -147,6 +147,32 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     await again.stop();
   });
 
+  it('pays voice presence only by default, and text only when configured', async function () {
+    const TEXT = '1190527980120850496';
+    assert.deepStrictEqual(Presence.gameSources('voice,text'), ['channel', 'text']);
+    assert.deepStrictEqual(Presence.gameSources(['status', 'Voice']), ['channel']);
+
+    for (const [sources, expected] of [[undefined, 1], [['voice', 'text'], 2]]) {
+      const operations = new FakeOperations();
+      const presence = new Presence({ path: path.join(dir, `store-${expected}`), tickMs: 0, operations, sources });
+      await presence.start();
+      const discord = operations.connect();
+      discord.emit('activity', {
+        type: 'DiscordMessage',
+        actor: { ref: '333333333333333333', username: 'talker' },
+        target: { ref: TEXT },
+        object: { id: 'm1', content: 'o7' }
+      });
+      discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: null, newChannelId: VOICE, channelName: 'PERMAFLEET' });
+      await new Promise((resolve) => setImmediate(resolve));
+      await presence.game.tick();
+
+      assert.strictEqual((await presence.report()).presentNow, expected);
+      assert.strictEqual((await presence.players(10)).count, expected);
+      await presence.stop();
+    }
+  });
+
   it('names leaderboard pilots from the Discord member cache', async function () {
     const store = path.join(dir, 'store');
     // A pilot saved before names were announced.

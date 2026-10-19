@@ -10,10 +10,13 @@ module.exports = {
   /**
    * Upstream Fabric Hub that owns /sessions, /device-links, /services/rpc.
    * Override with FABRIC_HUB_ORIGIN (must be allowlisted — loopback or
-   * https://hub.fabric.pub / https://relay.goon.vc / https://goon.vc).
+   * https://hub.fabric.pub / https://hub.goon.vc / https://relay.goon.vc /
+   * https://goon.vc). `seeds` are more Hubs, tried in order when the ones
+   * before can't be reached (FABRIC_HUB_SEEDS, comma separated; empty for none).
    */
   hub: {
-    origin: process.env.FABRIC_HUB_ORIGIN || 'https://hub.fabric.pub'
+    origin: process.env.FABRIC_HUB_ORIGIN || 'https://hub.fabric.pub',
+    seeds: (process.env.FABRIC_HUB_SEEDS ?? 'https://hub.goon.vc').split(',').map((s) => s.trim()).filter(Boolean)
   },
 
   http: {
@@ -66,6 +69,9 @@ module.exports = {
   presence: {
     path: process.env.GOON_PRESENCE_STORE || 'stores/presence',
     tickMs: Number(process.env.GOON_PRESENCE_TICK_MS || 600000) || 600000,
+    // What earns XP: 'voice' (in a voice channel) and/or 'text' (posting keeps a
+    // member present for 30 minutes). goon.vc pays voice only.
+    sources: (process.env.GOON_PRESENCE_SOURCES || 'voice').split(','),
     channels: [], // empty = every voice channel the bot can see counts
     announcements: ['1560112808283086929'] // G00N SQUAD #idlerpg
   },

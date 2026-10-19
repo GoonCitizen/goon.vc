@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
+const { createHubList, isHubList } = require('../functions/hubApiProxy');
 
 const BASE = '/services/members';
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -78,7 +79,8 @@ class Members {
   /**
    * @param {Object} [settings]
    * @param {string} [settings.path] Store directory.
-   * @param {string} [settings.hubOrigin] Hub that signs Passport sessions.
+   * @param {string|string[]|Object} [settings.hubOrigin] Hub(s) that sign
+   *   Passport sessions, in order, or the site's shared Hub list.
    * @param {string} [settings.loginPath] SPA page to return to after login.
    * @param {Object} [settings.discord] `{ clientId, clientSecret, redirectUri, guildId }`
    * @param {number} [settings.sessionTtlMs]
@@ -95,6 +97,7 @@ class Members {
       cookieName: DEFAULT_COOKIE
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.discord = Object.assign({}, this.settings.discord);
+    this.hubs = isHubList(this.settings.hubOrigin) ? this.settings.hubOrigin : createHubList(this.settings.hubOrigin);
     this._fetch = this.settings.fetch || ((...args) => fetch(...args));
     this.store = null;
   }
@@ -257,11 +260,19 @@ class Members {
       return sendJson(res, 409, { error: 'Session already claimed' });
     }
 
+    const headers = { Accept: 'application/json' };
+    if (pollSecret) headers['X-Fabric-Poll-Secret'] = pollSecret;
+    let hubRes = null;
+    for (const origin of this.hubs.order()) {
+      try {
+        hubRes = await this._fetch(`${origin}/sessions/${encodeURIComponent(sessionId)}`, { headers });
+        this.hubs.answered(origin);
+        break;
+      } catch (_) { /* try the next Hub */ }
+    }
+    if (!hubRes) return sendJson(res, 502, { error: 'Hub unreachable' });
     let signed;
     try {
-      const headers = { Accept: 'application/json' };
-      if (pollSecret) headers['X-Fabric-Poll-Secret'] = pollSecret;
-      const hubRes = await this._fetch(`${this.settings.hubOrigin}/sessions/${encodeURIComponent(sessionId)}`, { headers });
       signed = hubRes.ok ? await hubRes.json() : null;
     } catch (_) {
       return sendJson(res, 502, { error: 'Hub unreachable' });

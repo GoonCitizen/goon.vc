@@ -7,6 +7,7 @@ const { resolveHttpListenHost } = require('@fabric/http/functions/httpSharedMode
 const { assertAllowedFabricHub } = require('@fabric/http/functions/fabricHubAllowlist');
 const {
   createHubApiMiddleware,
+  createHubList,
   normalizeHubOrigin,
   shouldProxyHubApi
 } = require('../functions/hubApiProxy');
@@ -22,6 +23,7 @@ const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
+const DEFAULT_HUB_SEEDS = ['https://hub.goon.vc'];
 const DEFAULT_HTTP_PORT = 8080;
 
 function isPlainObject (value) {
@@ -48,6 +50,21 @@ function mergeDeep (target, source) {
 function envHubOrigin () {
   const raw = process.env.FABRIC_HUB_ORIGIN || process.env.HUB_ORIGIN || '';
   return normalizeHubOrigin(raw);
+}
+
+function envHubSeeds () {
+  const raw = process.env.FABRIC_HUB_SEEDS;
+  if (raw === undefined) return null;
+  return String(raw).split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function isLoopbackOrigin (origin) {
+  try {
+    const host = new URL(origin).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  } catch (_) {
+    return false;
+  }
 }
 
 function envHttpPort () {
@@ -86,7 +103,8 @@ class GoonVC {
       name: 'GOON.VC',
       site: defaultSite,
       hub: {
-        origin: envHubOrigin() || DEFAULT_HUB_ORIGIN
+        origin: envHubOrigin() || DEFAULT_HUB_ORIGIN,
+        seeds: envHubSeeds() || DEFAULT_HUB_SEEDS
       },
       http: {
         port: envHttpPort() || DEFAULT_HTTP_PORT,
@@ -145,6 +163,29 @@ class GoonVC {
       throw new Error(allowed.error || `Hub origin not allowed: ${origin}`);
     }
     return allowed.hubBase;
+  }
+
+  /**
+   * The Hub, then `hub.seeds` in order (tried when the ones before can't be
+   * reached). Seeds outside the Fabric Hub allowlist are skipped, and none are
+   * used with a loopback Hub: falling over from a local Hub to a public one
+   * would sign members in somewhere else.
+   * @returns {string[]}
+   */
+  _hubOrigins () {
+    const primary = this._assertHubOrigin();
+    if (isLoopbackOrigin(primary)) return [primary];
+    const origins = [primary];
+    const seeds = (this.settings.hub && this.settings.hub.seeds) || [];
+    for (const seed of [].concat(seeds)) {
+      const allowed = assertAllowedFabricHub(seed);
+      if (!allowed.ok) {
+        this.emit('error', 'GOON.VC', `skipping Hub seed: ${allowed.error}`);
+        continue;
+      }
+      if (!origins.includes(allowed.hubBase)) origins.push(allowed.hubBase);
+    }
+    return origins;
   }
 
   /**
@@ -259,7 +300,7 @@ class GoonVC {
   }
 
   async _start () {
-    const hubOrigin = this._assertHubOrigin();
+    const hubs = createHubList(this._hubOrigins());
     const assets = this.settings.assets
       || path.resolve(__dirname, '..', 'assets');
     const listenHost = (this.settings.http && this.settings.http.interface)
@@ -271,7 +312,7 @@ class GoonVC {
 
     this.members = new Members({
       path: memberSettings.path || './stores/members',
-      hubOrigin,
+      hubOrigin: hubs,
       loginPath: (this.settings.site && this.settings.site.loginPath) || '/sessions',
       sessionTtlMs: memberSettings.sessionTtlMs,
       fetch: memberSettings.fetch,
@@ -318,6 +359,7 @@ class GoonVC {
       path: presenceSettings.path || './stores/presence',
       tickMs: presenceSettings.tickMs,
       luck: presenceSettings.luck,
+      sources: presenceSettings.sources,
       channels: presenceSettings.channels,
       announcements: presenceSettings.announcements,
       gateway: presenceSettings.gateway,
@@ -387,7 +429,7 @@ class GoonVC {
       middlewares: {
         restorePath: this._restorePathMiddleware(),
         pageMeta: this._pageMetaMiddleware(assets),
-        hubApi: createHubApiMiddleware(hubOrigin, {
+        hubApi: createHubApiMiddleware(hubs, {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
         }),
         members: this.members.middleware(),
@@ -408,7 +450,7 @@ class GoonVC {
 
     await this.http.start();
     await assertStoreOpen(this.http.localStore);
-    this.emit('log', 'GOON.VC', `HTML site on ${listenHost}:${port}; Hub APIs → ${hubOrigin}`);
+    this.emit('log', 'GOON.VC', `HTML site on ${listenHost}:${port}; Hub APIs → ${hubs.origins.join(', ')}`);
     return this;
   }
 
@@ -429,4 +471,5 @@ class GoonVC {
 
 module.exports = GoonVC;
 module.exports.DEFAULT_HUB_ORIGIN = DEFAULT_HUB_ORIGIN;
+module.exports.DEFAULT_HUB_SEEDS = DEFAULT_HUB_SEEDS;
 module.exports.DEFAULT_HTTP_PORT = DEFAULT_HTTP_PORT;

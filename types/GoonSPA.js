@@ -121,7 +121,7 @@ const DEFAULTS = {
   permafleetDocumentTitle: 'PERMAFLEET — GOON SQUAD',
   permafleetChannelId: '1236721094153732276',
   permafleetChannelName: 'permafleet',
-  permafleetInviteUrl: 'https://discord.com/invite/M4h9bBWq',
+  permafleetInviteUrl: 'https://discord.gg/permafleet',
   permafleetHeroImage: '/hero-quantum.jpg',
   permafleetSquadronsPath: '/operations/PERMAFLEET/squadrons',
   permafleetSquadronsDocumentTitle: 'PERMAFLEET Squadrons — GOON SQUAD',

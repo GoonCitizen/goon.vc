@@ -6,12 +6,18 @@ or a GoonCitizen relay.
 **Topology (PLAN.md):**
 1. `goon.vc` — this repo: GoonSPA HTML + same-origin Hub API proxy
 2. `relay.goon.vc` — GoonCitizen LiveRelay (`star-citizen-live`)
-3. `hub.fabric.pub` — generic Fabric Hub (contract registry, Beacon, `/sessions` owner)
+3. `hub.fabric.pub` — generic Fabric Hub (contract registry, Beacon, `/sessions` owner);
+   `hub.goon.vc` is the same Hub under a second name
 
 **What this process is:** `@fabric/http` `HTTPServer` serving `assets/` and
 reverse-proxying `/sessions`, `/device-links`, `/services/rpc`, and
 `/identity/cluster` + `/identity/cross-sign` to `FABRIC_HUB_ORIGIN`
-(default `https://hub.fabric.pub`). No Fabric Peer listen, no Bitcoin, no
+(default `https://hub.fabric.pub`), then `hub.seeds` (`FABRIC_HUB_SEEDS`, default
+`https://hub.goon.vc`) in order when the ones before can't be reached at all
+(DNS / refused — never after a Hub answered or timed out). The proxy and the
+Passport claim share one list (`createHubList` in `functions/hubApiProxy.js`)
+that sticks to the Hub that answered last; seeds outside the `@fabric/http`
+Hub allowlist are skipped, and none are used behind a loopback Hub. No Fabric Peer listen, no Bitcoin, no
 `/services/star-citizen`. The one Discord gateway client is the read-only
 metrics bot below (non-privileged intents, `autoCommands: false`, never
 replies). Favicons are the suite lettermark
@@ -92,8 +98,12 @@ announcements (welcomes, level-ups, battles, finds, penalties), and only to the 
 channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
 View Channel + Send Messages there. IdleRPG credits every member present in a voice channel the bot
 can see (`presence.channels` narrows it) once per `presence.tickMs` and keeps UTC
-day buckets. Its world comes from `@fabric/rpg` (a dependency of `idlerpg`,
-not of this tree): the tick is the rpg `WorldClock`, each tick a present
+day buckets. Only voice earns XP on goon.vc: `presence.sources`
+(`GOON_PRESENCE_SOURCES`, default `voice`) maps to idlerpg's `sources`, and
+`text` (posting keeps a player present for idlerpg's `textWindowMs`) is for
+text-only communities, not enabled here. idlerpg's `status` source is never
+passed through — the Doorman adapter marks anyone who posts as online.
+Its world comes from `@fabric/rpg` (a dependency of `idlerpg`, not of this tree): the tick is the rpg `WorldClock`, each tick a present
 player may meet (`presence.luck`) a creature from their voice channel's biome
 (near their level; 72 animals and fantasy creatures, tougher ones gated by
 `minLevel`), gear, a cache, or a blessing; battles fight themselves,
@@ -117,8 +127,8 @@ IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
 DocumentTitle}` in `GoonSPA`.
-Settings: `presence.{path,tickMs,luck,channels,gateway}` (`GOON_PRESENCE_STORE`,
-`GOON_PRESENCE_TICK_MS`); `gateway: false` keeps serving stored stats. `npm run
+Settings: `presence.{path,tickMs,luck,channels,sources,gateway}` (`GOON_PRESENCE_STORE`,
+`GOON_PRESENCE_TICK_MS`, `GOON_PRESENCE_SOURCES`); `gateway: false` keeps serving stored stats. `npm run
 link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`; with a
 linked `idlerpg`, run its own `npm run link:rpg` to use `../rpg`.
 The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule` and

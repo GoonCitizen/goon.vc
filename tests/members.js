@@ -40,6 +40,12 @@ describe('Members', function () {
     if (url === 'http://hub.test/sessions/pendingsession') {
       return Promise.resolve(jsonResponse(200, { status: 'pending' }));
     }
+    if (url === 'http://hub.test/sessions/signedsession2') {
+      return Promise.resolve(jsonResponse(200, { status: 'signed', identity: { id: 'fabric-id-2' }, pubkeyHex: '02cd' }));
+    }
+    if (url.startsWith('http://down.test/')) {
+      return Promise.reject(new TypeError('fetch failed'));
+    }
     return Promise.resolve(jsonResponse(404, {}));
   }
 
@@ -172,6 +178,30 @@ describe('Members', function () {
     assert.strictEqual(logout.status, 200);
     const after = await request('/services/members/session', { headers: { Cookie: cookie } });
     assert.strictEqual(after.status, 401);
+  });
+
+  it('polls the next Hub when one cannot be reached', async function () {
+    const { createHubList } = require('../functions/hubApiProxy');
+    const saved = members.hubs;
+    members.hubs = createHubList(['http://down.test', 'http://hub.test']);
+    try {
+      const res = await request('/services/members/passport', {
+        method: 'POST',
+        body: { sessionId: 'signedsession2' }
+      });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.json.member.id, 'fabric:fabric-id-2');
+      assert.strictEqual(members.hubs.order()[0], 'http://hub.test');
+
+      members.hubs = createHubList(['http://down.test']);
+      const down = await request('/services/members/passport', {
+        method: 'POST',
+        body: { sessionId: 'pendingsession' }
+      });
+      assert.strictEqual(down.status, 502);
+    } finally {
+      members.hubs = saved;
+    }
   });
 
   it('keeps members across a Store restart', async function () {

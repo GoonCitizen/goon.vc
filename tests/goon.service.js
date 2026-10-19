@@ -101,6 +101,78 @@ describe('goon.vc', function () {
         await new Promise((resolve) => stub.close(resolve));
       }
     });
+
+    it('falls over to the next Hub only when one cannot be reached, then stays there', async function () {
+      const { createHubApiMiddleware, createHubList } = require('../functions/hubApiProxy');
+      const free = await new Promise((resolve) => {
+        const probe = require('net').createServer().listen(0, '127.0.0.1', () => {
+          const { port } = probe.address();
+          probe.close(() => resolve(port));
+        });
+      });
+      const seen = [];
+      const stub = http.createServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => { body += c; });
+        req.on('end', () => {
+          seen.push(body);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: true }));
+        });
+      });
+      await new Promise((resolve) => stub.listen(0, '127.0.0.1', resolve));
+      const hubs = createHubList([`http://127.0.0.1:${free}`, `http://127.0.0.1:${stub.address().port}`]);
+      const mw = createHubApiMiddleware(hubs);
+      const edge = http.createServer((req, res) => mw(req, res, () => res.end('not proxied')));
+      await new Promise((resolve) => edge.listen(0, '127.0.0.1', resolve));
+      const post = (payload) => new Promise((resolve, reject) => {
+        const req = http.request({
+          hostname: '127.0.0.1',
+          port: edge.address().port,
+          path: '/sessions',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+        }, (res) => {
+          res.resume();
+          res.on('end', () => resolve(res.statusCode));
+        });
+        req.on('error', reject);
+        req.end(payload);
+      });
+      try {
+        assert.strictEqual(await post('{"n":1}'), 200);
+        assert.deepStrictEqual(seen, ['{"n":1}'], 'the body reaches the second Hub intact');
+        assert.strictEqual(hubs.order()[0], `http://127.0.0.1:${stub.address().port}`, 'sticks to the Hub that answered');
+        assert.strictEqual(await post('{"n":2}'), 200);
+        await new Promise((resolve) => stub.close(resolve));
+        assert.strictEqual(await post('{"n":3}'), 502, 'no Hub reachable');
+      } finally {
+        await new Promise((resolve) => edge.close(resolve));
+        if (stub.listening) await new Promise((resolve) => stub.close(resolve));
+      }
+    });
+
+    it('lists hub.goon.vc after the Hub, but never behind a loopback Hub', function () {
+      const { DEFAULT_HUB_SEEDS } = require('../services/goon.vc');
+      assert.deepStrictEqual(DEFAULT_HUB_SEEDS, ['https://hub.goon.vc']);
+      // Older @fabric/http builds don't allowlist hub.goon.vc yet.
+      const saved = process.env.FABRIC_HUB_ALLOWLIST;
+      process.env.FABRIC_HUB_ALLOWLIST = 'https://hub.goon.vc';
+      try {
+        const site = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: DEFAULT_HUB_SEEDS } });
+        assert.deepStrictEqual(site._hubOrigins(), ['https://hub.fabric.pub', 'https://hub.goon.vc']);
+        const local = new GoonVC({ listen: false, hub: { origin: 'http://127.0.0.1:8080', seeds: DEFAULT_HUB_SEEDS } });
+        assert.deepStrictEqual(local._hubOrigins(), ['http://127.0.0.1:8080']);
+        const errors = [];
+        const odd = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: ['https://evil.example'] } });
+        odd.on('error', (...parts) => errors.push(parts.join(' ')));
+        assert.deepStrictEqual(odd._hubOrigins(), ['https://hub.fabric.pub']);
+        assert.ok(/evil\.example/.test(errors[0]), 'reports the skipped seed');
+      } finally {
+        if (saved === undefined) delete process.env.FABRIC_HUB_ALLOWLIST;
+        else process.env.FABRIC_HUB_ALLOWLIST = saved;
+      }
+    });
   });
 
   describe('GoonVC', function () {
@@ -762,7 +834,7 @@ describe('goon.vc HTTP', function () {
       'Schedule /operations/PERMAFLEET/schedule',
       'Squadrons /operations/PERMAFLEET/squadrons',
       'Organizations /organizations',
-      'Join https://discord.com/invite/M4h9bBWq'
+      'Join https://discord.gg/permafleet'
     ]);
     assert.ok(!res.body.includes('class="op-nav"') && !res.body.includes('class="schedule-nav"'), 'replaces the per-page crumbs');
     assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);"));
