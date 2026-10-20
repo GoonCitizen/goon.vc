@@ -5,7 +5,8 @@
  * from `GET /services/idlerpg` (aggregates + 30-day history + level
  * histogram + battle totals and most-slain creatures) and
  * `GET /services/idlerpg/players` (display names and game numbers only —
- * never Discord ids or messages).
+ * never Discord ids or messages). Each named pilot links to their own page
+ * ({@link module:components/IdleRPGPlayerPage}).
  */
 
 const escapeHtml = require('../functions/escapeHtml');
@@ -91,14 +92,14 @@ function renderIdleRPGHtml (props) {
           </table>
         </div>
         <p class="idlerpg-empty" id="idlerpg-players-empty">No players yet — join an alliance voice channel.</p>
-        <p class="idlerpg-note">Display names as shown on Discord. A green dot means the pilot is in voice right now.</p>
+        <p class="idlerpg-note">Display names as shown on Discord; pick a pilot for their gear and battles. A green dot means the pilot is in voice right now.</p>
       </section>
       <section class="idlerpg-section" aria-labelledby="idlerpg-rules-heading">
         <h2 id="idlerpg-rules-heading">How it works</h2>
         <ol class="idlerpg-rules">
           <li><b>Be present.</b> Every pilot in an alliance voice channel the bot can see is a player. Each tick you stay earns experience and credits.</li>
           <li><b>Level up.</b> There is no level cap. Each level takes a little longer than the last, and level 100 is about three months of steady presence away. The leaderboard ranks by experience, then hours.</li>
-          <li><b>Keep the peace.</b> Chatting in the game channel halves your credits and starts a cooldown — idling is the game.</li>
+          <li><b>Keep the peace.</b> Chatting in <b>#idlerpg</b>, where the game is announced, halves your credits and starts a cooldown — idling is the game. Talk anywhere else, voice channel chat included, as much as you like.</li>
           <li><b>Grow.</b> Each level adds a point to strength, dexterity, or constitution in turn.</li>
           <li><b>Encounters.</b> Now and then someone present meets something: a creature from the land their channel lies in (near their own level and a little above it: centered a tenth of your level higher, at most 15 levels, and spread two levels or a tenth either way; lair beasts run a few levels higher still). Goblins, wolves, and wisps turn up from the start; orcs, griffins, ogres, yetis, and wyverns only once you have grown into them. Or it is a piece of gear made for about their level, a hidden cache, or a blessing. Battles fight themselves. Win and you take experience and loot, and better gear is equipped on the spot. Lose and you drop a tenth of your credits. Every encounter is announced in Discord.</li>
           <li><b>What creatures wear.</b> A creature's shape decides its gear. Bandits, orcs, goblins, skeletons, and trolls carry weapons and armor and drop them when they fall, and a lich carries a staff and its jewelry. War hounds wear spiked collars and sometimes barding. Birds, serpents, spiders, elementals, treants, and dragons carry nothing but teeth, claws, and branches. Collars and barding don't fit you, so they go in your bag to sell.</li>
@@ -248,7 +249,15 @@ function renderIdleRPGScript (opts = {}) {
         rows.forEach(function (p) {
           var tr = el('tr', p.online ? 'idlerpg-online' : '');
           tr.appendChild(el('td', 'rank', String(p.rank)));
-          tr.appendChild(el('td', 'name', p.name));
+          var name = el('td', 'name');
+          if (p.slug) {
+            var link = el('a', '', p.name);
+            link.href = ${playersEndpoint} + '/' + encodeURIComponent(p.slug);
+            name.appendChild(link);
+          } else {
+            name.textContent = p.name;
+          }
+          tr.appendChild(name);
           tr.appendChild(el('td', 'num', String(p.level)));
           tr.appendChild(el('td', 'num', int(p.experience)));
           tr.appendChild(el('td', 'num', int(p.kills)));

@@ -36,7 +36,9 @@ module.exports = {
     token: process.env.DISCORD_BOT_TOKEN || null,
     secretsFile: process.env.DISCORD_SECRETS_FILE || null,
     // Member Login (OAuth2). Register <origin>/services/members/discord/callback
-    // as a redirect in the Discord application; the secret is env-only.
+    // as a redirect in the Discord application. Without DISCORD_APP_ID it is the
+    // application that owns the bot token; the secret is DISCORD_APP_SECRET or
+    // `appSecret` in the bot's discord.secrets.json (never in this file).
     clientId: process.env.DISCORD_APP_ID || process.env.DISCORD_CLIENT_ID || null,
     clientSecret: process.env.DISCORD_APP_SECRET || process.env.DISCORD_CLIENT_SECRET || null,
     redirectUri: process.env.DISCORD_REDIRECT_URI || null,
@@ -91,6 +93,21 @@ module.exports = {
     path: process.env.GOON_LEADERBOARD_STORE || 'stores/leaderboard',
     channelId: '1229937640116064276',
     channelName: '1v1-challenges'
+  },
+
+  // /clips: videos from the Discord clip channels, low-res proxies for the
+  // storyboard editor, and server-side renders (Fabric Store + media on disk).
+  // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)",
+  // plus every media channel); threads under a matched channel are read too.
+  // Needs ffmpeg + ffprobe on PATH; the bot needs View Channel + Read Message History.
+  // GOON_CLIPS_LINKS=1 also imports Medal / YouTube / Twitch links (needs yt-dlp).
+  clips: {
+    path: process.env.GOON_CLIPS_STORE || 'stores/clips',
+    channels: process.env.GOON_CLIPS_CHANNELS
+      ? process.env.GOON_CLIPS_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined,
+    externalLinks: process.env.GOON_CLIPS_LINKS === '1',
+    poll: process.env.GOON_CLIPS !== '0'
   },
 
   site: {

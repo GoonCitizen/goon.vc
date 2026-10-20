@@ -36,7 +36,10 @@ rendered live from that copy at `GET /services/events/schedule.svg?server=<id>&t
 control live on the board: the title picks the server, the zone label picks the
 zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
-the element's contract. The page footer's "Add our bot to your Discord" button
+the element's contract. `/operations/PERMAFLEET/schedule` is the same element
+pinned to the home server (`server=<discordWidgetId>`, PERMAFLEET brand, no
+server picker); every calendar renders through `EventsPage.calendar()` so they
+share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
 hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
 application that owns the bot token (scope `bot`, View Channels only).
 Every route is the one built `assets/index.html`; link previews get per-page
@@ -96,7 +99,9 @@ has `replies: false`, never logs in, and never answers commands). There is still
 exactly one gateway client. The only thing it posts is IdleRPG game
 announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
 channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
-View Channel + Send Messages there. IdleRPG credits every member present in a voice channel the bot
+View Channel + Send Messages there. Chatting is penalized only in those
+announcement channels (never in voice channel chat or anywhere else); with
+none configured, `Presence` turns penalties off. IdleRPG credits every member present in a voice channel the bot
 can see (`presence.channels` narrows it) once per `presence.tickMs` and keeps UTC
 day buckets. Only voice earns XP on goon.vc: `presence.sources`
 (`GOON_PRESENCE_SOURCES`, default `voice`) maps to idlerpg's `sources`, and
@@ -120,7 +125,13 @@ creatures, and armor scale with level (balanced with idlerpg's
 histogram, `battles { won, lost, total }`, `kills`, top-5 `slain` creatures)
 and `GET /services/idlerpg/players?limit=` the public leaderboard
 (Discord display names — already public via the home-page widget — plus level /
-XP / kills / weapon / credits / hours / online flag) — never member ids or messages. Names come
+XP / kills / weapon / credits / hours / online flag / `slug`) — never member ids or messages.
+Each named pilot has a page at `/services/idlerpg/players/<slug>`
+(`components/IdleRPGPlayerPage.js`; JSON clients get idlerpg's `profile(slug)`:
+rank, level progress, attributes, gear, bag, battles, top-5 slain; 404 when
+unknown). The slug is the display name slugified, `-2`… for a shared name by
+who played first; "Unknown pilot"s get none. Link previews come from
+`Presence#page`. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
 one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
 IdleRPG card fed by that route; the `/services/idlerpg` page is the players
@@ -213,12 +224,68 @@ everyone at the initial rating again; a closed season's duels are final.
 `PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
 `components/LeaguesPage.js` + `assets/scripts/leagues.js` (`?season=<n>` shows
 a past season); link previews come from `Leagues#page`.
+`/clips` is the public clip library and editor (`services/clips.js`, `GOON_CLIPS_STORE`
+default `stores/clips`: a Fabric Store plus `media/`, `renders/`, `tmp/`; routes
+under `/services/clips`). No sign-in: anyone may browse, edit, and render; a
+signed-in member's display name goes on their changes (`identify`), otherwise
+`null`. A render of a project revision that is queued, running, or done is
+reused, and new renders are refused (429) while `maxQueuedRenders` wait.
+Discord REST only: every guild the bot is in (`clips.guilds` narrows it), text,
+announcement, forum, and media channels matching `clips.channels`
+(`GOON_CLIPS_CHANNELS`; id, exact name, or `"/regex/"`; default names with
+"clip(s)"/"video(s)") plus every media channel (`mediaChannels`), and the
+active + archived public threads under them (forum / media posts are threads),
+are polled every `ttlMs` with an `after=` cursor per channel or thread (90 days
+of backfill for a new one; skipped while its `last_message_id` is behind the
+cursor; `GOON_CLIPS=0` serves stored clips only). `npm run collect:clips`
+(`scripts/clips.js`; stop the server first — one process per Store) reads the
+whole history of those channels and threads in every guild (`--channel`,
+`--guild` narrow it; `--days`, `--no-proxies`) and builds the proxies; it saves its
+cursor every page, so a rerun resumes and stored clips are kept. Video attachments and video embeds
+become clips; other links are kept as link-only clips unless `externalLinks`
+(`GOON_CLIPS_LINKS=1`) imports them with yt-dlp; `collect:clips -- --links`
+also queues the link-only clips already stored (most #clips posts are Medal links). The durable source is guild / channel / message / attachment
+— CDN URLs expire and are re-signed with `POST /attachments/refresh-urls` (a
+404 on the message means it was deleted). Each clip is downloaded once, probed,
+and kept only as a 240p/15 fps proxy plus a thumbnail sprite (needs `ffmpeg` +
+`ffprobe`); the original is deleted. Recording time
+(`functions/clipRecordingTime.js`) comes from container `creation_time`, then
+recorder filename patterns (ShadowPlay, Medal, Game Bar, OBS, ReLive) with the
+author's UTC offset solved against the post time and remembered, then
+`postedAt − duration`; anyone can override it or nudge sync (±10 min), and every
+change is in the clip `log`. `functions/clipTimeline.js` groups clips into
+play sessions (a new one after 2 hours without a clip, `sessionGapMs`;
+multi-hour sessions stay whole, separate evenings don't merge) with one track per pilot. `/clips` is
+`<clip-library>` (`assets/scripts/clip-library.js`): each session is a card
+that wraps beside the others (as wide as up to four of its clips; bigger
+sessions take the row) holding clip cards (sprite thumbnail with hover scrub, pilot, recorded time, length, caption),
+search + pilot / channel / sort / link filters, a player (`?clip=<id>`) with
+details, the Discord link, and the other pilots' overlapping angles at the same
+moment, "Start a project" per session, and the project list.
+`/clips/timeline?session=<id>|clip=<id>` is `<clip-timeline-editor>`
+(`assets/scripts/clip-timeline-editor.js`) browsing one session. Both are shadow
+DOM with no goon.vc dependencies; `components/ClipsPage.js` sets `src` only on
+the active route. Projects live at `/clips/projects/<id>`: a program of segments
+`{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
+`revision`; old revisions kept, nothing deleted). A render
+(`functions/clipRenderPlan.js`, a pure ffmpeg argument builder; one at a time,
+`maxRenderSeconds` / `maxSegments`) re-fetches the full-resolution originals and
+writes `renders/<id>.mp4` plus `<id>.sources.json` (each segment's pilot,
+channel, message link, file, and recorded time); credits ride along as a
+`mov_text` subtitle track. Responses carry display names only — never Discord
+user ids or CDN URLs.
 `/sessions` is the single login page (Discord, Passport, GoonCitizen desktop),
 backed by the members Store under `/services/members`; `/members/login`
 redirects there. The HTML client probes `OPTIONS /services/rpc` and
 `GET /services/members` on load: Passport/desktop are disabled when the Hub
 proxy is unreachable, and Login CTAs are hidden only when Discord login is
-also unconfigured.
+also unconfigured. Discord login is OAuth2 (`identify guilds`) through
+`DISCORD_APP_ID`, or by default the application that owns the bot token
+(looked up via `/oauth2/applications/@me`; today "sensemaker"). It is on once
+the client secret is set: `DISCORD_APP_SECRET`, or `appSecret` in the bot's
+`discord.secrets.json`. The application must list
+`<origin>/services/members/discord/callback` as a redirect (redirect URI
+follows the request host unless `DISCORD_REDIRECT_URI` is set).
 
 GoonCitizen release docs: `star-citizen-live/AGENTS.md`. Hub/core:
 `docs/PRODUCTION*.md`. Human call for GoonCitizen contributors (not this zipper):

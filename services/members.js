@@ -82,7 +82,9 @@ class Members {
    * @param {string|string[]|Object} [settings.hubOrigin] Hub(s) that sign
    *   Passport sessions, in order, or the site's shared Hub list.
    * @param {string} [settings.loginPath] SPA page to return to after login.
-   * @param {Object} [settings.discord] `{ clientId, clientSecret, redirectUri, guildId }`
+   * @param {Object} [settings.discord] `{ clientId, clientSecret, redirectUri, guildId, applicationId }`;
+   *   `applicationId` is `async () => string|null`, the client id used when `clientId` is unset
+   *   (the application that owns the bot token).
    * @param {number} [settings.sessionTtlMs]
    * @param {string} [settings.cookieName]
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
@@ -103,7 +105,18 @@ class Members {
   }
 
   get discordEnabled () {
-    return !!(this.discord.clientId && this.discord.clientSecret);
+    if (!this.discord.clientSecret) return false;
+    return !!this.discord.clientId || typeof this.discord.applicationId === 'function';
+  }
+
+  async _discordClientId () {
+    if (this.discord.clientId) return this.discord.clientId;
+    if (!this.discordEnabled) return null;
+    try {
+      const id = await this.discord.applicationId();
+      if (id) this.discord.clientId = String(id);
+    } catch (_) { /* Discord unreachable: try again on the next login */ }
+    return this.discord.clientId || null;
   }
 
   async start () {
@@ -181,6 +194,8 @@ class Members {
 
   async _discordStart (req, res) {
     if (!this.discordEnabled) return sendJson(res, 503, { error: 'Discord login is not configured' });
+    const clientId = await this._discordClientId();
+    if (!clientId) return redirect(res, this._loginResult({ error: 'discord_unavailable' }));
     const state = randomToken();
     const redirectUri = this._discordRedirectUri(req);
     await this.store.set(`/oauth/${state}`, {
@@ -188,7 +203,7 @@ class Members {
       expiresAt: Date.now() + OAUTH_STATE_TTL_MS
     });
     const url = new URL(DISCORD_AUTHORIZE);
-    url.searchParams.set('client_id', this.discord.clientId);
+    url.searchParams.set('client_id', clientId);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('redirect_uri', redirectUri);
     url.searchParams.set('scope', 'identify guilds');
@@ -211,11 +226,13 @@ class Members {
     await this.store.set(`/oauth/${state}`, Object.assign({}, pending, { usedAt: Date.now() }));
 
     try {
+      const clientId = await this._discordClientId();
+      if (!clientId) throw new Error('no client id');
       const tokenRes = await this._fetch(`${DISCORD_API}/oauth2/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
         body: new URLSearchParams({
-          client_id: this.discord.clientId,
+          client_id: clientId,
           client_secret: this.discord.clientSecret,
           grant_type: 'authorization_code',
           code,

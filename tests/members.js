@@ -146,6 +146,51 @@ describe('Members', function () {
     assert.ok(!JSON.stringify(stored).includes('discord-access'));
   });
 
+  it('signs in through the bot\'s application when no client id is set', async function () {
+    let lookups = 0;
+    const borrowed = new Members({
+      path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-members-app-')),
+      fetch: stubFetch,
+      discord: { clientSecret: 'client-secret', applicationId: async () => { lookups += 1; return lookups === 1 ? null : 'bot-app-id'; } }
+    });
+    await borrowed.start();
+    const mw = borrowed.middleware();
+    const run = (url) => new Promise((resolve) => {
+      const res = { headers: {}, setHeader (k, v) { this.headers[k.toLowerCase()] = v; }, end () { resolve(this); } };
+      mw({ method: 'GET', url, headers: { host: 'goon.vc', 'x-forwarded-proto': 'https' } }, res, () => resolve(null));
+    });
+    try {
+      assert.strictEqual(borrowed.discordEnabled, true);
+      assert.strictEqual((await run('/services/members/discord')).headers.location, '/sessions?error=discord_unavailable', 'Discord unreachable');
+      const start = await run('/services/members/discord');
+      const authorize = new URL(start.headers.location);
+      assert.strictEqual(authorize.searchParams.get('client_id'), 'bot-app-id');
+      assert.strictEqual(authorize.searchParams.get('redirect_uri'), 'https://goon.vc/services/members/discord/callback');
+      const callback = await run(`/services/members/discord/callback?code=good-code&state=${authorize.searchParams.get('state')}`);
+      assert.strictEqual(callback.headers.location, '/sessions?signedIn=discord');
+      const exchange = calls.filter((c) => c.url.endsWith('/oauth2/token')).pop();
+      assert.strictEqual(new URLSearchParams(exchange.opts.body).get('client_id'), 'bot-app-id');
+      assert.strictEqual(lookups, 2, 'looked up once it answered');
+      assert.strictEqual(new Members({ discord: { applicationId: async () => 'x' } }).discordEnabled, false, 'needs the client secret');
+    } finally {
+      await borrowed.stop();
+    }
+  });
+
+  it('reads the client secret from the bot\'s secrets file', function () {
+    const { resolveDiscordClientSecret } = require('../functions/resolveDiscordToken');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-secrets-'));
+    const file = path.join(dir, 'discord.secrets.json');
+    fs.writeFileSync(file, JSON.stringify({ token: 'bot', appSecret: 'from-file' }));
+    try {
+      assert.deepStrictEqual(resolveDiscordClientSecret({}, { env: {}, candidates: [file] }), { clientSecret: 'from-file', source: file });
+      assert.strictEqual(resolveDiscordClientSecret({}, { env: { DISCORD_APP_SECRET: 'from-env' }, candidates: [file] }).clientSecret, 'from-env');
+      assert.deepStrictEqual(resolveDiscordClientSecret({}, { env: {}, candidates: [path.join(dir, 'none.json')] }), { clientSecret: null, source: null });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('rejects a callback with an unknown state', async function () {
     const res = await request(`/services/members/discord/callback?code=good-code&state=${'0'.repeat(64)}`);
     assert.strictEqual(res.headers.location, '/sessions?error=expired_state');

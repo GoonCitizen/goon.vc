@@ -264,7 +264,7 @@ describe('goon.vc HTTP', function () {
         hostname: '127.0.0.1'
       },
       storePath: path.join(os.tmpdir(), `goonvc-test-${process.pid}`),
-      members: { path: path.join(os.tmpdir(), `goonvc-members-test-${process.pid}`) },
+      members: { path: path.join(os.tmpdir(), `goonvc-members-test-${process.pid}`), resolveClientSecret: () => ({ clientSecret: null, source: null }) },
       events: {
         path: path.join(os.tmpdir(), `goonvc-events-test-${process.pid}`),
         resolveToken: () => ({ token: null, source: null })
@@ -291,6 +291,7 @@ describe('goon.vc HTTP', function () {
           return { status: /\/pins$|\/members\/111$/.test(url) ? 200 : 404, headers: { get: () => null }, text: async () => JSON.stringify(body) };
         }
       },
+      clips: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-test-')), poll: false },
       listen: true
     });
     await site.start();
@@ -545,8 +546,17 @@ describe('goon.vc HTTP', function () {
       }).on('error', reject);
     });
     assert.strictEqual(res.status, 200);
-    assert.ok(res.body.includes('id="permafleet-schedule"'));
-    assert.ok(res.body.includes('/permafleet-schedule.svg'));
+    const start = res.body.indexOf('id="permafleet-schedule"');
+    assert.ok(start > 0);
+    const page = res.body.slice(start, res.body.indexOf('</main>', start));
+    const calendar = page.match(/<fabric-calendar[\s\S]*?<\/fabric-calendar>/);
+    assert.ok(calendar, 'same <fabric-calendar> as /events');
+    assert.ok(calendar[0].includes('board="/services/events/schedule.svg"'));
+    assert.ok(calendar[0].includes('server="1190527980120850493"'), 'pinned to the home server');
+    assert.ok(!calendar[0].includes('src='), 'no server picker');
+    assert.ok(calendar[0].includes('storage-key="goon.events.timeZone"'), 'shares the zone picked on /events');
+    assert.ok(!page.includes('<img'), 'no static poster');
+    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
   });
 
   it('serves the /operations index listing PERMAFLEET', async function () {
@@ -625,6 +635,32 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.status, 200);
     assert.deepStrictEqual(res.json.players, []);
     assert.strictEqual(res.json.count, 0);
+  });
+
+  it('gives each named IdleRPG player a page with its own link preview', async function () {
+    const game = site.presence.game;
+    const id = 'discord/users/111111111111111111';
+    await game._registerUser({ id, name: 'Neorion' });
+    await game._handleJoin({ user: id, channel: 'discord/channels/1236721094153732276' });
+    await game.tick();
+    try {
+      const board = await fetchJson('/services/idlerpg/players');
+      assert.strictEqual(board.json.players[0].slug, 'neorion');
+      const page = await fetchJson('/services/idlerpg/players/neorion', { headers: { Accept: 'text/html' } });
+      assert.strictEqual(page.status, 200);
+      assert.ok(page.body.includes('id="idlerpg-player-page"'));
+      assert.ok(page.body.includes('<meta property="og:title" content="Neorion — IDLERPG — GOON SQUAD">'), 'per-player Open Graph');
+      assert.ok(page.body.includes('<link rel="canonical" href="https://goon.vc/services/idlerpg/players/neorion">'));
+      const profile = await fetchJson('/services/idlerpg/players/neorion');
+      assert.strictEqual(profile.status, 200);
+      assert.strictEqual(profile.json.name, 'Neorion');
+      assert.strictEqual(profile.json.rank, 1);
+      assert.ok(!profile.body.includes('111111111111111111'), 'no member ids');
+      assert.strictEqual((await fetchJson('/services/idlerpg/players/nobody')).status, 404);
+    } finally {
+      delete game.content.players[id];
+      delete game.content.users[id];
+    }
   });
 
   it('serves the drills index and the melee rotation drill component at /drills', async function () {
@@ -895,6 +931,38 @@ describe('goon.vc HTTP', function () {
     assert.ok(!res.body.includes('"111"'), 'no Discord ids');
   });
 
+  it('serves the clip library, timeline, and projects without sign-in', async function () {
+    const page = await fetchJson('/clips', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('<title>CLIPS — GOON SQUAD</title>'));
+    assert.ok(page.body.includes('<main id="clips-page" class="clips-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline"'));
+    assert.ok(page.body.includes('<clip-library></clip-library>'));
+    assert.ok(page.body.includes('<main id="clip-timeline-page"'));
+    assert.ok(page.body.includes('<main id="clip-project-page"'));
+    assert.ok(page.body.includes('<script src="/scripts/clip-library.js" defer></script>'));
+    assert.ok(page.body.includes('<script src="/scripts/clip-timeline-editor.js" defer></script>'));
+    assert.ok(page.body.includes('<h2 class="operation-name"><a href="/clips">Clips</a></h2>'), 'resources card');
+    const timeline = await fetchJson('/clips/timeline?session=s-1', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(timeline.status, 200);
+    assert.ok(timeline.body.includes('<title>CLIP TIMELINE — GOON SQUAD</title>'));
+    const project = await fetchJson('/clips/projects/abc123', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(project.status, 200);
+
+    for (const [file, element] of [['clip-library.js', 'clip-library'], ['clip-timeline-editor.js', 'clip-timeline-editor']]) {
+      const script = await fetchJson(`/scripts/${file}`, { headers: { Accept: '*/*' } });
+      assert.strictEqual(script.status, 200);
+      assert.ok(script.body.includes(`customElements.define('${element}'`));
+    }
+
+    for (const pathname of ['/services/clips', '/services/clips/sessions', '/services/clips/projects']) {
+      const res = await fetchJson(pathname);
+      assert.strictEqual(res.status, 200, pathname);
+    }
+    const create = await fetchJson('/services/clips/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Open cut' }) });
+    assert.strictEqual(create.status, 201, create.body);
+    assert.strictEqual(create.json.createdBy, null);
+  });
+
   it('redirects /permafleet to the PERMAFLEET operation page', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
@@ -1078,6 +1146,7 @@ describe('goon.vc page paths', function () {
     fs.mkdirSync(path.join(assets, 'drills'), { recursive: true });
     fs.mkdirSync(path.join(assets, 'tournaments'));
     fs.mkdirSync(path.join(assets, 'leagues'));
+    fs.mkdirSync(path.join(assets, 'clips'));
     fs.copyFileSync(path.join(__dirname, '../assets/index.html'), path.join(assets, 'index.html'));
     const tokenless = { resolveToken: () => ({ token: null, source: null }) };
     const free = await new Promise((resolve, reject) => {
@@ -1100,6 +1169,7 @@ describe('goon.vc page paths', function () {
       tournaments: { path: path.join(root, 'tournaments') },
       leagues: { path: path.join(root, 'leagues') },
       leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
+      clips: { path: path.join(root, 'clips'), poll: false },
       listen: true
     });
     await site.start();
@@ -1121,7 +1191,7 @@ describe('goon.vc page paths', function () {
   }
 
   it('serves a page even when assets has a directory of the same name', async function () {
-    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/leagues', '/resources/1v1-leaderboard']) {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
       assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
     }
   });
@@ -1134,6 +1204,9 @@ describe('goon.vc page paths', function () {
     assert.deepStrictEqual(await get('/operations/PERMAFLEET/squadrons/'), { status: 301, location: '/operations/PERMAFLEET/squadrons' });
     assert.deepStrictEqual(await get('/leagues/'), { status: 301, location: '/leagues' });
     assert.deepStrictEqual(await get('/leagues/gladius-ladder/?season=2'), { status: 301, location: '/leagues/gladius-ladder?season=2' });
+    assert.deepStrictEqual(await get('/clips/'), { status: 301, location: '/clips' });
+    assert.deepStrictEqual(await get('/clips/timeline/'), { status: 301, location: '/clips/timeline' });
+    assert.deepStrictEqual(await get('/clips/projects/abc123/'), { status: 301, location: '/clips/projects/abc123' });
   });
 
   it('keeps the configured redirects', async function () {

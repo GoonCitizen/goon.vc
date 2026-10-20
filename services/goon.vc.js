@@ -18,9 +18,11 @@ const Presence = require('./presence');
 const Tournaments = require('./tournaments');
 const Leagues = require('./leagues');
 const Leaderboard = require('./leaderboard');
+const Clips = require('./clips');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
+const { resolveDiscordClientSecret } = require('../functions/resolveDiscordToken');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
 const DEFAULT_HUB_SEEDS = ['https://hub.goon.vc'];
@@ -132,6 +134,7 @@ class GoonVC {
     this.tournaments = null;
     this.leagues = null;
     this.leaderboard = null;
+    this.clips = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
     this._listeners = {};
@@ -199,8 +202,10 @@ class GoonVC {
     const site = spa.metaSite();
     const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
     const stores = [
+      [() => this.presence, pageMeta.findPage(pages, spa._site('idlerpgPath'))],
       [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
-      [() => this.leagues, pageMeta.findPage(pages, spa._site('leaguesPath'))]
+      [() => this.leagues, pageMeta.findPage(pages, spa._site('leaguesPath'))],
+      [() => this.clips, pageMeta.findPage(pages, spa._site('clipsPath'))]
     ];
     const storedPage = async (pathname) => {
       for (const [service, index] of stores) {
@@ -255,7 +260,7 @@ class GoonVC {
   _canonicalPathMiddleware () {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const pages = spa.pages();
-    const prefixes = ['tournamentsPath', 'leaguesPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
+    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
     const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
       || prefixes.some((prefix) => pathname.toLowerCase().startsWith(prefix));
     return (req, res, next) => {
@@ -318,7 +323,9 @@ class GoonVC {
       fetch: memberSettings.fetch,
       discord: {
         clientId: discord.clientId,
-        clientSecret: discord.clientSecret,
+        clientSecret: (memberSettings.resolveClientSecret || resolveDiscordClientSecret)(discord).clientSecret,
+        // Without DISCORD_APP_ID, sign in through the application that owns the bot token.
+        applicationId: () => (this.events ? this.events.applicationId() : null),
         redirectUri: discord.redirectUri,
         guildId: discord.guildId
       }
@@ -408,6 +415,15 @@ class GoonVC {
     });
     await this.leaderboard.start();
 
+    const clipSettings = this.settings.clips || {};
+    this.clips = new Clips(Object.assign({}, clipSettings, {
+      path: clipSettings.path || './stores/clips',
+      discord,
+      basePath: spa._site('clipsPath'),
+      identify
+    }));
+    await this.clips.start();
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -438,7 +454,8 @@ class GoonVC {
         presence: this.presence.middleware(),
         tournaments: this.tournaments.middleware(),
         leagues: this.leagues.middleware(),
-        leaderboard: this.leaderboard.middleware()
+        leaderboard: this.leaderboard.middleware(),
+        clips: this.clips.middleware()
       }
     });
 
@@ -456,7 +473,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.tournaments, this.leagues, this.leaderboard, this.members, this.events, this.presence, this.operations]) {
+    for (const service of [this.http, this.tournaments, this.leagues, this.leaderboard, this.clips, this.members, this.events, this.presence, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

@@ -1,7 +1,7 @@
 'use strict';
 
-const escapeHtml = require('../functions/escapeHtml');
-const { INK, WIDTH, HEIGHT } = require('../functions/scheduleGraphic');
+const { INK, WIDTH } = require('../functions/scheduleGraphic');
+const EventsPage = require('./EventsPage');
 
 function renderScheduleCss () {
   return `
@@ -10,33 +10,21 @@ function renderScheduleCss () {
         display: none;
         margin: 0 auto;
         max-width: ${WIDTH}px;
-        padding: 0 1em 2em;
+        padding: 1.5em 1em 2em;
         color: ${INK.ink};
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      }
-      .schedule-page a { color: ${INK.cream}; }
-      .schedule-board {
-        margin-top: 1em;
-        display: block;
-        width: 100%;
-        height: auto;
-        aspect-ratio: ${WIDTH} / ${HEIGHT};
-        border: 1px solid ${INK.line};
-        background: ${INK.bg};
-      }
-      .schedule-links { color: ${INK.muted}; font-size: 0.85rem; margin-top: 0.85em; }`;
+      }`;
 }
 
 /**
+ * The PERMAFLEET week board: the same `<fabric-calendar>` as /events, pinned
+ * to the home Discord server (drawn with the PERMAFLEET brand). The element
+ * script comes from `EventsPage.script()`.
  * @param {Object} props
- * @param {string} props.title
- * @param {string} props.imageSrc Board SVG from `npm run build:schedule`.
- * @param {string} props.htmlSrc Full-size standalone board.
+ * @param {string} props.server Home Discord server id.
  */
 function renderScheduleMainHtml (props) {
   return `<main id="permafleet-schedule" class="schedule-page">
-      <a href="${escapeHtml(props.htmlSrc)}"><img class="schedule-board" src="${escapeHtml(props.imageSrc)}" width="${WIDTH}" height="${HEIGHT}" alt="${escapeHtml(props.title)} weekly ops schedule" loading="lazy"></a>
-      <p class="schedule-links">Generated from Discord scheduled events · Times in Central · <a href="${escapeHtml(props.htmlSrc)}">Full size</a> · <a href="${escapeHtml(props.imageSrc)}">SVG</a></p>
+      ${EventsPage.calendar({ server: props.server })}
     </main>`;
 }
 

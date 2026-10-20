@@ -28,6 +28,21 @@ function sendJson (res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+/**
+ * Player slug from a `/services/idlerpg/players/<slug>` path.
+ * @param {string} pathname
+ * @returns {string|null}
+ */
+function playerSlug (pathname) {
+  const match = /^\/services\/idlerpg\/players\/([^/]+)\/?$/i.exec(String(pathname || ''));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]).toLowerCase();
+  } catch (_) {
+    return null;
+  }
+}
+
 function errorMessage (error) {
   return error && error.message ? error.message : String(error);
 }
@@ -107,6 +122,8 @@ class Presence {
       sources: gameSources(this.settings.sources),
       channels: this.settings.channels,
       announcements: this.announcementTargets(),
+      // Silence is kept only in the announcement channel; without one, nothing is penalized.
+      penalties: this.announcementTargets().length > 0,
       persistent: true,
       verbosity: 1
     });
@@ -247,8 +264,39 @@ class Presence {
   }
 
   /**
+   * One player's public profile by leaderboard slug (display name, standing,
+   * gear, game numbers — never a service id).
+   * @param {string} slug
+   * @returns {Promise<Object|null>}
+   */
+  async player (slug) {
+    if (!this.game || typeof this.game.profile !== 'function') return null;
+    return this.game.profile(slug);
+  }
+
+  /**
+   * Link-preview metadata for a player page
+   * (`/services/idlerpg/players/<slug>`), or null when there is no such player.
+   * @param {string} pathname
+   * @returns {Promise<{ path: string, title: string, description: string }|null>}
+   */
+  async page (pathname) {
+    const slug = playerSlug(pathname);
+    const profile = slug ? await this.player(slug) : null;
+    if (!profile) return null;
+    const kills = `${profile.kills} kill${profile.kills === 1 ? '' : 's'}`;
+    const weapon = profile.weapon ? `, wielding ${profile.weapon}` : '';
+    return {
+      path: `${BASE}/players/${encodeURIComponent(profile.slug)}`,
+      title: `${profile.name} — IDLERPG`,
+      description: `Level ${profile.level}, rank ${profile.rank} of ${profile.players} in the alliance idle game: ${kills}${weapon}, ${profile.hours} hours present.`
+    };
+  }
+
+  /**
    * Express middleware for the IdleRPG application's JSON:
-   * `GET /services/idlerpg` and `GET /services/idlerpg/players?limit=`.
+   * `GET /services/idlerpg`, `GET /services/idlerpg/players?limit=`, and
+   * `GET /services/idlerpg/players/<slug>`.
    * The retired `/services/presence` paths redirect there.
    * @returns {Function}
    */
@@ -264,10 +312,16 @@ class Presence {
       let job = null;
       if (pathname === BASE) job = () => this.report();
       else if (pathname === `${BASE}/players`) job = () => this.players(Math.min(Number(url.searchParams.get('limit')) || 50, 500));
+      else if (playerSlug(pathname)) {
+        job = () => this.player(playerSlug(pathname)).then((profile) => {
+          if (!profile) throw Object.assign(new Error('No such player'), { status: 404 });
+          return profile;
+        });
+      }
       if (!job) return next();
       if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
       job().then((body) => sendJson(res, 200, body)).catch((error) => {
-        if (!res.headersSent) sendJson(res, 500, { error: errorMessage(error) || 'Presence unavailable' });
+        if (!res.headersSent) sendJson(res, error && error.status === 404 ? 404 : 500, { error: errorMessage(error) || 'Presence unavailable' });
       });
     };
   }

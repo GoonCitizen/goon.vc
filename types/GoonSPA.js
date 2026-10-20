@@ -16,6 +16,7 @@ const Login = require('../components/Login');
 const EventsPage = require('../components/EventsPage');
 const OperationsIndex = require('../components/OperationsIndex');
 const IdleRPGPage = require('../components/IdleRPGPage');
+const IdleRPGPlayerPage = require('../components/IdleRPGPlayerPage');
 const Organizations = require('../components/Organizations');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
@@ -23,6 +24,7 @@ const DrillsPage = require('../components/DrillsPage');
 const TournamentsPage = require('../components/TournamentsPage');
 const LeaguesPage = require('../components/LeaguesPage');
 const DuelLeaderboard = require('../components/DuelLeaderboard');
+const ClipsPage = require('../components/ClipsPage');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -97,6 +99,14 @@ const DEFAULTS = {
   leaguesHeading: 'LEAGUES',
   leaguesIntro: 'Standing duel leagues with Elo ratings. Start a perpetual ladder or a seasonal one, log each duel, and the ratings update.',
   leaguesDocumentTitle: 'LEAGUES — GOON SQUAD',
+  // Clips: /clips library, /clips/timeline session timeline, /clips/projects/<id> editor (services/clips.js).
+  clipsPath: '/clips',
+  clipsHeading: 'CLIPS',
+  clipsTagline: 'Every clip from our Discord clip channels, in one library.',
+  clipsIntro: 'Every clip posted in our Discord clip channels, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best ones together and render the film.',
+  clipsDocumentTitle: 'CLIPS — GOON SQUAD',
+  clipsTimelineDocumentTitle: 'CLIP TIMELINE — GOON SQUAD',
+  clipsTimelineDescription: 'One recording session from our Discord clips, every pilot on their own track, lined up by when it happened.',
   // 1v1 ladder from the pinned message in G00N SQUAD #1v1-challenges (services/leaderboard.js).
   leaderboardPath: '/resources/1v1-leaderboard',
   leaderboardEndpoint: '/services/leaderboards/1v1',
@@ -127,8 +137,6 @@ const DEFAULTS = {
   permafleetSquadronsDocumentTitle: 'PERMAFLEET Squadrons — GOON SQUAD',
   permafleetSquadronsDescription: 'Your path to PERMAFLEET membership: join, fly with the fleet, and get selected for a cross-org squadron.',
   permafleetSchedulePath: '/operations/PERMAFLEET/schedule',
-  permafleetScheduleImage: '/permafleet-schedule.svg',
-  permafleetScheduleHtml: '/permafleet-schedule.html',
   permafleetScheduleDocumentTitle: 'PERMAFLEET Weekly Ops — GOON SQUAD',
   discordWidgetId: '1190527980120850493',
   discordRosterTitle: 'Discord',
@@ -230,6 +238,8 @@ class GoonSPA extends FabricSPA {
       )),
       page(this._site('tournamentsPath'), this._site('tournamentsDocumentTitle'), this._site('tournamentsIntro')),
       page(this._site('leaguesPath'), this._site('leaguesDocumentTitle'), this._site('leaguesIntro')),
+      page(this._site('clipsPath'), this._site('clipsDocumentTitle'), this._site('clipsIntro')),
+      page(ClipsPage.timelinePath(this._site('clipsPath')), this._site('clipsTimelineDocumentTitle'), this._site('clipsTimelineDescription')),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
       page(this._site('permafleetSquadronsPath'), this._site('permafleetSquadronsDocumentTitle'), this._site('permafleetSquadronsDescription'), permafleet),
@@ -288,6 +298,8 @@ class GoonSPA extends FabricSPA {
     const tournamentsTitleJson = JSON.stringify(this._site('tournamentsDocumentTitle'));
     const leaguesPath = this._site('leaguesPath');
     const leaguesTitleJson = JSON.stringify(this._site('leaguesDocumentTitle'));
+    const clipsPath = this._site('clipsPath');
+    const clipsTitleJson = JSON.stringify(this._site('clipsDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
     const permafleetInviteUrl = this._site('permafleetInviteUrl');
@@ -391,6 +403,17 @@ class GoonSPA extends FabricSPA {
       copyright
     });
     const idlerpgScript = IdleRPGPage.script();
+    const idlerpgPlayerMainHtml = IdleRPGPlayerPage.render({
+      idlerpgPath,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    });
+    const idlerpgPlayerScript = IdleRPGPlayerPage.script({
+      idlerpgPath,
+      titleSuffix: ` — ${this._site('idlerpgDocumentTitle')}`
+    });
     const resourcesMainHtml = Resources.render({
       heading: escapeHtml(this._site('resourcesHeading')),
       intro: escapeHtml(this._site('resourcesIntro')),
@@ -417,6 +440,12 @@ class GoonSPA extends FabricSPA {
         tagline: 'Perpetual and seasonal duel ladders, Elo-rated.',
         summary: this._site('leaguesIntro'),
         openLabel: 'Leagues'
+      }, {
+        name: 'Clips',
+        path: clipsPath,
+        tagline: this._site('clipsTagline'),
+        summary: 'Every clip from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.',
+        openLabel: 'Clips'
       }, {
         name: '1v1 Leaderboard',
         path: leaderboardPath,
@@ -503,6 +532,19 @@ class GoonSPA extends FabricSPA {
     const leaguesMainHtml = LeaguesPage.render(leaguesProps);
     const leagueMainHtml = LeaguesPage.renderLeague(leaguesProps);
     const leaguesScript = LeaguesPage.script(leaguesProps);
+    const clipsProps = {
+      heading: escapeHtml(this._site('clipsHeading')),
+      intro: escapeHtml(this._site('clipsIntro')),
+      basePath: clipsPath,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    };
+    const clipsMainHtml = ClipsPage.render(clipsProps);
+    const clipTimelineMainHtml = ClipsPage.renderTimeline(clipsProps);
+    const clipProjectMainHtml = ClipsPage.renderProject(clipsProps);
+    const clipsScript = ClipsPage.script(clipsProps);
     const orgProps = {
       heading: escapeHtml(this._site('organizationsHeading')),
       intro: escapeHtml(this._site('organizationsIntro')),
@@ -568,11 +610,7 @@ class GoonSPA extends FabricSPA {
       bitcoinAddress,
       copyright
     });
-    const scheduleMainHtml = PermafleetSchedule.render({
-      title: 'PERMAFLEET',
-      imageSrc: this._site('permafleetScheduleImage'),
-      htmlSrc: this._site('permafleetScheduleHtml')
-    });
+    const scheduleMainHtml = PermafleetSchedule.render({ server: widgetId });
     const permafleetHeaderHtml = PermafleetHeader.render({
       heading: escapeHtml(this._site('permafleetHeading')),
       homeLabel: escapeHtml(title),
@@ -634,12 +672,14 @@ ${Login.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
 ${IdleRPGPage.styles()}
+${IdleRPGPlayerPage.styles()}
 ${Organizations.styles()}
 ${Resources.styles()}
 ${DrillsPage.styles()}
 ${TournamentsPage.styles()}
 ${LeaguesPage.styles()}
 ${DuelLeaderboard.styles()}
+${ClipsPage.styles()}
     </style>
   </head>
   <body>
@@ -650,6 +690,7 @@ ${DuelLeaderboard.styles()}
     ${eventsMainHtml}
     ${operationsMainHtml}
     ${idlerpgMainHtml}
+    ${idlerpgPlayerMainHtml}
     ${organizationsMainHtml}
 ${organizationMainsHtml}
     ${resourcesMainHtml}
@@ -661,6 +702,9 @@ ${drillMainsHtml}
 ${tournamentMainsHtml}
     ${leaguesMainHtml}
     ${leagueMainHtml}
+    ${clipsMainHtml}
+    ${clipTimelineMainHtml}
+    ${clipProjectMainHtml}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
@@ -683,6 +727,9 @@ ${squadronMainsHtml}
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
         var isIdleRPG = path.toLowerCase() === ${JSON.stringify(idlerpgPath.toLowerCase())};
+        var idlerpgPlayerEl = path.toLowerCase().indexOf(${JSON.stringify(IdleRPGPlayerPage.playersPath(idlerpgPath).toLowerCase() + '/')}) === 0
+          ? document.getElementById('idlerpg-player-page')
+          : null;
         var isOrganizations = path.toLowerCase() === ${JSON.stringify(organizationsPath.toLowerCase())};
         var orgMatch = new RegExp(${JSON.stringify(orgPathPattern)}, 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
@@ -702,6 +749,11 @@ ${squadronMainsHtml}
         var leagueEl = path.toLowerCase().indexOf(${JSON.stringify(leaguesPath.toLowerCase() + '/')}) === 0
           ? document.getElementById('league-page')
           : null;
+        var isClips = path.toLowerCase() === ${JSON.stringify(clipsPath.toLowerCase())};
+        var isClipTimeline = path.toLowerCase() === ${JSON.stringify(ClipsPage.timelinePath(clipsPath).toLowerCase())};
+        var clipProjectEl = path.toLowerCase().indexOf(${JSON.stringify(clipsPath.toLowerCase() + '/projects/')}) === 0
+          ? document.getElementById('clip-project-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -717,13 +769,15 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
         if (idlerpgEl) idlerpgEl.style.display = isIdleRPG ? 'block' : 'none';
+        var idlerpgPlayerPageEl = document.getElementById('idlerpg-player-page');
+        if (idlerpgPlayerPageEl) idlerpgPlayerPageEl.style.display = idlerpgPlayerEl ? 'block' : 'none';
         var organizationsEl = document.getElementById('organizations-page');
         if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
         document.querySelectorAll('.organization-page').forEach(function (el) {
@@ -748,6 +802,12 @@ ${squadronMainsHtml}
         if (leaguesEl) leaguesEl.style.display = isLeagues ? 'block' : 'none';
         var leaguePageEl = document.getElementById('league-page');
         if (leaguePageEl) leaguePageEl.style.display = leagueEl ? 'block' : 'none';
+        var clipsEl = document.getElementById('clips-page');
+        if (clipsEl) clipsEl.style.display = isClips ? 'block' : 'none';
+        var clipTimelineEl = document.getElementById('clip-timeline-page');
+        if (clipTimelineEl) clipTimelineEl.style.display = isClipTimeline ? 'block' : 'none';
+        var clipProjectPageEl = document.getElementById('clip-project-page');
+        if (clipProjectPageEl) clipProjectPageEl.style.display = clipProjectEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -762,7 +822,7 @@ ${squadronMainsHtml}
         if (isLogin) document.title = ${loginTitleJson};
         else if (isEvents) document.title = ${eventsTitleJson};
         else if (isOperations) document.title = ${operationsTitleJson};
-        else if (isIdleRPG) document.title = ${idlerpgTitleJson};
+        else if (isIdleRPG || idlerpgPlayerEl) document.title = ${idlerpgTitleJson};
         else if (isOrganizations) document.title = ${organizationsTitleJson};
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
@@ -772,6 +832,8 @@ ${squadronMainsHtml}
         else if (isTournaments) document.title = ${tournamentsTitleJson};
         else if (tournamentEl) document.title = ${tournamentsTitleJson};
         else if (isLeagues || leagueEl) document.title = ${leaguesTitleJson};
+        else if (isClipTimeline) document.title = ${JSON.stringify(this._site('clipsTimelineDocumentTitle'))};
+        else if (isClips || clipProjectEl) document.title = ${clipsTitleJson};
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
@@ -787,12 +849,14 @@ ${squadronMainsHtml}
     ${eventsScript}
     ${operationsScript}
     ${idlerpgScript}
+    ${idlerpgPlayerScript}
     ${Resources.gooncitizenScript()}
     ${Resources.presenceScript()}
     ${DuelLeaderboard.script({ endpoint: this._site('leaderboardEndpoint') })}
     ${drillsScript}
     ${tournamentsScript}
     ${leaguesScript}
+    ${clipsScript}
     ${permafleetScript}
     ${applicationScript}
   </body>

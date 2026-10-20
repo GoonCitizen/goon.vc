@@ -127,7 +127,8 @@ function renderLoginScript (props) {
           access_denied: 'Discord sign-in was cancelled.',
           expired_state: 'That sign-in link expired. Try again.',
           invalid_request: 'Discord returned an invalid response. Try again.',
-          discord_failed: 'Could not complete Discord sign-in. Try again.'
+          discord_failed: 'Could not complete Discord sign-in. Try again.',
+          discord_unavailable: 'Discord could not be reached. Try again in a minute.'
         };
 
         function showMember (member) {

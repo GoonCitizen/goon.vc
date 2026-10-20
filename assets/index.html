@@ -612,21 +612,9 @@
         display: none;
         margin: 0 auto;
         max-width: 1920px;
-        padding: 0 1em 2em;
+        padding: 1.5em 1em 2em;
         color: #f4f1ea;
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       }
-      .schedule-page a { color: #e8dcc8; }
-      .schedule-board {
-        margin-top: 1em;
-        display: block;
-        width: 100%;
-        height: auto;
-        aspect-ratio: 1920 / 1080;
-        border: 1px solid #2c2c30;
-        background: #0c0c0d;
-      }
-      .schedule-links { color: #9a9488; font-size: 0.85rem; margin-top: 0.85em; }
 
       .pf-page {
         --pf-void: #050A18;
@@ -850,6 +838,15 @@
       .idlerpg-rules b { color: #ddd; }
       .idlerpg-gateway { color: #777; font-size: 0.75rem; margin: 1.5rem 0 0; text-align: center; }
 
+      .idlerpg-player-standing { color: #bbb; font-size: 0.92em; margin: -0.5em 0 1.75em; text-align: center; }
+      .idlerpg-player-standing.idlerpg-online::before { background: #3ddc84; border-radius: 50%; content: ''; display: inline-block; height: 0.55em; margin-right: 0.45em; width: 0.55em; }
+      .idlerpg-progress { background: rgba(255, 255, 255, 0.08); border-radius: 4px; height: 0.5rem; margin: 1rem 0 0.3rem; overflow: hidden; }
+      .idlerpg-progress span { background: #7c3aed; display: block; height: 100%; }
+      .idlerpg-progress-label { color: #888; font-size: 0.75rem; }
+      .idlerpg-rarity-rare { color: #60a5fa; }
+      .idlerpg-rarity-legendary { color: #f59e0b; }
+      .idlerpg-table a, .idlerpg-player-page a.idlerpg-name { color: inherit; }
+
       .organizations-page, .organization-page { display: none; margin: 0 auto; max-width: 38em; padding: 1.5em 1em 3em; text-align: left; color: #E8F4FF; }
       .organizations-page > h1, .organizations-intro { text-align: center; }
       .organizations-page > h1 { color: #fff; margin-top: 0.5em; }
@@ -985,6 +982,10 @@
       .pf-duels > p { margin: 0 0 0.75rem; color: var(--pf-muted); line-height: 1.45; }
       .pf-page .pf-duels .duel-ladder li { border-bottom-color: var(--pf-line); }
       .pf-page .pf-duels .duel-meta { color: var(--pf-muted); }
+
+      .clips-page, .clip-timeline-page, .clip-project-page { display: none; margin: 0 auto; max-width: 1280px; padding: 0 1em 3em; text-align: left; }
+      .clips-page > h1, .clips-page > .operations-intro, .clip-timeline-page > h1, .clip-project-page > h1 { text-align: center; }
+      .clips-page clip-library, .clip-timeline-page clip-timeline-editor, .clip-project-page clip-timeline-editor { margin-top: 1.5em; }
     </style>
   </head>
   <body>
@@ -1137,14 +1138,14 @@
           </table>
         </div>
         <p class="idlerpg-empty" id="idlerpg-players-empty">No players yet — join an alliance voice channel.</p>
-        <p class="idlerpg-note">Display names as shown on Discord. A green dot means the pilot is in voice right now.</p>
+        <p class="idlerpg-note">Display names as shown on Discord; pick a pilot for their gear and battles. A green dot means the pilot is in voice right now.</p>
       </section>
       <section class="idlerpg-section" aria-labelledby="idlerpg-rules-heading">
         <h2 id="idlerpg-rules-heading">How it works</h2>
         <ol class="idlerpg-rules">
           <li><b>Be present.</b> Every pilot in an alliance voice channel the bot can see is a player. Each tick you stay earns experience and credits.</li>
           <li><b>Level up.</b> There is no level cap. Each level takes a little longer than the last, and level 100 is about three months of steady presence away. The leaderboard ranks by experience, then hours.</li>
-          <li><b>Keep the peace.</b> Chatting in the game channel halves your credits and starts a cooldown — idling is the game.</li>
+          <li><b>Keep the peace.</b> Chatting in <b>#idlerpg</b>, where the game is announced, halves your credits and starts a cooldown — idling is the game. Talk anywhere else, voice channel chat included, as much as you like.</li>
           <li><b>Grow.</b> Each level adds a point to strength, dexterity, or constitution in turn.</li>
           <li><b>Encounters.</b> Now and then someone present meets something: a creature from the land their channel lies in (near their own level and a little above it: centered a tenth of your level higher, at most 15 levels, and spread two levels or a tenth either way; lair beasts run a few levels higher still). Goblins, wolves, and wisps turn up from the start; orcs, griffins, ogres, yetis, and wyverns only once you have grown into them. Or it is a piece of gear made for about their level, a hidden cache, or a blessing. Battles fight themselves. Win and you take experience and loot, and better gear is equipped on the spot. Lose and you drop a tenth of your credits. Every encounter is announced in Discord.</li>
           <li><b>What creatures wear.</b> A creature's shape decides its gear. Bandits, orcs, goblins, skeletons, and trolls carry weapons and armor and drop them when they fall, and a lich carries a staff and its jewelry. War hounds wear spiked collars and sometimes barding. Birds, serpents, spiders, elementals, treants, and dragons carry nothing but teeth, claws, and branches. Collars and barding don't fit you, so they go in your bag to sell.</li>
@@ -1153,6 +1154,49 @@
       </section>
       <p class="idlerpg-gateway" id="idlerpg-gateway" hidden></p>
       <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="idlerpg-player-page" class="idlerpg-page idlerpg-player-page">
+      <h1 id="idlerpg-player-name">Pilot</h1>
+      <p class="idlerpg-player-standing" id="idlerpg-player-standing"></p>
+      <p class="idlerpg-empty" id="idlerpg-player-missing" hidden>No pilot by that name yet. Names change when pilots rename on Discord — find them on the leaderboard.</p>
+      <div id="idlerpg-player-body" hidden>
+        <section class="idlerpg-section" aria-labelledby="idlerpg-player-progress-heading">
+          <h2 id="idlerpg-player-progress-heading">Progress</h2>
+          <ul class="idlerpg-stats" id="idlerpg-player-stats"></ul>
+          <div class="idlerpg-progress" aria-hidden="true"><span id="idlerpg-player-progress"></span></div>
+          <div class="idlerpg-progress-label" id="idlerpg-player-progress-label"></div>
+        </section>
+        <section class="idlerpg-section" aria-labelledby="idlerpg-player-attributes-heading">
+          <h2 id="idlerpg-player-attributes-heading">Attributes</h2>
+          <ul class="idlerpg-stats" id="idlerpg-player-attributes"></ul>
+        </section>
+        <section class="idlerpg-section" aria-labelledby="idlerpg-player-gear-heading">
+          <h2 id="idlerpg-player-gear-heading">Equipment</h2>
+          <div class="idlerpg-table-wrap">
+            <table class="idlerpg-table" id="idlerpg-player-gear" hidden>
+              <thead><tr><th>Slot</th><th>Item</th><th class="num">Damage</th><th class="num">Armor</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="idlerpg-empty" id="idlerpg-player-gear-empty">Bare-handed — no gear yet.</p>
+          <h3 class="idlerpg-subhead" id="idlerpg-player-bag-heading" hidden>Bag</h3>
+          <ul class="idlerpg-levels" id="idlerpg-player-bag" aria-labelledby="idlerpg-player-bag-heading"></ul>
+        </section>
+        <section class="idlerpg-section" aria-labelledby="idlerpg-player-battles-heading">
+          <h2 id="idlerpg-player-battles-heading">Battles</h2>
+          <ul class="idlerpg-stats" id="idlerpg-player-battles"></ul>
+          <h3 class="idlerpg-subhead" id="idlerpg-player-slain-heading" hidden>Most slain</h3>
+          <ul class="idlerpg-levels" id="idlerpg-player-slain" aria-labelledby="idlerpg-player-slain-heading"></ul>
+          <p class="idlerpg-empty" id="idlerpg-player-battles-empty">No battles fought yet.</p>
+        </section>
+        <p class="idlerpg-note" id="idlerpg-player-seen"></p>
+      </div>
+      <p class="page-back"><a href="/services/idlerpg">&larr; IdleRPG</a></p>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -1540,6 +1584,13 @@
           <div class="operation-links"><a class="goon-button" href="/leagues">Leagues</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/clips">Clips</a></h2>
+          <p class="operation-tagline">Every clip from our Discord clip channels, in one library.</p>
+          <p class="operation-summary">Every clip from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/clips">Clips</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
           <p class="operation-tagline">The standing dogfight ladder, synced from #1v1-challenges.</p>
           <p class="operation-summary">Anyone can challenge anyone, including pilots from other orgs.</p>
@@ -1764,6 +1815,34 @@
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+    <main id="clips-page" class="clips-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline" data-login="/sessions">
+      <h1>CLIPS</h1>
+      <p class="operations-intro">Every clip posted in our Discord clip channels, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best ones together and render the film.</p>
+      <clip-library></clip-library>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="clip-timeline-page" class="clip-timeline-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline" data-login="/sessions">
+      <p class="page-back"><a href="/clips">&larr; Clip library</a></p>
+      <clip-timeline-editor></clip-timeline-editor>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="clip-project-page" class="clip-project-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline" data-login="/sessions">
+      <p class="page-back"><a href="/clips">&larr; Clip library</a></p>
+      <clip-timeline-editor></clip-timeline-editor>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
     <main id="operation-permafleet" class="op-page">
       <div class="op-shell">
         <div class="op-hero-bg" aria-hidden="true"></div>
@@ -1867,8 +1946,12 @@
       </div>
     </main>
     <main id="permafleet-schedule" class="schedule-page">
-      <a href="/permafleet-schedule.html"><img class="schedule-board" src="/permafleet-schedule.svg" width="1920" height="1080" alt="PERMAFLEET weekly ops schedule" loading="lazy"></a>
-      <p class="schedule-links">Generated from Discord scheduled events · Times in Central · <a href="/permafleet-schedule.html">Full size</a> · <a href="/permafleet-schedule.svg">SVG</a></p>
+      <fabric-calendar
+        board="/services/events/schedule.svg"
+        server="1190527980120850493"
+        default-time-zone="America/Chicago"
+        default-time-zone-label="Central (G00N SQUAD)"
+        storage-key="goon.events.timeZone"></fabric-calendar>
     </main>
     <main id="squadrons-page" class="pf-page">
       <p class="pf-eyebrow">Cross-org squadrons</p>
@@ -2043,6 +2126,9 @@
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
         var isIdleRPG = path.toLowerCase() === "/services/idlerpg";
+        var idlerpgPlayerEl = path.toLowerCase().indexOf("/services/idlerpg/players/") === 0
+          ? document.getElementById('idlerpg-player-page')
+          : null;
         var isOrganizations = path.toLowerCase() === "/organizations";
         var orgMatch = new RegExp("^/organizations/([^/]+)$", 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
@@ -2062,6 +2148,11 @@
         var leagueEl = path.toLowerCase().indexOf("/leagues/") === 0
           ? document.getElementById('league-page')
           : null;
+        var isClips = path.toLowerCase() === "/clips";
+        var isClipTimeline = path.toLowerCase() === "/clips/timeline";
+        var clipProjectEl = path.toLowerCase().indexOf("/clips/projects/") === 0
+          ? document.getElementById('clip-project-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -2077,13 +2168,15 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
         if (idlerpgEl) idlerpgEl.style.display = isIdleRPG ? 'block' : 'none';
+        var idlerpgPlayerPageEl = document.getElementById('idlerpg-player-page');
+        if (idlerpgPlayerPageEl) idlerpgPlayerPageEl.style.display = idlerpgPlayerEl ? 'block' : 'none';
         var organizationsEl = document.getElementById('organizations-page');
         if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
         document.querySelectorAll('.organization-page').forEach(function (el) {
@@ -2108,6 +2201,12 @@
         if (leaguesEl) leaguesEl.style.display = isLeagues ? 'block' : 'none';
         var leaguePageEl = document.getElementById('league-page');
         if (leaguePageEl) leaguePageEl.style.display = leagueEl ? 'block' : 'none';
+        var clipsEl = document.getElementById('clips-page');
+        if (clipsEl) clipsEl.style.display = isClips ? 'block' : 'none';
+        var clipTimelineEl = document.getElementById('clip-timeline-page');
+        if (clipTimelineEl) clipTimelineEl.style.display = isClipTimeline ? 'block' : 'none';
+        var clipProjectPageEl = document.getElementById('clip-project-page');
+        if (clipProjectPageEl) clipProjectPageEl.style.display = clipProjectEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -2122,7 +2221,7 @@
         if (isLogin) document.title = "Login — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
-        else if (isIdleRPG) document.title = "IDLERPG — GOON SQUAD";
+        else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
         else if (isOrganizations) document.title = "PERMAFLEET Organizations — GOON SQUAD";
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
@@ -2132,6 +2231,8 @@
         else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
         else if (tournamentEl) document.title = "TOURNAMENTS — GOON SQUAD";
         else if (isLeagues || leagueEl) document.title = "LEAGUES — GOON SQUAD";
+        else if (isClipTimeline) document.title = "CLIP TIMELINE — GOON SQUAD";
+        else if (isClips || clipProjectEl) document.title = "CLIPS — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
@@ -2236,7 +2337,8 @@
           access_denied: 'Discord sign-in was cancelled.',
           expired_state: 'That sign-in link expired. Try again.',
           invalid_request: 'Discord returned an invalid response. Try again.',
-          discord_failed: 'Could not complete Discord sign-in. Try again.'
+          discord_failed: 'Could not complete Discord sign-in. Try again.',
+          discord_unavailable: 'Discord could not be reached. Try again in a minute.'
         };
 
         function showMember (member) {
@@ -2708,7 +2810,15 @@
         rows.forEach(function (p) {
           var tr = el('tr', p.online ? 'idlerpg-online' : '');
           tr.appendChild(el('td', 'rank', String(p.rank)));
-          tr.appendChild(el('td', 'name', p.name));
+          var name = el('td', 'name');
+          if (p.slug) {
+            var link = el('a', '', p.name);
+            link.href = "/services/idlerpg/players" + '/' + encodeURIComponent(p.slug);
+            name.appendChild(link);
+          } else {
+            name.textContent = p.name;
+          }
+          tr.appendChild(name);
           tr.appendChild(el('td', 'num', String(p.level)));
           tr.appendChild(el('td', 'num', int(p.experience)));
           tr.appendChild(el('td', 'num', int(p.kills)));
@@ -2748,6 +2858,131 @@
         visible = now;
         schedule();
       }).observe(page);
+    })();
+  </script>
+    <script>
+    (function () {
+      var page = document.getElementById('idlerpg-player-page');
+      var path = (window.location.pathname || '').replace(/\/+$/, '');
+      if (!page || path.toLowerCase().indexOf("/services/idlerpg/players/") !== 0) return;
+      var url = path;
+
+      function fmt (n) {
+        if (!(n > 0)) return '0';
+        if (n >= 100) return String(Math.round(n));
+        return String(Math.round(n * 10) / 10);
+      }
+      function int (n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+      function el (tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+      function stat (value, label) {
+        var li = el('li', 'idlerpg-stat');
+        li.appendChild(el('span', 'idlerpg-stat-value', value));
+        li.appendChild(el('span', 'idlerpg-stat-label', label));
+        return li;
+      }
+      function label (key) {
+        var text = String(key).replace(/-/g, ' ');
+        return text.charAt(0).toUpperCase() + text.slice(1);
+      }
+      function rarity (item) {
+        return item.rarity && item.rarity !== 'common' ? 'idlerpg-rarity-' + item.rarity : '';
+      }
+
+      function render (p) {
+        document.getElementById('idlerpg-player-name').textContent = p.name;
+        document.title = p.name + " — IDLERPG — GOON SQUAD";
+        var standing = document.getElementById('idlerpg-player-standing');
+        standing.textContent = 'Rank ' + p.rank + ' of ' + p.players + ' \u00b7 Level ' + p.level + (p.online ? ' \u00b7 in voice now' : '');
+        standing.className = 'idlerpg-player-standing' + (p.online ? ' idlerpg-online' : '');
+
+        var stats = document.getElementById('idlerpg-player-stats');
+        stats.textContent = '';
+        stats.appendChild(stat(String(p.level), 'level'));
+        stats.appendChild(stat(int(p.experience), 'experience'));
+        stats.appendChild(stat(int(p.wealth), 'credits'));
+        stats.appendChild(stat(int(p.kills), 'kills'));
+        stats.appendChild(stat(fmt(p.hours), 'hours present'));
+        var span = Math.max(1, p.nextLevelExperience - p.levelExperience);
+        var into = Math.max(0, Math.min(span, p.experience - p.levelExperience));
+        document.getElementById('idlerpg-player-progress').style.width = Math.round(into / span * 100) + '%';
+        document.getElementById('idlerpg-player-progress-label').textContent = int(p.nextLevelExperience - p.experience) + ' XP to level ' + (p.level + 1);
+
+        var attributes = document.getElementById('idlerpg-player-attributes');
+        attributes.textContent = '';
+        Object.keys(p.attributes || {}).forEach(function (key) { attributes.appendChild(stat(String(p.attributes[key]), key)); });
+        attributes.appendChild(stat(int(p.armor), 'armor'));
+
+        var gear = document.getElementById('idlerpg-player-gear');
+        var body = gear.querySelector('tbody');
+        var equipment = p.equipment || [];
+        body.textContent = '';
+        equipment.forEach(function (item) {
+          var tr = el('tr', '');
+          tr.appendChild(el('td', '', label(item.slot)));
+          tr.appendChild(el('td', rarity(item), item.name));
+          tr.appendChild(el('td', 'num', item.damage ? fmt(item.damage) : '\u2014'));
+          tr.appendChild(el('td', 'num', item.armor ? int(item.armor) : '\u2014'));
+          body.appendChild(tr);
+        });
+        gear.hidden = !equipment.length;
+        document.getElementById('idlerpg-player-gear-empty').hidden = equipment.length > 0;
+        var bag = document.getElementById('idlerpg-player-bag');
+        var held = p.inventory || [];
+        bag.textContent = '';
+        held.forEach(function (item) { bag.appendChild(el('li', rarity(item), item.name)); });
+        document.getElementById('idlerpg-player-bag-heading').hidden = !held.length;
+
+        var battles = p.battles || { won: 0, lost: 0, total: 0 };
+        var list = document.getElementById('idlerpg-player-battles');
+        var slain = document.getElementById('idlerpg-player-slain');
+        var top = p.slain || [];
+        list.textContent = '';
+        slain.textContent = '';
+        if (battles.total > 0) {
+          list.appendChild(stat(int(battles.total), 'battles'));
+          list.appendChild(stat(int(battles.won), 'won'));
+          list.appendChild(stat(int(battles.lost), 'lost'));
+          list.appendChild(stat(Math.round(battles.won / battles.total * 100) + '%', 'win rate'));
+        }
+        top.forEach(function (c) {
+          var li = el('li', '');
+          li.appendChild(el('b', '', c.name));
+          li.appendChild(document.createTextNode(' \u00d7 ' + int(c.count)));
+          slain.appendChild(li);
+        });
+        document.getElementById('idlerpg-player-slain-heading').hidden = !top.length;
+        document.getElementById('idlerpg-player-battles-empty').hidden = battles.total > 0;
+
+        var seen = [];
+        if (p.firstSeen) seen.push('Playing since ' + p.firstSeen + '.');
+        if (!p.online && p.lastSeen) seen.push('Last seen ' + p.lastSeen + '.');
+        document.getElementById('idlerpg-player-seen').textContent = seen.join(' ');
+        document.getElementById('idlerpg-player-body').hidden = false;
+        document.getElementById('idlerpg-player-missing').hidden = true;
+      }
+
+      function missing () {
+        document.getElementById('idlerpg-player-body').hidden = true;
+        document.getElementById('idlerpg-player-missing').hidden = false;
+      }
+
+      function load () {
+        fetch(url, { headers: { Accept: 'application/json' } })
+          .then(function (res) {
+            if (res.status === 404) { missing(); return null; }
+            return res.ok ? res.json() : null;
+          })
+          .then(function (data) { if (data) render(data); })
+          .catch(function () {});
+      }
+
+      load();
+      setInterval(function () { if (!document.hidden) load(); }, 60000);
     })();
   </script>
     <script>
@@ -2932,6 +3167,62 @@
     <script src="/scripts/tournament-bracket.js" defer></script>
     <script src="/scripts/tournaments.js" defer></script>
     <script src="/scripts/leagues.js" defer></script>
+    <script src="/scripts/clip-library.js" defer></script>
+    <script src="/scripts/clip-timeline-editor.js" defer></script>
+    <script type="text/javascript">
+      (function () {
+        var base = "/clips";
+        var path = (window.location.pathname || '/').replace(/\/+$/, '');
+        var lower = path.toLowerCase();
+        var prefix = base.toLowerCase() + '/projects/';
+        var params = new URLSearchParams(window.location.search);
+        function setQuery (name, value) {
+          var next = new URLSearchParams(window.location.search);
+          if (value) next.set(name, value); else next.delete(name);
+          var query = next.toString();
+          window.history.replaceState(window.history.state, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
+        }
+        if (lower === base.toLowerCase()) {
+          var host = document.getElementById('clips-page');
+          var library = host && host.querySelector('clip-library');
+          if (!library) return;
+          library.setAttribute('base', host.getAttribute('data-base') || base);
+          library.setAttribute('timeline', host.getAttribute('data-timeline'));
+          if (params.get('clip')) library.setAttribute('clip', params.get('clip'));
+          library.setAttribute('src', host.getAttribute('data-api'));
+          library.addEventListener('clipopen', function (event) { setQuery('clip', event.detail.id); });
+          library.addEventListener('clipclose', function () { setQuery('clip', null); });
+          return;
+        }
+        var editorHost = null;
+        var project = null;
+        if (lower === base.toLowerCase() + '/timeline') {
+          editorHost = document.getElementById('clip-timeline-page');
+        } else if (lower.indexOf(prefix) === 0 && path.length > prefix.length) {
+          editorHost = document.getElementById('clip-project-page');
+          project = decodeURIComponent(path.slice(prefix.length).split('/')[0]);
+        }
+        var editor = editorHost && editorHost.querySelector('clip-timeline-editor');
+        if (!editor) return;
+        editor.setAttribute('base', editorHost.getAttribute('data-base') || base);
+        editor.setAttribute('login', editorHost.getAttribute('data-login') || '/sessions');
+        if (project) {
+          editor.setAttribute('project', project);
+        } else {
+          if (params.get('session')) editor.setAttribute('session', params.get('session'));
+          if (params.get('clip')) editor.setAttribute('clip', params.get('clip'));
+          editor.addEventListener('sessionchange', function (event) {
+            setQuery('clip', null);
+            setQuery('session', event.detail.id);
+          });
+        }
+        editor.setAttribute('src', editorHost.getAttribute('data-api'));
+        editor.addEventListener('projectsave', function () {
+          var name = editor.shadowRoot && editor.shadowRoot.querySelector('input[name=name]');
+          if (name && name.value) document.title = name.value + ' — Clips';
+        });
+      })();
+    </script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');

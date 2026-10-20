@@ -65,6 +65,26 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     await presence.stop();
   });
 
+  it('penalizes chat only in the announcement channel, never in voice chat or elsewhere', async function () {
+    const ANNOUNCE = '1560112808283086929';
+    const user = 'discord/users/111111111111111111';
+    const wealth = (presence) => presence.game.content.players[user].wealth;
+    for (const announcements of [[ANNOUNCE], []]) {
+      const presence = new Presence({ path: path.join(dir, `store-${announcements.length}`), tickMs: 0, gateway: false, announcements });
+      await presence.start();
+      await presence.game._handleJoin({ user, channel: `discord/channels/${VOICE}` });
+      await presence.game.tick();
+      const before = wealth(presence);
+      await presence.game._handleMessage({ actor: user, target: `discord/channels/${VOICE}`, object: 'voice channel chat' });
+      await presence.game._handleMessage({ actor: user, target: 'discord/channels/1190527980120850499', object: 'general chat' });
+      assert.strictEqual(wealth(presence), before, 'chat outside #idlerpg is free');
+      await presence.game._handleMessage({ actor: user, target: `discord/channels/${ANNOUNCE}`, object: 'hello #idlerpg' });
+      assert.strictEqual(wealth(presence), announcements.length ? Math.floor(before / 2) : before,
+        announcements.length ? 'talking in #idlerpg is penalized' : 'no announcement channel, no penalties');
+      await presence.stop();
+    }
+  });
+
   it('fights @fabric/rpg encounters and reports battles without ids', async function () {
     const ANNOUNCE = '1560112808283086929';
     const operations = new FakeOperations();
@@ -126,7 +146,8 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     const board = await presence.players(10);
     assert.strictEqual(board.count, 2);
     assert.strictEqual(board.players.length, 2);
-    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'kills', 'lastSeen', 'level', 'name', 'online', 'rank', 'ticks', 'wealth', 'weapon']);
+    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'kills', 'lastSeen', 'level', 'name', 'online', 'rank', 'slug', 'ticks', 'wealth', 'weapon']);
+    assert.strictEqual(board.players[0].slug, null, 'unnamed pilots get no page');
     assert.strictEqual(board.players[0].rank, 1);
     assert.strictEqual(board.players[0].online, true);
     assert.ok(!JSON.stringify(board).includes('111111111111111111'), 'leaderboard carries no ids');
@@ -233,6 +254,45 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     assert.strictEqual(players.status, 200);
     assert.deepStrictEqual(players.body.players, []);
     assert.strictEqual((await call('GET', '/services/operations')).status, 'next');
+    await presence.stop();
+  });
+
+  it('serves each named player a page and a profile without ids', async function () {
+    const presence = new Presence({ path: path.join(dir, 'store'), tickMs: 0, gateway: false });
+    await presence.start();
+    await presence.game._registerUser({ id: 'discord/users/111111111111111111', name: 'Neorion Prime' });
+    await presence.game._handleJoin({ user: 'discord/users/111111111111111111', channel: `discord/channels/${VOICE}` });
+    await presence.game._handleJoin({ user: 'discord/users/222222222222222222', channel: `discord/channels/${VOICE}` });
+    await presence.game.tick();
+    const middleware = presence.middleware();
+    const call = (url) => new Promise((resolve) => {
+      const res = {
+        headers: {},
+        setHeader (k, v) { this.headers[k] = v; },
+        end (body) { resolve({ status: this.statusCode, body: body ? JSON.parse(body) : null }); }
+      };
+      middleware({ method: 'GET', url, originalUrl: url }, res, () => resolve({ status: 'next' }));
+    });
+
+    const board = (await presence.players()).players;
+    assert.deepStrictEqual(board.map((row) => row.slug).sort(), ['neorion-prime', null].sort());
+
+    const profile = await call('/services/idlerpg/players/Neorion-Prime');
+    assert.strictEqual(profile.status, 200);
+    assert.strictEqual(profile.body.name, 'Neorion Prime');
+    assert.strictEqual(profile.body.players, 2);
+    assert.ok(Array.isArray(profile.body.equipment));
+    assert.ok(profile.body.nextLevelExperience > 0);
+    assert.ok(!JSON.stringify(profile.body).includes('111111111111111111'), 'no member ids');
+    assert.strictEqual((await call('/services/idlerpg/players/unknown-pilot')).status, 404);
+    assert.strictEqual((await call('/services/idlerpg/players/%E0%A4%A')).status, 'next');
+
+    const page = await presence.page('/services/idlerpg/players/neorion-prime');
+    assert.strictEqual(page.path, '/services/idlerpg/players/neorion-prime');
+    assert.strictEqual(page.title, 'Neorion Prime — IDLERPG');
+    assert.match(page.description, /^Level \d+, rank \d of 2 /);
+    assert.strictEqual(await presence.page('/services/idlerpg/players/nobody'), null);
+    assert.strictEqual(await presence.page('/services/idlerpg'), null);
     await presence.stop();
   });
 });
