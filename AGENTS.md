@@ -125,12 +125,15 @@ creatures, and armor scale with level (balanced with idlerpg's
 histogram, `battles { won, lost, total }`, `kills`, top-5 `slain` creatures)
 and `GET /services/idlerpg/players?limit=` the public leaderboard
 (Discord display names — already public via the home-page widget — plus level /
-XP / kills / weapon / credits / hours / online flag / `slug`) — never member ids or messages.
-Each named pilot has a page at `/services/idlerpg/players/<slug>`
-(`components/IdleRPGPlayerPage.js`; JSON clients get idlerpg's `profile(slug)`:
+XP / kills / weapon / credits / hours / online flag / player `id`) — never member ids or messages.
+Each pilot has a page at `/services/idlerpg/players/<id>`
+(`components/IdleRPGPlayerPage.js`; JSON clients get idlerpg's `profile(id)`:
 rank, level progress, attributes, gear, bag, battles, top-5 slain; 404 when
-unknown). The slug is the display name slugified, `-2`… for a shared name by
-who played first; "Unknown pilot"s get none. Link previews come from
+unknown). The id is the idlerpg player id: 16 hex characters, unified across
+the player's remote `accounts` (`{ service, id }` — Discord now; Slack or
+another network later via `linkAccount`, still one page), unchanged by
+renames, and not derived from any account id. Saves from before accounts move
+to that shape on start with everything kept. Link previews come from
 `Presence#page`. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
 one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
@@ -244,11 +247,16 @@ whole history of those channels and threads in every guild (`--channel`,
 cursor every page, so a rerun resumes and stored clips are kept. Video attachments and video embeds
 become clips; other links are kept as link-only clips unless `externalLinks`
 (`GOON_CLIPS_LINKS=1`) imports them with yt-dlp; `collect:clips -- --links`
-also queues the link-only clips already stored (most #clips posts are Medal links). The durable source is guild / channel / message / attachment
+also queues the link-only clips already stored (most #clips posts are Medal links). A
+clip is marked `failed` after 3 attempts, but a missing tool never spends one:
+processing pauses with the clips still queued, and every start requeues clips
+that failed for a missing tool or codec (`Clips#retryFailed`;
+`collect:clips -- --retry-failed` retries every failure). The durable source is guild / channel / message / attachment
 — CDN URLs expire and are re-signed with `POST /attachments/refresh-urls` (a
 404 on the message means it was deleted). Each clip is downloaded once, probed,
 and kept only as a 240p/15 fps proxy plus a thumbnail sprite (needs `ffmpeg` +
-`ffprobe`); the original is deleted. Recording time
+`ffprobe`; `npm run check:video` checks a host — codecs, filters, the real
+commands on a generated clip, yt-dlp, disk, Discord CDN — and exits 1 on a gap); the original is deleted. Recording time
 (`functions/clipRecordingTime.js`) comes from container `creation_time`, then
 recorder filename patterns (ShadowPlay, Medal, Game Bar, OBS, ReLive) with the
 author's UTC offset solved against the post time and remembered, then

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * One IdleRPG player's page at `/services/idlerpg/players/<slug>`. Filled
+ * One IdleRPG player's page at `/services/idlerpg/players/<id>`. Filled
  * client-side from the same URL as JSON (`Presence#player`): display name,
  * rank, level progress, attributes, gear, battles, and most-slain creatures —
  * never Discord ids or messages. Shares the `idlerpg-*` styles of
@@ -43,7 +43,7 @@ function renderPlayerHtml (props) {
   return `<main id="idlerpg-player-page" class="idlerpg-page idlerpg-player-page">
       <h1 id="idlerpg-player-name">Pilot</h1>
       <p class="idlerpg-player-standing" id="idlerpg-player-standing"></p>
-      <p class="idlerpg-empty" id="idlerpg-player-missing" hidden>No pilot by that name yet. Names change when pilots rename on Discord — find them on the leaderboard.</p>
+      <p class="idlerpg-empty" id="idlerpg-player-missing" hidden>No pilot at this address. Find them on the leaderboard.</p>
       <div id="idlerpg-player-body" hidden>
         <section class="idlerpg-section" aria-labelledby="idlerpg-player-progress-heading">
           <h2 id="idlerpg-player-progress-heading">Progress</h2>

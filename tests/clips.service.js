@@ -560,4 +560,80 @@ describe('clips', function () {
       assert.ok(!calls.some((c) => /\/messages\?/.test(c)), calls.join('\n'));
     });
   });
+
+  describe('Clips proxy retries', function () {
+    this.timeout(20000);
+
+    let root;
+    let clips;
+    let installed;
+
+    function linkClip (id, proxy) {
+      return { id, kind: 'link', url: `https://medal.tv/clips/${id}`, author: 'Ace', postedAt: '2026-10-20T02:40:00.000Z', proxy };
+    }
+
+    async function seed (records) {
+      for (const record of records) {
+        await clips.store.set(`/clips/${record.id}`, record);
+        await clips._append('clips', record.id);
+      }
+    }
+
+    before(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-retry-'));
+      installed = false;
+      clips = new Clips({
+        path: root,
+        discord: {},
+        poll: false,
+        fetch: () => Promise.resolve(response(404, {})),
+        run: async () => {
+          if (!installed) throw Object.assign(new Error('spawn yt-dlp ENOENT'), { code: 'ENOENT' });
+          return { code: 1, stdout: '', stderr: 'ERROR: [medal] clip is private' };
+        },
+        resolveToken: () => ({ token: 'test-token', source: 'test' })
+      });
+      await clips.start();
+    });
+
+    after(async function () {
+      if (clips) await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('leaves clips queued without spending attempts while a tool is missing', async function () {
+      await seed([linkClip('a', { status: 'pending', attempts: 0, error: null }), linkClip('b', { status: 'pending', attempts: 0, error: null })]);
+      for (let i = 0; i < 4; i++) assert.strictEqual(await clips.processPending(), 0);
+      for (const id of ['a', 'b']) assert.deepStrictEqual((await clips.getClip(id)).proxy, { status: 'pending', attempts: 0, error: null });
+    });
+
+    it('requeues clips that failed for a missing tool or codec, and every failure when asked', async function () {
+      await seed([
+        linkClip('c', { status: 'failed', attempts: 3, error: 'ffprobe is not installed' }),
+        linkClip('d', { status: 'failed', attempts: 3, error: "ffmpeg exited 1: Unknown encoder 'libx264'" }),
+        linkClip('e', { status: 'failed', attempts: 3, error: 'yt-dlp exited 1: ERROR: Video unavailable' })
+      ]);
+      assert.strictEqual(await clips.retryFailed(), 2);
+      assert.deepStrictEqual((await clips.getClip('c')).proxy, { status: 'pending', attempts: 0, error: null });
+      assert.strictEqual((await clips.getClip('d')).proxy.status, 'pending');
+      assert.strictEqual((await clips.getClip('e')).proxy.status, 'failed');
+      assert.strictEqual(await clips.retryFailed({ all: true }), 1);
+      assert.strictEqual((await clips.getClip('e')).proxy.status, 'pending');
+    });
+
+    it('counts real failures once the tool is there', async function () {
+      installed = true;
+      await clips.processPending();
+      const proxy = (await clips.getClip('a')).proxy;
+      assert.strictEqual(proxy.attempts, 1);
+      assert.match(proxy.error, /clip is private/);
+    });
+
+    it('requeues missing-tool failures on start', async function () {
+      await clips.store.set('/clips/c', linkClip('c', { status: 'failed', attempts: 3, error: 'ffmpeg is not installed' }));
+      await clips.stop();
+      await clips.start();
+      assert.strictEqual((await clips.getClip('c')).proxy.status, 'pending');
+    });
+  });
 });

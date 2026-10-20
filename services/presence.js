@@ -29,11 +29,22 @@ function sendJson (res, status, body) {
 }
 
 /**
- * Player slug from a `/services/idlerpg/players/<slug>` path.
+ * Discord user id (snowflake) among an IdleRPG player's remote accounts, or
+ * null when they have no Discord account.
+ * @param {Object} player IdleRPG player record (`accounts: [{ service, id }]`).
+ * @returns {string|null}
+ */
+function discordUserId (player) {
+  const account = ((player && player.accounts) || []).find((entry) => entry.service === 'discord');
+  return account ? account.id : null;
+}
+
+/**
+ * IdleRPG player id from a `/services/idlerpg/players/<id>` path.
  * @param {string} pathname
  * @returns {string|null}
  */
-function playerSlug (pathname) {
+function playerId (pathname) {
   const match = /^\/services\/idlerpg\/players\/([^/]+)\/?$/i.exec(String(pathname || ''));
   if (!match) return null;
   try {
@@ -201,11 +212,10 @@ class Presence {
     if (!this.game || !discord) return 0;
     const client = discord.client;
     const guilds = client && client.guilds && client.guilds.cache ? [...client.guilds.cache.values()] : [];
-    const prefix = 'discord/users/';
     let named = 0;
     for (const player of Object.values(this.game.content.players)) {
-      if (player.name !== player.id || !player.id.startsWith(prefix)) continue;
-      const userId = player.id.slice(prefix.length);
+      const userId = discordUserId(player);
+      if (player.name || !userId) continue;
       let name = null;
       for (const guild of guilds) {
         name = this.adapter ? this.adapter.displayName(userId, guild.id) : null;
@@ -221,7 +231,7 @@ class Presence {
         if (user) name = user.globalName || user.username;
       }
       if (!name) continue;
-      await this.game._registerUser({ id: player.id, name: String(name) });
+      await this.game._registerUser({ id: `discord/users/${userId}`, name: String(name) });
       named += 1;
     }
     if (named) await this.game._persist();
@@ -249,8 +259,8 @@ class Presence {
   }
 
   /**
-   * Public leaderboard: display names (already public on the Discord widget)
-   * and game numbers — never service ids.
+   * Public leaderboard: player ids, display names (already public on the
+   * Discord widget), and game numbers — never member ids.
    * @param {number} [limit=50]
    * @returns {Promise<Object>}
    */
@@ -264,30 +274,31 @@ class Presence {
   }
 
   /**
-   * One player's public profile by leaderboard slug (display name, standing,
-   * gear, game numbers — never a service id).
-   * @param {string} slug
+   * One player's public profile by the player id the leaderboard lists —
+   * one id however many chat accounts they link, unchanged by renames
+   * (display name, standing, gear, game numbers — never member ids).
+   * @param {string} id
    * @returns {Promise<Object|null>}
    */
-  async player (slug) {
+  async player (id) {
     if (!this.game || typeof this.game.profile !== 'function') return null;
-    return this.game.profile(slug);
+    return this.game.profile(id);
   }
 
   /**
    * Link-preview metadata for a player page
-   * (`/services/idlerpg/players/<slug>`), or null when there is no such player.
+   * (`/services/idlerpg/players/<id>`), or null when there is no such player.
    * @param {string} pathname
    * @returns {Promise<{ path: string, title: string, description: string }|null>}
    */
   async page (pathname) {
-    const slug = playerSlug(pathname);
-    const profile = slug ? await this.player(slug) : null;
+    const id = playerId(pathname);
+    const profile = id ? await this.player(id) : null;
     if (!profile) return null;
     const kills = `${profile.kills} kill${profile.kills === 1 ? '' : 's'}`;
     const weapon = profile.weapon ? `, wielding ${profile.weapon}` : '';
     return {
-      path: `${BASE}/players/${encodeURIComponent(profile.slug)}`,
+      path: `${BASE}/players/${encodeURIComponent(profile.id)}`,
       title: `${profile.name} — IDLERPG`,
       description: `Level ${profile.level}, rank ${profile.rank} of ${profile.players} in the alliance idle game: ${kills}${weapon}, ${profile.hours} hours present.`
     };
@@ -296,7 +307,7 @@ class Presence {
   /**
    * Express middleware for the IdleRPG application's JSON:
    * `GET /services/idlerpg`, `GET /services/idlerpg/players?limit=`, and
-   * `GET /services/idlerpg/players/<slug>`.
+   * `GET /services/idlerpg/players/<id>`.
    * The retired `/services/presence` paths redirect there.
    * @returns {Function}
    */
@@ -312,8 +323,8 @@ class Presence {
       let job = null;
       if (pathname === BASE) job = () => this.report();
       else if (pathname === `${BASE}/players`) job = () => this.players(Math.min(Number(url.searchParams.get('limit')) || 50, 500));
-      else if (playerSlug(pathname)) {
-        job = () => this.player(playerSlug(pathname)).then((profile) => {
+      else if (playerId(pathname)) {
+        job = () => this.player(playerId(pathname)).then((profile) => {
           if (!profile) throw Object.assign(new Error('No such player'), { status: 404 });
           return profile;
         });

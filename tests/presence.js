@@ -68,7 +68,7 @@ describe('Presence service (Doorman + IdleRPG)', function () {
   it('penalizes chat only in the announcement channel, never in voice chat or elsewhere', async function () {
     const ANNOUNCE = '1560112808283086929';
     const user = 'discord/users/111111111111111111';
-    const wealth = (presence) => presence.game.content.players[user].wealth;
+    const wealth = (presence) => presence.game.playerFor(user).wealth;
     for (const announcements of [[ANNOUNCE], []]) {
       const presence = new Presence({ path: path.join(dir, `store-${announcements.length}`), tickMs: 0, gateway: false, announcements });
       await presence.start();
@@ -146,11 +146,12 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     const board = await presence.players(10);
     assert.strictEqual(board.count, 2);
     assert.strictEqual(board.players.length, 2);
-    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'kills', 'lastSeen', 'level', 'name', 'online', 'rank', 'slug', 'ticks', 'wealth', 'weapon']);
-    assert.strictEqual(board.players[0].slug, null, 'unnamed pilots get no page');
+    assert.deepStrictEqual(Object.keys(board.players[0]).sort(), ['experience', 'firstSeen', 'hours', 'id', 'kills', 'lastSeen', 'level', 'name', 'online', 'rank', 'ticks', 'wealth', 'weapon']);
+    assert.ok(board.players.every((row) => /^[0-9a-f]{16}$/.test(row.id)), 'pages are keyed by player id');
     assert.strictEqual(board.players[0].rank, 1);
     assert.strictEqual(board.players[0].online, true);
-    assert.ok(!JSON.stringify(board).includes('111111111111111111'), 'leaderboard carries no ids');
+    assert.ok(!JSON.stringify(board).includes('111111111111111111'), 'leaderboard carries no member ids');
+    assert.ok(!JSON.stringify(board).includes('discord/users'), 'leaderboard carries no namespaced ids');
 
     discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: VOICE, newChannelId: null, channelName: 'PERMAFLEET' });
     await new Promise((resolve) => setImmediate(resolve));
@@ -257,7 +258,34 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     await presence.stop();
   });
 
-  it('serves each named player a page and a profile without ids', async function () {
+  it('keeps pilots saved before remote accounts, with their Discord account attached', async function () {
+    const store = path.join(dir, 'legacy-store');
+    const first = new Presence({ path: store, tickMs: 0, gateway: false });
+    await first.start();
+    first.game.content.players = {
+      'discord/users/111111111111111111': { id: 'discord/users/111111111111111111', name: 'Neorion', experience: 4200, wealth: 77, ticks: 300, presenceMs: 180000000, kills: 9, battles: { won: 9, lost: 2 } }
+    };
+    await first.stop();
+
+    const second = new Presence({ path: store, tickMs: 0, gateway: false });
+    await second.start();
+    const player = second.game.playerFor('discord/users/111111111111111111');
+    assert.deepStrictEqual(player.accounts, [{ service: 'discord', id: '111111111111111111' }]);
+    const [row] = (await second.players()).players;
+    assert.strictEqual(row.id, player.id, 'the page is the player id');
+    assert.strictEqual(row.name, 'Neorion');
+    assert.strictEqual(row.experience, 4200);
+    assert.strictEqual(row.wealth, 77);
+    assert.strictEqual(row.kills, 9);
+    assert.strictEqual(row.hours, 50);
+    const profile = await second.player(player.id);
+    assert.deepStrictEqual(profile.battles, { won: 9, lost: 2, total: 11 });
+    assert.ok(!JSON.stringify([row, profile]).includes('111111111111111111'), 'no member ids');
+    assert.strictEqual(await second.player('111111111111111111'), null, 'Discord ids are not page ids');
+    await second.stop();
+  });
+
+  it('serves each player a page keyed by their player id that survives renames', async function () {
     const presence = new Presence({ path: path.join(dir, 'store'), tickMs: 0, gateway: false });
     await presence.start();
     await presence.game._registerUser({ id: 'discord/users/111111111111111111', name: 'Neorion Prime' });
@@ -275,21 +303,25 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     });
 
     const board = (await presence.players()).players;
-    assert.deepStrictEqual(board.map((row) => row.slug).sort(), ['neorion-prime', null].sort());
+    const id = board.find((row) => row.name === 'Neorion Prime').id;
+    assert.strictEqual(id, presence.game.playerFor('discord/users/111111111111111111').id);
 
-    const profile = await call('/services/idlerpg/players/Neorion-Prime');
+    await presence.game._registerUser({ id: 'discord/users/111111111111111111', name: 'Neorion Renamed' });
+    const profile = await call(`/services/idlerpg/players/${id}`);
     assert.strictEqual(profile.status, 200);
-    assert.strictEqual(profile.body.name, 'Neorion Prime');
+    assert.strictEqual(profile.body.name, 'Neorion Renamed', 'the page follows a rename');
     assert.strictEqual(profile.body.players, 2);
     assert.ok(Array.isArray(profile.body.equipment));
     assert.ok(profile.body.nextLevelExperience > 0);
     assert.ok(!JSON.stringify(profile.body).includes('111111111111111111'), 'no member ids');
-    assert.strictEqual((await call('/services/idlerpg/players/unknown-pilot')).status, 404);
+    assert.ok(!JSON.stringify(profile.body).includes('discord/users'), 'no namespaced ids');
+    assert.strictEqual((await call('/services/idlerpg/players/111111111111111111')).status, 404, 'Discord ids are not page ids');
+    assert.strictEqual((await call('/services/idlerpg/players/neorion-prime')).status, 404, 'names are not page ids');
     assert.strictEqual((await call('/services/idlerpg/players/%E0%A4%A')).status, 'next');
 
-    const page = await presence.page('/services/idlerpg/players/neorion-prime');
-    assert.strictEqual(page.path, '/services/idlerpg/players/neorion-prime');
-    assert.strictEqual(page.title, 'Neorion Prime — IDLERPG');
+    const page = await presence.page(`/services/idlerpg/players/${id}`);
+    assert.strictEqual(page.path, `/services/idlerpg/players/${id}`);
+    assert.strictEqual(page.title, 'Neorion Renamed — IDLERPG');
     assert.match(page.description, /^Level \d+, rank \d of 2 /);
     assert.strictEqual(await presence.page('/services/idlerpg/players/nobody'), null);
     assert.strictEqual(await presence.page('/services/idlerpg'), null);

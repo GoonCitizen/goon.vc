@@ -13,13 +13,14 @@
  *   npm run collect:clips -- --days 30        (only the last 30 days)
  *   npm run collect:clips -- --no-proxies     (index only; proxies later)
  *   npm run collect:clips -- --links          (also import Medal / YouTube / Twitch links with yt-dlp)
+ *   npm run collect:clips -- --retry-failed   (try every failed clip again; missing-tool failures are retried on every start)
  */
 
 const settings = require('../settings/local');
 const Clips = require('../services/clips');
 
 function parseArgs (argv) {
-  const args = { channels: [], guilds: [], days: 0, proxies: true, links: false, path: null };
+  const args = { channels: [], guilds: [], days: 0, proxies: true, links: false, retryFailed: false, path: null };
   const list = argv.slice(2);
   while (list.length) {
     const a = list.shift();
@@ -28,6 +29,7 @@ function parseArgs (argv) {
     else if (a === '--days') args.days = Number(list.shift());
     else if (a === '--no-proxies') args.proxies = false;
     else if (a === '--links') args.links = true;
+    else if (a === '--retry-failed') args.retryFailed = true;
     else if (a === '--path') args.path = list.shift();
     else throw new Error(`Unknown flag: ${a}`);
   }
@@ -70,6 +72,7 @@ async function main () {
     log(`${status.channels} channel${status.channels === 1 ? '' : 's'}, ${status.added} new clip${status.added === 1 ? '' : 's'}${status.error ? ` (errors: ${status.error})` : ''}`);
     if (!status.channels) log('no matching channel: is the bot in the guild with View Channel on the clip channels?');
     if (args.links) log(`queued ${await clips.queueLinks()} links for import (needs yt-dlp)`);
+    if (args.retryFailed) log(`queued ${await clips.retryFailed({ all: true })} failed clips for another try`);
     if (args.proxies) {
       log('building proxies (needs ffmpeg + ffprobe)…');
       if (clips._processing) await clips._processing;

@@ -30,6 +30,7 @@ const MEDIA_CHANNEL = 16;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const PAGE_SIZE = 100;
 const MAX_ATTEMPTS = 3;
+const MISSING_DEPENDENCY = /is not installed|Unknown encoder|Encoder not found|No such filter|Filter not found|Unrecognized option|Invalid encoder type/i;
 const NAMES_TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 60 * 1000;
 const LIMITS = { name: 80, notes: 2000, caption: 500 };
@@ -249,6 +250,8 @@ class Clips {
         this._enqueueRender(id);
       }
     }
+    const requeued = await this.retryFailed();
+    if (requeued) this._log(`queued ${requeued} clip${requeued === 1 ? '' : 's'} that failed for a missing tool or codec`);
     if (this.settings.poll) {
       if (this.settings.refreshOnStart) this._refreshInBackground();
       if (this.settings.ttlMs > 0) {
@@ -551,8 +554,14 @@ class Clips {
    * @private
    */
   _run (command, args, opts = {}) {
+    const missing = (error) => {
+      if (!error || error.code !== 'ENOENT') return error;
+      const out = new Error(`${command} is not installed`);
+      out.missingTool = command;
+      return out;
+    };
     if (this.settings.run) {
-      return Promise.resolve(this.settings.run(command, args, opts)).then((out) => {
+      return Promise.resolve().then(() => this.settings.run(command, args, opts)).catch((error) => { throw missing(error); }).then((out) => {
         if (out && out.code) throw new Error(`${path.basename(command)} exited ${out.code}: ${String(out.stderr || '').trim().split('\n').slice(-3).join(' ')}`);
         return out || { code: 0, stdout: '', stderr: '' };
       });
@@ -566,7 +575,7 @@ class Clips {
         else if (stdout.length < 4 * 1024 * 1024) stdout += chunk.toString();
       });
       child.stderr.on('data', (chunk) => { stderr = (stderr + chunk.toString()).slice(-16 * 1024); });
-      child.on('error', (error) => reject(error.code === 'ENOENT' ? new Error(`${command} is not installed`) : error));
+      child.on('error', (error) => reject(missing(error)));
       child.on('close', (code) => {
         if (code) return reject(new Error(`${path.basename(command)} exited ${code}: ${stderr.trim().split('\n').slice(-3).join(' ')}`));
         resolve({ code, stdout, stderr });
@@ -794,6 +803,27 @@ class Clips {
     return queued;
   }
 
+  /**
+   * Queue failed clips for another try. By default only the ones that failed
+   * because the host was missing a tool or codec (ffmpeg, ffprobe, yt-dlp,
+   * libx264, a filter), which `start` does on every boot; `all` retries every
+   * failure.
+   * @param {Object} [opts]
+   * @param {boolean} [opts.all] retry every failed clip
+   * @returns {Promise<number>} clips queued
+   */
+  async retryFailed (opts = {}) {
+    let queued = 0;
+    for (const id of await this._list('clips')) {
+      const clip = await this.store.get(`/clips/${id}`);
+      if (!clip || !clip.proxy || clip.proxy.status !== 'failed') continue;
+      if (!opts.all && !MISSING_DEPENDENCY.test(clip.proxy.error || '')) continue;
+      await this._updateClip(id, (record) => { record.proxy = { status: 'pending', attempts: 0, error: null }; });
+      queued += 1;
+    }
+    return queued;
+  }
+
   _processInBackground () {
     if (this._processing || this._stopped) return this._processing;
     this._processing = this.processPending()
@@ -824,6 +854,10 @@ class Clips {
         built += 1;
         this._log(`[${index}/${ids.length}] ${clip.author}: ${clip.filename || clip.id} (${Math.round(made.durationMs / 1000)}s, recorded ${made.recording.recordedAt} from ${made.recording.source})`);
       } catch (error) {
+        if (error.missingTool) {
+          this._log(`${error.message}: proxies wait until it is (nothing marked failed)`);
+          break;
+        }
         this._log(`[${index}/${ids.length}] ${clip.author}: ${clip.filename || clip.id} failed: ${error.message || error}`);
         await this._updateClip(id, (record) => {
           const attempts = ((record.proxy && record.proxy.attempts) || 0) + 1;

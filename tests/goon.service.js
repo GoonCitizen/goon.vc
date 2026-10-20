@@ -637,7 +637,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.json.count, 0);
   });
 
-  it('gives each named IdleRPG player a page with its own link preview', async function () {
+  it('gives each IdleRPG player a page under their player id, with its own link preview', async function () {
     const game = site.presence.game;
     const id = 'discord/users/111111111111111111';
     await game._registerUser({ id, name: 'Neorion' });
@@ -645,20 +645,23 @@ describe('goon.vc HTTP', function () {
     await game.tick();
     try {
       const board = await fetchJson('/services/idlerpg/players');
-      assert.strictEqual(board.json.players[0].slug, 'neorion');
-      const page = await fetchJson('/services/idlerpg/players/neorion', { headers: { Accept: 'text/html' } });
+      const playerId = board.json.players[0].id;
+      assert.strictEqual(playerId, game.playerFor(id).id);
+      const page = await fetchJson(`/services/idlerpg/players/${playerId}`, { headers: { Accept: 'text/html' } });
       assert.strictEqual(page.status, 200);
       assert.ok(page.body.includes('id="idlerpg-player-page"'));
       assert.ok(page.body.includes('<meta property="og:title" content="Neorion — IDLERPG — GOON SQUAD">'), 'per-player Open Graph');
-      assert.ok(page.body.includes('<link rel="canonical" href="https://goon.vc/services/idlerpg/players/neorion">'));
-      const profile = await fetchJson('/services/idlerpg/players/neorion');
+      assert.ok(page.body.includes(`<link rel="canonical" href="https://goon.vc/services/idlerpg/players/${playerId}">`));
+      const profile = await fetchJson(`/services/idlerpg/players/${playerId}`);
       assert.strictEqual(profile.status, 200);
       assert.strictEqual(profile.json.name, 'Neorion');
       assert.strictEqual(profile.json.rank, 1);
       assert.ok(!profile.body.includes('111111111111111111'), 'no member ids');
-      assert.strictEqual((await fetchJson('/services/idlerpg/players/nobody')).status, 404);
+      assert.strictEqual((await fetchJson('/services/idlerpg/players/neorion')).status, 404, 'names are not page ids');
     } finally {
-      delete game.content.players[id];
+      const player = game.playerFor(id);
+      if (player) delete game.content.players[player.id];
+      delete game._accounts[id];
       delete game.content.users[id];
     }
   });

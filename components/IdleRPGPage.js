@@ -250,9 +250,9 @@ function renderIdleRPGScript (opts = {}) {
           var tr = el('tr', p.online ? 'idlerpg-online' : '');
           tr.appendChild(el('td', 'rank', String(p.rank)));
           var name = el('td', 'name');
-          if (p.slug) {
+          if (p.id) {
             var link = el('a', '', p.name);
-            link.href = ${playersEndpoint} + '/' + encodeURIComponent(p.slug);
+            link.href = ${playersEndpoint} + '/' + encodeURIComponent(p.id);
             name.appendChild(link);
           } else {
             name.textContent = p.name;

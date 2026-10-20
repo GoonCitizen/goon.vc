@@ -1163,7 +1163,7 @@
     <main id="idlerpg-player-page" class="idlerpg-page idlerpg-player-page">
       <h1 id="idlerpg-player-name">Pilot</h1>
       <p class="idlerpg-player-standing" id="idlerpg-player-standing"></p>
-      <p class="idlerpg-empty" id="idlerpg-player-missing" hidden>No pilot by that name yet. Names change when pilots rename on Discord — find them on the leaderboard.</p>
+      <p class="idlerpg-empty" id="idlerpg-player-missing" hidden>No pilot at this address. Find them on the leaderboard.</p>
       <div id="idlerpg-player-body" hidden>
         <section class="idlerpg-section" aria-labelledby="idlerpg-player-progress-heading">
           <h2 id="idlerpg-player-progress-heading">Progress</h2>
@@ -2811,9 +2811,9 @@
           var tr = el('tr', p.online ? 'idlerpg-online' : '');
           tr.appendChild(el('td', 'rank', String(p.rank)));
           var name = el('td', 'name');
-          if (p.slug) {
+          if (p.id) {
             var link = el('a', '', p.name);
-            link.href = "/services/idlerpg/players" + '/' + encodeURIComponent(p.slug);
+            link.href = "/services/idlerpg/players" + '/' + encodeURIComponent(p.id);
             name.appendChild(link);
           } else {
             name.textContent = p.name;
