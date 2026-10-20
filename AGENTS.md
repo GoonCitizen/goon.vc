@@ -245,18 +245,28 @@ cursor; `GOON_CLIPS=0` serves stored clips only). `npm run collect:clips`
 whole history of those channels and threads in every guild (`--channel`,
 `--guild` narrow it; `--days`, `--no-proxies`) and builds the proxies; it saves its
 cursor every page, so a rerun resumes and stored clips are kept. Video attachments and video embeds
-become clips; other links are kept as link-only clips unless `externalLinks`
-(`GOON_CLIPS_LINKS=1`) imports them with yt-dlp; `collect:clips -- --links`
-also queues the link-only clips already stored (most #clips posts are Medal links). A
+become clips. Medal links (most #clips posts) are downloaded with yt-dlp and
+become local clips too; other hosts stay link-only unless listed in
+`externalLinks` (`GOON_CLIPS_LINKS`: unset = `medal.tv`, `1`/`all` = YouTube,
+Streamable, and Twitch as well, `0` = none, or a host list; `collect:clips --
+--links` = all). Every start queues stored link-only clips whose host is now listed. A
 clip is marked `failed` after 3 attempts, but a missing tool never spends one:
 processing pauses with the clips still queued, and every start requeues clips
 that failed for a missing tool or codec (`Clips#retryFailed`;
 `collect:clips -- --retry-failed` retries every failure). The durable source is guild / channel / message / attachment
 — CDN URLs expire and are re-signed with `POST /attachments/refresh-urls` (a
-404 on the message means it was deleted). Each clip is downloaded once, probed,
-and kept only as a 240p/15 fps proxy plus a thumbnail sprite (needs `ffmpeg` +
-`ffprobe`; `npm run check:video` checks a host — codecs, filters, the real
-commands on a generated clip, yt-dlp, disk, Discord CDN — and exits 1 on a gap); the original is deleted. Recording time
+404 on the message means it was deleted). Each clip is downloaded, probed, and
+gets a 240p/15 fps proxy plus a thumbnail sprite (needs `ffmpeg` + `ffprobe`;
+`npm run check:video` checks a host — codecs, filters, the real commands on a
+generated clip, yt-dlp, disk, Discord CDN — and exits 1 on a gap). The download
+itself (up to `maxSourceHeight`, 1080p) is kept as the clip's **master** in
+`masters/` (`keepMasters`, `GOON_CLIPS_MASTERS=0` turns it off; none are stored
+while the disk has under `minFreeBytes`, 10 GB). A rescan pass every
+`rescanEveryMs` (hourly, `rescanBatch` clips) stores masters for ready clips
+that lack one and asks yt-dlp (`-J`, no download) whether a link clip not
+checked for `recheckAfterMs` (a week) now offers a taller version, downloading
+it and rebuilding the proxy when it does; uploads are fixed files and are left
+alone once stored (`collect:clips -- --rescan` runs a full pass). Recording time
 (`functions/clipRecordingTime.js`) comes from container `creation_time`, then
 recorder filename patterns (ShadowPlay, Medal, Game Bar, OBS, ReLive) with the
 author's UTC offset solved against the post time and remembered, then
@@ -277,7 +287,8 @@ the active route. Projects live at `/clips/projects/<id>`: a program of segments
 `{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
 `revision`; old revisions kept, nothing deleted). A render
 (`functions/clipRenderPlan.js`, a pure ffmpeg argument builder; one at a time,
-`maxRenderSeconds` / `maxSegments`) re-fetches the full-resolution originals and
+`maxRenderSeconds` / `maxSegments`) cuts from the masters (fetching the source
+again only for a clip without one, so deleted messages and links still render) and
 writes `renders/<id>.mp4` plus `<id>.sources.json` (each segment's pilot,
 channel, message link, file, and recorded time); credits ride along as a
 `mov_text` subtitle track. Responses carry display names only — never Discord

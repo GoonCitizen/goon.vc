@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Check a host for everything goon.vc /clips needs to process video:
 # ffmpeg + ffprobe (libx264, aac, mov_text, mjpeg, and the filters the proxy,
-# thumbnail sprite, and render commands use), optional yt-dlp for link
-# imports, disk space for the clips Store, and access to Discord's CDN.
+# thumbnail sprite, and render commands use), yt-dlp for Medal (and other
+# link) imports, disk space for the clips Store, and access to Discord's CDN.
 # Each ffmpeg command services/clips.js and functions/clipRenderPlan.js run is
 # also run for real on a short generated clip.
 #
 #   bash scripts/check-video-deps.sh             (from the goon.vc checkout)
-#   bash scripts/check-video-deps.sh --links     (yt-dlp is required, as with GOON_CLIPS_LINKS=1)
 #   bash scripts/check-video-deps.sh --offline   (skip the network checks)
+#
+# yt-dlp is required unless GOON_CLIPS_LINKS=0 (links kept as sources only).
 #
 # Overrides: FFMPEG, FFPROBE, YTDLP (binary paths), GOON_CLIPS_STORE (default stores/clips).
 # Exits 1 when something /clips needs is missing; warnings alone exit 0.
@@ -19,14 +20,13 @@ FFMPEG="${FFMPEG:-ffmpeg}"
 FFPROBE="${FFPROBE:-ffprobe}"
 YTDLP="${YTDLP:-yt-dlp}"
 STORE="${GOON_CLIPS_STORE:-stores/clips}"
-LINKS=0
-[ "${GOON_CLIPS_LINKS:-}" = "1" ] && LINKS=1
+LINKS=1
+[ "${GOON_CLIPS_LINKS:-}" = "0" ] && LINKS=0
 NETWORK=1
 for arg in "$@"; do
   case "$arg" in
-    --links) LINKS=1 ;;
     --offline) NETWORK=0 ;;
-    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -177,7 +177,7 @@ else
 fi
 
 # --- yt-dlp ------------------------------------------------------------------
-section "yt-dlp ($([ "$LINKS" = 1 ] && echo 'required: link imports are on' || echo 'optional: only for GOON_CLIPS_LINKS=1 / collect:clips --links'))"
+section "yt-dlp ($([ "$LINKS" = 1 ] && echo 'required: Medal clips are downloaded with it' || echo 'optional: GOON_CLIPS_LINKS=0 keeps links as sources only'))"
 missing_ytdlp () { if [ "$LINKS" = 1 ]; then fail "$*"; else warn "$*"; fi; }
 if have "$YTDLP"; then
   YV="$("$YTDLP" --version 2>/dev/null)"
@@ -188,12 +188,10 @@ if have "$YTDLP"; then
     NOW_S="$(date +%s)"
     REL_S="$(date -d "$REL" +%s 2>/dev/null || date -j -f %Y-%m-%d "$REL" +%s 2>/dev/null || echo "$NOW_S")"
     AGE=$(( (NOW_S - REL_S) / 86400 ))
-    if [ "$AGE" -gt 60 ]; then missing_ytdlp "yt-dlp is $AGE days old; YouTube / Medal imports break on old releases. Update: $YTDLP -U, or $(hint yt-dlp)"; fi
+    if [ "$AGE" -gt 60 ]; then warn "yt-dlp is $AGE days old; YouTube / Medal imports break on old releases. Update: $YTDLP -U, or $(hint yt-dlp)"; fi
   fi
-  if ! have deno && ! have node && ! have bun; then
-    missing_ytdlp "no JavaScript runtime (deno) for yt-dlp; current releases need one for YouTube"
-  elif ! have deno; then
-    warn "yt-dlp prefers deno for YouTube; without it some YouTube links may fail (https://deno.com)"
+  if ! have deno; then
+    warn "no deno: fine for Medal, but YouTube imports (GOON_CLIPS_LINKS=1) need it (https://deno.com)"
   fi
 else
   missing_ytdlp "$YTDLP not found. Install $(hint yt-dlp)"
@@ -223,13 +221,16 @@ fi
 FREE_KB="$(df -Pk "$PROBE_DIR" 2>/dev/null | awk 'NR==2 {print $4}')"
 if [ -n "$FREE_KB" ]; then
   FREE_GB=$((FREE_KB / 1048576))
-  # Originals are downloaded up to 1 GiB each before the proxy is made, and renders re-fetch them.
+  # Originals are downloaded up to 1 GiB each and kept as masters until the disk is down to minFreeBytes (10 GB).
   if [ "$FREE_GB" -lt 2 ]; then fail "only ${FREE_GB} GB free at $PROBE_DIR (originals up to 1 GB each are downloaded while processing)"
-  elif [ "$FREE_GB" -lt 10 ]; then warn "${FREE_GB} GB free at $PROBE_DIR; renders and large originals need room"
+  elif [ "$FREE_GB" -lt 10 ]; then warn "${FREE_GB} GB free at $PROBE_DIR; under 10 GB no masters are kept, so renders download sources again"
   else pass "${FREE_GB} GB free at $PROBE_DIR"; fi
 fi
 if [ -d "$STORE/media" ]; then
   pass "existing proxies: $(find "$STORE/media" -name '*.mp4' 2>/dev/null | wc -l | tr -d ' ') ($(du -sh "$STORE/media" 2>/dev/null | cut -f1))"
+fi
+if [ -d "$STORE/masters" ]; then
+  pass "existing masters: $(find "$STORE/masters" -type f 2>/dev/null | wc -l | tr -d ' ') ($(du -sh "$STORE/masters" 2>/dev/null | cut -f1))"
 fi
 
 # --- network -------------------------------------------------------------------

@@ -100,13 +100,23 @@ module.exports = {
   // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)",
   // plus every media channel); threads under a matched channel are read too.
   // Needs ffmpeg + ffprobe on PATH; the bot needs View Channel + Read Message History.
-  // GOON_CLIPS_LINKS=1 also imports Medal / YouTube / Twitch links (needs yt-dlp).
+  // Medal links are downloaded with yt-dlp; GOON_CLIPS_LINKS=1 (or "all") also imports
+  // YouTube / Streamable / Twitch, "0" keeps every link as a source only, or list hosts.
+  // Each clip's best download (up to 1080p) is kept in <store>/masters for renders, and
+  // links are re-checked weekly for a better version; GOON_CLIPS_MASTERS=0 keeps proxies only.
   clips: {
     path: process.env.GOON_CLIPS_STORE || 'stores/clips',
     channels: process.env.GOON_CLIPS_CHANNELS
       ? process.env.GOON_CLIPS_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
       : undefined,
-    externalLinks: process.env.GOON_CLIPS_LINKS === '1',
+    externalLinks: (() => {
+      const links = (process.env.GOON_CLIPS_LINKS || '').trim();
+      if (!links) return undefined;
+      if (links === '1' || links === 'all') return true;
+      if (links === '0') return false;
+      return links.split(',').map((s) => s.trim()).filter(Boolean);
+    })(),
+    keepMasters: process.env.GOON_CLIPS_MASTERS !== '0',
     poll: process.env.GOON_CLIPS !== '0'
   },
 

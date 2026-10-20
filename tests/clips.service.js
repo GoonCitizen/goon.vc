@@ -246,6 +246,8 @@ describe('clips', function () {
         ttlMs: 0,
         fetch: fetchStub,
         run: fakeRun,
+        externalLinks: false,
+        keepMasters: false,
         ffmpegPath: 'ffmpeg',
         ffprobePath: 'ffprobe',
         resolveToken: () => ({ token: 'test-token', source: 'test' }),
@@ -455,8 +457,10 @@ describe('clips', function () {
     });
 
     it('queues stored link-only clips for import once links are on', async function () {
-      await assert.rejects(clips.queueLinks(), /externalLinks/);
-      clips.settings.externalLinks = true;
+      assert.strictEqual(await clips.queueLinks(), 0);
+      clips.settings.externalLinks = ['youtube.com'];
+      assert.strictEqual(await clips.queueLinks(), 0, 'only the listed hosts');
+      clips.settings.externalLinks = ['medal.tv'];
       try {
         assert.strictEqual(await clips.queueLinks(), 1);
         assert.strictEqual((await clips.getClip(`${M2}-l0`)).proxy.status, 'pending');
@@ -554,6 +558,11 @@ describe('clips', function () {
       assert.deepStrictEqual(list.channels.map((c) => [c.name, c.clips]).sort(), [['library', 1], ['videos', 1]]);
     });
 
+    it('downloads Medal clips by default and keeps other links as sources', async function () {
+      assert.notStrictEqual((await clips.getClip(`${M5}-l0`)).proxy.status, 'skipped', 'Medal');
+      assert.strictEqual((await clips.getClip(`${M4}-l0`)).proxy.status, 'skipped', 'YouTube');
+    });
+
     it('skips channels and threads with nothing new', async function () {
       calls = [];
       await clips.refresh();
@@ -629,11 +638,147 @@ describe('clips', function () {
       assert.match(proxy.error, /clip is private/);
     });
 
-    it('requeues missing-tool failures on start', async function () {
+    it('requeues missing-tool failures and stored Medal links on start', async function () {
       await clips.store.set('/clips/c', linkClip('c', { status: 'failed', attempts: 3, error: 'ffmpeg is not installed' }));
+      await seed([
+        linkClip('f', { status: 'skipped', attempts: 0, error: null }),
+        Object.assign(linkClip('g', { status: 'skipped', attempts: 0, error: null }), { url: 'https://youtu.be/abc' })
+      ]);
       await clips.stop();
       await clips.start();
       assert.strictEqual((await clips.getClip('c')).proxy.status, 'pending');
+      assert.strictEqual((await clips.getClip('f')).proxy.status, 'pending', 'Medal links are imported by default');
+      assert.strictEqual((await clips.getClip('g')).proxy.status, 'skipped');
+    });
+  });
+
+  describe('Clips masters and rescans', function () {
+    this.timeout(20000);
+
+    const DAY = 24 * 60 * 60 * 1000;
+    const UPLOAD = `${CDN}/${CLIPS_CHANNEL}/6001/raid.mp4`;
+    let root;
+    let clips;
+    let clock;
+    let offered;
+    let runs;
+
+    async function fakeRun (command, args) {
+      runs.push([command, args]);
+      const last = args[args.length - 1];
+      if (command === 'yt-dlp' && args.includes('-J')) return { code: 0, stderr: '', stdout: JSON.stringify({ height: offered, requested_formats: [{ height: offered }, { height: null }] }) };
+      if (command === 'yt-dlp') {
+        fs.writeFileSync(args[args.indexOf('-o') + 1], `LINK-${offered}`);
+        return { code: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'ffprobe') {
+        const height = Number((/(\d+)$/.exec(fs.readFileSync(last, 'utf8')) || [])[1]) || 1080;
+        return { code: 0, stderr: '', stdout: JSON.stringify({ streams: [{ codec_type: 'video', codec_name: 'h264', width: Math.round(height * 16 / 9), height }], format: { duration: '12.0' } }) };
+      }
+      fs.writeFileSync(last, 'FAKE');
+      return { code: 0, stdout: '', stderr: '' };
+    }
+
+    function fetchStub (url, opts = {}) {
+      if (url.endsWith('/attachments/refresh-urls') && opts.method === 'POST') {
+        return Promise.resolve(response(200, { refreshed_urls: [{ original: UPLOAD, refreshed: `${UPLOAD}?ex=new` }] }));
+      }
+      if (url === `${UPLOAD}?ex=new`) return Promise.resolve(response(200, 'UPLOAD-1080'));
+      return Promise.resolve(response(404, {}));
+    }
+
+    function ready (id, extra) {
+      return Object.assign({
+        id,
+        author: 'Ace',
+        channelId: CLIPS_CHANNEL,
+        messageId: '9001',
+        postedAt: '2026-10-20T02:40:00.000Z',
+        proxy: { status: 'ready', attempts: 0, error: null, height: 240 }
+      }, extra);
+    }
+
+    before(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-masters-'));
+      clock = Date.parse('2026-10-20T12:00:00Z');
+      offered = 720;
+      runs = [];
+      clips = new Clips({
+        path: root,
+        discord: {},
+        poll: false,
+        minFreeBytes: 0,
+        fetch: fetchStub,
+        run: fakeRun,
+        now: () => clock,
+        resolveToken: () => ({ token: 'test-token', source: 'test' })
+      });
+      await clips.start();
+      for (const clip of [
+        ready('6001', { kind: 'attachment', url: UPLOAD, filename: 'raid.mp4' }),
+        ready('9002-l0', { kind: 'link', url: 'https://medal.tv/clips/abc' })
+      ]) {
+        await clips.store.set(`/clips/${clip.id}`, clip);
+        await clips._append('clips', clip.id);
+      }
+    });
+
+    after(async function () {
+      if (clips) await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('stores a master for downloads made before masters were kept', async function () {
+      assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 2, stored: 2, upgraded: 0 });
+      const upload = await clips.getClip('6001');
+      assert.strictEqual(upload.master.height, 1080);
+      assert.strictEqual(fs.readFileSync(path.join(root, 'masters', upload.master.file), 'utf8'), 'UPLOAD-1080');
+      const link = await clips.getClip('9002-l0');
+      assert.strictEqual(link.master.height, 720);
+      assert.deepStrictEqual(clips.publicClip(link).master, { width: 1280, height: 720 });
+      assert.ok(!JSON.stringify(clips.publicClip(link)).includes(root), 'no server paths');
+    });
+
+    it('leaves stored uploads alone and rechecks links only after recheckAfterMs', async function () {
+      runs = [];
+      assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 0, stored: 0, upgraded: 0 });
+      clock += 8 * DAY;
+      assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 1, stored: 0, upgraded: 0 });
+      assert.deepStrictEqual(runs.map(([command, args]) => `${command} ${args.includes('-J') ? '-J' : 'download'}`), ['yt-dlp -J'], 'asks without downloading');
+      assert.strictEqual((await clips.getClip('9002-l0')).master.checkedAt, new Date(clock).toISOString());
+    });
+
+    it('downloads a taller version when the host offers one', async function () {
+      clock += 8 * DAY;
+      offered = 1080;
+      assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 1, stored: 0, upgraded: 1 });
+      const link = await clips.getClip('9002-l0');
+      assert.strictEqual(link.master.height, 1080);
+      assert.strictEqual(link.height, 1080);
+      assert.deepStrictEqual(fs.readdirSync(path.join(root, 'masters')).sort(), ['6001.mp4', '9002-l0.mp4']);
+      assert.ok(runs.some(([command, args]) => command === 'yt-dlp' && args.includes('bv*[height<=1080]+ba/b[height<=1080]/b')));
+    });
+
+    it('renders from the stored masters without asking Discord or the host', async function () {
+      runs = [];
+      const project = await clips.createProject({ name: 'Raid night', segments: [{ clipId: '6001', in: 0, out: 4 }, { clipId: '9002-l0', in: 1, out: 3 }] });
+      const render = await clips.startRender(project.id);
+      await clips._renderChain;
+      assert.strictEqual((await clips.getRender(render.id)).status, 'complete');
+      const [, args] = runs.find(([command]) => command === 'ffmpeg');
+      assert.ok(args.includes(path.join(root, 'masters', '6001.mp4')) && args.includes(path.join(root, 'masters', '9002-l0.mp4')));
+      assert.ok(!runs.some(([command]) => command === 'yt-dlp'));
+    });
+
+    it('stores nothing new while the disk is short on space', async function () {
+      clock += 8 * DAY;
+      offered = 1440;
+      clips.settings.minFreeBytes = Number.MAX_SAFE_INTEGER;
+      try {
+        assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 0, stored: 0, upgraded: 0 });
+      } finally {
+        clips.settings.minFreeBytes = 0;
+      }
     });
   });
 });

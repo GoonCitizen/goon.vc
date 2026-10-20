@@ -12,15 +12,16 @@
  *   npm run collect:clips -- --channel clips --guild 1190527980120850493  (only these)
  *   npm run collect:clips -- --days 30        (only the last 30 days)
  *   npm run collect:clips -- --no-proxies     (index only; proxies later)
- *   npm run collect:clips -- --links          (also import Medal / YouTube / Twitch links with yt-dlp)
+ *   npm run collect:clips -- --links          (import YouTube / Streamable / Twitch links too; Medal is always imported)
  *   npm run collect:clips -- --retry-failed   (try every failed clip again; missing-tool failures are retried on every start)
+ *   npm run collect:clips -- --rescan         (store masters for every clip without one, check links for better versions now)
  */
 
 const settings = require('../settings/local');
 const Clips = require('../services/clips');
 
 function parseArgs (argv) {
-  const args = { channels: [], guilds: [], days: 0, proxies: true, links: false, retryFailed: false, path: null };
+  const args = { channels: [], guilds: [], days: 0, proxies: true, links: false, retryFailed: false, rescan: false, path: null };
   const list = argv.slice(2);
   while (list.length) {
     const a = list.shift();
@@ -30,6 +31,7 @@ function parseArgs (argv) {
     else if (a === '--no-proxies') args.proxies = false;
     else if (a === '--links') args.links = true;
     else if (a === '--retry-failed') args.retryFailed = true;
+    else if (a === '--rescan') args.rescan = true;
     else if (a === '--path') args.path = list.shift();
     else throw new Error(`Unknown flag: ${a}`);
   }
@@ -56,7 +58,7 @@ async function main () {
     refreshOnStart: false,
     backfillDays: args.days,
     maxPages: Infinity,
-    externalLinks: args.links || configured.externalLinks,
+    externalLinks: args.links ? true : configured.externalLinks,
     log
   }));
 
@@ -71,12 +73,16 @@ async function main () {
     const status = await clips.refresh({ fromStart: true });
     log(`${status.channels} channel${status.channels === 1 ? '' : 's'}, ${status.added} new clip${status.added === 1 ? '' : 's'}${status.error ? ` (errors: ${status.error})` : ''}`);
     if (!status.channels) log('no matching channel: is the bot in the guild with View Channel on the clip channels?');
-    if (args.links) log(`queued ${await clips.queueLinks()} links for import (needs yt-dlp)`);
     if (args.retryFailed) log(`queued ${await clips.retryFailed({ all: true })} failed clips for another try`);
     if (args.proxies) {
       log('building proxies (needs ffmpeg + ffprobe)…');
       if (clips._processing) await clips._processing;
       await clips.processPending();
+      if (args.rescan) {
+        log('storing masters and checking links for better versions…');
+        const result = await clips.rescan({ limit: Infinity });
+        log(`checked ${result.checked}: ${result.stored} masters stored, ${result.upgraded} upgraded`);
+      }
     } else {
       clips._stopped = true;
       if (clips._processing) await clips._processing;

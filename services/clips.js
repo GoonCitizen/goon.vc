@@ -170,6 +170,7 @@ class Clips {
    * @param {string} [settings.path] Root directory (Store, media, renders).
    * @param {Object} [settings.discord] settings.discord (token / secretsFile).
    * @param {Array<string>} [settings.channels] Channel matchers (id, exact name, or "/regex/"); threads under a matched channel are read too.
+   * @param {(Array<string>|boolean)} [settings.externalLinks] Hosts whose clip links are downloaded with yt-dlp (default Medal); `true` for every clip host, `false` to keep links as sources only.
    * @param {boolean} [settings.mediaChannels] Also read every media channel, whatever its name.
    * @param {Array<string>} [settings.guilds] Only these guilds (default: every guild the bot is in).
    * @param {boolean} [settings.poll] Poll Discord and build proxies (false serves stored clips only).
@@ -177,6 +178,12 @@ class Clips {
    * @param {number} [settings.backfillDays] How far back a new channel is read (0 = its whole history).
    * @param {number} [settings.maxPages] Pages of 100 messages read per channel per poll.
    * @param {number} [settings.sessionGapMs] Largest silence inside one session.
+   * @param {boolean} [settings.keepMasters] Keep each clip's best download (up to `maxSourceHeight`) in `masters/` for renders.
+   * @param {number} [settings.maxSourceHeight] Tallest source downloaded (default the 1080p render height).
+   * @param {number} [settings.minFreeBytes] No new masters while the disk has less free space than this.
+   * @param {number} [settings.rescanEveryMs] How often a rescan pass runs (0 = never; `rescan` still works).
+   * @param {number} [settings.recheckAfterMs] How long before a link clip's source is checked for a better version again.
+   * @param {number} [settings.rescanBatch] Clips checked per rescan pass.
    * @param {number} [settings.maxQueuedRenders] Renders waiting at once before new ones are refused.
    * @param {Function} [settings.identify] `async (req) => string|null` — the signed-in member's display name.
    * @param {Function} [settings.log] `(message) => void` progress while polling and building proxies.
@@ -199,8 +206,14 @@ class Clips {
       maxPages: 20,
       sessionGapMs: DEFAULT_GAP_MS,
       defaultTimeZone: 'America/Chicago',
-      externalLinks: false,
+      externalLinks: ['medal.tv'],
       maxDownloadBytes: 1024 * 1024 * 1024,
+      keepMasters: true,
+      maxSourceHeight: 1080,
+      minFreeBytes: 10 * 1024 * 1024 * 1024,
+      rescanEveryMs: 60 * 60 * 1000,
+      recheckAfterMs: 7 * 24 * 60 * 60 * 1000,
+      rescanBatch: 10,
       proxyHeight: 240,
       proxyFps: 15,
       thumbEverySec: 2,
@@ -225,6 +238,7 @@ class Clips {
     this.dirs = {
       store: path.join(this.root, 'store'),
       media: path.join(this.root, 'media'),
+      masters: path.join(this.root, 'masters'),
       renders: path.join(this.root, 'renders'),
       tmp: path.join(this.root, 'tmp')
     };
@@ -232,8 +246,10 @@ class Clips {
     this._queue = Promise.resolve();
     this._refreshing = null;
     this._processing = null;
+    this._rescanning = null;
     this._renderChain = Promise.resolve();
     this._timer = null;
+    this._rescanTimer = null;
     this._lastBackgroundAt = 0;
     this._stopped = false;
   }
@@ -252,11 +268,17 @@ class Clips {
     }
     const requeued = await this.retryFailed();
     if (requeued) this._log(`queued ${requeued} clip${requeued === 1 ? '' : 's'} that failed for a missing tool or codec`);
+    const links = await this.queueLinks();
+    if (links) this._log(`queued ${links} link${links === 1 ? '' : 's'} for import with yt-dlp`);
     if (this.settings.poll) {
       if (this.settings.refreshOnStart) this._refreshInBackground();
       if (this.settings.ttlMs > 0) {
         this._timer = setInterval(() => this._refreshInBackground(), this.settings.ttlMs);
         this._timer.unref();
+      }
+      if (this.settings.rescanEveryMs > 0) {
+        this._rescanTimer = setInterval(() => this._rescanInBackground(), this.settings.rescanEveryMs);
+        this._rescanTimer.unref();
       }
     }
     return this;
@@ -265,9 +287,12 @@ class Clips {
   async stop () {
     this._stopped = true;
     if (this._timer) clearInterval(this._timer);
+    if (this._rescanTimer) clearInterval(this._rescanTimer);
     this._timer = null;
+    this._rescanTimer = null;
     if (this._refreshing) await this._refreshing.catch(() => {});
     if (this._processing) await this._processing.catch(() => {});
+    if (this._rescanning) await this._rescanning.catch(() => {});
     await this._renderChain.catch(() => {});
     await this._queue.catch(() => {});
     if (this.store) await this.store.stop();
@@ -502,7 +527,7 @@ class Clips {
           if (stored.caption !== caption) await this.store.set(`/clips/${item.id}`, Object.assign(stored, { caption }));
           return false;
         }
-        const linkOnly = item.kind === 'link' && !this.settings.externalLinks;
+        const linkOnly = item.kind === 'link' && !this._importsLink(item);
         const clip = Object.assign({}, item, {
           guildId: guild.id,
           guildName: guild.name || channel.guildName || null,
@@ -664,11 +689,16 @@ class Clips {
    * Fetch a clip's full-resolution original to `dest` (yt-dlp for links).
    * @private
    */
+  _ytdlpFormat () {
+    const h = this.settings.maxSourceHeight;
+    return `bv*[height<=${h}]+ba/b[height<=${h}]/b`;
+  }
+
   async _fetchOriginal (clip, url, dest) {
     if (clip.kind === 'link') {
       const out = `${dest}.mp4`;
       await this._run(this.settings.ytdlpPath, [
-        '--no-playlist', '--no-progress', '-f', 'bv*[height<=1080]+ba/b[height<=1080]/b',
+        '--no-playlist', '--no-progress', '-f', this._ytdlpFormat(),
         '--merge-output-format', 'mp4', '--max-filesize', String(this.settings.maxDownloadBytes),
         '-o', out, url
       ]);
@@ -704,6 +734,51 @@ class Clips {
 
   _mediaPath (id, ext) {
     return path.join(this.dirs.media, `${id}.${ext}`);
+  }
+
+  _masterPath (clip) {
+    return clip.master && clip.master.file ? path.join(this.dirs.masters, path.basename(clip.master.file)) : null;
+  }
+
+  _hasMaster (clip) {
+    const file = this._masterPath(clip);
+    return Boolean(file && fs.existsSync(file));
+  }
+
+  async _roomForMasters () {
+    if (!this.settings.minFreeBytes) return true;
+    try {
+      const disk = await fsp.statfs(this.dirs.masters);
+      return disk.bavail * disk.bsize >= this.settings.minFreeBytes;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /**
+   * Move a downloaded original into `masters/`, replacing the clip's older
+   * master. Returns the `master` record, or null when masters are off or the
+   * disk is short on space.
+   * @private
+   */
+  async _keepMaster (clip, original, probe) {
+    if (!this.settings.keepMasters || !(await this._roomForMasters())) return null;
+    const ext = path.extname(original) || (/^\.[a-z0-9]{2,4}$/i.test(path.extname(clip.filename || '')) ? path.extname(clip.filename).toLowerCase() : '.mp4');
+    const file = `${clip.id}${ext}`;
+    const dest = path.join(this.dirs.masters, file);
+    const old = this._masterPath(clip);
+    await fsp.rename(original, dest);
+    if (old && old !== dest) await fsp.rm(old, { force: true }).catch(() => {});
+    const at = this._iso();
+    return {
+      file,
+      width: probe.width,
+      height: probe.height,
+      bytes: (await fsp.stat(dest)).size,
+      storedAt: at,
+      checkedAt: at,
+      error: null
+    };
   }
 
   /**
@@ -762,7 +837,9 @@ class Clips {
       await fsp.rename(spritePart, this._mediaPath(clip.id, 'jpg'));
       const bytes = (await fsp.stat(this._mediaPath(clip.id, 'mp4'))).size;
       const proxyHeight = probe.height ? Math.min(h, Math.floor(probe.height / 2) * 2) : h;
+      const master = await this._keepMaster(clip, original, probe);
       return {
+        ...(master ? { master } : {}),
         durationMs: probe.durationMs,
         width: probe.width,
         height: probe.height,
@@ -787,16 +864,36 @@ class Clips {
   }
 
   /**
-   * Queue every link-only clip for a proxy (downloaded with yt-dlp). Needs
-   * `externalLinks`.
+   * Whether a link clip is downloaded (its host is in `externalLinks`).
+   * @private
+   */
+  _importsLink (clip) {
+    const hosts = this.settings.externalLinks;
+    if (hosts === true) return true;
+    if (!Array.isArray(hosts) || !hosts.length) return false;
+    let host;
+    try {
+      host = new URL(clip.url).hostname.toLowerCase().replace(/^www\./, '');
+    } catch (_) {
+      return false;
+    }
+    return hosts.some((entry) => {
+      const want = String(entry).toLowerCase().replace(/^www\./, '');
+      return host === want || host.endsWith(`.${want}`);
+    });
+  }
+
+  /**
+   * Queue every stored link-only clip whose host is in `externalLinks` for a
+   * proxy (downloaded with yt-dlp). `start` does this on every boot.
    * @returns {Promise<number>} clips queued
    */
   async queueLinks () {
-    if (!this.settings.externalLinks) throw new Error('Importing links needs externalLinks');
     let queued = 0;
     for (const id of await this._list('clips')) {
       const clip = await this.store.get(`/clips/${id}`);
       if (!clip || clip.kind !== 'link' || !clip.proxy || clip.proxy.status !== 'skipped') continue;
+      if (!this._importsLink(clip)) continue;
       await this._updateClip(id, (record) => { record.proxy = { status: 'pending', attempts: 0, error: null }; });
       queued += 1;
     }
@@ -872,6 +969,88 @@ class Clips {
     return built;
   }
 
+  /**
+   * Tallest version a link's host offers now (within `maxSourceHeight`),
+   * asked of yt-dlp without downloading.
+   * @private
+   */
+  async _availableHeight (clip) {
+    const { stdout } = await this._run(this.settings.ytdlpPath, ['--no-playlist', '--no-warnings', '-J', '-f', this._ytdlpFormat(), clip.url]);
+    let info;
+    try { info = JSON.parse(stdout); } catch (_) { throw new Error('yt-dlp returned no metadata'); }
+    const heights = [info.height].concat((info.requested_formats || []).map((format) => format.height)).map(Number).filter((n) => n > 0);
+    return heights.length ? Math.max(...heights) : null;
+  }
+
+  _rescanInBackground () {
+    if (this._rescanning || this._processing || this._stopped) return this._rescanning;
+    this._rescanning = this.rescan()
+      .catch(() => {})
+      .finally(() => { this._rescanning = null; });
+    return this._rescanning;
+  }
+
+  /**
+   * Keep the stored downloads at their best: store a master for ready clips
+   * that have none (downloaded before masters were kept, or lost), and check
+   * link clips not checked for `recheckAfterMs` for a taller version than the
+   * stored one, downloading it (and rebuilding the proxy) when there is.
+   * Attachments and embeds are fixed files, so once stored they are left alone.
+   * @param {Object} [opts]
+   * @param {number} [opts.limit] Clips checked this pass (default `rescanBatch`).
+   * @returns {Promise<{ checked: number, stored: number, upgraded: number }>}
+   */
+  async rescan (opts = {}) {
+    const limit = opts.limit === undefined ? this.settings.rescanBatch : opts.limit;
+    const result = { checked: 0, stored: 0, upgraded: 0 };
+    if (!this.settings.keepMasters) return result;
+    const now = this.settings.now();
+    let token = null;
+    for (const id of await this._list('clips')) {
+      if (this._stopped || result.checked >= limit) break;
+      const clip = await this.store.get(`/clips/${id}`);
+      if (!clip || !clip.proxy || clip.proxy.status !== 'ready') continue;
+      const stored = this._hasMaster(clip);
+      if (stored && clip.kind !== 'link') continue;
+      const checkedAt = Date.parse((clip.master && clip.master.checkedAt) || '');
+      if (Number.isFinite(checkedAt) && now - checkedAt < this.settings.recheckAfterMs) continue;
+      if (!(await this._roomForMasters())) {
+        this._log('rescan paused: the disk is below minFreeBytes');
+        break;
+      }
+      result.checked += 1;
+      const label = `${clip.author}: ${clip.filename || clip.url || clip.id}`;
+      try {
+        if (stored) {
+          const available = await this._availableHeight(clip);
+          if (!available || available <= (clip.master.height || 0)) {
+            await this._updateClip(id, (record) => { record.master = Object.assign({}, record.master, { checkedAt: this._iso(), error: null }); });
+            continue;
+          }
+          this._log(`rescan ${label}: ${available}p is up (stored ${clip.master.height || '?'}p)`);
+        }
+        if (!token) token = this._token();
+        const urls = await this._freshUrls([clip], token);
+        const made = await this._makeProxy(clip, urls.get(clip.id));
+        await this._updateClip(id, (record) => Object.assign(record, made, { url: urls.get(clip.id) || record.url }));
+        if (!made.master) break;
+        if (stored) result.upgraded += 1;
+        else result.stored += 1;
+        this._log(`rescan ${label}: stored ${made.master.height}p master`);
+      } catch (error) {
+        if (error.missingTool) {
+          this._log(`${error.message}: rescan waits until it is`);
+          break;
+        }
+        this._log(`rescan ${label} failed: ${error.message || error}`);
+        await this._updateClip(id, (record) => {
+          record.master = Object.assign({ file: null }, record.master, { checkedAt: this._iso(), error: error.message || String(error) });
+        });
+      }
+    }
+    return result;
+  }
+
   async _updateClip (id, change) {
     return this._exclusive(async () => {
       const clip = await this.store.get(`/clips/${id}`);
@@ -918,6 +1097,7 @@ class Clips {
       width: clip.width,
       height: clip.height,
       hasAudio: clip.hasAudio,
+      master: this._hasMaster(clip) ? { width: clip.master.width, height: clip.master.height } : null,
       recordedAt: Number.isFinite(start) ? new Date(start).toISOString() : null,
       recording: clip.recording,
       override: clip.override,
@@ -1288,11 +1468,11 @@ class Clips {
         if (!clip) throw new Error(`Clip ${clipId} is gone`);
         clips.push(clip);
       }
-      const token = this._token();
-      const urls = await this._freshUrls(clips, token);
+      const remote = clips.filter((clip) => !this._hasMaster(clip));
+      const urls = remote.length ? await this._freshUrls(remote, this._token()) : new Map();
       const byId = {};
       for (const clip of clips) {
-        const file = await this._fetchOriginal(clip, urls.get(clip.id), path.join(work, clip.id));
+        const file = this._hasMaster(clip) ? this._masterPath(clip) : await this._fetchOriginal(clip, urls.get(clip.id), path.join(work, clip.id));
         byId[clip.id] = Object.assign({}, clip, { path: file });
       }
       const srtPath = this.settings.renderCredits ? path.join(work, 'sources.srt') : undefined;
