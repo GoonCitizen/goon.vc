@@ -1,0 +1,43 @@
+{
+  "name": "GoonCitizen",
+  "version": "0.1.0-dev",
+  "generatedAt": "2026-10-06T18:46:59.119Z",
+  "files": [
+    {
+      "platform": "windows",
+      "label": "Windows",
+      "version": "0.1.0-dev",
+      "href": "/downloads/gooncitizen/GoonCitizen-Setup-0.1.0-dev.exe",
+      "size": 127637791,
+      "sha256": "e7ba929ab6be5d16484a23f4a7d0245bef1b0d6d6280a5f8132501b54a1581a3",
+      "builtAt": "2026-09-22T06:09:21.511Z"
+    },
+    {
+      "platform": "macos",
+      "label": "macOS (Apple silicon)",
+      "version": "0.1.0-dev",
+      "href": "/downloads/gooncitizen/GoonCitizen-0.1.0-dev-arm64.dmg",
+      "size": 137987746,
+      "sha256": "21f18167955d9f3ff54299a042a707a32cdbdc9310560df0bdf397940d0d850a",
+      "builtAt": "2026-09-22T06:07:44.007Z"
+    },
+    {
+      "platform": "linux",
+      "label": "Linux (.deb)",
+      "version": "0.1.0-dev",
+      "href": "/downloads/gooncitizen/gooncitizen_0.1.0-dev_amd64.deb",
+      "size": 125466216,
+      "sha256": "8d88b8147fc25ec5321f25cc8307d5000c2b3483b2be3b7646720c7164b62c51",
+      "builtAt": "2026-09-22T06:08:31.576Z"
+    },
+    {
+      "platform": "android",
+      "label": "Android (test build)",
+      "version": "0.1.0-dev",
+      "href": "/downloads/gooncitizen/GoonCitizen-0.1.0-dev-debug.apk",
+      "size": 259345653,
+      "sha256": "f01d6ba663eb7a3d530d49a28e9cae093c72bd80bb29558e2516c7ecef37c5af",
+      "builtAt": "2026-08-20T02:56:23.737Z"
+    }
+  ]
+}
