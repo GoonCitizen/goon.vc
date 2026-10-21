@@ -19,10 +19,12 @@ const Tournaments = require('./tournaments');
 const Leagues = require('./leagues');
 const Leaderboard = require('./leaderboard');
 const Clips = require('./clips');
+const Commands = require('./commands');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
 const { resolveDiscordClientSecret } = require('../functions/resolveDiscordToken');
+const createDiscordDirectory = require('../functions/discordDirectory');
 
 const DEFAULT_HUB_ORIGIN = 'https://hub.fabric.pub';
 const DEFAULT_HUB_SEEDS = ['https://hub.goon.vc'];
@@ -133,6 +135,7 @@ class GoonVC {
     this.operations = null;
     this.tournaments = null;
     this.leagues = null;
+    this.commands = null;
     this.leaderboard = null;
     this.clips = null;
     this.id = 'goon.vc';
@@ -402,10 +405,31 @@ class GoonVC {
     this.leagues = new Leagues({
       path: leagueSettings.path || './stores/leagues',
       basePath: spa._site('leaguesPath'),
-      identify
+      identify,
+      directory: leagueSettings.directory || createDiscordDirectory({
+        discord,
+        gateway: () => (this.operations && this.operations.discord ? this.operations.discord.client : null),
+        fetch: leagueSettings.fetch,
+        resolveToken: leagueSettings.resolveToken
+      })
     });
     await this.leagues.start();
     for (const report of await this.tournaments.resultReports()) await postResults(report);
+
+    const commandSettings = this.settings.commands || {};
+    this.commands = new Commands({
+      operations: commandSettings.enabled === false ? null : this.operations,
+      presence: this.presence,
+      leagues: this.leagues,
+      members: this.members,
+      siteUrl: spa._site('siteUrl'),
+      idlerpgPath: spa._site('idlerpgPath'),
+      leaguesPath: spa._site('leaguesPath'),
+      register: commandSettings.register
+    });
+    this.commands.on('log', (...parts) => this.emit('log', ...parts));
+    this.commands.on('error', (...parts) => this.emit('error', ...parts));
+    await this.commands.start();
 
     const leaderboardSettings = this.settings.leaderboard || {};
     this.leaderboard = new Leaderboard({
@@ -479,7 +503,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.tournaments, this.leagues, this.leaderboard, this.clips, this.members, this.events, this.presence, this.operations]) {
+    for (const service of [this.http, this.commands, this.tournaments, this.leagues, this.leaderboard, this.clips, this.members, this.events, this.presence, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

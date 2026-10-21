@@ -1,9 +1,11 @@
 'use strict';
 
+const crypto = require('crypto');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
 const elo = require('../functions/elo');
 const { normalizeBestOf, parsePlayers } = require('../assets/scripts/tournament-bracket');
+const { normalizeHandle } = require('../functions/discordDirectory');
 
 const BASE = '/services/leagues';
 const LEAGUE_ID = /^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
@@ -13,6 +15,9 @@ const MAX_LEAGUES = 1000;
 const MAX_PLAYERS = 500;
 const MAX_DUELS = 20000;
 const MAX_SEASONS = 200;
+const PROPOSAL_ID = /^[0-9a-f]{12}$/;
+const PROPOSAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DISCORD_MEMBER = 'discord:';
 const OPEN_LEAGUE = {
   name: 'Open League',
   tagline: 'Any ship, any loadout.',
@@ -64,6 +69,27 @@ function current (league) {
 function findPlayer (league, name) {
   const wanted = String(name || '').toLowerCase();
   return league.players.find((player) => player.name.toLowerCase() === wanted) || null;
+}
+
+/**
+ * The set length and score of a duel input, checked against the league's
+ * usual set: the winner of a best of n took (n + 1) / 2 games.
+ * @returns {{ bestOf: number, score: number[] }}
+ */
+function setScore (league, input) {
+  const bestOf = normalizeBestOf(input.bestOf === undefined ? league.bestOf : input.bestOf);
+  const need = (bestOf + 1) / 2;
+  const score = Array.isArray(input.score) ? input.score.map(Number) : bestOf === 1 ? [1, 0] : null;
+  if (!score) throw fail(400, `Give the set score for a best of ${bestOf}.`);
+  if (score[0] !== need || !Number.isInteger(score[1]) || score[1] < 0 || score[1] >= need) {
+    throw fail(400, `A best of ${bestOf} ends ${need}–0${need > 1 ? ` to ${need}–${need - 1}` : ''}.`);
+  }
+  return { bestOf, score: [score[0], score[1]] };
+}
+
+/** The side of a duel proposal that has to confirm it. */
+function counterparty (proposal) {
+  return proposal.proposer === 'winner' ? 'loser' : 'winner';
 }
 
 function playedAt (duel) {
@@ -151,6 +177,9 @@ function publicLeague (league) {
  * loser, best of n, set score — and Elo ratings ({@link module:functions/elo})
  * are rebuilt from the season's duels. Nothing is deleted: a mistaken duel is
  * voided (and can be restored), and every change is in the league's log.
+ * Duels reported from Discord are proposals until the other player confirms
+ * them; roster players can carry a private link to a goon.vc member, which
+ * a duel logged on the site with a Discord `@handle` also uses.
  * Everything lives in one `@fabric/core` {@link Store}.
  */
 class Leagues {
@@ -160,6 +189,8 @@ class Leagues {
    * @param {string} [settings.basePath] Site path of the league pages (for link previews).
    * @param {Function} [settings.identify] `async (req) => displayName|null` for the change log.
    * @param {Array<Object>} [settings.defaults] Leagues created on start when their id is free (same shape as {@link Leagues#createLeague}).
+   * @param {number} [settings.proposalTtlMs] How long a proposed duel waits for confirmation (default 7 days).
+   * @param {Object} [settings.directory] Discord server lookup for `@handle` players ({@link module:functions/discordDirectory}).
    * @param {Function} [settings.now] Clock, injected for tests.
    */
   constructor (settings = {}) {
@@ -168,6 +199,8 @@ class Leagues {
       basePath: '/leagues',
       identify: null,
       defaults: [OPEN_LEAGUE],
+      proposalTtlMs: PROPOSAL_TTL_MS,
+      directory: null,
       now: () => Date.now()
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.store = null;
@@ -295,15 +328,18 @@ class Leagues {
   }
 
   _change (id, change) {
-    return this._exclusive(async () => {
-      const stored = await this._get(id);
-      if (!stored) throw fail(404, 'No such league.');
-      const league = JSON.parse(JSON.stringify(stored));
-      if (change(league) === false) return publicLeague(stored);
-      league.updatedAt = this._iso();
-      await this.store.set(`/league/${league.id}`, league);
-      return publicLeague(league);
-    });
+    return this._exclusive(() => this._apply(id, change));
+  }
+
+  /** {@link Leagues#_change} for callers already holding the queue. */
+  async _apply (id, change) {
+    const stored = await this._get(id);
+    if (!stored) throw fail(404, 'No such league.');
+    const league = JSON.parse(JSON.stringify(stored));
+    if (change(league) === false) return publicLeague(stored);
+    league.updatedAt = this._iso();
+    await this.store.set(`/league/${league.id}`, league);
+    return publicLeague(league);
   }
 
   _join (league, name, by) {
@@ -312,6 +348,36 @@ class Leagues {
     league.players.push({ name, joinedAt: this._iso() });
     league.log.push(this._entry('join', by, { name }));
     return name;
+  }
+
+  /**
+   * The roster name of a site member (`{ member, name, username? }`, where
+   * `member` is the goon.vc member id), found by that link rather than by
+   * name, so a member who renames keeps their place. A member not yet on the
+   * roster claims an unlinked player with their name or their handle (one
+   * typed into a tournament or the duel form, say), or joins under their
+   * name — or as `name (username)` when a different member already has it.
+   * @returns {string} roster name
+   */
+  _joinMember (league, account, by) {
+    const linked = league.players.find((player) => player.member === account.member);
+    if (linked) return linked.name;
+    const candidates = parsePlayers([account.name, account.username ? `${account.name} (${account.username})` : null].filter(Boolean));
+    const claimable = parsePlayers([account.name, account.username].filter(Boolean).concat(candidates))
+      .map((name) => findPlayer(league, name))
+      .find((player) => player && !player.member);
+    if (claimable) {
+      claimable.member = account.member;
+      league.log.push(this._entry('link', by, { name: claimable.name }));
+      return claimable.name;
+    }
+    for (const name of candidates) {
+      if (findPlayer(league, name)) continue;
+      const joined = this._join(league, name, by);
+      findPlayer(league, joined).member = account.member;
+      return joined;
+    }
+    throw fail(409, `${account.name} is already in the league as someone else.`);
   }
 
   /**
@@ -347,12 +413,160 @@ class Leagues {
 
   /**
    * Log a duel in the current season: `{ winner, loser, bestOf, score: [won, lost], note? }`.
-   * New names join the league. The winner of a best of n took (n + 1) / 2 games.
+   * A player is a roster name (new names join the league) or a Discord
+   * `@handle`, found in the home server and placed by that account like a
+   * duel reported on Discord. A handle nobody there has (or one typed while
+   * Discord can't be asked) is taken as a name, without the `@`. The winner
+   * of a best of n took (n + 1) / 2 games.
    */
-  logDuel (id, input, by) {
+  async logDuel (id, input, by) {
+    input = input || {};
+    const [winner, loser] = await Promise.all([this._account(input.winner), this._account(input.loser)]);
+    const plain = (player) => typeof player === 'string' ? player.trim().replace(/^@+/, '') : player;
     return this._change(id, (league) => {
-      const duel = this._addDuel(league, input, by);
+      const names = {
+        winner: winner ? this._joinMember(league, winner, by) : plain(input.winner),
+        loser: loser ? this._joinMember(league, loser, by) : plain(input.loser)
+      };
+      const duel = this._addDuel(league, Object.assign({}, input, names), by);
       league.log.push(this._entry('duel', by, { duel: duel.id, winner: duel.winner, loser: duel.loser, bestOf: duel.bestOf, score: duel.score }));
+    });
+  }
+
+  /**
+   * The server member behind a `@handle` player, or null (a plain name, or
+   * a handle that can't be found).
+   * @returns {Promise<{ member: string, name: string, username: string }|null>}
+   */
+  async _account (player) {
+    const typed = typeof player === 'string' ? player.trim() : '';
+    const directory = this.settings.directory;
+    if (!typed.startsWith('@') || !normalizeHandle(typed) || !directory) return null;
+    const found = await Promise.resolve(directory.resolve(typed)).catch(() => null);
+    return found ? { member: `${DISCORD_MEMBER}${found.id}`, name: found.name, username: found.handle } : null;
+  }
+
+  /**
+   * Discord server members matching typed text, for the duel form.
+   * @returns {Promise<Array<{ handle: string, name: string }>>}
+   */
+  async findHandles (text) {
+    const directory = this.settings.directory;
+    if (!directory) throw fail(503, 'Discord lookup is not available right now.');
+    return directory.search(text);
+  }
+
+  /**
+   * Propose a duel one of its players reports, to count once the other
+   * confirms: `{ winner, loser, proposer: 'winner'|'loser', bestOf?, score, note? }`,
+   * where each player is `{ member, name, username? }` (goon.vc member id plus
+   * the name to join under). Proposals are private; only the duel they
+   * become is public.
+   * @param {string} id League id.
+   * @param {Object} input
+   * @returns {Promise<Object>} the proposal
+   */
+  proposeDuel (id, input) {
+    return this._exclusive(async () => {
+      input = input || {};
+      const league = await this._get(id);
+      if (!league) throw fail(404, 'No such league.');
+      if (current(league).endedAt) throw fail(409, 'This season is over; start the next one to log duels.');
+      const side = (account) => {
+        const name = parsePlayers([account && account.name])[0];
+        if (!account || !account.member || !name) throw fail(400, 'A duel needs a winner and a loser.');
+        return Object.assign({ member: String(account.member), name }, account.username ? { username: String(account.username) } : {});
+      };
+      const winner = side(input.winner);
+      const loser = side(input.loser);
+      if (winner.member === loser.member) throw fail(400, 'A pilot cannot duel themselves.');
+      if (input.proposer !== 'winner' && input.proposer !== 'loser') throw fail(400, 'Only the players can propose a duel.');
+      const { bestOf, score } = setScore(league, input);
+      const now = this.settings.now();
+      const proposal = {
+        id: crypto.randomBytes(6).toString('hex'),
+        league: league.id,
+        winner,
+        loser,
+        proposer: input.proposer,
+        bestOf,
+        score,
+        note: text(input.note, LIMITS.note),
+        proposedAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + this.settings.proposalTtlMs).toISOString(),
+        status: 'pending'
+      };
+      if (!proposal.note) delete proposal.note;
+      await this.store.set(`/proposal/${proposal.id}`, proposal);
+      return proposal;
+    });
+  }
+
+  async getProposal (proposalId) {
+    if (!PROPOSAL_ID.test(String(proposalId || ''))) return null;
+    return this.store.get(`/proposal/${proposalId}`);
+  }
+
+  /**
+   * The other player confirms a proposed duel: both players are linked on
+   * the roster and the duel is logged, dated when it was proposed. A
+   * proposal that is no longer pending (or has expired) comes back as it
+   * is, with `league` and `duel` null.
+   * @param {string} proposalId
+   * @param {string} member goon.vc member id of whoever confirmed.
+   * @returns {Promise<{ proposal: Object, league: Object|null, duel: Object|null }>}
+   */
+  confirmDuel (proposalId, member) {
+    return this._resolve(proposalId, member, async (proposal, role) => {
+      if (role !== 'counterparty') throw fail(403, `Only ${proposal[counterparty(proposal)].name} can confirm this duel.`);
+      let duelId = null;
+      const league = await this._apply(proposal.league, (league) => {
+        const proposer = proposal[proposal.proposer];
+        const other = proposal[counterparty(proposal)];
+        const winner = this._joinMember(league, proposal.winner, proposer.name);
+        const loser = this._joinMember(league, proposal.loser, proposer.name);
+        const duel = this._addDuel(league, { winner, loser, bestOf: proposal.bestOf, score: proposal.score, note: proposal.note }, proposer.name, null, proposal.proposedAt);
+        duel.confirmedBy = other === proposal.winner ? winner : loser;
+        duelId = duel.id;
+        league.log.push(this._entry('duel', proposer.name, { duel: duel.id, winner: duel.winner, loser: duel.loser, bestOf: duel.bestOf, score: duel.score, confirmedBy: duel.confirmedBy }));
+      });
+      proposal.status = 'confirmed';
+      proposal.duel = duelId;
+      return { league, duel: league.duels.find((duel) => duel.id === duelId) };
+    });
+  }
+
+  /**
+   * The other player declines a proposed duel, or its proposer withdraws it.
+   * @param {string} proposalId
+   * @param {string} member goon.vc member id of whoever declined.
+   * @returns {Promise<{ proposal: Object, league: null, duel: null }>}
+   */
+  declineDuel (proposalId, member) {
+    return this._resolve(proposalId, member, async (proposal, role) => {
+      if (!role) throw fail(403, `Only ${proposal.winner.name} or ${proposal.loser.name} can decline this duel.`);
+      proposal.status = role === 'proposer' ? 'withdrawn' : 'declined';
+      return {};
+    });
+  }
+
+  _resolve (proposalId, member, settle) {
+    return this._exclusive(async () => {
+      const stored = await this.getProposal(proposalId);
+      if (!stored) throw fail(404, 'No such duel proposal.');
+      const proposal = JSON.parse(JSON.stringify(stored));
+      if (proposal.status === 'pending' && this.settings.now() > Date.parse(proposal.expiresAt)) {
+        proposal.status = 'expired';
+        proposal.resolvedAt = this._iso();
+        await this.store.set(`/proposal/${proposal.id}`, proposal);
+      }
+      if (proposal.status !== 'pending') return { proposal, league: null, duel: null };
+      const role = proposal[proposal.proposer].member === member ? 'proposer'
+        : proposal[counterparty(proposal)].member === member ? 'counterparty' : null;
+      const result = await settle(proposal, role);
+      proposal.resolvedAt = this._iso();
+      await this.store.set(`/proposal/${proposal.id}`, proposal);
+      return Object.assign({ proposal, league: null, duel: null }, result);
     });
   }
 
@@ -427,20 +641,14 @@ class Leagues {
     const [loserName] = parsePlayers([input.loser]);
     if (!winnerName || !loserName) throw fail(400, 'A duel needs a winner and a loser.');
     if (winnerName.toLowerCase() === loserName.toLowerCase()) throw fail(400, 'A pilot cannot duel themselves.');
-    const bestOf = normalizeBestOf(input.bestOf === undefined ? league.bestOf : input.bestOf);
-    const need = (bestOf + 1) / 2;
-    const score = Array.isArray(input.score) ? input.score.map(Number) : bestOf === 1 ? [1, 0] : null;
-    if (!score) throw fail(400, `Give the set score for a best of ${bestOf}.`);
-    if (score[0] !== need || !Number.isInteger(score[1]) || score[1] < 0 || score[1] >= need) {
-      throw fail(400, `A best of ${bestOf} ends ${need}–0${need > 1 ? ` to ${need}–${need - 1}` : ''}.`);
-    }
+    const { bestOf, score } = setScore(league, input);
     const duel = {
       id: `d${league.duels.length + 1}`,
       season: season.number,
       winner: this._join(league, winnerName, by),
       loser: this._join(league, loserName, by),
       bestOf,
-      score: [score[0], score[1]],
+      score,
       note: text(input.note, LIMITS.note),
       loggedAt: this._iso()
     };
@@ -560,6 +768,11 @@ class Leagues {
           }
           if (method === 'PATCH') return [200, await this.updateLeague(id, body, by)];
         } else if (parts.length === 2) {
+          if (collection === 'handles' && method === 'GET') {
+            if (!await this._get(id)) throw fail(404, 'No such league.');
+            const query = new URL(req.originalUrl || req.url, 'http://localhost').searchParams.get('query');
+            return [200, { handles: await this.findHandles(query) }];
+          }
           if (collection === 'players' && method === 'POST') return [200, await this.addPlayer(id, body.name, by)];
           if (collection === 'duels' && method === 'POST') return [201, await this.logDuel(id, body, by)];
           if (collection === 'seasons' && method === 'POST') return [201, await this.startSeason(id, body, by)];

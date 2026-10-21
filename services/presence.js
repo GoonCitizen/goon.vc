@@ -79,7 +79,8 @@ class Presence {
    *   `text` (posting, for the game's text window afterwards). Default voice only.
    * @param {Array<string>} [settings.channels] Channel allowlist (empty = every channel counts).
    * @param {Array<string>} [settings.announcements] Discord text channel ids that receive game
-   *   announcements. The only thing the bot ever posts; commands are never answered.
+   *   announcements. The only thing the game posts; its `!` commands are never answered
+   *   (`/idlerpg` is services/commands.js).
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
    * @param {boolean} [settings.gateway] Attach to the Discord gateway when available (default true).
    * @param {Function} [settings.Doorman] Injected for tests; defaults to @fabric/doorman.
@@ -283,6 +284,17 @@ class Presence {
   async player (id) {
     if (!this.game || typeof this.game.profile !== 'function') return null;
     return this.game.profile(id);
+  }
+
+  /**
+   * The public profile of the player behind a Discord account, or null when
+   * they have not played.
+   * @param {string} userId Discord user id (snowflake).
+   * @returns {Promise<Object|null>}
+   */
+  async discordPlayer (userId) {
+    const record = this.game ? this.game.playerFor(`discord/users/${userId}`) : null;
+    return record ? this.player(record.id) : null;
   }
 
   /**

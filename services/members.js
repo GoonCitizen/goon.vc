@@ -139,6 +139,30 @@ class Members {
     return this.store.get(`/members/${id}`);
   }
 
+  /**
+   * The goon.vc member for a Discord account, created on first sight — by a
+   * Discord command, say — as the same member Discord login signs in to.
+   * Not a login: sessions and `lastLoginAt` are untouched, and a display name
+   * already on the profile is kept.
+   * @param {{ id: string, username?: string, globalName?: string }} user Discord user.
+   * @param {string} [displayName] Name to start a new profile with.
+   * @returns {Promise<Object>} the member
+   */
+  async linkDiscord (user, displayName) {
+    if (!user || !/^\d{5,25}$/.test(String(user.id || ''))) throw new Error('Discord user id required');
+    const id = `discord:${user.id}`;
+    const existing = await this.getMember(id);
+    const discord = { id: String(user.id), username: user.username || null, globalName: user.globalName || null };
+    const member = Object.assign({
+      id,
+      createdAt: new Date().toISOString(),
+      provider: 'discord',
+      displayName: displayName || discord.globalName || discord.username
+    }, existing || {}, { discord });
+    if (JSON.stringify(member) !== JSON.stringify(existing)) await this.store.set(`/members/${id}`, member);
+    return member;
+  }
+
   async _upsertMember (id, fields) {
     const now = new Date().toISOString();
     const existing = await this.getMember(id);

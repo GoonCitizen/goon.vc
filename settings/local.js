@@ -89,6 +89,11 @@ module.exports = {
     path: process.env.GOON_LEAGUES_STORE || 'stores/leagues'
   },
 
+  // Discord application commands /idlerpg and /1v1, answered on the operations gateway client.
+  commands: {
+    enabled: process.env.GOON_COMMANDS !== '0'
+  },
+
   // /services/leaderboards/1v1: the ladder pinned in G00N SQUAD #1v1-challenges (Fabric Store).
   // The bot needs View Channel + Read Message History there, and the Message Content intent.
   leaderboard: {

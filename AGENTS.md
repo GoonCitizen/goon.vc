@@ -18,10 +18,11 @@ reverse-proxying `/sessions`, `/device-links`, `/services/rpc`, and
 Passport claim share one list (`createHubList` in `functions/hubApiProxy.js`)
 that sticks to the Hub that answered last; seeds outside the `@fabric/http`
 Hub allowlist are skipped, and none are used behind a loopback Hub. No Fabric Peer listen, no Bitcoin, no
-`/services/star-citizen`. The one Discord gateway client is the read-only
-metrics bot below (non-privileged intents, `autoCommands: false`, never
-replies). Favicons are the suite lettermark
-(serif **f** on royal purple `#4C1D95`) from `@fabric/http` `npm run make:icons`.
+`/services/star-citizen`. The one Discord gateway client is the metrics bot
+below (non-privileged intents, `autoCommands: false`); it never answers chat,
+only the `/idlerpg` and `/1v1` application commands. Favicons are the G00N SQUAD
+skull, the org's RSI logo (`logoUrl` in `contracts/organizations.json`), not the
+Fabric suite lettermark.
 `/events` lists upcoming Discord Guild Scheduled Events from every server the
 configured bot token can see (`GET /services/events`, REST only — no gateway
 bot). Events are saved per guild in an on-disk Fabric Store (`stores/events`,
@@ -41,7 +42,7 @@ pinned to the home server (`server=<discordWidgetId>`, PERMAFLEET brand, no
 server picker); every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
 hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
-application that owns the bot token (scope `bot`, View Channels only).
+application that owns the bot token (scopes `bot applications.commands`, View Channels only).
 Every route is the one built `assets/index.html`; link previews get per-page
 Open Graph / Twitter tags because `services/goon.vc.js` swaps the
 `<!-- page-meta -->` block (and `<title>`) per request from `GoonSPA#pages()`
@@ -95,8 +96,8 @@ runs `@fabric/doorman` **in-process** (`http: false`, no `local` adapter) with t
 `idlerpg` plugin (`IdleRPG` core Service, Fabric Store `stores/presence`), and
 Doorman's Discord adapter is **attached** to the same `@fabric/discord` client
 `services/operations.js` already runs (`Operations` emits `gateway`; the adapter
-has `replies: false`, never logs in, and never answers commands). There is still
-exactly one gateway client. The only thing it posts is IdleRPG game
+has `replies: false`, never logs in, and never answers `!` commands). There is still
+exactly one gateway client. Apart from application command replies, the only thing it posts is IdleRPG game
 announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
 channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
 View Channel + Send Messages there. Chatting is penalized only in those
@@ -235,7 +236,17 @@ Anyone creates more (`POST /services/leagues`: `name`, `kind` `perpetual` |
 (default 1000), fixed at creation). A league lives at `/leagues/<id>` (name
 slug, `-2`… when taken). Logging a duel (`POST …/<id>/duels`: `winner`,
 `loser`, `bestOf`, `score` `[won, lost]`, where the winner took (n + 1) / 2)
-joins new names to the roster. Ratings are never stored: `functions/elo.js`
+joins new names to the roster. A player given as a Discord `@handle` is looked
+up in the home server (`discord.guildId`; `functions/discordDirectory.js`: REST
+member search with the bot token — no privileged intent, start of a handle or
+nickname, results cached a minute — plus the members the operations gateway
+client has already seen, matched by any part of their handle, nickname, or
+display name) and placed by that account like a `/1v1` player below. A handle
+nobody there has, or one typed while Discord can't be asked, is logged as a
+plain name without the `@`; a member found later claims an unlinked name equal
+to their handle. The form suggests members as you type
+from `GET …/<id>/handles?query=` (handles and display names only, never ids).
+Ratings are never stored: `functions/elo.js`
 replays the season's duels in the order they were played (`playedAt`, the log
 time for duels logged by hand; ties keep logged order), and each duel moves
 K × √(best of) × (1 − expected) from loser to winner (the set score is kept but
@@ -247,6 +258,33 @@ everyone at the initial rating again; a closed season's duels are final.
 `PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
 `components/LeaguesPage.js` + `assets/scripts/leagues.js` (`?season=<n>` shows
 a past season); link previews come from `Leagues#page`.
+Discord **application commands** (`services/commands.js`) are answered on that
+same gateway client (interactions need no intents) and registered globally for
+servers only when it is ready. The application is shared (today "sensemaker"),
+so only these names are upserted, never `set()`, and unchanged ones are skipped.
+Everyone who runs one in a server gets a goon.vc member profile: the command
+links their Discord (`Members#linkDiscord`: the same `discord:<id>` member
+Discord login signs in to; not a login, and an existing display name is kept),
+even when the command is then refused. A button press links only on Confirm.
+`/idlerpg profile [pilot]` | `leaderboard` | `stats` reply from `Presence`
+(`discordPlayer`, `players`, `report`): public numbers and display names, with
+links to the player pages. `/1v1 winner loser score [league] [note]` is run by
+one of the two players (the Open League unless `league`, which autocompletes;
+`score` is a choice from `1-0` to `5-4`, and best of n follows from the winner's
+games). It stores a private proposal (`Leagues#proposeDuel`, `/proposal/<id>` in the leagues Store,
+7 days to answer). It then posts a card with Confirm / Decline buttons
+(`1v1:confirm|decline:<proposal>`) pinging only the opponent. The opponent's
+Confirm (`Leagues#confirmDuel`) links them too and logs the duel, dated when it
+was proposed, with `by` the proposer and `confirmedBy` the opponent. Decline
+by the opponent, a withdrawal by the proposer, and expiry log nothing. The card
+is rewritten with the outcome. Players are found by Discord account, not name:
+a roster player carries a private `member` link (never in public JSON), so a
+renamed member keeps their place. An unlinked member claims an unlinked roster
+name equal to their server display name (nickname, then display name) or their
+handle, e.g. one typed into a tournament (logged `link`). Otherwise they join under it, or as
+`name (username)` when another member holds the name. Bots and self-duels are refused.
+Errors are ephemeral. Replies carry no Discord ids and ping no one except the
+opponent asked to confirm. `GOON_COMMANDS=0` turns the commands off.
 `/clips` is the public clip library and editor (`services/clips.js`, `GOON_CLIPS_STORE`
 default `stores/clips`: a Fabric Store plus `media/`, `renders/`, `tmp/`; routes
 under `/services/clips`). No sign-in: anyone may browse, edit, and render; a
@@ -273,7 +311,11 @@ Streamable, and Twitch as well, `0` = none, or a host list; `collect:clips --
 clip is marked `failed` after 3 attempts, but a missing tool never spends one:
 processing pauses with the clips still queued, and every start requeues clips
 that failed for a missing tool or codec (`Clips#retryFailed`;
-`collect:clips -- --retry-failed` retries every failure). The durable source is guild / channel / message / attachment
+`collect:clips -- --retry-failed` retries every failure). Every failure is
+retried when `ffmpeg -version` or `yt-dlp --version` differs from the last one
+seen (Store `/tools`, checked on start and hourly — yt-dlp's site extractors
+break when a host changes its pages, and an upgrade fixes them), and the hourly
+pass (`Clips#maintain`) retries failures over `recheckAfterMs` (a week) old. The durable source is guild / channel / message / attachment
 — CDN URLs expire and are re-signed with `POST /attachments/refresh-urls` (a
 404 on the message means it was deleted). Each clip is downloaded, probed, and
 gets a 240p/15 fps proxy plus a thumbnail sprite (needs `ffmpeg` + `ffprobe`;

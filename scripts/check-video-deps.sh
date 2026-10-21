@@ -50,7 +50,11 @@ hint () {
       elif have brew; then echo "brew install ffmpeg"
       else echo "a full ffmpeg build (with libx264) from https://ffmpeg.org/download.html"; fi ;;
     yt-dlp)
-      echo "a current release (distro packages go stale): sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod a+rx /usr/local/bin/yt-dlp" ;;
+      if [ "$OS" = Linux ]; then
+        echo "the standalone build (bundles its own Python; distro packages go stale): sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp && sudo chmod a+rx /usr/local/bin/yt-dlp"
+      else
+        echo "a current release: brew upgrade yt-dlp (or pipx upgrade yt-dlp)"
+      fi ;;
   esac
 }
 
@@ -181,7 +185,12 @@ section "yt-dlp ($([ "$LINKS" = 1 ] && echo 'required: Medal clips are downloade
 missing_ytdlp () { if [ "$LINKS" = 1 ]; then fail "$*"; else warn "$*"; fi; }
 if have "$YTDLP"; then
   YV="$("$YTDLP" --version 2>/dev/null)"
-  pass "$YTDLP $YV ($(command -v "$YTDLP"))"
+  PY="$("$YTDLP" -v 2>&1 | sed -nE 's/^\[debug\] Python ([0-9]+\.[0-9]+).*/\1/p' | head -n1)"
+  pass "$YTDLP $YV ($(command -v "$YTDLP")$([ -n "$PY" ] && echo ", Python $PY"))"
+  # Current yt-dlp releases need Python 3.10+; an older Python pins yt-dlp at a release whose site extractors have broken.
+  if [ -n "$PY" ] && [ "${PY%%.*}" -eq 3 ] && [ "${PY#*.}" -lt 10 ]; then
+    missing_ytdlp "yt-dlp runs on Python $PY, too old for current releases (Medal downloads fail with 'Could not find video information'). Install $(hint yt-dlp)"
+  fi
   # Releases are dated YYYY.MM.DD; site extractors break within weeks of a stale build.
   if printf '%s' "$YV" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}'; then
     REL="$(printf '%s' "$YV" | cut -c1-10 | tr . -)"

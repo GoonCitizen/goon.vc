@@ -401,8 +401,8 @@ describe('goon.vc HTTP', function () {
     });
     assert.strictEqual(res.status, 200);
     assert.ok(/GOON SQUAD/i.test(res.body));
-    assert.ok(res.body.includes('favicon.svg'));
-    assert.ok(res.body.includes('#4C1D95'));
+    assert.ok(res.body.includes('favicon.png'));
+    assert.ok(res.body.includes('<meta name="theme-color" content="#520002">'));
     assert.ok(!/Star Citizen relay API/i.test(res.body));
     assert.strictEqual(require('../constants').FEATURES.headerLogin, false);
     const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(res.body)[1];

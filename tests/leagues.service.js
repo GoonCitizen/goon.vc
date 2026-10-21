@@ -6,6 +6,19 @@ const os = require('os');
 const path = require('path');
 const Leagues = require('../services/leagues');
 const elo = require('../functions/elo');
+const createDiscordDirectory = require('../functions/discordDirectory');
+
+function route (service, method, url) {
+  return new Promise((resolve) => {
+    const res = {
+      headersSent: false,
+      statusCode: 200,
+      setHeader () {},
+      end (body) { resolve({ status: this.statusCode, body: JSON.parse(body) }); }
+    };
+    service.middleware()({ method, url, path: url.split('?')[0], body: {} }, res, () => resolve({ status: 'next' }));
+  });
+}
 
 describe('elo', function () {
   it('moves rating from the loser to the winner, more for an upset', function () {
@@ -45,6 +58,81 @@ describe('elo', function () {
       { id: 'd2', winner: 'Cid', loser: 'Dee', bestOf: 1 }
     ]);
     assert.deepStrictEqual(standings.map((p) => p.rank), [1, 1, 3, 3]);
+  });
+});
+
+describe('Discord directory', function () {
+  const member = (id, username, extra) => Object.assign({ user: Object.assign({ id, username, global_name: null }, extra && extra.user) }, extra && extra.member);
+
+  it('finds server members by handle or nickname without exposing ids', async function () {
+    const asked = [];
+    const directory = createDiscordDirectory({
+      discord: { guildId: '42' },
+      resolveToken: () => ({ token: 'test' }),
+      fetch: async (url) => {
+        asked.push(url);
+        const body = [
+          member('111', 'kersa', { member: { nick: 'Kersa | PF' } }),
+          member('112', 'kersabot', { user: { bot: true } }),
+          member('113', 'kersa2', { user: { global_name: 'Kersa Two' } })
+        ];
+        return { status: 200, text: async () => JSON.stringify(body), headers: { get: () => null } };
+      }
+    });
+    assert.deepStrictEqual(await directory.search('@Ker'), [
+      { handle: 'kersa', name: 'Kersa | PF' },
+      { handle: 'kersa2', name: 'Kersa Two' }
+    ]);
+    assert.ok(asked[0].includes('/guilds/42/members/search?query=Ker&limit=25'));
+    await directory.search('ker');
+    assert.strictEqual(asked.length, 1, 'repeat lookups are cached');
+    assert.deepStrictEqual(await directory.resolve('@KERSA'), { id: '111', handle: 'kersa', name: 'Kersa | PF' });
+    assert.strictEqual(await directory.resolve('@kersabot'), null, 'bots are left out');
+    assert.strictEqual(await directory.resolve('@k'), null);
+    assert.deepStrictEqual(await directory.search('k'), []);
+    assert.strictEqual(createDiscordDirectory.normalizeHandle(' @Some.User_1 '), 'some.user_1');
+  });
+
+  it('also finds members the gateway has seen by display name', async function () {
+    const cached = [
+      { nickname: null, user: { id: '221', username: 'rk_77', globalName: 'Rat King' } },
+      { nickname: 'Kersa | PF', user: { id: '111', username: 'kersa', globalName: 'Kersa' } },
+      { nickname: null, user: { id: '999', username: 'kingbot', globalName: 'King Bot', bot: true } }
+    ];
+    const client = { guilds: { cache: new Map([['42', { members: { cache: new Map(cached.map((m) => [m.user.id, m])) } }]]) } };
+    let asked = 0;
+    const directory = createDiscordDirectory({
+      discord: { guildId: '42' },
+      gateway: () => client,
+      resolveToken: () => ({ token: 'test' }),
+      fetch: async (url) => {
+        asked++;
+        const query = new URL(url).searchParams.get('query').toLowerCase();
+        const body = [member('333', 'kingfisher')].filter((m) => m.user.username.startsWith(query));
+        return { status: 200, text: async () => JSON.stringify(body), headers: { get: () => null } };
+      }
+    });
+    assert.deepStrictEqual(await directory.search('king'), [
+      { handle: 'kingfisher', name: 'kingfisher' },
+      { handle: 'rk_77', name: 'Rat King' }
+    ], 'names that start with the text come first; bots never show');
+    assert.deepStrictEqual(await directory.search('@rat k'), [{ handle: 'rk_77', name: 'Rat King' }]);
+    assert.deepStrictEqual(await directory.resolve('@rk_77'), { id: '221', handle: 'rk_77', name: 'Rat King' });
+    assert.strictEqual(asked, 2, 'a member the gateway knows resolves without asking Discord');
+
+    const offline = createDiscordDirectory({ discord: { guildId: '42' }, gateway: () => client, resolveToken: () => ({ token: null }) });
+    assert.deepStrictEqual(await offline.search('kersa'), [{ handle: 'kersa', name: 'Kersa | PF' }], 'seen members still show when Discord can’t be asked');
+    await assert.rejects(offline.search('nobody'), (error) => error.status === 503);
+  });
+
+  it('fails as unavailable without a token or when Discord refuses', async function () {
+    const none = createDiscordDirectory({ resolveToken: () => ({ token: null }) });
+    await assert.rejects(none.search('kersa'), (error) => error.status === 503);
+    const limited = createDiscordDirectory({
+      resolveToken: () => ({ token: 'test' }),
+      fetch: async () => ({ status: 429, text: async () => '{"retry_after":5}', headers: { get: () => null } })
+    });
+    await assert.rejects(limited.resolve('kersa'), (error) => error.status === 503);
   });
 });
 
@@ -257,6 +345,69 @@ describe('leagues service', function () {
     league = await service.recordTournament('arena', report({ winner: 'Bolt', loser: 'Ace', playedAt: '2026-10-15T22:00:00.000Z' }));
     assert.strictEqual(league.duels.find((duel) => duel.id === 'd2').playedAt, '2026-10-15T22:00:00.000Z', 'a set’s date follows the tournament');
     assert.strictEqual(league.log[league.log.length - 1].type, 'void', 'redating is not a new log entry');
+  });
+
+  it('logs duels by Discord handle, placing players by their account', async function () {
+    const server = [
+      { id: '111', handle: 'kersa', name: 'Kersa | PF' },
+      { id: '222', handle: 'ratgrot', name: 'Ace' },
+      { id: '333', handle: 'newbie', name: 'Newbie' }
+    ];
+    const directory = {
+      search: async (text) => server.filter((m) => m.handle.startsWith(text.replace(/^@/, ''))).map(({ handle, name }) => ({ handle, name })),
+      resolve: async (value) => server.find((m) => m.handle === value.replace(/^@/, '').toLowerCase()) || null
+    };
+    await service.stop();
+    service = new Leagues({ path: dir, defaults: [], directory, now: () => (clock += 1000) });
+    await service.start();
+    await service.createLeague({ name: 'Arena', kind: 'perpetual', players: ['Ace', 'Bolt'] });
+
+    let league = await service.logDuel('arena', { winner: '@Kersa', loser: '@ratgrot', bestOf: 1 }, 'Ref');
+    assert.deepStrictEqual(league.players, ['Ace', 'Bolt', 'Kersa | PF'], 'a handle claims the unlinked roster name it goes by, or joins');
+    assert.deepStrictEqual([league.duels[0].winner, league.duels[0].loser], ['Kersa | PF', 'Ace']);
+    assert.ok(league.log.some((entry) => entry.type === 'link' && entry.name === 'Ace'));
+    assert.ok(!JSON.stringify(league).includes('discord:'), 'account links stay private');
+
+    server[0].name = 'Kersa';
+    league = await service.logDuel('arena', { winner: '@kersa', loser: 'Bolt', bestOf: 1 });
+    assert.strictEqual(league.duels[1].winner, 'Kersa | PF', 'a renamed member keeps their place');
+    await assert.rejects(service.logDuel('arena', { winner: '@kersa', loser: 'Kersa | PF', bestOf: 1 }), /cannot duel themselves/);
+    await assert.rejects(service.logDuel('arena', { winner: '@newbie', loser: 'Bolt', bestOf: 3, score: [2, 2] }), /ends 2–0/);
+    assert.deepStrictEqual((await service.getLeague('arena')).players, ['Ace', 'Bolt', 'Kersa | PF'], 'a refused duel joins nobody');
+
+    league = await service.logDuel('arena', { winner: '@nobody', loser: '@Some Pilot', bestOf: 1 });
+    assert.deepStrictEqual([league.duels[2].winner, league.duels[2].loser], ['nobody', 'Some Pilot'], 'anything else is taken as a name');
+    server.push({ id: '444', handle: 'nobody', name: 'Nobody Special' });
+    league = await service.logDuel('arena', { winner: '@nobody', loser: 'Bolt', bestOf: 1 });
+    assert.strictEqual(league.duels[3].winner, 'nobody', 'once found, they claim the name their handle was logged under');
+    assert.ok(league.log.some((entry) => entry.type === 'link' && entry.name === 'nobody'));
+
+    const proposal = await service.proposeDuel('arena', {
+      winner: { member: 'discord:222', name: 'Ratgrot', username: 'ratgrot' },
+      loser: { member: 'discord:111', name: 'Kersa', username: 'kersa' },
+      proposer: 'winner',
+      score: [1, 0]
+    });
+    const confirmed = await service.confirmDuel(proposal.id, 'discord:111');
+    assert.deepStrictEqual([confirmed.duel.winner, confirmed.duel.loser], ['Ace', 'Kersa | PF'], 'the same players as on Discord');
+
+    const res = await route(service, 'GET', '/services/leagues/arena/handles?query=%40ke');
+    assert.deepStrictEqual([res.status, res.body], [200, { handles: [{ handle: 'kersa', name: 'Kersa' }] }]);
+    assert.strictEqual((await route(service, 'GET', '/services/leagues/nope/handles?query=ke')).status, 404);
+  });
+
+  it('takes handles as names when Discord lookup is unavailable', async function () {
+    await service.createLeague({ name: 'Arena', kind: 'perpetual' });
+    assert.strictEqual((await route(service, 'GET', '/services/leagues/arena/handles?query=ke')).status, 503);
+    let league = await service.logDuel('arena', { winner: '@kersa', loser: 'Bolt', bestOf: 1 });
+    assert.deepStrictEqual([league.duels[0].winner, league.duels[0].loser], ['kersa', 'Bolt']);
+
+    await service.stop();
+    const failing = { search: async () => { throw new Error('down'); }, resolve: async () => { throw new Error('down'); } };
+    service = new Leagues({ path: dir, defaults: [], directory: failing, now: () => (clock += 1000) });
+    await service.start();
+    league = await service.logDuel('arena', { winner: '@kersa', loser: 'Bolt', bestOf: 1 });
+    assert.strictEqual(league.duels[1].winner, 'kersa', 'a failed lookup does not stop the duel');
   });
 
   it('keeps leagues across restarts', async function () {

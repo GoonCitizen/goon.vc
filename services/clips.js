@@ -266,6 +266,7 @@ class Clips {
         this._enqueueRender(id);
       }
     }
+    await this.retryAfterToolChange();
     const requeued = await this.retryFailed();
     if (requeued) this._log(`queued ${requeued} clip${requeued === 1 ? '' : 's'} that failed for a missing tool or codec`);
     const links = await this.queueLinks();
@@ -903,21 +904,56 @@ class Clips {
   /**
    * Queue failed clips for another try. By default only the ones that failed
    * because the host was missing a tool or codec (ffmpeg, ffprobe, yt-dlp,
-   * libx264, a filter), which `start` does on every boot; `all` retries every
-   * failure.
+   * libx264, a filter), which `start` does on every boot; `olderThanMs` adds
+   * failures at least that old, and `all` retries every failure.
    * @param {Object} [opts]
    * @param {boolean} [opts.all] retry every failed clip
+   * @param {number} [opts.olderThanMs] also retry failures this old (or of unknown age)
    * @returns {Promise<number>} clips queued
    */
   async retryFailed (opts = {}) {
+    const now = this.settings.now();
     let queued = 0;
     for (const id of await this._list('clips')) {
       const clip = await this.store.get(`/clips/${id}`);
       if (!clip || !clip.proxy || clip.proxy.status !== 'failed') continue;
-      if (!opts.all && !MISSING_DEPENDENCY.test(clip.proxy.error || '')) continue;
+      const failedAt = Date.parse(clip.proxy.failedAt || '');
+      const stale = opts.olderThanMs > 0 && !(now - failedAt < opts.olderThanMs);
+      if (!opts.all && !stale && !MISSING_DEPENDENCY.test(clip.proxy.error || '')) continue;
       await this._updateClip(id, (record) => { record.proxy = { status: 'pending', attempts: 0, error: null }; });
       queued += 1;
     }
+    return queued;
+  }
+
+  async _toolVersions () {
+    const versions = {};
+    for (const [name, command, args] of [['ffmpeg', this.settings.ffmpegPath, ['-version']], ['yt-dlp', this.settings.ytdlpPath, ['--version']]]) {
+      try {
+        const { stdout } = await this._run(command, args);
+        versions[name] = String(stdout || '').split('\n')[0].trim().slice(0, 120) || null;
+      } catch (_) {
+        versions[name] = null;
+      }
+    }
+    return versions;
+  }
+
+  /**
+   * Requeue every failed clip when ffmpeg or yt-dlp was installed or upgraded
+   * since the last check: a new release often fixes what failed (yt-dlp's site
+   * extractors break whenever a host changes its pages).
+   * @returns {Promise<number>} clips queued
+   */
+  async retryAfterToolChange () {
+    const versions = await this._toolVersions();
+    const seen = await this.store.get('/tools');
+    const changed = Object.keys(versions).filter((name) => versions[name] && (!seen || versions[name] !== seen[name]));
+    if (!changed.length) return 0;
+    const kept = Object.fromEntries(Object.entries(versions).filter(([, version]) => version));
+    await this.store.set('/tools', Object.assign({}, seen, kept, { checkedAt: this._iso() }));
+    const queued = await this.retryFailed({ all: true });
+    if (queued) this._log(`queued ${queued} failed clip${queued === 1 ? '' : 's'}: ${changed.map((name) => `${name} is now ${versions[name]}`).join(', ')}`);
     return queued;
   }
 
@@ -961,7 +997,8 @@ class Clips {
           record.proxy = Object.assign({}, record.proxy, {
             status: attempts >= MAX_ATTEMPTS ? 'failed' : 'pending',
             attempts,
-            error: error.message || String(error)
+            error: error.message || String(error),
+            failedAt: attempts >= MAX_ATTEMPTS ? this._iso() : null
           });
         });
       }
@@ -984,10 +1021,27 @@ class Clips {
 
   _rescanInBackground () {
     if (this._rescanning || this._processing || this._stopped) return this._rescanning;
-    this._rescanning = this.rescan()
+    this._rescanning = this.maintain()
       .catch(() => {})
       .finally(() => { this._rescanning = null; });
     return this._rescanning;
+  }
+
+  /**
+   * The periodic pass: retry failed clips (all of them after a tool upgrade,
+   * otherwise those that failed `recheckAfterMs` ago), then `rescan`.
+   * @returns {Promise<Object>} `{ retried, checked, stored, upgraded }`
+   */
+  async maintain () {
+    const upgraded = await this.retryAfterToolChange();
+    const stale = await this.retryFailed({ olderThanMs: this.settings.recheckAfterMs });
+    if (stale) this._log(`queued ${stale} clip${stale === 1 ? '' : 's'} that failed over ${Math.round(this.settings.recheckAfterMs / 86400000)} days ago`);
+    const retried = upgraded + stale;
+    if (retried) {
+      this._processInBackground();
+      return { retried, checked: 0, stored: 0, upgraded: 0 };
+    }
+    return Object.assign({ retried: 0 }, await this.rescan());
   }
 
   /**

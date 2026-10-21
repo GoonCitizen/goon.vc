@@ -115,7 +115,7 @@ describe('Events', function () {
     const location = new URL(res.headers.Location);
     assert.strictEqual(location.origin + location.pathname, 'https://discord.com/oauth2/authorize');
     assert.strictEqual(location.searchParams.get('client_id'), '444444444444444444');
-    assert.strictEqual(location.searchParams.get('scope'), 'bot');
+    assert.strictEqual(location.searchParams.get('scope'), 'bot applications.commands');
     assert.strictEqual(location.searchParams.get('permissions'), '1024', 'View Channels only');
   });
 

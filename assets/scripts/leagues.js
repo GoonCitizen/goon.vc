@@ -163,12 +163,21 @@
         : '';
       return `<li class="${duel.voided ? 'void' : ''}">
           <time class="tournament-muted" datetime="${esc(duel.playedAt || duel.loggedAt)}">${esc(when(duel.playedAt || duel.loggedAt, { year: undefined }))}</time>
-          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.source ? ` <span class="tournament-muted">— <a href="${esc(duel.source.path)}">${esc(duel.source.name)}</a></span>` : ''}${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}</span>
+          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.source ? ` <span class="tournament-muted">— <a href="${esc(duel.source.path)}">${esc(duel.source.name)}</a></span>` : ''}${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}${duel.confirmedBy ? ` <span class="tournament-muted">— confirmed by ${esc(duel.confirmedBy)} on Discord</span>` : ''}</span>
           ${delta}
           ${action}
         </li>`;
     }).join('');
     return `<ol class="league-duels" reversed>${items}</ol>`;
+  }
+
+  /** Datalist options: roster names containing the typed text, then Discord members as `@handle`. */
+  function pilotOptions (roster, typed, handles) {
+    const wanted = typed.replace(/^@/, '').toLowerCase();
+    const names = typed.startsWith('@') ? [] : roster.filter((name) => name.toLowerCase().includes(wanted));
+    return names.map((name) => `<option value="${esc(name)}"></option>`)
+      .concat(handles.map((entry) => `<option value="@${esc(entry.handle)}">${esc(entry.name)}</option>`))
+      .join('');
   }
 
   function scoreOptions (bestOf) {
@@ -184,8 +193,9 @@
     switch (entry.type) {
       case 'create': what = `League created (${esc(entry.kind)})${entry.players && entry.players.length ? ` with ${plural(entry.players.length, 'pilot')}` : ''}.`; break;
       case 'join': what = `${esc(entry.name)} joined.`; break;
+      case 'link': what = `${esc(entry.name)} was linked to their Discord account.`; break;
       case 'update': what = `Details edited: ${esc((entry.fields || []).join(', '))}.`; break;
-      case 'duel': what = `<strong>${esc(entry.winner)}</strong> beat ${esc(entry.loser)} ${esc((entry.score || []).join('–'))} (best of ${esc(entry.bestOf)}).`; break;
+      case 'duel': what = `<strong>${esc(entry.winner)}</strong> beat ${esc(entry.loser)} ${esc((entry.score || []).join('–'))} (best of ${esc(entry.bestOf)})${entry.confirmedBy ? `, confirmed by ${esc(entry.confirmedBy)} on Discord` : ''}.`; break;
       case 'void': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) voided${entry.reason ? `: ${esc(entry.reason)}` : ''}.`; break;
       case 'restore': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) restored.`; break;
       case 'season-end': what = `${esc(entry.name || `Season ${entry.season}`)} closed${entry.champion ? `; <strong>${esc(entry.champion)}</strong> finished first` : ''}.`; break;
@@ -215,16 +225,18 @@
     const seasonLine = seasonal
       ? `<p class="tournament-muted">${esc(season.name)}: started ${esc(when(season.startedAt))}${season.endedAt ? `, closed ${esc(when(season.endedAt))}` : season.endsAt ? `, planned to end ${esc(when(season.endsAt))}` : ''}.${!open && season.champion ? ` <strong>${esc(season.champion)}</strong> finished first.` : ''}</p>`
       : '';
-    const players = league.players.map((name) => `<option value="${esc(name)}"></option>`).join('');
+    const players = pilotOptions(league.players, '', []);
     const duelForm = open
       ? `<section class="tournament-section">
           <h2>Log a duel</h2>
           <form class="tournament-form" id="league-duel-form">
-            <datalist id="league-pilots">${players}</datalist>
+            <datalist id="league-winner-options">${players}</datalist>
+            <datalist id="league-loser-options">${players}</datalist>
             <div class="tournament-row">
-              <label>Winner <input name="winner" list="league-pilots" maxlength="24" required autocomplete="off"></label>
-              <label>Loser <input name="loser" list="league-pilots" maxlength="24" required autocomplete="off"></label>
+              <label>Winner <input name="winner" list="league-winner-options" maxlength="33" placeholder="@handle or name" required autocomplete="off"></label>
+              <label>Loser <input name="loser" list="league-loser-options" maxlength="33" placeholder="@handle or name" required autocomplete="off"></label>
             </div>
+            <p class="tournament-muted">Type any name, or a Discord handle to find a member of our server. A pilot picked by <code>@handle</code> keeps their place in the league by their Discord account, whatever name they go by.</p>
             <div class="tournament-row">
               <label>Set <select name="bestOf">${bestOfOptions(league.bestOf)}</select></label>
               <label>Score <select name="lost">${scoreOptions(league.bestOf)}</select></label>
@@ -328,6 +340,27 @@
       if (duelForm) {
         duelForm.bestOf.addEventListener('change', () => {
           duelForm.lost.innerHTML = scoreOptions(Number(duelForm.bestOf.value));
+        });
+        [duelForm.winner, duelForm.loser].forEach((input) => {
+          const list = document.getElementById(input.getAttribute('list'));
+          let timer = null;
+          let asked = 0;
+          input.addEventListener('input', () => {
+            clearTimeout(timer);
+            const typed = input.value.trim();
+            list.innerHTML = pilotOptions(league.players, typed, []);
+            if (typed.replace(/^@/, '').length < 2) return;
+            timer = setTimeout(async () => {
+              const ticket = ++asked;
+              let handles = [];
+              try {
+                handles = (await request('GET', `${src}/handles?query=${encodeURIComponent(typed)}`)).handles;
+              } catch (error) {
+                return;
+              }
+              if (ticket === asked && input.value.trim() === typed) list.innerHTML = pilotOptions(league.players, typed, handles);
+            }, 250);
+          });
         });
       }
       submit(duelForm, (form) => {

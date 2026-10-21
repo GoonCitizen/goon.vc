@@ -167,6 +167,7 @@ describe('clips', function () {
 
     async function fakeRun (command, args, opts = {}) {
       runs.push([command, args]);
+      if (/^--?version$/.test(args[0])) return { code: 1, stdout: '', stderr: 'no versions in this test' };
       if (command === 'ffprobe') {
         assert.strictEqual(fs.readFileSync(args[args.length - 1], 'utf8'), 'ORIGINAL-VIDEO-BYTES');
         return {
@@ -576,6 +577,8 @@ describe('clips', function () {
     let root;
     let clips;
     let installed;
+    let version;
+    let clock;
 
     function linkClip (id, proxy) {
       return { id, kind: 'link', url: `https://medal.tv/clips/${id}`, author: 'Ace', postedAt: '2026-10-20T02:40:00.000Z', proxy };
@@ -591,13 +594,17 @@ describe('clips', function () {
     before(async function () {
       root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-retry-'));
       installed = false;
+      version = '2026.01.01';
+      clock = Date.parse('2026-10-20T12:00:00Z');
       clips = new Clips({
         path: root,
         discord: {},
         poll: false,
+        now: () => clock,
         fetch: () => Promise.resolve(response(404, {})),
-        run: async () => {
-          if (!installed) throw Object.assign(new Error('spawn yt-dlp ENOENT'), { code: 'ENOENT' });
+        run: async (command, args) => {
+          if (!installed) throw Object.assign(new Error(`spawn ${command} ENOENT`), { code: 'ENOENT' });
+          if (/^--?version$/.test(args[0])) return { code: 0, stdout: `${command} ${version}\n`, stderr: '' };
           return { code: 1, stdout: '', stderr: 'ERROR: [medal] clip is private' };
         },
         resolveToken: () => ({ token: 'test-token', source: 'test' })
@@ -650,6 +657,31 @@ describe('clips', function () {
       assert.strictEqual((await clips.getClip('f')).proxy.status, 'pending', 'Medal links are imported by default');
       assert.strictEqual((await clips.getClip('g')).proxy.status, 'skipped');
     });
+
+    it('retries every failed clip once ffmpeg or yt-dlp is upgraded', async function () {
+      await clips.retryAfterToolChange();
+      const medal = 'yt-dlp exited 1: ERROR: [MedalTV] h: Could not find video information.';
+      await clips.store.set('/clips/h', linkClip('h', { status: 'failed', attempts: 3, error: medal, failedAt: new Date(clock).toISOString() }));
+      await clips._append('clips', 'h');
+      assert.strictEqual(await clips.retryAfterToolChange(), 0, 'same versions');
+      assert.strictEqual(await clips.retryFailed(), 0, 'not a missing tool');
+      version = '2026.10.20';
+      assert.strictEqual(await clips.retryAfterToolChange(), 1);
+      assert.deepStrictEqual((await clips.getClip('h')).proxy, { status: 'pending', attempts: 0, error: null });
+      assert.strictEqual((await clips.store.get('/tools'))['yt-dlp'], 'yt-dlp 2026.10.20');
+    });
+
+    it('retries failures a week old in the periodic pass', async function () {
+      await clips.store.set('/clips/h', linkClip('h', { status: 'failed', attempts: 3, error: 'yt-dlp exited 1: HTTP Error 404', failedAt: new Date(clock - 8 * 24 * 3600 * 1000).toISOString() }));
+      await clips.store.set('/clips/c', linkClip('c', { status: 'failed', attempts: 3, error: 'yt-dlp exited 1: HTTP Error 404', failedAt: new Date(clock - 3600 * 1000).toISOString() }));
+      const pass = await clips.maintain();
+      assert.strictEqual(pass.retried, 1);
+      assert.strictEqual((await clips.getClip('c')).proxy.status, 'failed', 'failed an hour ago');
+      await clips._processing;
+      const h = (await clips.getClip('h')).proxy;
+      assert.strictEqual(h.attempts, 1, 'tried again');
+      assert.strictEqual(h.status, 'pending');
+    });
   });
 
   describe('Clips masters and rescans', function () {
@@ -666,6 +698,7 @@ describe('clips', function () {
     async function fakeRun (command, args) {
       runs.push([command, args]);
       const last = args[args.length - 1];
+      if (/^--?version$/.test(args[0])) return { code: 0, stderr: '', stdout: `${command} 1.0\n` };
       if (command === 'yt-dlp' && args.includes('-J')) return { code: 0, stderr: '', stdout: JSON.stringify({ height: offered, requested_formats: [{ height: offered }, { height: null }] }) };
       if (command === 'yt-dlp') {
         fs.writeFileSync(args[args.indexOf('-o') + 1], `LINK-${offered}`);
@@ -744,7 +777,7 @@ describe('clips', function () {
       assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 0, stored: 0, upgraded: 0 });
       clock += 8 * DAY;
       assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 1, stored: 0, upgraded: 0 });
-      assert.deepStrictEqual(runs.map(([command, args]) => `${command} ${args.includes('-J') ? '-J' : 'download'}`), ['yt-dlp -J'], 'asks without downloading');
+      assert.deepStrictEqual(runs.filter(([, args]) => !/version/.test(args[0])).map(([command, args]) => `${command} ${args.includes('-J') ? '-J' : 'download'}`), ['yt-dlp -J'], 'asks without downloading');
       assert.strictEqual((await clips.getClip('9002-l0')).master.checkedAt, new Date(clock).toISOString());
     });
 

@@ -386,7 +386,7 @@ class Events {
   async inviteUrl () {
     const id = await this.applicationId();
     if (!id) return null;
-    const q = new URLSearchParams({ client_id: id, scope: 'bot', permissions: INVITE_PERMISSIONS });
+    const q = new URLSearchParams({ client_id: id, scope: 'bot applications.commands', permissions: INVITE_PERMISSIONS });
     return `https://discord.com/oauth2/authorize?${q}`;
   }
 
