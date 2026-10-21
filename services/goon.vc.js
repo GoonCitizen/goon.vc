@@ -386,10 +386,15 @@ class GoonVC {
       const member = current && await this.members.getMember(current.session.memberId);
       return (member && member.displayName) || null;
     };
+    const postResults = (report, by) => this.leagues.recordTournament(Leagues.OPEN_LEAGUE_ID, report, by).catch((error) => {
+      this.emit('error', 'GOON.VC', `could not post tournament ${report.id} to the Open League: ${error.message}`);
+    });
     this.tournaments = new Tournaments({
       path: tournamentSettings.path || './stores/tournaments',
       basePath: spa._site('tournamentsPath'),
-      identify
+      password: tournamentSettings.password || null,
+      identify,
+      onResults: postResults
     });
     await this.tournaments.start();
 
@@ -400,6 +405,7 @@ class GoonVC {
       identify
     });
     await this.leagues.start();
+    for (const report of await this.tournaments.resultReports()) await postResults(report);
 
     const leaderboardSettings = this.settings.leaderboard || {};
     this.leaderboard = new Leaderboard({

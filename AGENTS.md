@@ -197,7 +197,26 @@ deleted, undo is logged, and once the champion is recorded the tournament is
 Seeds can be edited until the first game; after that a **latecomer** takes an
 open first-round bye (lowest seed number first, only while nothing scored
 depends on it), so they fight the same number of sets to the final as everyone
-else — a full bracket refuses latecomers. Link previews for series and
+else — a full bracket refuses latecomers. A player who drops out is
+disqualified from an open set with the set's **DQ** control (`POST …/forfeits
+{ match, side, players }`, `side` = who dropped): the set ends with no wins,
+the opponent advances, and games already scored stay in the record so Undo
+restores them. A tournament is `locked` for good once it has a champion:
+edits then need the password (`tournaments.password`, env
+`GOON_TOURNAMENTS_PASSWORD` only — unset = finished tournaments stay final;
+409), sent as `X-Tournament-Password` (401 without it). The bracket's padlock
+(top right) checks it with `POST …/unlock { password }` and keeps it in memory
+only; five wrong passwords from one address (last `X-Forwarded-For` hop) in 15
+minutes get 429. An edit that takes the champion away reopens the tournament
+(logged `reopen`, `results` null) — still locked — until it is decided again.
+Results post to the Open League (`Tournaments#report` → `onResults` →
+`Leagues#recordTournament`) on completion and on every edit of a locked
+tournament: every set played (byes and DQs skipped) is a duel tagged
+`source { tournament, name, path, match }` and dated `playedAt` when the set
+finished, so it rates in its place however late it posts; a changed result or
+a reopened tournament voids the duels it no longer backs (`voided.tournament`),
+and they come back with the result (duels voided by hand stay void). Start-up
+syncs every locked tournament, and a failed post never fails the game. Link previews for series and
 tournament pages come from the Store (`Tournaments#page`, wired in
 `_pageMetaMiddleware`). The bracket is `<tournament-bracket>`
 (`assets/scripts/tournament-bracket.js`, shadow DOM, no goon.vc dependencies):
@@ -217,7 +236,8 @@ Anyone creates more (`POST /services/leagues`: `name`, `kind` `perpetual` |
 slug, `-2`… when taken). Logging a duel (`POST …/<id>/duels`: `winner`,
 `loser`, `bestOf`, `score` `[won, lost]`, where the winner took (n + 1) / 2)
 joins new names to the roster. Ratings are never stored: `functions/elo.js`
-replays the season's duels in logged order, and each duel moves
+replays the season's duels in the order they were played (`playedAt`, the log
+time for duels logged by hand; ties keep logged order), and each duel moves
 K × √(best of) × (1 − expected) from loser to winner (the set score is kept but
 doesn't change the rating). Nothing is deleted: a wrong duel is voided (and can be
 restored) with `POST …/duels/<duelId>/void|restore`, and every change is in

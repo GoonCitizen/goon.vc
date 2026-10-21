@@ -66,8 +66,30 @@ function findPlayer (league, name) {
   return league.players.find((player) => player.name.toLowerCase() === wanted) || null;
 }
 
+function playedAt (duel) {
+  return duel.playedAt || duel.loggedAt || '';
+}
+
+/**
+ * Duels in the order they were played (ties keep logged order), so a
+ * tournament posted late still lands where its sets were fought.
+ */
+function inPlayOrder (duels) {
+  return duels
+    .map((duel, index) => ({ duel, index }))
+    .sort((x, y) => playedAt(x.duel).localeCompare(playedAt(y.duel)) || x.index - y.index)
+    .map((entry) => entry.duel);
+}
+
 function seasonDuels (league, number) {
-  return league.duels.filter((duel) => duel.season === number);
+  return inPlayOrder(league.duels.filter((duel) => duel.season === number));
+}
+
+function sameResult (duel, set) {
+  return duel.winner.toLowerCase() === String(set.winner).toLowerCase() &&
+    duel.loser.toLowerCase() === String(set.loser).toLowerCase() &&
+    duel.bestOf === normalizeBestOf(set.bestOf) &&
+    Array.isArray(set.score) && duel.score[0] === Number(set.score[0]) && duel.score[1] === Number(set.score[1]);
 }
 
 function rateSeason (league, season) {
@@ -117,7 +139,7 @@ function publicLeague (league) {
     createdBy: league.createdBy || null,
     players: league.players.map((player) => player.name),
     seasons,
-    duels: league.duels.map((duel) => Object.assign({}, duel, { change: changes[duel.id] || null })),
+    duels: inPlayOrder(league.duels).map((duel) => Object.assign({}, duel, { change: changes[duel.id] || null })),
     log: league.log
   });
 }
@@ -277,7 +299,7 @@ class Leagues {
       const stored = await this._get(id);
       if (!stored) throw fail(404, 'No such league.');
       const league = JSON.parse(JSON.stringify(stored));
-      change(league);
+      if (change(league) === false) return publicLeague(stored);
       league.updatedAt = this._iso();
       await this.store.set(`/league/${league.id}`, league);
       return publicLeague(league);
@@ -329,38 +351,105 @@ class Leagues {
    */
   logDuel (id, input, by) {
     return this._change(id, (league) => {
-      input = input || {};
-      const season = current(league);
-      if (season.endedAt) throw fail(409, 'This season is over; start the next one to log duels.');
-      if (league.duels.length >= MAX_DUELS) throw fail(409, 'This league is full.');
-      const [winnerName] = parsePlayers([input.winner]);
-      const [loserName] = parsePlayers([input.loser]);
-      if (!winnerName || !loserName) throw fail(400, 'A duel needs a winner and a loser.');
-      if (winnerName.toLowerCase() === loserName.toLowerCase()) throw fail(400, 'A pilot cannot duel themselves.');
-      const bestOf = normalizeBestOf(input.bestOf === undefined ? league.bestOf : input.bestOf);
-      const need = (bestOf + 1) / 2;
-      const score = Array.isArray(input.score) ? input.score.map(Number) : bestOf === 1 ? [1, 0] : null;
-      if (!score) throw fail(400, `Give the set score for a best of ${bestOf}.`);
-      if (score[0] !== need || !Number.isInteger(score[1]) || score[1] < 0 || score[1] >= need) {
-        throw fail(400, `A best of ${bestOf} ends ${need}–0${need > 1 ? ` to ${need}–${need - 1}` : ''}.`);
-      }
-      const winner = this._join(league, winnerName, by);
-      const loser = this._join(league, loserName, by);
-      const duel = {
-        id: `d${league.duels.length + 1}`,
-        season: season.number,
-        winner,
-        loser,
-        bestOf,
-        score: [score[0], score[1]],
-        note: text(input.note, LIMITS.note),
-        loggedAt: this._iso()
-      };
-      if (by) duel.by = by;
-      if (!duel.note) delete duel.note;
-      league.duels.push(duel);
-      league.log.push(this._entry('duel', by, { duel: duel.id, winner, loser, bestOf, score: duel.score }));
+      const duel = this._addDuel(league, input, by);
+      league.log.push(this._entry('duel', by, { duel: duel.id, winner: duel.winner, loser: duel.loser, bestOf: duel.bestOf, score: duel.score }));
     });
+  }
+
+  /**
+   * Bring a tournament's duels in line with its results: every set of a
+   * complete tournament is a duel dated when the set finished (so ratings
+   * replay it in its place, however late it is posted), and a set whose
+   * result changed or a tournament that was reopened voids the duels it no
+   * longer backs. Each duel keeps its `source`, so posting the same results
+   * again changes nothing. Duels voided this way come back if the result
+   * does; duels someone voided by hand stay void, and closed seasons are
+   * left alone.
+   * @param {string} id League id.
+   * @param {Object} report `{ id, name, path, complete, sets: [{ match, winner, loser, bestOf, score, playedAt }] }` from `Tournaments#report`.
+   * @param {string} [by] Display name of whoever changed the tournament.
+   */
+  recordTournament (id, report, by) {
+    return this._change(id, (league) => {
+      const name = text(report.name, LIMITS.name);
+      const wanted = new Map((report.complete === false ? [] : report.sets || []).map((set) => [set.match, set]));
+      const open = (duel) => {
+        const season = league.seasons.find((entry) => entry.number === duel.season);
+        return !(season && season.endedAt);
+      };
+      const posted = league.duels.filter((duel) => duel.source && duel.source.tournament === report.id && open(duel));
+      const added = [];
+      const voided = [];
+      const restored = [];
+      let redated = 0;
+      for (const duel of posted) {
+        const set = wanted.get(duel.source.match);
+        const backed = set && sameResult(duel, set);
+        if (backed) {
+          wanted.delete(duel.source.match);
+          if (duel.voided && !duel.voided.tournament) continue;
+          if (duel.voided) {
+            delete duel.voided;
+            restored.push(duel.id);
+          }
+          if (set.playedAt && duel.playedAt !== set.playedAt) {
+            duel.playedAt = set.playedAt;
+            redated++;
+          }
+        } else if (!backed && !duel.voided) {
+          duel.voided = Object.assign({ at: this._iso(), reason: 'The tournament’s results changed.', tournament: true }, by ? { by } : {});
+          voided.push(duel.id);
+        }
+      }
+      for (const set of wanted.values()) {
+        added.push(this._addDuel(league, set, by, { tournament: report.id, name, path: report.path, match: set.match }, set.playedAt).id);
+      }
+      if (!added.length && !voided.length && !restored.length) return redated ? undefined : false;
+      league.log.push(this._entry('tournament', by, Object.assign(
+        { tournament: report.id, name, path: report.path, duels: added },
+        voided.length ? { voided } : {},
+        restored.length ? { restored } : {}
+      )));
+    });
+  }
+
+  /**
+   * Validate and append one duel to the current season: `{ winner, loser, bestOf, score: [won, lost], note? }`.
+   * @param {string} [played] When it was fought, if not now (tournament sets).
+   * @returns {Object} the duel
+   */
+  _addDuel (league, input, by, source, played) {
+    input = input || {};
+    const season = current(league);
+    if (season.endedAt) throw fail(409, 'This season is over; start the next one to log duels.');
+    if (league.duels.length >= MAX_DUELS) throw fail(409, 'This league is full.');
+    const [winnerName] = parsePlayers([input.winner]);
+    const [loserName] = parsePlayers([input.loser]);
+    if (!winnerName || !loserName) throw fail(400, 'A duel needs a winner and a loser.');
+    if (winnerName.toLowerCase() === loserName.toLowerCase()) throw fail(400, 'A pilot cannot duel themselves.');
+    const bestOf = normalizeBestOf(input.bestOf === undefined ? league.bestOf : input.bestOf);
+    const need = (bestOf + 1) / 2;
+    const score = Array.isArray(input.score) ? input.score.map(Number) : bestOf === 1 ? [1, 0] : null;
+    if (!score) throw fail(400, `Give the set score for a best of ${bestOf}.`);
+    if (score[0] !== need || !Number.isInteger(score[1]) || score[1] < 0 || score[1] >= need) {
+      throw fail(400, `A best of ${bestOf} ends ${need}–0${need > 1 ? ` to ${need}–${need - 1}` : ''}.`);
+    }
+    const duel = {
+      id: `d${league.duels.length + 1}`,
+      season: season.number,
+      winner: this._join(league, winnerName, by),
+      loser: this._join(league, loserName, by),
+      bestOf,
+      score: [score[0], score[1]],
+      note: text(input.note, LIMITS.note),
+      loggedAt: this._iso()
+    };
+    duel.playedAt = played ? optionalDate(played) : duel.loggedAt;
+    if (by) duel.by = by;
+    if (!duel.note) delete duel.note;
+    if (source) duel.source = source;
+    league.duels.push(duel);
+    return duel;
   }
 
   _openDuel (league, duelId) {
@@ -489,3 +578,4 @@ class Leagues {
 
 module.exports = Leagues;
 module.exports.OPEN_LEAGUE = OPEN_LEAGUE;
+module.exports.OPEN_LEAGUE_ID = slugify(OPEN_LEAGUE.name);

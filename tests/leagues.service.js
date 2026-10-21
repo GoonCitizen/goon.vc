@@ -190,6 +190,75 @@ describe('leagues service', function () {
     assert.strictEqual(await service.page('/tournaments/arena'), null);
   });
 
+  it('rates a tournament posted late in the order its sets were played', async function () {
+    await service.createLeague({ name: 'Arena', kind: 'perpetual' });
+    await service.logDuel('arena', { winner: 'Ace', loser: 'Bolt', bestOf: 1 });
+    const league = await service.recordTournament('arena', {
+      id: 'cup/2026-10-15',
+      name: 'Cup',
+      path: '/tournaments/cup/2026-10-15',
+      complete: true,
+      sets: [
+        { match: 'W1-1', winner: 'Bolt', loser: 'Cid', bestOf: 1, score: [1, 0], playedAt: '2026-10-15T20:00:00.000Z' },
+        { match: 'W2-1', winner: 'Bolt', loser: 'Ace', bestOf: 1, score: [1, 0], playedAt: '2026-10-15T21:00:00.000Z' }
+      ]
+    });
+    assert.deepStrictEqual(league.duels.map((duel) => [duel.id, duel.playedAt]), [
+      ['d2', '2026-10-15T20:00:00.000Z'],
+      ['d3', '2026-10-15T21:00:00.000Z'],
+      ['d1', league.duels[2].loggedAt]
+    ], 'the tournament’s sets come before the duel logged after them');
+    const ace = league.duels.find((duel) => duel.id === 'd1').change;
+    assert.strictEqual(ace.winner[0], Math.round(1000 - elo.exchange(1016, 1000, 1, 32)), 'Ace had already lost the cup final when the later duel was rated');
+    const replayed = elo.rate(league.duels, { k: league.k, initialRating: league.initialRating });
+    assert.deepStrictEqual(league.seasons[0].standings.map((p) => [p.name, p.rating]), replayed.standings.map((p) => [p.name, p.rating]));
+  });
+
+  it('keeps a tournament’s duels in line with its results', async function () {
+    await service.createLeague({ name: 'Arena', kind: 'perpetual' });
+    const report = (final, extra) => Object.assign({
+      id: 'cup/2026-10-15',
+      name: 'Cup',
+      path: '/tournaments/cup/2026-10-15',
+      complete: true,
+      sets: [
+        { match: 'W1-1', winner: 'Bolt', loser: 'Cid', bestOf: 1, score: [1, 0], playedAt: '2026-10-15T20:00:00.000Z' },
+        Object.assign({ match: 'W2-1', bestOf: 1, score: [1, 0], playedAt: '2026-10-15T21:00:00.000Z' }, final)
+      ]
+    }, extra);
+    const live = (league) => league.duels.filter((duel) => !duel.voided).map((duel) => duel.id);
+
+    let league = await service.recordTournament('arena', report({ winner: 'Bolt', loser: 'Ace' }));
+    assert.deepStrictEqual(live(league), ['d1', 'd2']);
+    const updatedAt = league.updatedAt;
+    league = await service.recordTournament('arena', report({ winner: 'bolt', loser: 'ace' }));
+    assert.strictEqual(league.updatedAt, updatedAt, 'the same results change nothing');
+
+    league = await service.recordTournament('arena', report({ winner: 'Ace', loser: 'Bolt' }), 'ChairmanPoW');
+    assert.deepStrictEqual(live(league), ['d1', 'd3'], 'an edited final voids the old duel and logs the new one');
+    assert.strictEqual(league.duels.find((duel) => duel.id === 'd2').voided.tournament, true);
+    let entry = league.log[league.log.length - 1];
+    assert.deepStrictEqual([entry.type, entry.duels, entry.voided, entry.by], ['tournament', ['d3'], ['d2'], 'ChairmanPoW']);
+
+    league = await service.recordTournament('arena', report(null, { complete: false, sets: [] }));
+    assert.deepStrictEqual(live(league), [], 'a reopened tournament backs no duels');
+
+    league = await service.recordTournament('arena', report({ winner: 'Bolt', loser: 'Ace' }));
+    assert.deepStrictEqual(live(league), ['d1', 'd2'], 'its duels come back with its results');
+    entry = league.log[league.log.length - 1];
+    assert.deepStrictEqual([entry.duels, entry.restored], [[], ['d1', 'd2']]);
+    assert.strictEqual(league.duels.length, 3, 'nothing is duplicated');
+
+    await service.voidDuel('arena', 'd1', { reason: 'Wrong ship' });
+    league = await service.recordTournament('arena', report({ winner: 'Bolt', loser: 'Ace' }));
+    assert.deepStrictEqual(live(league), ['d2'], 'a duel voided by hand stays void');
+    assert.strictEqual(league.duels.length, 3);
+
+    league = await service.recordTournament('arena', report({ winner: 'Bolt', loser: 'Ace', playedAt: '2026-10-15T22:00:00.000Z' }));
+    assert.strictEqual(league.duels.find((duel) => duel.id === 'd2').playedAt, '2026-10-15T22:00:00.000Z', 'a set’s date follows the tournament');
+    assert.strictEqual(league.log[league.log.length - 1].type, 'void', 'redating is not a new log entry');
+  });
+
   it('keeps leagues across restarts', async function () {
     await service.createLeague({ name: 'Arena', kind: 'perpetual' });
     await service.logDuel('arena', { winner: 'Ace', loser: 'Bolt', bestOf: 1 });

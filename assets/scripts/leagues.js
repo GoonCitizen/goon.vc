@@ -162,8 +162,8 @@
         ? `<button type="button" data-duel="${esc(duel.id)}" data-action="${duel.voided ? 'restore' : 'void'}">${duel.voided ? 'Restore' : 'Void'}</button>`
         : '';
       return `<li class="${duel.voided ? 'void' : ''}">
-          <time class="tournament-muted" datetime="${esc(duel.loggedAt)}">${esc(when(duel.loggedAt, { year: undefined }))}</time>
-          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}</span>
+          <time class="tournament-muted" datetime="${esc(duel.playedAt || duel.loggedAt)}">${esc(when(duel.playedAt || duel.loggedAt, { year: undefined }))}</time>
+          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.source ? ` <span class="tournament-muted">— <a href="${esc(duel.source.path)}">${esc(duel.source.name)}</a></span>` : ''}${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}</span>
           ${delta}
           ${action}
         </li>`;
@@ -190,6 +190,14 @@
       case 'restore': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) restored.`; break;
       case 'season-end': what = `${esc(entry.name || `Season ${entry.season}`)} closed${entry.champion ? `; <strong>${esc(entry.champion)}</strong> finished first` : ''}.`; break;
       case 'season-start': what = `${esc(entry.name)} began.`; break;
+      case 'tournament': {
+        const parts = [];
+        if ((entry.duels || []).length) parts.push(`${plural(entry.duels.length, 'set')} logged as duels, dated when they were played`);
+        if ((entry.voided || []).length) parts.push(`${plural(entry.voided.length, 'duel')} voided because its results changed`);
+        if ((entry.restored || []).length) parts.push(`${plural(entry.restored.length, 'duel')} restored`);
+        what = `<a href="${esc(entry.path)}">${esc(entry.name)}</a>: ${parts.join('; ')}.`;
+        break;
+      }
       default: what = esc(entry.type);
     }
     return `<li><time datetime="${esc(entry.at)}">${esc(when(entry.at, { year: undefined, hour: 'numeric', minute: '2-digit' }))}</time>${what}${by}</li>`;

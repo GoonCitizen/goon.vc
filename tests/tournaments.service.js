@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const Tournaments = require('../services/tournaments');
+const Leagues = require('../services/leagues');
 const engine = require('../assets/scripts/tournament-bracket');
 
 const SATURDAY = {
@@ -132,6 +133,132 @@ describe('tournaments service', function () {
     const reopened = await service.getTournament('saturday-1v1', created.slug);
     assert.strictEqual(reopened.results.champion, 'VIPER', 'results survive a restart');
     assert.strictEqual((await service.listTournaments('saturday-1v1')).length, 1);
+  });
+
+  it('posts a finished tournament’s sets to a league once, in the order they finished', async function () {
+    await service.stop();
+    const posted = [];
+    const leagueDir = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournament-league-'));
+    const leagues = new Leagues({ path: leagueDir });
+    await leagues.start();
+    service = new Tournaments({
+      path: dir,
+      onResults: async (report, by) => {
+        posted.push(report);
+        await leagues.recordTournament(Leagues.OPEN_LEAGUE_ID, report, by);
+      }
+    });
+    await service.start();
+    try {
+      const created = await service.createTournament(Object.assign(saturday('2026-10-25T01:00:00.000Z', ['VIPER', 'KESTREL', 'NOMAD']), { format: 'single-elimination' }));
+      const games = {};
+      // Every set goes 2–1: the second-listed pilot takes game one.
+      const done = await playOut(service, created.slug, (m) => {
+        games[m.id] = (games[m.id] || 0) + 1;
+        return games[m.id] === 1 ? 1 : 0;
+      });
+      assert.strictEqual(done.results.champion, 'VIPER');
+      assert.strictEqual(posted.length, 1, 'posted when the champion is recorded');
+
+      const report = service.report(done);
+      assert.strictEqual(report.path, `/tournaments/saturday-1v1/${created.slug}`);
+      assert.deepStrictEqual(report.sets.map((set) => [set.winner, set.loser, set.bestOf, set.score]), [
+        ['KESTREL', 'NOMAD', 3, [2, 1]],
+        ['VIPER', 'KESTREL', 3, [2, 1]]
+      ], 'byes are not duels');
+      assert.deepStrictEqual(posted[0], report);
+
+      let league = await leagues.getLeague(Leagues.OPEN_LEAGUE_ID);
+      assert.deepStrictEqual(league.duels.map((duel) => [duel.winner, duel.loser, duel.score, duel.source.tournament, duel.source.path]), [
+        ['KESTREL', 'NOMAD', [2, 1], report.id, report.path],
+        ['VIPER', 'KESTREL', [2, 1], report.id, report.path]
+      ]);
+      assert.deepStrictEqual(league.players, ['KESTREL', 'NOMAD', 'VIPER']);
+      assert.strictEqual(league.seasons[0].standings[0].name, 'VIPER');
+      const entry = league.log[league.log.length - 1];
+      assert.deepStrictEqual([entry.type, entry.name, entry.duels], ['tournament', 'Saturday 1v1', ['d1', 'd2']]);
+
+      const updatedAt = league.updatedAt;
+      league = await leagues.recordTournament(Leagues.OPEN_LEAGUE_ID, (await service.resultReports())[0]);
+      assert.strictEqual(league.duels.length, 2, 'posting again adds nothing');
+      assert.strictEqual(league.updatedAt, updatedAt);
+    } finally {
+      await leagues.stop();
+      fs.rmSync(leagueDir, { recursive: true, force: true });
+    }
+  });
+
+  it('disqualifies a player who drops out, and never posts the DQ as a duel', async function () {
+    await service.stop();
+    const reports = [];
+    service = new Tournaments({ path: dir, onResults: (report, by) => reports.push([report, by]) });
+    await service.start();
+    const created = await service.createTournament(Object.assign(saturday('2026-10-25T01:00:00.000Z', ['VIPER', 'KESTREL', 'NOMAD', 'RONIN']), { format: 'single-elimination' }));
+    const slug = created.slug;
+
+    await service.recordGame('saturday-1v1', slug, { match: 'W1-1', side: 1, players: [0, 3] });
+    await assert.rejects(service.recordForfeit('saturday-1v1', slug, { match: 'W1-1', side: 2 }), /side must be 0 or 1/);
+    await assert.rejects(service.recordForfeit('saturday-1v1', slug, { match: 'W1-1', side: 1, players: [3, 0] }), /bracket changed/);
+    let record = await service.recordForfeit('saturday-1v1', slug, { match: 'W1-1', side: 1, players: [0, 3] }, 'ChairmanPoW');
+    assert.deepStrictEqual(record.record['W1-1'], { players: [0, 3], games: [1], forfeit: 1 });
+    const entry = record.log[record.log.length - 1];
+    assert.deepStrictEqual([entry.type, entry.player, entry.winner, entry.by], ['forfeit', 'RONIN', 'VIPER', 'ChairmanPoW']);
+    assert.ok(!record.log.some((line) => line.type === 'set'), 'a DQ is not a set result');
+    await assert.rejects(service.recordForfeit('saturday-1v1', slug, { match: 'W1-1', side: 0 }), /not open/);
+
+    record = await service.undoGame('saturday-1v1', slug, { match: 'W1-1' });
+    assert.deepStrictEqual(record.record['W1-1'], { players: [0, 3], games: [1] }, 'undo takes back the DQ and keeps the game');
+    assert.strictEqual(record.log[record.log.length - 1].forfeit, 'RONIN');
+    await service.recordForfeit('saturday-1v1', slug, { match: 'W1-1', side: 1 });
+
+    for (let i = 0; i < 2; i++) await service.recordGame('saturday-1v1', slug, { match: 'W1-2', side: 0 });
+    const done = await service.recordForfeit('saturday-1v1', slug, { match: 'W2-1', side: 1 }, 'ChairmanPoW');
+    assert.strictEqual(done.status, 'complete');
+    assert.deepStrictEqual([done.results.champion, done.results.runnerUp], ['VIPER', 'KESTREL']);
+    assert.strictEqual(reports.length, 1);
+    assert.deepStrictEqual(reports[0][0].sets.map((set) => [set.winner, set.loser, set.score]), [['KESTREL', 'NOMAD', [2, 0]]], 'only the set actually played is a duel');
+    assert.strictEqual(reports[0][1], 'ChairmanPoW');
+  });
+
+  it('locks a finished tournament: only the password edits it, and the league follows its results', async function () {
+    await service.stop();
+    const leagueDir = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournament-lock-'));
+    const leagues = new Leagues({ path: leagueDir });
+    await leagues.start();
+    service = new Tournaments({
+      path: dir,
+      password: 'hunter2',
+      onResults: (report, by) => leagues.recordTournament(Leagues.OPEN_LEAGUE_ID, report, by)
+    });
+    await service.start();
+    const duels = async () => (await leagues.getLeague(Leagues.OPEN_LEAGUE_ID)).duels.filter((duel) => !duel.voided).map((duel) => [duel.winner, duel.loser]);
+    try {
+      const created = await service.createTournament(Object.assign(saturday('2026-10-25T01:00:00.000Z', ['VIPER', 'KESTREL']), { format: 'single-elimination', bestOf: 1 }));
+      const slug = created.slug;
+      const done = await service.recordGame('saturday-1v1', slug, { match: 'W1-1', side: 0 });
+      assert.deepStrictEqual([done.status, done.locked, done.results.champion], ['complete', true, 'VIPER']);
+      assert.deepStrictEqual(await duels(), [['VIPER', 'KESTREL']]);
+
+      const refused = (status) => (error) => error.status === status;
+      await assert.rejects(service.undoGame('saturday-1v1', slug, { match: 'W1-1' }), refused(401));
+      await assert.rejects(service.undoGame('saturday-1v1', slug, { match: 'W1-1' }, null, 'hunter3'), refused(401));
+      await assert.rejects(service.unlock('saturday-1v1', slug, 'hunter3'), /Wrong password/);
+      assert.strictEqual((await service.unlock('saturday-1v1', slug, 'hunter2')).locked, true);
+
+      const reopened = await service.undoGame('saturday-1v1', slug, { match: 'W1-1' }, 'ChairmanPoW', 'hunter2');
+      assert.deepStrictEqual([reopened.status, reopened.locked, reopened.results], ['open', true, null], 'its only game was taken back');
+      const entry = reopened.log[reopened.log.length - 1];
+      assert.deepStrictEqual([entry.type, entry.champion, entry.by], ['reopen', 'VIPER', 'ChairmanPoW']);
+      assert.deepStrictEqual(await duels(), [], 'a reopened tournament takes its duels back');
+      await assert.rejects(service.recordGame('saturday-1v1', slug, { match: 'W1-1', side: 1 }), refused(401), 'still locked while reopened');
+
+      const again = await service.recordGame('saturday-1v1', slug, { match: 'W1-1', side: 1 }, 'ChairmanPoW', 'hunter2');
+      assert.deepStrictEqual([again.status, again.results.champion], ['complete', 'KESTREL']);
+      assert.deepStrictEqual(await duels(), [['KESTREL', 'VIPER']], 'the league has the corrected result');
+    } finally {
+      await leagues.stop();
+      fs.rmSync(leagueDir, { recursive: true, force: true });
+    }
   });
 
   it('describes series and tournament pages for link previews', async function () {

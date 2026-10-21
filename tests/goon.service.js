@@ -278,7 +278,7 @@ describe('goon.vc HTTP', function () {
         tickMs: 0,
         gateway: false
       },
-      tournaments: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournaments-test-')) },
+      tournaments: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-tournaments-test-')), password: 'test-password' },
       leagues: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-leagues-test-')) },
       leaderboard: {
         path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-leaderboard-test-')),
@@ -713,9 +713,9 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(listing.status, 200);
     assert.deepStrictEqual(listing.json.tournaments, []);
 
-    const post = (pathname, body, method = 'POST') => fetchJson(pathname, {
+    const post = (pathname, body, method = 'POST', headers = {}) => fetchJson(pathname, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify(body)
     });
     const created = await post('/services/tournaments', {
@@ -738,7 +738,32 @@ describe('goon.vc HTTP', function () {
     const final = await fetchJson(record);
     assert.strictEqual(final.json.status, 'complete');
     assert.strictEqual(final.json.results.champion, 'VIPER');
-    assert.strictEqual((await post(`${record}/undo`, { match: 'F1-1' })).status, 409, 'results are permanent');
+    assert.strictEqual(final.json.locked, true);
+    const locked = await post(`${record}/undo`, { match: 'F1-1' });
+    assert.strictEqual(locked.status, 401, 'results are locked');
+    assert.match(locked.json.error, /Unlock it with the password/);
+    assert.strictEqual((await post(`${record}/forfeits`, { match: 'F1-1', side: 1 })).status, 401, 'no DQs after the champion either');
+    const leagueDuels = async () => (await fetchJson('/services/leagues/open-league')).json.duels.filter((duel) => !duel.voided);
+    assert.deepStrictEqual((await leagueDuels()).map((duel) => [duel.winner, duel.loser, duel.score, duel.source.path]), [
+      ['VIPER', 'KESTREL', [2, 0], `/tournaments/saturday-1v1/${created.json.slug}`],
+      ['VIPER', 'KESTREL', [2, 0], `/tournaments/saturday-1v1/${created.json.slug}`]
+    ], 'every set played lands in the Open League');
+
+    assert.strictEqual((await post(`${record}/unlock`, { password: 'nope' })).status, 401);
+    assert.strictEqual((await post(`${record}/unlock`, { password: 'test-password' })).status, 200);
+    const unlocked = { 'X-Tournament-Password': 'test-password' };
+    const reopened = await post(`${record}/undo`, { match: 'F1-1' }, 'POST', unlocked);
+    assert.strictEqual(reopened.status, 200);
+    assert.deepStrictEqual([reopened.json.status, reopened.json.locked, reopened.json.results], ['live', true, null]);
+    assert.strictEqual((await leagueDuels()).length, 0, 'a reopened tournament backs no duels');
+    assert.strictEqual((await post(`${record}/games`, { match: 'F1-1', side: 0 })).status, 401, 'still locked while reopened');
+    const rescored = await post(`${record}/games`, { match: 'F1-1', side: 0 }, 'POST', unlocked);
+    assert.strictEqual(rescored.json.results.champion, 'VIPER');
+    assert.strictEqual((await leagueDuels()).length, 2, 'and is again once decided');
+
+    for (let i = 0; i < 4; i++) assert.strictEqual((await post(`${record}/unlock`, { password: `guess-${i}` })).status, 401);
+    const throttled = await post(`${record}/unlock`, { password: 'test-password' });
+    assert.strictEqual(throttled.status, 429, 'five wrong passwords lock the address out for a while');
     assert.strictEqual((await fetchJson('/services/tournaments/saturday-1v1/2020-01-01')).status, 404);
     assert.strictEqual((await fetchJson('/services/tournaments/nope')).status, 404);
     assert.strictEqual((await fetchJson('/services/tournaments/saturday-1v1')).json.tournaments.length, 1);

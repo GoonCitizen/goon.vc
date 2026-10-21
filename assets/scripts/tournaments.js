@@ -158,8 +158,10 @@
         break;
       }
       case 'set': what = `<strong>${esc(entry.winner)}</strong> beat ${esc(entry.loser)}, ${esc((entry.score || []).slice().sort((x, y) => y - x).join('–'))}.`; break;
-      case 'undo': what = `A game for ${esc(entry.winner)} was taken back.`; break;
+      case 'forfeit': what = `${esc(entry.player)} was disqualified (DQ); <strong>${esc(entry.winner)}</strong> advances.`; break;
+      case 'undo': what = entry.forfeit ? `${esc(entry.forfeit)}’s DQ was taken back.` : `A game for ${esc(entry.winner)} was taken back.`; break;
       case 'complete': what = `<strong>${esc(entry.champion)}</strong> is the champion.`; break;
+      case 'reopen': what = `Reopened by an edit; ${esc(entry.champion)} is no longer recorded as champion.`; break;
       default: what = esc(entry.type);
     }
     return `<li><time datetime="${esc(entry.at)}">${esc(when(entry.at, { weekday: undefined, year: undefined }))}</time>${what}${by}</li>`;

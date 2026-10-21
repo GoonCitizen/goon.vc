@@ -69,7 +69,7 @@ function renderIndexHtml (props) {
       </section>
       <section class="tournament-section">
         <h2>New tournament</h2>
-        <p class="tournament-muted">Pick a name, format, and start time. The bracket and every result are kept on record.</p>
+        <p class="tournament-muted">Pick a name, format, and start time. The bracket and every result are kept on record, and once there’s a champion every set played counts as a duel in the <a href="/leagues/open-league">Open League</a>.</p>
         <form class="tournament-form" id="tournament-create-form">
           <label>Name <input name="name" maxlength="48" required placeholder="Gladius Cup"></label>
           <label>Tagline <input name="tagline" maxlength="120"></label>

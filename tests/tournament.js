@@ -116,6 +116,29 @@ describe('tournament bracket engine', function () {
     assert.strictEqual(view.champion, 0, 'restoring the result restores the final');
   });
 
+  it('ends a set with no wins when a player is disqualified', function () {
+    const bracket = Tournament.createBracket(4, 'single-elimination');
+    const record = { 'W1-1': { players: [0, 3], games: [0], forfeit: 0 } };
+    assert.strictEqual(Tournament.hasGames({ 'W1-1': { players: [0, 3], games: [], forfeit: 1 } }), true, 'a DQ alone counts as a result');
+    let view = Tournament.resolveBracket(bracket, 3, record);
+    const set = view.byId['W1-1'];
+    assert.deepStrictEqual([set.status, set.forfeit, set.winner, set.loser], ['done', 0, 3, 0]);
+    assert.deepStrictEqual([set.wins, set.games], [[0, 0], []], 'games scored before the DQ do not count');
+    assert.strictEqual(view.byId['W2-1'].a, 3, 'the opponent advances');
+    assert.strictEqual(view.byId['W1-2'].forfeit, null);
+
+    record['W2-1'] = { players: [3, 1], games: [], forfeit: 1 };
+    record['W1-2'] = { players: [1, 2], games: [0, 0] };
+    view = Tournament.resolveBracket(bracket, 3, record);
+    assert.strictEqual(view.champion, 3, 'a DQ in the final crowns the champion');
+    assert.deepStrictEqual(Tournament.placements(bracket, view), { champion: 3, runnerUp: 1, third: null });
+
+    delete record['W1-1'].forfeit;
+    view = Tournament.resolveBracket(bracket, 3, record);
+    assert.deepStrictEqual([view.byId['W1-1'].status, view.byId['W1-1'].wins], ['live', [1, 0]], 'without the DQ the games are back');
+    assert.strictEqual(view.byId['W2-1'].status, 'pending', 'and the final waits again');
+  });
+
   describe('latecomers', function () {
     const winnersSets = (view, player) => view.matches.filter((m) => m.bracket === 'W' && m.status === 'done' && (m.a === player || m.b === player)).length;
 
@@ -165,6 +188,15 @@ describe('tournament bracket engine', function () {
       state.record['W2-1'] = { players: [0, 3], games: [1] };
       const none = Tournament.seatLatecomer(state, 7);
       assert.match(none.error, /No open first-round seat/);
+    });
+
+    it('keeps a DQ when seating a latecomer', function () {
+      const state = sixPlayers();
+      state.record['W1-4'] = { players: [2, 5], games: [], forfeit: 1 };
+      state.record['W2-2'] = { players: [1, 2], games: [], forfeit: 0 };
+      const seat = Tournament.seatLatecomer(state, 7);
+      assert.strictEqual(seat.slots[5], null, 'seed 2 already lost their next set by DQ');
+      assert.strictEqual(seat.slots[1], 6);
     });
 
     it('refuses when the bracket is full', function () {

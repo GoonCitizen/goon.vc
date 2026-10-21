@@ -80,7 +80,9 @@ module.exports = {
 
   // /tournaments: templates and every tournament run from one (Fabric Store, kept forever).
   tournaments: {
-    path: process.env.GOON_TOURNAMENTS_STORE || 'stores/tournaments'
+    path: process.env.GOON_TOURNAMENTS_STORE || 'stores/tournaments',
+    // Unlocks edits to finished tournaments; unset = they stay final. Env only (this file is tracked).
+    password: process.env.GOON_TOURNAMENTS_PASSWORD || null
   },
   // /leagues: perpetual and seasonal Elo duel leagues (Fabric Store, kept forever).
   leagues: {

@@ -4,8 +4,8 @@
  * @fileoverview Elo ratings for league duels. A duel is one result (winner 1,
  * loser 0) whose weight grows with the set length: K × √(best of), so a best
  * of 3 moves ratings about 1.7× a single game. Ratings are always rebuilt by
- * replaying a season's duels in the order they were logged, so voiding a duel
- * is just leaving it out. Pure; no I/O.
+ * replaying a season's duels in the order they were played (the caller
+ * orders them), so voiding a duel is just leaving it out. Pure; no I/O.
  */
 
 const DEFAULT_K = 32;
@@ -47,7 +47,7 @@ function key (name) {
 
 /**
  * Replay duels into standings.
- * @param {Array<{ id: string, winner: string, loser: string, bestOf: number, score: number[], voided?: Object }>} duels In logged order.
+ * @param {Array<{ id: string, winner: string, loser: string, bestOf: number, score: number[], voided?: Object }>} duels In the order they were played.
  * @param {Object} [opts]
  * @param {number} [opts.k]
  * @param {number} [opts.initialRating]
