@@ -1,0 +1,124 @@
+{
+  "id": "recruit-permafleet-officers",
+  "title": "PERMAFLEET officer recruiting",
+  "description": "Puts a Prospect IV forward for PERMAFLEET officer training (offered by the recruiting campaign in contracts/recruiting.json). Answers are recorded per member for PERMAFLEET leadership, who select who trains.",
+  "start": "welcome",
+  "requires": ["[P4] Prospect IV"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Your answers go to PERMAFLEET leadership, who select who trains as a **PERMAFLEET OFFICER**. Nothing is sent until you confirm at the end, and Cancel stops at any point.",
+      "input": { "type": "confirm" },
+      "next": "leadership"
+    },
+    "leadership": {
+      "say": "Have you led in Star Citizen before?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "none", "label": "Not yet" },
+          { "id": "small", "label": "Small groups", "description": "Missions with friends, small crews" },
+          { "id": "ops", "label": "Ops and events", "description": "I run or call ops regularly" },
+          { "id": "org", "label": "Org leadership", "description": "Officer or founder of an org" }
+        ]
+      },
+      "next": "interests"
+    },
+    "interests": {
+      "say": "What would you like to take on? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "ops", "label": "Running ops" },
+          { "id": "wing", "label": "Leading a wing or squad" },
+          { "id": "training", "label": "Training Prospects" },
+          { "id": "events", "label": "Events and scheduling" },
+          { "id": "diplomacy", "label": "Diplomacy", "description": "Embassies and member orgs" },
+          { "id": "logistics", "label": "Logistics and industry" }
+        ]
+      },
+      "next": "comms"
+    },
+    "comms": {
+      "say": "How are you on comms?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "lead", "label": "I call shots comfortably" },
+          { "id": "learning", "label": "Learning, and willing" },
+          { "id": "quiet", "label": "I'd rather not lead on voice" }
+        ]
+      },
+      "next": "hours"
+    },
+    "hours": {
+      "say": "How much time a week could you give to officer work?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "under-2", "label": "Under 2 hours" },
+          { "id": "2-5", "label": "2 to 5 hours" },
+          { "id": "5-10", "label": "5 to 10 hours" },
+          { "id": "over-10", "label": "More than 10 hours" }
+        ]
+      },
+      "next": "org"
+    },
+    "org": {
+      "say": "Which PERMAFLEET member org do you fly with? Skip if it's PERMAFLEET itself.",
+      "input": { "type": "text", "label": "Member org", "placeholder": "Org name or RSI symbol", "maxLength": 60, "optional": true },
+      "next": "region"
+    },
+    "region": {
+      "say": "Where do you play from?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "na", "label": "North America" },
+          { "id": "sa", "label": "South America" },
+          { "id": "eu", "label": "Europe" },
+          { "id": "oce", "label": "Oceania" },
+          { "id": "asia", "label": "Asia" }
+        ]
+      },
+      "next": "when"
+    },
+    "when": {
+      "say": "When do you usually play (your local time)? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "weeknights", "label": "Weekday evenings" },
+          { "id": "late", "label": "Weekday late nights" },
+          { "id": "weekend-days", "label": "Weekend days" },
+          { "id": "weekend-nights", "label": "Weekend evenings" },
+          { "id": "varies", "label": "It varies" }
+        ]
+      },
+      "next": "handle"
+    },
+    "handle": {
+      "say": "What's your RSI handle? It's the name in your RSI profile link (robertsspaceindustries.com/citizens/<handle>).",
+      "input": { "type": "text", "label": "RSI handle", "placeholder": "Your RSI handle", "maxLength": 60, "pattern": "^[A-Za-z0-9_-]{3,60}$" },
+      "next": "notes"
+    },
+    "notes": {
+      "say": "Anything leadership should know? Ops you've run, orgs you've led, someone who can vouch for you. Skip if not.",
+      "input": { "type": "text", "label": "Notes for leadership", "maxLength": 500, "multiline": true, "optional": true },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll send to PERMAFLEET leadership:\n- Led before: {{labels.leadership}}\n- Wants to take on: {{labels.interests}}\n- Comms: {{labels.comms}}\n- Time a week: {{labels.hours}}\n- Member org: {{answers.org|PERMAFLEET}}\n- Region: {{labels.region}}\n- Plays: {{labels.when}}\n- RSI handle: {{answers.handle}}\n- Notes: {{answers.notes|none}}\n\nSend it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Sent. PERMAFLEET leadership reviews every name and selects who trains as an officer; you'll hear from them on Discord. Until then, keep showing up for ops: {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/schedule"
+  },
+  "cancelled": {
+    "say": "No problem, nothing was sent. If you change your mind, ask in the PERMAFLEET Discord about officer training."
+  },
+  "onComplete": [{ "action": "record" }]
+}

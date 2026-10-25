@@ -1,0 +1,130 @@
+{
+  "id": "recruit-bravo-squadron",
+  "title": "BRAVO SQUADRON recruiting",
+  "description": "Puts a Prospect IV forward for BRAVO SQUADRON, PERMAFLEET's fighter squadron (offered by the recruiting campaign in contracts/recruiting.json). Answers are recorded per member for PERMAFLEET leadership, who select who joins.",
+  "start": "welcome",
+  "requires": ["[P4] Prospect IV"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Your answers go to PERMAFLEET leadership, who select who joins **BRAVO SQUADRON**. Nothing is sent until you confirm at the end, and Cancel stops at any point.",
+      "input": { "type": "confirm" },
+      "next": "experience"
+    },
+    "experience": {
+      "say": "How much dogfighting have you done?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "new", "label": "New to dogfighting" },
+          { "id": "pve", "label": "PvE", "description": "Bounties and combat missions" },
+          { "id": "pvp", "label": "PvP", "description": "I hold my own against players" },
+          { "id": "competitive", "label": "Competitive", "description": "Tournaments, the 1v1 ladder, Arena Commander" }
+        ]
+      },
+      "next": "ships"
+    },
+    "ships": {
+      "say": "What do you like to fly? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "light", "label": "Light fighters", "description": "Arrow, Gladius, Talon" },
+          { "id": "medium", "label": "Medium fighters", "description": "Hornet, Sabre, Scorpius" },
+          { "id": "heavy", "label": "Heavy fighters", "description": "Vanguard, Hurricane, Ares" },
+          { "id": "multicrew", "label": "Gunships and multi-crew" },
+          { "id": "any", "label": "Whatever the fleet needs" }
+        ]
+      },
+      "next": "controls"
+    },
+    "controls": {
+      "say": "What do you fly with?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "mkb", "label": "Mouse and keyboard" },
+          { "id": "hosas", "label": "HOSAS (two sticks)" },
+          { "id": "hotas", "label": "HOTAS" },
+          { "id": "gamepad", "label": "Gamepad" }
+        ]
+      },
+      "next": "fnf"
+    },
+    "fnf": {
+      "say": "Official BRAVO training runs on **Friday Night Fights**. Can you make it?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "most", "label": "Most weeks" },
+          { "id": "some", "label": "Some weeks" },
+          { "id": "rarely", "label": "Rarely" }
+        ]
+      },
+      "next": "region"
+    },
+    "region": {
+      "say": "Where do you play from?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "na", "label": "North America" },
+          { "id": "sa", "label": "South America" },
+          { "id": "eu", "label": "Europe" },
+          { "id": "oce", "label": "Oceania" },
+          { "id": "asia", "label": "Asia" }
+        ]
+      },
+      "next": "when"
+    },
+    "when": {
+      "say": "When do you usually play (your local time)? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "weeknights", "label": "Weekday evenings" },
+          { "id": "late", "label": "Weekday late nights" },
+          { "id": "weekend-days", "label": "Weekend days" },
+          { "id": "weekend-nights", "label": "Weekend evenings" },
+          { "id": "varies", "label": "It varies" }
+        ]
+      },
+      "next": "handle"
+    },
+    "handle": {
+      "say": "What's your RSI handle? It's the name in your RSI profile link (robertsspaceindustries.com/citizens/<handle>).",
+      "input": { "type": "text", "label": "RSI handle", "placeholder": "Your RSI handle", "maxLength": 60, "pattern": "^[A-Za-z0-9_-]{3,60}$" },
+      "next": "application"
+    },
+    "application": {
+      "say": "Have you filled out the squadron application? One application covers every squadron, and it's also required to join G00N SQUAD: {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/squadrons#squadron-apply",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "yes", "label": "Yes, it's in" },
+          { "id": "now", "label": "I'll do it now" },
+          { "id": "unsure", "label": "Not sure" }
+        ]
+      },
+      "next": "notes"
+    },
+    "notes": {
+      "say": "Anything leadership should know? Past squadrons or orgs, clips, tournament results, a wingman who can vouch for you. Skip if not.",
+      "input": { "type": "text", "label": "Notes for leadership", "maxLength": 500, "multiline": true, "optional": true },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll send to PERMAFLEET leadership:\n- Dogfighting: {{labels.experience}}\n- Flies: {{labels.ships}}\n- Controls: {{labels.controls}}\n- Friday Night Fights: {{labels.fnf}}\n- Region: {{labels.region}}\n- Plays: {{labels.when}}\n- RSI handle: {{answers.handle}}\n- Squadron application: {{labels.application}}\n- Notes: {{answers.notes|none}}\n\nSend it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Sent. PERMAFLEET leadership reviews every name and selects who joins BRAVO SQUADRON; you'll hear from them on Discord. Until then, fly Friday Night Fights and log your duels with `/1v1`: {{context.siteUrl|https://goon.vc}}/resources/1v1-leaderboard"
+  },
+  "cancelled": {
+    "say": "No problem, nothing was sent. When you're ready, the squadron application is at {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/squadrons#squadron-apply"
+  },
+  "onComplete": [{ "action": "record" }]
+}

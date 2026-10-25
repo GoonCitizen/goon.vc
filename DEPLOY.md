@@ -18,7 +18,7 @@ Passport / desktop login on goon.vc uses POST /sessions (proxied to Hub).
 
 ## Prerequisites
 - Ubuntu/Debian VPS with the `goon.vc` DNS A/AAAA records pointed at it
-- Node.js **24.15.0** (see `.nvmrc`)
+- Node.js **26.12.1** (see `.nvmrc`)
 - Caddy 2 — automatic Let's Encrypt
 - A reachable Hub at `FABRIC_HUB_ORIGIN` (production: `https://hub.fabric.pub`)
 
@@ -54,6 +54,7 @@ curl -s -X POST https://goon.vc/sessions \
   -H 'Content-Type: application/json' -H 'Origin: https://goon.vc' \
   -d '{"origin":"https://goon.vc"}'     # proxied Hub session create
 journalctl -u goonvc -f
+curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # presentNow / uniquePlayers
 ```
 
 ## Configuration
@@ -61,9 +62,11 @@ journalctl -u goonvc -f
 | Var | Purpose |
 |-----|---------|
 | `FABRIC_HUB_ORIGIN` | Upstream Hub (`https://hub.fabric.pub`). Loopback allowed for local Hub. |
+| `FABRIC_HUB_SEEDS` | More Hubs, comma separated, tried in order when the ones before can't be reached (default `https://hub.goon.vc`; empty for none; ignored behind a loopback Hub). |
 | `FABRIC_HUB_PORT` | HTTP listen (default `8080`). Caddy proxies here. |
 | `FABRIC_HUB_INTERFACE` | Bind address (default `127.0.0.1`). |
 | `FABRIC_HUB_HOSTNAME` | Host header / sitemap host (default `goon.vc`). |
+| `DISCORD_BOT_TOKEN` | Bot token for `/events`, `/operations` metrics, and IdleRPG. The bot posts IdleRPG announcements to `presence.announcements` (G00N SQUAD `#idlerpg`) and needs View Channel + Send Messages there. |
 
 No Fabric mnemonic is required on this host. Identity stays on Hub and on
 user wallets (Passport / GoonCitizen).

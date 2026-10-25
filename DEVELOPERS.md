@@ -19,7 +19,7 @@ want a LiveRelay + Fabric Peer) is in the sibling repo:
 Site deploy: [`DEPLOY.md`](DEPLOY.md). Topology: [`PLAN.md`](PLAN.md).
 
 ```bash
-nvm use           # 24.15.0
+nvm use           # 26.12.1
 npm i --allow-git=all
 npm run link:http # sibling ~/fabric-http (same pin as Hub: 7536341)
 npm run build

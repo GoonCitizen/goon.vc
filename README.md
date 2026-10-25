@@ -8,8 +8,9 @@ Hub API paths used for Fabric site login (Passport / GoonCitizen desktop).
 | **relay.goon.vc** | GoonCitizen LiveRelay |
 | **hub.fabric.pub** | Fabric Hub |
 
-Favicon is the Fabric lettermark (serif **f**, white on royal purple `#4C1D95`).
-Regenerate with `@fabric/http` `npm run make:icons`.
+Favicon is the G00N SQUAD skull, the org logo on RSI (`logoUrl` in
+`contracts/organizations.json`): `favicon.ico` (16/32/48), `favicon.png`, and
+`apple-touch-icon.png` in `assets/`.
 
 ## Quick Start
 ```bash
