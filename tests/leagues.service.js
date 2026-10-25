@@ -134,6 +134,22 @@ describe('Discord directory', function () {
     });
     await assert.rejects(limited.resolve('kersa'), (error) => error.status === 503);
   });
+
+  it('stops asking Discord for retry_after once it is rate limited', async function () {
+    let calls = 0;
+    const limited = createDiscordDirectory({
+      resolveToken: () => ({ token: 'test' }),
+      searchIntervalMs: 0,
+      fetch: async () => {
+        calls += 1;
+        return { status: 429, text: async () => '{"retry_after":5}', headers: { get: () => null } };
+      }
+    });
+    await assert.rejects(limited.search('kersa'), (error) => error.status === 503);
+    const first = calls;
+    await assert.rejects(limited.search('another'), (error) => error.status === 503);
+    assert.strictEqual(calls, first, 'no call while backing off');
+  });
 });
 
 describe('leagues service', function () {

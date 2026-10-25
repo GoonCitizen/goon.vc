@@ -2,9 +2,9 @@
 
 /**
  * Turn a clips project (an ordered list of segments, each a range of one
- * clip) into ffmpeg arguments for the final cut, plus the sources manifest
- * that says where every second of the film came from. Pure: no files or
- * processes are touched here.
+ * clip, or a screenshot held for a while) into ffmpeg arguments for the
+ * final cut, plus the sources manifest that says where every second of the
+ * film came from. Pure: no files or processes are touched here.
  */
 
 const DEFAULTS = Object.freeze({
@@ -15,7 +15,8 @@ const DEFAULTS = Object.freeze({
   preset: 'veryfast',
   audioBitrate: '160k',
   maxSegments: 200,
-  maxDurationMs: 10 * 60 * 1000
+  maxDurationMs: 10 * 60 * 1000,
+  maxStillMs: 60 * 1000
 });
 // A segment may run this far past the clip's probed length (rounding in the editor).
 const END_TOLERANCE_S = 0.25;
@@ -31,16 +32,22 @@ function seconds (value) {
   return Number(value.toFixed(3));
 }
 
+function isStill (clip) {
+  return Boolean(clip && clip.media === 'image');
+}
+
 /**
- * Check and normalize a project's segments against the clips they use.
+ * Check and normalize a project's segments against the clips they use. A
+ * screenshot's segment always starts at 0 and its out is how long it shows.
  * @param {Array<Object>} segments `{ clipId, in, out, audio?, volume? }` (seconds into the clip)
- * @param {Object<string, Object>} clipsById Clip records with `durationMs`.
- * @param {Object} [limits] `{ maxSegments, maxDurationMs }`
+ * @param {Object<string, Object>} clipsById Clip records with `durationMs` (or `media: 'image'`).
+ * @param {Object} [limits] `{ maxSegments, maxDurationMs, maxStillMs }`
  * @returns {Array<{ clipId: string, in: number, out: number, audio: string, volume: number }>}
  */
 function normalizeSegments (segments, clipsById, limits = {}) {
   const maxSegments = limits.maxSegments || DEFAULTS.maxSegments;
   const maxDurationMs = limits.maxDurationMs || DEFAULTS.maxDurationMs;
+  const maxStillMs = limits.maxStillMs || DEFAULTS.maxStillMs;
   if (!Array.isArray(segments)) throw fail(400, 'segments must be a list.');
   if (segments.length > maxSegments) throw fail(400, `A project holds at most ${maxSegments} segments.`);
   let totalMs = 0;
@@ -48,6 +55,14 @@ function normalizeSegments (segments, clipsById, limits = {}) {
     const clipId = String((segment && segment.clipId) || '');
     const clip = clipsById[clipId];
     if (!clip) throw fail(400, `Segment ${index + 1}: no such clip.`);
+    if (isStill(clip)) {
+      const hold = Number(segment.out) - (Number(segment.in) || 0);
+      if (!Number.isFinite(hold)) throw fail(400, `Segment ${index + 1}: out must be a number of seconds.`);
+      if (hold < MIN_SEGMENT_S) throw fail(400, `Segment ${index + 1}: a screenshot shows for at least ${MIN_SEGMENT_S}s.`);
+      if (hold * 1000 > maxStillMs) throw fail(400, `Segment ${index + 1}: a screenshot shows for at most ${Math.round(maxStillMs / 1000)}s.`);
+      totalMs += hold * 1000;
+      return { clipId, in: 0, out: seconds(hold), audio: 'on', volume: 1 };
+    }
     const length = (Number(clip.durationMs) || 0) / 1000;
     const start = Number(segment.in);
     let end = Number(segment.out);
@@ -88,6 +103,7 @@ function sourcesManifest (project, segments, clipsById) {
   let at = 0;
   const rows = segments.map((segment, index) => {
     const clip = clipsById[segment.clipId];
+    const still = isStill(clip);
     const duration = seconds(segment.out - segment.in);
     const start = clipStartIso(clip);
     const shift = (s) => (start ? new Date(Date.parse(start) + s * 1000).toISOString() : null);
@@ -99,9 +115,10 @@ function sourcesManifest (project, segments, clipsById) {
       out: segment.out,
       audio: segment.audio,
       recordedFrom: shift(segment.in),
-      recordedTo: shift(segment.out),
+      recordedTo: still ? shift(0) : shift(segment.out),
       clip: {
         id: clip.id,
+        media: still ? 'image' : 'video',
         author: clip.author || null,
         guild: clip.guildName || null,
         channel: clip.channelName || null,
@@ -145,7 +162,8 @@ function creditsSrt (manifest) {
 
 /**
  * ffmpeg arguments for the cut. Each segment is its own input, seeked with
- * `-ss`/`-t`, scaled and padded to one frame size, and concatenated.
+ * `-ss`/`-t` (a screenshot is looped for its `-t`), scaled and padded to one
+ * frame size, and concatenated.
  * @param {Object} project `{ id, name, revision }`
  * @param {Array<Object>} segments normalized segments
  * @param {Object<string, Object>} clipsById Clip records with `path` (local original) and `hasAudio`.
@@ -166,11 +184,12 @@ function buildRenderPlan (project, segments, clipsById, opts = {}) {
     const clip = clipsById[segment.clipId];
     if (!clip.path) throw fail(500, `Clip ${clip.id} has no local file.`);
     const d = seconds(segment.out - segment.in);
-    args.push('-ss', String(segment.in), '-t', String(d), '-i', clip.path);
+    if (isStill(clip)) args.push('-loop', '1', '-framerate', String(o.fps), '-t', String(d), '-i', clip.path);
+    else args.push('-ss', String(segment.in), '-t', String(d), '-i', clip.path);
     graph.push(`[${k}:v]setpts=PTS-STARTPTS,scale=${W}:${H}:force_original_aspect_ratio=decrease,` +
       `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${o.fps},format=yuv420p,trim=duration=${d}[v${k}]`);
     const tail = `aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${d},asetpts=PTS-STARTPTS`;
-    if (clip.hasAudio && segment.audio !== 'mute') {
+    if (clip.hasAudio && !isStill(clip) && segment.audio !== 'mute') {
       const gain = segment.volume !== 1 ? `,volume=${segment.volume}` : '';
       graph.push(`[${k}:a]asetpts=PTS-STARTPTS,aresample=48000${gain},${tail}[a${k}]`);
     } else {

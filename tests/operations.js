@@ -90,6 +90,54 @@ describe('Operations metrics service', function () {
     await ops.stop();
   });
 
+  it('adds intents other consumers of the client ask for', async function () {
+    const ops = new Operations({
+      path: dir,
+      Discord: FakeDiscord,
+      resolveToken: () => ({ token: 'test-token', source: 'test' }),
+      intents: ['MessageContent', 'DirectMessages'],
+      partials: ['Channel'],
+      tickMs: 0
+    });
+    await ops.start();
+    await ops._gatewayStarting;
+    const { GatewayIntentBits } = require('discord.js');
+    const intents = FakeDiscord.last.settings.intents;
+    assert.ok(intents.includes(GatewayIntentBits.MessageContent));
+    assert.ok(intents.includes(GatewayIntentBits.DirectMessages));
+    assert.ok(intents.includes(GatewayIntentBits.GuildMessages));
+    assert.ok(!intents.includes(GatewayIntentBits.GuildMembers));
+    assert.deepStrictEqual(FakeDiscord.last.settings.partials, ['Channel']);
+    await ops.stop();
+  });
+
+  it('asks for the privileged Server Members intent only when campaigns ask for it', async function () {
+    const { GatewayIntentBits } = require('discord.js');
+    const Community = require('../services/community');
+    const Campaigns = function Campaigns () {};
+    const Scripts = function Scripts () {};
+    const intentsFor = async (community) => {
+      const ops = new Operations({
+        path: fs.mkdtempSync(path.join(dir, 'ops-')),
+        Discord: FakeDiscord,
+        resolveToken: () => ({ token: 'test-token', source: 'test' }),
+        intents: Community.gateway(community).intents,
+        tickMs: 0
+      });
+      await ops.start();
+      await ops._gatewayStarting;
+      const intents = FakeDiscord.last.settings.intents;
+      await ops.stop();
+      return intents;
+    };
+    const off = await intentsFor({ Scripts, Campaigns });
+    assert.ok(off.includes(GatewayIntentBits.DirectMessages));
+    assert.ok(!off.includes(GatewayIntentBits.GuildMembers));
+    const on = await intentsFor({ Scripts, Campaigns, campaigns: { enabled: true } });
+    assert.ok(on.includes(GatewayIntentBits.GuildMembers));
+    assert.ok(on.includes(GatewayIntentBits.DirectMessages));
+  });
+
   it('ranks by live voice, then voice hours, then messages', function () {
     const op = (id, live, hours, messages) => ({
       id,

@@ -68,6 +68,23 @@ describe('PERMAFLEET schedule', function () {
     assert.ok(central.includes('>AMERICA/CHICAGO</text>') && central.includes('3:00 PM'));
   });
 
+  it('counts the events that do not fit a wide column', function () {
+    const busy = Array.from({ length: 9 }, (_, k) => events.serializeScheduledEvent({
+      id: String(100 + k),
+      guild_id: '1190527980120850493',
+      name: `OP ${k}`,
+      scheduled_start_time: new Date(Date.parse('2026-10-06T14:00:00.000Z') + k * 3600000).toISOString(),
+      entity_type: 2,
+      status: 1
+    }));
+    const svg = graphic.renderWeekScheduleSvg({ events: busy, timeZone: 'UTC' }).svg;
+    const wide = svg.slice(0, svg.indexOf('</svg>'));
+    const more = /class="schedule-more"[^>]*y="(\d+(?:\.\d+)?)"[^>]*>\+(\d+) more</.exec(wide);
+    assert.ok(more, 'a +N more line');
+    assert.ok(Number(more[2]) > 0);
+    assert.ok(Number(more[1]) < 1080 - 28 - 64, 'above the footer');
+  });
+
   it('stacks the week for a narrow viewport', function () {
     const rows = FIXTURE.map(events.serializeScheduledEvent);
     const rendered = graphic.renderWeekScheduleSvg({ events: rows, brand: 'permafleet' });

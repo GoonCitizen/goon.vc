@@ -1,15 +1,17 @@
 'use strict';
 
 /**
- * Collect every clip ever posted in the Discord clip channels (names with
- * clip/clips/video/videos, every media channel, and the threads under them, in
+ * Collect every clip and screenshot ever posted in the Discord clip channels
+ * (names with clip(s)/video(s)/screenshot(s), every media channel, and the threads under them, in
  * every guild the bot is in) into the clips Store (default `stores/clips`),
- * then build the low-resolution proxies. Safe to run again: clips already
+ * follow the go-live announcements in #streams to their Twitch VODs (those
+ * Twitch still has), then build the low-resolution proxies. Safe to run again: clips already
  * stored are kept, and an interrupted run picks up where it stopped. Stop the
  * goon.vc server first (the Store allows one process at a time).
  *
  *   npm run collect:clips
  *   npm run collect:clips -- --channel clips --guild 1190527980120850493  (only these)
+ *   npm run collect:clips -- --stream-channel '/streams/'  (only #streams: go-live announcements → Twitch VODs; id, exact name, or "/regex/")
  *   npm run collect:clips -- --days 30        (only the last 30 days)
  *   npm run collect:clips -- --no-proxies     (index only; proxies later)
  *   npm run collect:clips -- --links          (import YouTube / Streamable / Twitch links too; Medal is always imported)
@@ -21,11 +23,12 @@ const settings = require('../settings/local');
 const Clips = require('../services/clips');
 
 function parseArgs (argv) {
-  const args = { channels: [], guilds: [], days: 0, proxies: true, links: false, retryFailed: false, rescan: false, path: null };
+  const args = { channels: [], streamChannels: [], guilds: [], days: 0, proxies: true, links: false, retryFailed: false, rescan: false, path: null };
   const list = argv.slice(2);
   while (list.length) {
     const a = list.shift();
     if (a === '--channel') args.channels.push(list.shift());
+    else if (a === '--stream-channel') args.streamChannels.push(list.shift());
     else if (a === '--guild') args.guilds.push(list.shift());
     else if (a === '--days') args.days = Number(list.shift());
     else if (a === '--no-proxies') args.proxies = false;
@@ -48,12 +51,15 @@ async function main () {
   const discord = settings.discord || {};
   const configured = settings.clips || {};
   const guilds = args.guilds.length ? args.guilds : (configured.guilds || undefined);
+  // Naming any channel reads only the channels named.
+  const narrowed = args.channels.length || args.streamChannels.length;
   const clips = new Clips(Object.assign({}, configured, {
     path: args.path || configured.path,
     discord,
     guilds,
-    channels: args.channels.length ? args.channels : configured.channels,
-    mediaChannels: args.channels.length ? false : configured.mediaChannels,
+    channels: narrowed ? args.channels : configured.channels,
+    mediaChannels: narrowed ? false : configured.mediaChannels,
+    streams: Object.assign({}, configured.streams, narrowed ? { channels: args.streamChannels } : {}),
     poll: false,
     refreshOnStart: false,
     backfillDays: args.days,
@@ -69,13 +75,18 @@ async function main () {
   }
 
   try {
-    log(`reading ${args.days ? `the last ${args.days} days of` : 'the whole history of'} ${clips.settings.channels.join(', ')}${clips.settings.mediaChannels ? ' and every media channel' : ''} (threads included) in ${guilds ? `guild ${guilds.join(', ')}` : 'every guild the bot is in'}`);
+    const streams = clips.settings.streams.enabled && clips.settings.streams.channels.length ? clips.settings.streams.channels : [];
+    const read = clips.settings.channels.concat(streams.map((channel) => `${channel} (announcements)`));
+    log(`reading ${args.days ? `the last ${args.days} days of` : 'the whole history of'} ${read.join(', ') || 'no channel'}${clips.settings.mediaChannels ? ' and every media channel' : ''} (threads included) in ${guilds ? `guild ${guilds.join(', ')}` : 'every guild the bot is in'}`);
+    // refresh() starts building proxies in the background; without proxies,
+    // stop that before the first clip is downloaded.
+    if (!args.proxies) clips._stopped = true;
     const status = await clips.refresh({ fromStart: true });
     log(`${status.channels} channel${status.channels === 1 ? '' : 's'}, ${status.added} new clip${status.added === 1 ? '' : 's'}${status.error ? ` (errors: ${status.error})` : ''}`);
     if (!status.channels) log('no matching channel: is the bot in the guild with View Channel on the clip channels?');
     if (args.retryFailed) log(`queued ${await clips.retryFailed({ all: true })} failed clips for another try`);
     if (args.proxies) {
-      log('building proxies (needs ffmpeg + ffprobe)…');
+      log('following stream announcements, then building proxies (needs ffmpeg + ffprobe, yt-dlp for VODs)…');
       if (clips._processing) await clips._processing;
       await clips.processPending();
       if (args.rescan) {
@@ -86,6 +97,9 @@ async function main () {
     } else {
       clips._stopped = true;
       if (clips._processing) await clips._processing;
+      clips._stopped = false;
+      const vods = await clips.collectStreams({ force: true });
+      log(`stream announcements: ${vods.collected} VODs found, ${vods.waiting} still live or unreadable, ${vods.none} without a VOD, ${vods.missed} too old`);
     }
     const summary = await clips.list();
     for (const channel of summary.channels) {
@@ -99,6 +113,8 @@ async function main () {
 
 main().then((status) => {
   log(`ready ${status.ready}, waiting ${status.pending}, failed ${status.failed}, links only ${status.linksOnly}`);
+  const s = status.streams || {};
+  if (status.vods || s.waiting || s.none || s.missed) log(`VODs ${status.vods}; announcements waiting ${s.waiting}, no VOD ${s.none}, too old ${s.missed}`);
 }).catch((exception) => {
   console.error('[COLLECT:CLIPS]', '[EXCEPTION]', exception.message || exception);
   process.exitCode = 1;

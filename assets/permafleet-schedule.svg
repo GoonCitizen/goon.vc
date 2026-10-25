@@ -1,10 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="PERMAFLEET weekly ops">
+<svg xmlns="http://www.w3.org/2000/svg" class="schedule-root" width="1920" height="1080" role="img" aria-label="PERMAFLEET weekly ops" style="--board-wide-w:1920;--board-wide-h:1080;--board-vertical-w:440;--board-vertical-h:2635">
 <title>PERMAFLEET Weekly Ops</title>
-<rect width="1920" height="1080" fill="#0c0c0d"/>
-<rect x="0" y="0" width="1920" height="6" fill="#c81e1e"/>
-<text x="32" y="70" fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="38" letter-spacing="4">PERMAFLEET</text>
+<style type="text/css">
+.layout-wide { display: block; }
+.layout-tall { display: none; }
+@media (max-width: 760px) and (min-height: 480px) {
+  .layout-wide { display: none !important; }
+  .layout-tall { display: block !important; }
+  .schedule-root {
+    width: 100vw;
+    height: calc(100vw * var(--board-vertical-h) / var(--board-vertical-w));
+  }
+}
+</style>
+<svg class="layout-wide" x="0" y="0" width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet">
+<rect class="schedule-bg" width="1920" height="1080" fill="#0c0c0d"/>
+<rect class="schedule-accent" x="0" y="0" width="1920" height="6" fill="#c81e1e"/>
+<text id="schedule-title" x="32" y="70" fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="38" letter-spacing="4">PERMAFLEET</text>
 <text x="32" y="102" fill="#c81e1e" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="6">WEEKLY OPS</text>
-<text x="32" y="126" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">Alliance weekly ops · day theme + afternoon / evening blocks · Discord scheduled events</text>
+<text id="schedule-subtitle" x="32" y="126" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">Alliance weekly ops · day theme + afternoon / evening blocks · Discord scheduled events</text>
 <text x="32" y="160" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2">ORGS</text>
 <rect x="84" y="142" width="94" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
 <rect x="84" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
@@ -12,33 +25,30 @@
 <rect x="186" y="142" width="161" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
 <rect x="186" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
 <text x="267.5" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">INFINITY INDUSTRIES</text>
-<rect x="355" y="142" width="42" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="355" y="142" width="168" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
 <rect x="355" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="377" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">RAT</text>
-<rect x="405" y="142" width="161" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
-<rect x="405" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="486.5" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">TRANSGALACTIC TRADE</text>
-<rect x="574" y="142" width="64" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
-<rect x="574" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="607" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">LEGACY</text>
-<rect x="646" y="142" width="109" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
-<rect x="646" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="701.5" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">BLACK EXODUS</text>
-<rect x="763" y="142" width="124" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
-<rect x="763" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="826" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">TURTLE BRIGADE</text>
-<rect x="895" y="142" width="79" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
-<rect x="895" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
-<text x="935.5" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">STARJUMP</text>
-<text x="1892" y="76" text-anchor="end" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">AMERICA/CHICAGO</text>
-<text x="1892" y="100" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">As of Mon, Oct 5, 2026, 1:28 AM CDT</text>
+<text x="440" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">TRANS-GALACTIC TRADE</text>
+<rect x="531" y="142" width="153" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="531" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
+<text x="608.5" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">LEGACY CORPORATION</text>
+<rect x="692" y="142" width="198" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="692" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
+<text x="792" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">DOUBLEDOG DELIVERY, INC.</text>
+<rect x="898" y="142" width="124" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="898" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
+<text x="961" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">4M CONTRACTORS</text>
+<rect x="1030" y="142" width="94" height="26" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="1030" y="142" width="4" height="26" fill="#c81e1e" rx="1"/>
+<text x="1078" y="159" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.6">A.I.M.O.S.</text>
+<text id="schedule-timezone" x="1892" y="76" text-anchor="end" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">AMERICA/CHICAGO</text>
+<text id="schedule-asof" x="1892" y="100" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13">As of Sat, Oct 24, 2026, 4:15 PM CDT</text>
 <rect x="29" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="43" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">MON</text>
 <rect x="39" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="39" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="53" y="256">MINING MONDAY</tspan></text>
 <text x="53" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">6:00 AM</text>
-<text x="53" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Monday · Oct 5</text>
+<text x="53" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Monday · Oct 26</text>
 <rect x="39" y="398" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="39" y="398" width="5" height="148" fill="#c81e1e" rx="2"/>
 <text x="53" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">1:00 PM</text>
@@ -46,7 +56,7 @@
 <text x="246" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="53" y="444">ROCKBREAKER</tspan></text>
 <text x="53" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Weekly Rockbreaker runs.</text>
-<text x="53" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 5 · 3 in</text>
+<text x="53" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 26 · 3 in</text>
 <rect x="39" y="556" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="39" y="556" width="5" height="148" fill="#c81e1e" rx="2"/>
 <text x="53" y="578" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">7:00 PM</text>
@@ -54,14 +64,14 @@
 <text x="246" y="577" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="53" y="602">HATHOR DOMINANCE</tspan></text>
 <text x="53" y="672" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Let&apos;s get that Carinite!</text>
-<text x="53" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 5 · 5 in</text>
+<text x="53" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 26 · 5 in</text>
 <rect x="297" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="311" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">TUE</text>
 <rect x="307" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="307" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="321" y="256">TRAUMA TUESDAY</tspan></text>
 <text x="321" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">6:00 AM</text>
-<text x="321" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Tuesday · Oct 6</text>
+<text x="321" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Tuesday · Oct 27</text>
 <rect x="307" y="398" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="307" y="398" width="5" height="148" fill="#c81e1e" rx="2"/>
 <text x="321" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">6:00 PM</text>
@@ -69,14 +79,14 @@
 <text x="514" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="321" y="444">SLAYING SHAI</tspan><tspan x="321" y="462">HALUD</tspan></text>
 <text x="321" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Weekly worm hunt. Bring superheavies,…</text>
-<text x="321" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 6 · 1 in</text>
+<text x="321" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 27 · 1 in</text>
 <rect x="565" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="579" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">WED</text>
 <rect x="575" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="575" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="589" y="256">HUMPDAY</tspan><tspan x="589" y="278">HAULING</tspan></text>
 <text x="589" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">6:00 AM</text>
-<text x="589" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Wednesday · Oct 7</text>
+<text x="589" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Wednesday · Oct 28</text>
 <rect x="575" y="398" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="575" y="398" width="5" height="148" fill="#3f7d4e" rx="2"/>
 <text x="589" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">7:30 PM</text>
@@ -84,7 +94,7 @@
 <text x="775" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="589" y="444">TRAINING</tspan><tspan x="589" y="462">WEDNESDAY</tspan></text>
 <text x="589" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">First training night in the week.…</text>
-<text x="589" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 7 · 12 in</text>
+<text x="589" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 28 · 12 in</text>
 <rect x="575" y="556" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="575" y="556" width="5" height="148" fill="#c81e1e" rx="2"/>
 <text x="589" y="578" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">6:00 PM</text>
@@ -92,7 +102,7 @@
 <text x="782" y="577" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="589" y="602">CONTESTED ZONES</tspan></text>
 <text x="589" y="672" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Kill &apos;em all</text>
-<text x="589" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 7 · 4 in</text>
+<text x="589" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 28 · 4 in</text>
 <rect x="833" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="847" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">THU</text>
 <rect x="843" y="220" width="234" height="168" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1" stroke-dasharray="4 4"/>
@@ -105,7 +115,7 @@
 <text x="1043" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="857" y="444">FLIGHT SCHOOL</tspan><tspan x="857" y="462">EUROPA</tspan></text>
 <text x="857" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Basic flight school. Settings,…</text>
-<text x="857" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 8 · 7 in</text>
+<text x="857" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 29 · 7 in</text>
 <rect x="843" y="556" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="843" y="556" width="5" height="148" fill="#3f7d4e" rx="2"/>
 <text x="857" y="578" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">7:00 PM</text>
@@ -113,14 +123,14 @@
 <text x="1043" y="577" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="857" y="602">TRAINING</tspan><tspan x="857" y="620">THURSDAY</tspan></text>
 <text x="857" y="672" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Steel sharpens steel. Fighters only,…</text>
-<text x="857" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 8 · 31 in</text>
+<text x="857" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 29 · 31 in</text>
 <rect x="1101" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="1115" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">FRI</text>
 <rect x="1111" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="1111" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="1125" y="256">FIGHTER FRIDAY</tspan></text>
 <text x="1125" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">6:00 AM</text>
-<text x="1125" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Friday · Oct 9</text>
+<text x="1125" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Friday · Oct 30</text>
 <rect x="1111" y="398" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="1111" y="398" width="5" height="148" fill="#3f7d4e" rx="2"/>
 <text x="1125" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">3:00 PM</text>
@@ -128,47 +138,219 @@
 <text x="1311" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
 <text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1125" y="444">FRIDAY NIGHT</tspan><tspan x="1125" y="462">FIGHTS</tspan></text>
 <text x="1125" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Official BRAVO SQUADRON training time.</text>
-<text x="1125" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 9 · 14 in</text>
+<text x="1125" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 30 · 14 in</text>
 <rect x="1369" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#c81e1e" stroke-width="2"/>
 <text x="1383" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">SAT</text>
 <rect x="1379" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="1379" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="1393" y="256">SATURDAY</tspan><tspan x="1393" y="278">SHENANIGANS</tspan></text>
+<rect x="1561" y="230" width="40" height="18" rx="3" ry="3" fill="#c81e1e"/>
+<text x="1581" y="243" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">LIVE</text>
 <text x="1393" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">11:00 AM</text>
-<text x="1393" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Saturday · Oct 10</text>
-<rect x="1379" y="398" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<text x="1393" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Saturday · Oct 24</text>
+<rect x="1379" y="398" width="234" height="148" rx="8" ry="8" fill="#241111" stroke="#c81e1e" stroke-width="1.5"/>
 <rect x="1379" y="398" width="5" height="148" fill="#c81e1e" rx="2"/>
-<text x="1393" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">6:00 PM</text>
-<rect x="1569" y="406" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
-<text x="1586" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">PVP</text>
-<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="444">1v1 Tournament</tspan></text>
-<text x="1393" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">1v1 tournament; best of 3, double…</text>
-<text x="1393" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 10 · 12 in</text>
+<text x="1393" y="420" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">12:00 PM</text>
+<rect x="1541" y="406" width="62" height="18" rx="3" ry="3" fill="#c81e1e"/>
+<text x="1572" y="419" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">MONTHLY</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="444">Tour Through The</tspan><tspan x="1393" y="462">Stars</tspan></text>
+<text x="1393" y="514" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Your opportunity to speedrun the…</text>
+<text x="1393" y="532" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 28 in</text>
 <rect x="1379" y="556" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="1379" y="556" width="5" height="148" fill="#c81e1e" rx="2"/>
-<text x="1393" y="578" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">8:00 PM</text>
-<rect x="1533" y="564" width="70" height="18" rx="3" ry="3" fill="#9b1616"/>
-<text x="1568" y="577" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">BIWEEKLY</text>
-<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="602">CAPITAL COMBAT</tspan></text>
-<text x="1393" y="672" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Suit up for boarding maneuvers — Org…</text>
-<text x="1393" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 10 · 6 in</text>
-<rect x="1379" y="714" width="234" height="148" rx="8" ry="8" fill="#241111" stroke="#c81e1e" stroke-width="1.5"/>
+<text x="1393" y="578" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">6:00 PM</text>
+<rect x="1569" y="564" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="1586" y="577" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">PVP</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="602">1v1 Tournament</tspan></text>
+<text x="1393" y="672" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">1v1 tournament; best of 3, double…</text>
+<text x="1393" y="690" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 12 in</text>
+<rect x="1379" y="714" width="234" height="148" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
 <rect x="1379" y="714" width="5" height="148" fill="#c81e1e" rx="2"/>
-<text x="1393" y="736" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">12:00 PM</text>
-<rect x="1541" y="722" width="62" height="18" rx="3" ry="3" fill="#c81e1e"/>
-<text x="1572" y="735" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">MONTHLY</text>
-<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="760">Tour Through The</tspan><tspan x="1393" y="778">Stars</tspan></text>
-<text x="1393" y="830" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Your opportunity to speedrun the…</text>
-<text x="1393" y="848" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 28 in</text>
+<text x="1393" y="736" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">8:00 PM</text>
+<rect x="1533" y="722" width="70" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="1568" y="735" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">BIWEEKLY</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="1393" y="760">CAPITAL COMBAT</tspan></text>
+<text x="1393" y="830" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Suit up for boarding maneuvers — Org…</text>
+<text x="1393" y="848" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 6 in</text>
 <rect x="1637" y="184" width="254" height="804" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
 <text x="1651" y="204" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">SUN</text>
 <rect x="1647" y="220" width="234" height="168" rx="8" ry="8" fill="#6e1010"/>
 <rect x="1647" y="220" width="6" height="168" fill="#c81e1e" rx="2"/>
 <text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18"><tspan x="1661" y="256">SUNDAY FUNDAY</tspan></text>
-<rect x="1829" y="230" width="40" height="18" rx="3" ry="3" fill="#c81e1e"/>
-<text x="1849" y="243" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">LIVE</text>
 <text x="1661" y="352" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">3:45 PM</text>
-<text x="1661" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Sunday · Oct 4</text>
+<text x="1661" y="372" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">weekly Sunday · Oct 25</text>
 <rect x="28" y="1004" width="1864" height="1" fill="#2c2c30"/>
-<text x="32" y="1034" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan fill="#c81e1e">&#9608;</tspan> Day theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="#9b1616">&#9608;</tspan> Special / ops / monthly   ·   Times in Central   ·   Alliance orgs on the board   ·   npm run build:schedule -- --brand permafleet</text>
+<text id="schedule-legend" x="32" y="1034" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan fill="#c81e1e">&#9608;</tspan> Day theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="#9b1616">&#9608;</tspan> Special / ops / monthly   ·   Times in Central Time   ·   Alliance orgs on the board   ·   npm run build:schedule -- --brand permafleet</text>
+</svg>
+<svg class="layout-tall" x="0" y="0" width="100%" height="100%" viewBox="0 0 440 2635" preserveAspectRatio="xMidYMid meet" style="display:none">
+<rect class="schedule-bg" width="440" height="2635" fill="#0c0c0d"/>
+<rect class="schedule-accent" x="0" y="0" width="440" height="6" fill="#c81e1e"/>
+<text data-hook="schedule-title" x="16" y="46" fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="22" letter-spacing="1.2">PERMAFLEET</text>
+<text x="16" y="68" fill="#c81e1e" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3">WEEKLY OPS</text>
+<text data-hook="schedule-subtitle" x="16" y="88" data-wrap="40" data-line="14" data-max-lines="3" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12"><tspan x="16" y="88">Alliance weekly ops · day theme +</tspan><tspan x="16" y="102">afternoon / evening blocks · Discord</tspan><tspan x="16" y="116">scheduled events</tspan></text>
+<text data-hook="schedule-timezone" x="16" y="140" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">AMERICA/CHICAGO</text>
+<text data-hook="schedule-asof" x="16" y="162" data-wrap="64" data-line="13" data-max-lines="2" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">As of Sat, Oct 24, 2026, 4:15 PM CDT</text>
+<text x="16" y="205" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="1.4">ORGS</text>
+<rect x="64" y="189" width="82" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="64" y="189" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="106" y="205" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">G00N SQUAD</text>
+<rect x="152" y="189" width="141" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="152" y="189" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="223.5" y="205" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">INFINITY INDUSTRIES</text>
+<rect x="16" y="219" width="148" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="16" y="219" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="91" y="235" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">TRANS-GALACTIC TRADE</text>
+<rect x="170" y="219" width="135" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="170" y="219" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="238.5" y="235" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">LEGACY CORPORATION</text>
+<rect x="16" y="249" width="174" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="16" y="249" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="104" y="265" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">DOUBLEDOG DELIVERY, INC.</text>
+<rect x="196" y="249" width="108" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="196" y="249" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="251" y="265" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">4M CONTRACTORS</text>
+<rect x="310" y="249" width="82" height="24" rx="4" ry="4" fill="#241111" stroke="#6e1010" stroke-width="1"/>
+<rect x="310" y="249" width="4" height="24" fill="#c81e1e" rx="1"/>
+<text x="352" y="265" text-anchor="middle" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="0.4">A.I.M.O.S.</text>
+<rect x="16" y="287" width="408" height="372" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="307" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">MON</text>
+<text x="412" y="307" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 26</text>
+<rect x="26" y="317" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="317" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="345">MINING MONDAY</tspan></text>
+<text x="42" y="401" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 AM<tspan fill="#9a9488" font-weight="400"> · weekly Monday</tspan></text>
+<rect x="26" y="425" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="425" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="447" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">1:00 PM</text>
+<rect x="370" y="433" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="387" y="446" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="471">ROCKBREAKER</tspan></text>
+<text x="42" y="503" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Weekly Rockbreaker runs.</text>
+<text x="42" y="519" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 26 · 3 in</text>
+<rect x="26" y="541" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="541" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="563" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">7:00 PM</text>
+<rect x="370" y="549" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="387" y="562" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="587">HATHOR DOMINANCE</tspan></text>
+<text x="42" y="619" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Let&apos;s get that Carinite!</text>
+<text x="42" y="635" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 26 · 5 in</text>
+<rect x="16" y="671" width="408" height="256" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="691" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">TUE</text>
+<text x="412" y="691" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 27</text>
+<rect x="26" y="701" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="701" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="729">TRAUMA TUESDAY</tspan></text>
+<text x="42" y="785" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 AM<tspan fill="#9a9488" font-weight="400"> · weekly Tuesday</tspan></text>
+<rect x="26" y="809" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="809" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="831" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 PM</text>
+<rect x="370" y="817" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="387" y="830" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="855">SLAYING SHAI HALUD</tspan></text>
+<text x="42" y="887" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Weekly worm hunt. Bring superheavies, heavies,…</text>
+<text x="42" y="903" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 27 · 1 in</text>
+<rect x="16" y="939" width="408" height="372" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="959" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">WED</text>
+<text x="412" y="959" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 28</text>
+<rect x="26" y="969" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="969" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="997">HUMPDAY HAULING</tspan></text>
+<text x="42" y="1053" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 AM<tspan fill="#9a9488" font-weight="400"> · weekly Wednesday</tspan></text>
+<rect x="26" y="1077" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="1077" width="5" height="108" fill="#3f7d4e" rx="2"/>
+<text x="42" y="1099" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">7:30 PM</text>
+<rect x="356" y="1085" width="48" height="18" rx="3" ry="3" fill="#3f7d4e"/>
+<text x="380" y="1098" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="1123">TRAINING WEDNESDAY</tspan></text>
+<text x="42" y="1155" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">First training night in the week. STEEL…</text>
+<text x="42" y="1171" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 28 · 12 in</text>
+<rect x="26" y="1193" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="1193" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="1215" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 PM</text>
+<rect x="370" y="1201" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="387" y="1214" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">OPS</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="1239">CONTESTED ZONES</tspan></text>
+<text x="42" y="1271" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Kill &apos;em all</text>
+<text x="42" y="1287" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 28 · 4 in</text>
+<rect x="16" y="1323" width="408" height="340" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="1343" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">THU</text>
+<text x="412" y="1343" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 29</text>
+<rect x="26" y="1353" width="388" height="68" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="42" y="1381" fill="#6b665c" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14">NO THEME</text>
+<text x="42" y="1401" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12">Open play / training only</text>
+<rect x="26" y="1429" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="1429" width="5" height="108" fill="#3f7d4e" rx="2"/>
+<text x="42" y="1451" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">12:00 PM</text>
+<rect x="356" y="1437" width="48" height="18" rx="3" ry="3" fill="#3f7d4e"/>
+<text x="380" y="1450" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="1475">FLIGHT SCHOOL EUROPA</tspan></text>
+<text x="42" y="1507" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Basic flight school. Settings, mechanics, and…</text>
+<text x="42" y="1523" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 29 · 7 in</text>
+<rect x="26" y="1545" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="1545" width="5" height="108" fill="#3f7d4e" rx="2"/>
+<text x="42" y="1567" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">7:00 PM</text>
+<rect x="356" y="1553" width="48" height="18" rx="3" ry="3" fill="#3f7d4e"/>
+<text x="380" y="1566" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="1591">TRAINING THURSDAY</tspan></text>
+<text x="42" y="1623" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Steel sharpens steel. Fighters only, Arena…</text>
+<text x="42" y="1639" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 29 · 31 in</text>
+<rect x="16" y="1675" width="408" height="256" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="1695" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">FRI</text>
+<text x="412" y="1695" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 30</text>
+<rect x="26" y="1705" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="1705" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="1733">FIGHTER FRIDAY</tspan></text>
+<text x="42" y="1789" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 AM<tspan fill="#9a9488" font-weight="400"> · weekly Friday</tspan></text>
+<rect x="26" y="1813" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="1813" width="5" height="108" fill="#3f7d4e" rx="2"/>
+<text x="42" y="1835" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">3:00 PM</text>
+<rect x="356" y="1821" width="48" height="18" rx="3" ry="3" fill="#3f7d4e"/>
+<text x="380" y="1834" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">TRAIN</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="1859">FRIDAY NIGHT FIGHTS</tspan></text>
+<text x="42" y="1891" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Official BRAVO SQUADRON training time.</text>
+<text x="42" y="1907" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 30 · 14 in</text>
+<rect x="16" y="1943" width="408" height="488" rx="10" ry="10" fill="#161618" stroke="#c81e1e" stroke-width="2"/>
+<text x="28" y="1963" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">SAT</text>
+<text x="412" y="1963" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 24</text>
+<rect x="26" y="1973" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="1973" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="2001">SATURDAY SHENANIGANS</tspan></text>
+<rect x="364" y="1981" width="40" height="18" rx="3" ry="3" fill="#c81e1e"/>
+<text x="384" y="1994" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">LIVE</text>
+<text x="42" y="2057" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">11:00 AM<tspan fill="#9a9488" font-weight="400"> · weekly Saturday</tspan></text>
+<rect x="26" y="2081" width="388" height="108" rx="8" ry="8" fill="#241111" stroke="#c81e1e" stroke-width="1.5"/>
+<rect x="26" y="2081" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="2103" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">12:00 PM</text>
+<rect x="342" y="2089" width="62" height="18" rx="3" ry="3" fill="#c81e1e"/>
+<text x="373" y="2102" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">MONTHLY</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="2127">Tour Through The Stars</tspan></text>
+<text x="42" y="2159" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Your opportunity to speedrun the &apos;verse. Every…</text>
+<text x="42" y="2175" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 28 in</text>
+<rect x="26" y="2197" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="2197" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="2219" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6:00 PM</text>
+<rect x="370" y="2205" width="34" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="387" y="2218" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">PVP</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="2243">1v1 Tournament</tspan></text>
+<text x="42" y="2275" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">1v1 tournament; best of 3, double elimination.…</text>
+<text x="42" y="2291" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 12 in</text>
+<rect x="26" y="2313" width="388" height="108" rx="8" ry="8" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1"/>
+<rect x="26" y="2313" width="5" height="108" fill="#c81e1e" rx="2"/>
+<text x="42" y="2335" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">8:00 PM</text>
+<rect x="334" y="2321" width="70" height="18" rx="3" ry="3" fill="#9b1616"/>
+<text x="369" y="2334" text-anchor="middle" fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.8">BIWEEKLY</text>
+<text fill="#f4f1ea" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700"><tspan x="42" y="2359">CAPITAL COMBAT</tspan></text>
+<text x="42" y="2391" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Suit up for boarding maneuvers — Org vs. Org…</text>
+<text x="42" y="2407" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10">Oct 24 · 6 in</text>
+<rect x="16" y="2443" width="408" height="140" rx="10" ry="10" fill="#161618" stroke="#2c2c30" stroke-width="1"/>
+<text x="28" y="2463" fill="#6b665c" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">SUN</text>
+<text x="412" y="2463" text-anchor="end" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11">Oct 25</text>
+<rect x="26" y="2473" width="388" height="100" rx="8" ry="8" fill="#6e1010"/>
+<rect x="26" y="2473" width="6" height="100" fill="#c81e1e" rx="2"/>
+<text fill="#f4f1ea" font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"><tspan x="42" y="2501">SUNDAY FUNDAY</tspan></text>
+<text x="42" y="2557" fill="#e8dcc8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">3:45 PM<tspan fill="#9a9488" font-weight="400"> · weekly Sunday</tspan></text>
+<rect x="16" y="2599" width="408" height="1" fill="#2c2c30"/>
+<text data-hook="schedule-legend" x="16" y="2619" fill="#9a9488" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11"><tspan fill="#c81e1e">&#9608;</tspan> Theme   <tspan fill="#3f7d4e">&#9608;</tspan> Training   <tspan fill="#9b1616">&#9608;</tspan> Special</text>
+</svg>
 </svg>

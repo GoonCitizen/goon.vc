@@ -52,7 +52,7 @@ const MEMBER_ORGS = Object.freeze([
   'A.I.M.O.S.'
 ]);
 
-function renderMemberOrgsHtml (orgs, organizationsPath) {
+function renderMemberOrgsHtml (orgs, organizationsPath, onboardingPath) {
   const tiles = orgs.map((org) => {
     const name = escapeHtml(org.name);
     const mark = org.logoUrl
@@ -74,8 +74,8 @@ function renderMemberOrgsHtml (orgs, organizationsPath) {
               ${body}
             </span></li>`;
   });
-  if (organizationsPath) {
-    tiles.push(`<li><a class="op-member op-member-add" href="${escapeHtml(organizationsPath)}#add-your-organization">
+  if (onboardingPath || organizationsPath) {
+    tiles.push(`<li><a class="op-member op-member-add" href="${escapeHtml(onboardingPath || `${organizationsPath}#add-your-organization`)}">
               <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
               <span class="op-member-name">Your org here</span>
               <span class="op-member-meta">Add your organization &raquo;</span>
@@ -552,7 +552,7 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>${CHARTER}</p>
-            ${renderMemberOrgsHtml(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name })), opts.organizationsPath)}
+            ${renderMemberOrgsHtml(opts.memberOrgs || MEMBER_ORGS.map((name) => ({ name })), opts.organizationsPath, opts.onboardingPath)}
             ${opts.organizationsPath ? `<p class="op-resource-link"><a href="${escapeHtml(opts.organizationsPath)}">Member organizations &raquo;</a></p>` : ''}
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>

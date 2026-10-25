@@ -8,6 +8,9 @@ const SEARCH_LIMIT = 25;
 const MAX_RESULTS = 10;
 const CACHE_MS = 60 * 1000;
 const CACHE_SIZE = 200;
+const SEARCH_INTERVAL_MS = 250;
+const BACKOFF_MS = 60 * 1000;
+const MAX_QUEUE_MS = 5 * 1000;
 
 function fail (status, message) {
   const error = new Error(message);
@@ -65,6 +68,9 @@ function createDiscordDirectory (settings = {}) {
   const guildId = String(discord.guildId || DEFAULT_GUILD_ID);
   const resolveToken = settings.resolveToken || resolveDiscordToken;
   const cache = new Map();
+  const intervalMs = settings.searchIntervalMs != null ? Number(settings.searchIntervalMs) : SEARCH_INTERVAL_MS;
+  let lastCallAt = 0;
+  let blockedUntil = 0;
 
   function seen () {
     try {
@@ -82,9 +88,20 @@ function createDiscordDirectory (settings = {}) {
     if (hit && Date.now() - hit.at < CACHE_MS) return hit.members;
     const auth = resolveToken(discord);
     if (!auth || !auth.token) throw fail(503, 'Discord lookup is not available right now.');
+    // Discord counts 401 / 403 / 429 against the bot's IP, and the token is
+    // shared with every other service: back off after one, and space calls.
+    const now = Date.now();
+    const slot = Math.max(now, lastCallAt + intervalMs);
+    if (now < blockedUntil || slot - now > MAX_QUEUE_MS) throw fail(503, 'Discord lookup is not available right now.');
+    lastCallAt = slot;
+    if (slot > now) await new Promise((resolve) => setTimeout(resolve, slot - now));
     const params = new URLSearchParams({ query, limit: String(SEARCH_LIMIT) });
     // One attempt: a rate-limited lookup fails fast instead of holding the request.
     const res = await discordGet(`/guilds/${guildId}/members/search?${params}`, auth.token, { fetch: settings.fetch, retries: 1 });
+    if (res.status === 401 || res.status === 403 || res.status === 429) {
+      const retryAfter = Number(res.json && res.json.retry_after);
+      blockedUntil = Date.now() + (Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter * 1000) : BACKOFF_MS);
+    }
     if (res.status !== 200 || !Array.isArray(res.json)) throw fail(503, 'Discord lookup is not available right now.');
     const found = res.json.map(entry).filter(Boolean);
     cache.delete(key);

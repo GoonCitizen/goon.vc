@@ -15,6 +15,7 @@ const MAX_LEAGUES = 1000;
 const MAX_PLAYERS = 500;
 const MAX_DUELS = 20000;
 const MAX_SEASONS = 200;
+const MAX_LOG = 60000;
 const PROPOSAL_ID = /^[0-9a-f]{12}$/;
 const PROPOSAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DISCORD_MEMBER = 'discord:';
@@ -191,6 +192,7 @@ class Leagues {
    * @param {Array<Object>} [settings.defaults] Leagues created on start when their id is free (same shape as {@link Leagues#createLeague}).
    * @param {number} [settings.proposalTtlMs] How long a proposed duel waits for confirmation (default 7 days).
    * @param {Object} [settings.directory] Discord server lookup for `@handle` players ({@link module:functions/discordDirectory}).
+   * @param {Object} [settings.members] goon.vc {@link Members}: roster and proposal links follow its merges and account keys.
    * @param {Function} [settings.now] Clock, injected for tests.
    */
   constructor (settings = {}) {
@@ -201,6 +203,7 @@ class Leagues {
       defaults: [OPEN_LEAGUE],
       proposalTtlMs: PROPOSAL_TTL_MS,
       directory: null,
+      members: null,
       now: () => Date.now()
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.store = null;
@@ -219,7 +222,53 @@ class Leagues {
       const ids = await this._index();
       if (!ids.includes(slugify(text(league.name, LIMITS.name)))) await this.createLeague(league);
     }
+    await this.relinkMembers();
     return this;
+  }
+
+  /**
+   * The goon.vc member id behind a member id, an older or merged-away one,
+   * or an account key (`discord:<id>`); the value itself without members.
+   */
+  async _canonical (id) {
+    const members = this.settings.members;
+    if (!members || !id) return id;
+    const member = await members.resolve(id).catch(() => null);
+    return member ? member.id : id;
+  }
+
+  /**
+   * Point every roster link at the member it now belongs to (after members
+   * merge, or for links saved before cumulative identity). When one member
+   * turns out to hold two players in a league, the first keeps the link.
+   */
+  relinkMembers () {
+    if (!this.settings.members) return Promise.resolve();
+    return this._exclusive(async () => {
+      for (const id of await this._index()) {
+        const league = await this._get(id);
+        if (!league) continue;
+        const holders = new Map();
+        let changed = false;
+        for (const player of league.players) {
+          if (!player.member) continue;
+          const member = await this._canonical(player.member);
+          const holder = holders.get(member);
+          if (holder) {
+            delete player.member;
+            league.log.push(this._entry('merge', null, { name: holder.name, other: player.name }));
+            changed = true;
+            continue;
+          }
+          holders.set(member, player);
+          if (member !== player.member) {
+            player.member = member;
+            changed = true;
+          }
+        }
+        if (changed) await this.store.set(`/league/${league.id}`, league);
+      }
+    });
   }
 
   async stop () {
@@ -335,6 +384,7 @@ class Leagues {
   async _apply (id, change) {
     const stored = await this._get(id);
     if (!stored) throw fail(404, 'No such league.');
+    if ((stored.log || []).length >= MAX_LOG) throw fail(409, 'This league’s record is full.');
     const league = JSON.parse(JSON.stringify(stored));
     if (change(league) === false) return publicLeague(stored);
     league.updatedAt = this._iso();
@@ -443,7 +493,17 @@ class Leagues {
     const directory = this.settings.directory;
     if (!typed.startsWith('@') || !normalizeHandle(typed) || !directory) return null;
     const found = await Promise.resolve(directory.resolve(typed)).catch(() => null);
-    return found ? { member: `${DISCORD_MEMBER}${found.id}`, name: found.name, username: found.handle } : null;
+    if (!found) return null;
+    let member = `${DISCORD_MEMBER}${found.id}`;
+    if (this.settings.members) {
+      member = (await this.settings.members.memberFor(member, {
+        create: true,
+        via: 'directory',
+        profile: { username: found.handle },
+        displayName: found.name
+      })).id;
+    }
+    return { member, name: found.name, username: found.handle };
   }
 
   /**
@@ -479,7 +539,7 @@ class Leagues {
       };
       const winner = side(input.winner);
       const loser = side(input.loser);
-      if (winner.member === loser.member) throw fail(400, 'A pilot cannot duel themselves.');
+      if (await this._canonical(winner.member) === await this._canonical(loser.member)) throw fail(400, 'A pilot cannot duel themselves.');
       if (input.proposer !== 'winner' && input.proposer !== 'loser') throw fail(400, 'Only the players can propose a duel.');
       const { bestOf, score } = setScore(league, input);
       const now = this.settings.now();
@@ -561,6 +621,9 @@ class Leagues {
         await this.store.set(`/proposal/${proposal.id}`, proposal);
       }
       if (proposal.status !== 'pending') return { proposal, league: null, duel: null };
+      member = await this._canonical(member);
+      proposal.winner.member = await this._canonical(proposal.winner.member);
+      proposal.loser.member = await this._canonical(proposal.loser.member);
       const role = proposal[proposal.proposer].member === member ? 'proposer'
         : proposal[counterparty(proposal)].member === member ? 'counterparty' : null;
       const result = await settle(proposal, role);

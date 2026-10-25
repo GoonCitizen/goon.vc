@@ -102,7 +102,7 @@ function renderRosterCta (props) {
   if (!props.embassyUrl) return '';
   return `<section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
-        <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
+        <p>${props.onboardingPath ? `See <a href="${escapeHtml(props.onboardingPath)}">how onboarding works</a>, then talk` : 'Talk'} to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
         <a class="goon-button" href="${escapeHtml(props.embassyUrl)}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>
       </section>`;
 }
@@ -121,6 +121,7 @@ function renderSource (props) {
  * @param {Array<Object>} props.organizations Plain-text records.
  * @param {string} [props.fetchedAt]
  * @param {string} [props.embassyUrl] Discord invite for the #embassy roster call to action.
+ * @param {string} [props.onboardingPath] How an organization joins the Protectorate.
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.

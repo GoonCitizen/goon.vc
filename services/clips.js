@@ -14,13 +14,18 @@ const discordEvents = require('../functions/discordScheduledEvents');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 const { displayName } = require('../functions/duelLeaderboard');
 const { estimateRecordingTime } = require('../functions/clipRecordingTime');
-const { groupSessions, clipStartMs, DEFAULT_GAP_MS } = require('../functions/clipTimeline');
+const { containerTimeTags, imageTimeTags } = require('../functions/mediaTimeTags');
+const { readAnnouncement, readVod, pickVod, vodFinished } = require('../functions/streamAnnouncements');
+const { groupSessions, clipStartMs, isStill, DEFAULT_GAP_MS } = require('../functions/clipTimeline');
 const { normalizeSegments, buildRenderPlan } = require('../functions/clipRenderPlan');
 
 const BASE = '/services/clips';
 const DISCORD_API = 'https://discord.com/api/v10';
 const DISCORD_EPOCH = 1420070400000n;
 const VIDEO_EXT = /\.(mp4|mov|m4v|mkv|webm|avi)$/i;
+// Stills only: GIFs are reactions, not screenshots.
+const IMAGE_TYPE = /^image\/(png|jpeg|webp)$/i;
+const IMAGE_EXT = /\.(png|jpe?g|webp)$/i;
 const LINK_RE = /https?:\/\/(?:www\.)?(?:medal\.tv\/(?:[^\s?#]*\/)?clips?\/\S+|youtube\.com\/(?:watch\?|shorts\/)\S+|youtu\.be\/\S+|streamable\.com\/\S+|clips\.twitch\.tv\/\S+|twitch\.tv\/\S+\/clip\/\S+)/gi;
 // Text and announcement channels.
 const TEXT_CHANNEL_TYPES = new Set([0, 5]);
@@ -34,6 +39,21 @@ const MISSING_DEPENDENCY = /is not installed|Unknown encoder|Encoder not found|N
 const NAMES_TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 60 * 1000;
 const LIMITS = { name: 80, notes: 2000, caption: 500 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+// A live broadcast's VOD exists from its first minute, so by then a missing one is not coming.
+const NO_VOD_AFTER_MS = 6 * 60 * 60 * 1000;
+const VOD_FIELDS = '%(.{id,timestamp,duration,is_live,uploader,uploader_id,title})j';
+const STREAM_DEFAULTS = {
+  enabled: true,
+  download: true,
+  channels: ['/(^|[^a-z])streams?([^a-z]|$)/'],
+  archives: 20,
+  waitDays: 60,
+  checkEveryMs: 30 * 60 * 1000,
+  settleMs: 30 * 60 * 1000,
+  maxSourceHeight: 720,
+  maxDownloadBytes: 8 * 1024 * 1024 * 1024
+};
 
 function sendJson (res, status, body) {
   res.statusCode = status;
@@ -109,20 +129,25 @@ function basename (url) {
 }
 
 /**
- * Every clip one Discord message carries: video attachments, direct video
- * embeds, and links to clip hosts (Medal, YouTube, Streamable, Twitch).
+ * Every clip one Discord message carries: video and screenshot attachments,
+ * direct video embeds, and links to clip hosts (Medal, YouTube, Streamable,
+ * Twitch).
  * @param {Object} message Discord message
- * @returns {Array<Object>} `{ id, kind, attachmentId, url, filename, contentType, size, width, height }`
+ * @returns {Array<Object>} `{ id, kind, media, attachmentId, url, filename, contentType, size, width, height }`
  */
 function extractClips (message) {
   const out = [];
   if (!message || !message.id) return out;
   for (const attachment of message.attachments || []) {
     const type = String(attachment.content_type || '');
-    if (!/^video\//i.test(type) && !VIDEO_EXT.test(String(attachment.filename || ''))) continue;
+    const filename = String(attachment.filename || '');
+    const video = /^video\//i.test(type) || VIDEO_EXT.test(filename);
+    const image = !video && (type ? IMAGE_TYPE.test(type) : IMAGE_EXT.test(filename));
+    if (!video && !image) continue;
     out.push({
       id: String(attachment.id),
       kind: 'attachment',
+      media: video ? 'video' : 'image',
       attachmentId: String(attachment.id),
       url: attachment.url || null,
       filename: attachment.filename || null,
@@ -137,6 +162,7 @@ function extractClips (message) {
     out.push({
       id: `${message.id}-e${index}`,
       kind: 'embed',
+      media: 'video',
       attachmentId: null,
       url: embed.video.url,
       filename: basename(embed.video.url),
@@ -148,7 +174,7 @@ function extractClips (message) {
   });
   const links = String(message.content || '').match(LINK_RE) || [];
   Array.from(new Set(links.map((link) => link.replace(/[)>.,]+$/, '')))).forEach((url, index) => {
-    out.push({ id: `${message.id}-l${index}`, kind: 'link', attachmentId: null, url, filename: null, contentType: null, size: null, width: null, height: null });
+    out.push({ id: `${message.id}-l${index}`, kind: 'link', media: 'video', attachmentId: null, url, filename: null, contentType: null, size: null, width: null, height: null });
   });
   return out;
 }
@@ -159,9 +185,12 @@ function extractClips (message) {
  * Polls every text channel the bot can see whose name matches `channels`
  * (Discord REST only), keeps each clip's source (guild, channel, message,
  * attachment), estimates when it was recorded, and stores a low-resolution
- * proxy and thumbnail sprite for storyboarding. Projects put ranges of clips
- * in order; renders fetch the full-resolution originals from Discord again
- * and cut the film with ffmpeg. No sign-in needed: anyone may browse and
+ * proxy and thumbnail sprite for storyboarding. Screenshots join the same
+ * sessions, shown on the timeline for `stillSeconds`. Projects put ranges of
+ * clips (and screenshots held for a while) in order. Go-live announcements
+ * in stream channels are followed to their Twitch VODs, which join the
+ * sessions as the streamer's track once the broadcast is over. Renders cut the film
+ * from the full-resolution originals with ffmpeg. No sign-in needed: anyone may browse and
  * edit, and a signed-in member's display name goes on their changes.
  */
 class Clips {
@@ -172,15 +201,22 @@ class Clips {
    * @param {Array<string>} [settings.channels] Channel matchers (id, exact name, or "/regex/"); threads under a matched channel are read too.
    * @param {(Array<string>|boolean)} [settings.externalLinks] Hosts whose clip links are downloaded with yt-dlp (default Medal); `true` for every clip host, `false` to keep links as sources only.
    * @param {boolean} [settings.mediaChannels] Also read every media channel, whatever its name.
+   * @param {Object} [settings.streams] Go-live announcements → Twitch VODs: `enabled`, `download` (false keeps VODs as links),
+   *   `channels` (matchers), `archives` (VODs listed per Twitch channel), `waitDays`, `checkEveryMs`, `settleMs`,
+   *   `maxSourceHeight`, `maxDownloadBytes`.
    * @param {Array<string>} [settings.guilds] Only these guilds (default: every guild the bot is in).
    * @param {boolean} [settings.poll] Poll Discord and build proxies (false serves stored clips only).
    * @param {number} [settings.ttlMs] Poll interval.
    * @param {number} [settings.backfillDays] How far back a new channel is read (0 = its whole history).
    * @param {number} [settings.maxPages] Pages of 100 messages read per channel per poll.
    * @param {number} [settings.sessionGapMs] Largest silence inside one session.
+   * @param {number} [settings.stillSeconds] How long a screenshot shows on the timeline (and when first added to a project).
+   * @param {number} [settings.maxStillSeconds] Longest a screenshot may show in a project.
+   * @param {number} [settings.stillHeight] Tallest screenshot preview served to the editor.
    * @param {boolean} [settings.keepMasters] Keep each clip's best download (up to `maxSourceHeight`) in `masters/` for renders.
    * @param {number} [settings.maxSourceHeight] Tallest source downloaded (default the 1080p render height).
-   * @param {number} [settings.minFreeBytes] No new masters while the disk has less free space than this.
+   * @param {number} [settings.minFreeBytes] Free space kept on the disk: a download waits until its largest allowed
+   *   size still leaves this much, and no master is kept below it.
    * @param {number} [settings.rescanEveryMs] How often a rescan pass runs (0 = never; `rescan` still works).
    * @param {number} [settings.recheckAfterMs] How long before a link clip's source is checked for a better version again.
    * @param {number} [settings.rescanBatch] Clips checked per rescan pass.
@@ -196,7 +232,7 @@ class Clips {
       path: './stores/clips',
       basePath: '/clips',
       discord: {},
-      channels: ['/(^|[^a-z])(clips?|videos?)([^a-z]|$)/'],
+      channels: ['/(^|[^a-z])(clips?|videos?|screenshots?)([^a-z]|$)/'],
       mediaChannels: true,
       guilds: null,
       poll: true,
@@ -205,12 +241,15 @@ class Clips {
       backfillDays: 90,
       maxPages: 20,
       sessionGapMs: DEFAULT_GAP_MS,
+      stillSeconds: 5,
+      maxStillSeconds: 60,
+      stillHeight: 720,
       defaultTimeZone: 'America/Chicago',
       externalLinks: ['medal.tv'],
       maxDownloadBytes: 1024 * 1024 * 1024,
       keepMasters: true,
       maxSourceHeight: 1080,
-      minFreeBytes: 10 * 1024 * 1024 * 1024,
+      minFreeBytes: 20 * 1024 * 1024 * 1024,
       rescanEveryMs: 60 * 60 * 1000,
       recheckAfterMs: 7 * 24 * 60 * 60 * 1000,
       rescanBatch: 10,
@@ -225,6 +264,7 @@ class Clips {
       renderCredits: true,
       maxRenderSeconds: 600,
       maxSegments: 200,
+      maxRenderSources: 40,
       maxQueuedRenders: 3,
       ffmpegPath: 'ffmpeg',
       ffprobePath: 'ffprobe',
@@ -233,6 +273,8 @@ class Clips {
       log: null,
       now: () => Date.now()
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
+    this.settings.streams = Object.assign({}, STREAM_DEFAULTS,
+      Object.fromEntries(Object.entries(settings.streams || {}).filter(([, value]) => value !== undefined)));
     this._resolveToken = this.settings.resolveToken || resolveDiscordToken;
     this.root = path.resolve(this.settings.path);
     this.dirs = {
@@ -271,6 +313,8 @@ class Clips {
     if (requeued) this._log(`queued ${requeued} clip${requeued === 1 ? '' : 's'} that failed for a missing tool or codec`);
     const links = await this.queueLinks();
     if (links) this._log(`queued ${links} link${links === 1 ? '' : 's'} for import with yt-dlp`);
+    const redated = await this.redate();
+    if (redated) this._log(`re-dated ${redated} clip${redated === 1 ? '' : 's'}`);
     if (this.settings.poll) {
       if (this.settings.refreshOnStart) this._refreshInBackground();
       if (this.settings.ttlMs > 0) {
@@ -396,14 +440,15 @@ class Clips {
       if (!matched.length) continue;
       const active = await this._activeThreads(token, guild);
       for (const channel of matched) {
-        const sources = TEXT_CHANNEL_TYPES.has(Number(channel.type)) ? [channel] : [];
+        const streams = this._isStreamChannel(channel);
+        const sources = TEXT_CHANNEL_TYPES.has(Number(channel.type)) ? [Object.assign({}, channel, { streams })] : [];
         try {
           const threads = (active.get(String(channel.id)) || []).concat(await this._archivedThreads(token, channel));
           const seen = new Set();
           for (const thread of threads) {
             if (seen.has(String(thread.id))) continue;
             seen.add(String(thread.id));
-            sources.push(Object.assign({}, thread, { name: channel.name, thread: thread.name }));
+            sources.push(Object.assign({}, thread, { name: channel.name, thread: thread.name, streams }));
           }
         } catch (error) {
           errors.push(`#${channel.name} threads: ${error.message}`);
@@ -434,7 +479,14 @@ class Clips {
     const type = Number(channel.type);
     if (!TEXT_CHANNEL_TYPES.has(type) && !THREAD_ONLY_TYPES.has(type)) return false;
     if (type === MEDIA_CHANNEL && this.settings.mediaChannels) return true;
-    return matchesAnyChannel(this.settings.channels, { id: String(channel.id), name: channel.name });
+    return matchesAnyChannel(this.settings.channels, { id: String(channel.id), name: channel.name }) || this._isStreamChannel(channel);
+  }
+
+  /** A channel whose go-live announcements are followed to their VODs. */
+  _isStreamChannel (channel) {
+    const streams = this.settings.streams;
+    if (!streams.enabled || !TEXT_CHANNEL_TYPES.has(Number(channel.type))) return false;
+    return matchesAnyChannel(streams.channels || [], { id: String(channel.id), name: channel.name });
   }
 
   /** Active threads in the guild, by parent channel id. */
@@ -482,7 +534,7 @@ class Clips {
       guildId: guild.id,
       cursor: this._backfillCursor(),
       clips: 0
-    }, saved || {}, { guildName: guild.name || (saved && saved.guildName) || null, name: channel.name, thread: channel.thread || null });
+    }, saved || {}, { guildName: guild.name || (saved && saved.guildName) || null, name: channel.name, thread: channel.thread || null, streams: Boolean(channel.streams) });
     if (opts.fromStart) state.cursor = this._backfillCursor();
     else if (saved && channel.last_message_id && compareSnowflake(state.cursor, channel.last_message_id) >= 0) return 0;
     const label = channel.thread ? `#${channel.name} › ${channel.thread}` : `#${channel.name}`;
@@ -514,6 +566,7 @@ class Clips {
   }
 
   async _indexMessage (token, guild, channel, message) {
+    if (channel.streams) await this._recordAnnouncement(guild, channel, message);
     const found = extractClips(message);
     if (!found.length) return 0;
     const author = message.author || {};
@@ -573,6 +626,207 @@ class Clips {
     return name;
   }
 
+  // ---------------------------------------------------------------- streams
+
+  /**
+   * Save each Twitch channel or VOD a go-live announcement links, to be
+   * matched to its broadcast by `collectStreams`.
+   * @private
+   */
+  async _recordAnnouncement (guild, channel, message) {
+    const found = readAnnouncement(message);
+    if (!found) return 0;
+    const base = {
+      guildId: guild.id,
+      guildName: guild.name || channel.guildName || null,
+      channelId: channel.id,
+      channelName: channel.name,
+      threadName: channel.thread || null,
+      messageId: String(message.id),
+      messageUrl: `https://discord.com/channels/${guild.id}/${channel.id}/${message.id}`,
+      announcedAt: message.timestamp || null,
+      streamer: found.streamer ? text(found.streamer, LIMITS.name) : null,
+      title: found.title ? text(found.title, LIMITS.caption) : null,
+      status: 'waiting',
+      vodId: null,
+      clipId: null,
+      checkedAt: null,
+      error: null
+    };
+    // A linked VOD is looked up by itself; it may be older than a channel's newest `archives`.
+    const entries = found.vods.map((vod) => Object.assign({}, base, { id: `${message.id}-v${vod.id}`, login: null, vodId: vod.id }))
+      .concat(found.channels.map((login) => Object.assign({}, base, { id: `${message.id}-${login}`, login })));
+    let added = 0;
+    for (const entry of entries) {
+      if (!ID.test(entry.id)) continue;
+      const created = await this._exclusive(async () => {
+        if (await this.store.get(`/streams/${entry.id}`)) return false;
+        await this.store.set(`/streams/${entry.id}`, entry);
+        await this._append('streams', entry.id);
+        return true;
+      });
+      if (created) added += 1;
+    }
+    return added;
+  }
+
+  async _updateAnnouncement (id, fields) {
+    return this._exclusive(async () => {
+      const entry = await this.store.get(`/streams/${id}`);
+      if (entry) await this.store.set(`/streams/${id}`, Object.assign(entry, fields));
+    });
+  }
+
+  /**
+   * Twitch VODs as yt-dlp lists them (a channel's past broadcasts, newest
+   * first, or one VOD), without downloading.
+   * @private
+   */
+  async _twitchVods (url, count) {
+    const out = await this._run(this.settings.ytdlpPath, [
+      '--no-warnings', '--ignore-no-formats-error', '--playlist-items', `1:${count}`, '--print', VOD_FIELDS, url
+    ], { keepOutput: true });
+    const vods = String(out.stdout || '').split('\n').map((line) => {
+      try { return readVod(JSON.parse(line)); } catch (_) { return null; }
+    }).filter(Boolean);
+    if (out.code && !vods.length) throw new Error(`yt-dlp exited ${out.code}: ${String(out.stderr || '').trim().split('\n').slice(-2).join(' ')}`);
+    return vods;
+  }
+
+  /**
+   * Follow waiting go-live announcements to their broadcasts: once a
+   * broadcast's VOD is over, it becomes a clip (dated by when the stream went
+   * live, by the streamer) and is downloaded like one. An announcement with no
+   * VOD after `NO_VOD_AFTER_MS` is `none` (past broadcasts off, or deleted);
+   * one older than `waitDays` is `missed`. Each Twitch channel is listed once
+   * a pass, and an announcement is checked at most every `checkEveryMs`.
+   * @param {Object} [opts]
+   * @param {boolean} [opts.force] Check every waiting announcement now.
+   * @returns {Promise<{ checked: number, collected: number, waiting: number, none: number, missed: number }>}
+   */
+  async collectStreams (opts = {}) {
+    const streams = this.settings.streams;
+    const result = { checked: 0, collected: 0, waiting: 0, none: 0, missed: 0 };
+    if (!streams.enabled) return result;
+    const now = this.settings.now();
+    const due = [];
+    for (const id of await this._list('streams')) {
+      const entry = await this.store.get(`/streams/${id}`);
+      if (!entry || entry.status !== 'waiting') continue;
+      const announcedMs = Date.parse(entry.announcedAt || '');
+      if (!(now - announcedMs <= streams.waitDays * DAY_MS)) {
+        await this._updateAnnouncement(id, { status: 'missed', checkedAt: this._iso() });
+        result.missed += 1;
+      } else if (!opts.force && now - Date.parse(entry.checkedAt || 0) < streams.checkEveryMs) {
+        result.waiting += 1;
+      } else {
+        due.push(entry);
+      }
+    }
+    const listings = new Map();
+    for (const entry of due) {
+      if (this._stopped) break;
+      const key = entry.login || `v${entry.vodId}`;
+      if (!listings.has(key)) {
+        const url = entry.login ? `https://www.twitch.tv/${entry.login}/videos?filter=archives&sort=time` : `https://www.twitch.tv/videos/${entry.vodId}`;
+        listings.set(key, this._twitchVods(url, entry.login ? streams.archives : 1).catch((error) => error));
+      }
+      const vods = await listings.get(key);
+      if (vods instanceof Error) {
+        if (vods.missingTool) {
+          this._log(`${vods.message}: stream announcements wait until it is`);
+          break;
+        }
+        await this._updateAnnouncement(entry.id, { checkedAt: this._iso(), error: vods.message });
+        result.waiting += 1;
+        continue;
+      }
+      result.checked += 1;
+      const announcedMs = Date.parse(entry.announcedAt);
+      const vod = entry.vodId ? vods.find((v) => v.id === entry.vodId) : pickVod(vods, announcedMs);
+      if (vod && vodFinished(vod, now, streams.settleMs)) {
+        const clipId = await this._addVod(entry, vod);
+        await this._updateAnnouncement(entry.id, { status: 'collected', vodId: vod.id, clipId, checkedAt: this._iso(), error: null });
+        result.collected += 1;
+        this._log(`${entry.login || vod.channel}: VOD ${vod.id} (${Math.round(vod.durationMs / 60000)} min, live ${vod.startedAt}) from #${entry.channelName}`);
+      } else if (vod || now - announcedMs <= NO_VOD_AFTER_MS) {
+        await this._updateAnnouncement(entry.id, { vodId: vod ? vod.id : entry.vodId, checkedAt: this._iso(), error: null });
+        result.waiting += 1;
+      } else {
+        await this._updateAnnouncement(entry.id, { status: 'none', checkedAt: this._iso(), error: null });
+        result.none += 1;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * The clip for a finished VOD (one per VOD, however often it was announced).
+   * @private
+   */
+  async _addVod (entry, vod) {
+    const id = `twitch-v${vod.id}`;
+    await this._exclusive(async () => {
+      if (await this.store.get(`/clips/${id}`)) return;
+      const login = vod.channel || entry.login || null;
+      const clip = {
+        id,
+        kind: 'link',
+        media: 'video',
+        attachmentId: null,
+        url: `https://www.twitch.tv/videos/${vod.id}`,
+        filename: null,
+        contentType: null,
+        size: null,
+        width: null,
+        height: null,
+        stream: { platform: 'twitch', channel: login, vodId: vod.id, announcement: entry.id },
+        startedAt: vod.startedAt,
+        guildId: entry.guildId,
+        guildName: entry.guildName,
+        channelId: entry.channelId,
+        channelName: entry.channelName,
+        threadName: entry.threadName,
+        messageId: entry.messageId,
+        messageUrl: entry.messageUrl,
+        authorId: null,
+        author: text(vod.streamer || entry.streamer || login || 'Unknown streamer', LIMITS.name),
+        caption: text(vod.title || entry.title || '', LIMITS.caption),
+        postedAt: entry.announcedAt,
+        durationMs: vod.durationMs || null,
+        hasAudio: null,
+        codec: null,
+        creationTime: null,
+        recording: estimateRecordingTime({ startedAt: vod.startedAt, postedAt: entry.announcedAt, durationMs: vod.durationMs }, { defaultTimeZone: this.settings.defaultTimeZone }),
+        override: null,
+        proxy: { status: this.settings.streams.download ? 'pending' : 'skipped', attempts: 0, error: null },
+        indexedAt: this._iso(),
+        log: []
+      };
+      await this.store.set(`/clips/${id}`, clip);
+      await this._append('clips', id);
+    });
+    return id;
+  }
+
+  _maxDownloadBytes (clip) {
+    return clip && clip.stream ? this.settings.streams.maxDownloadBytes : this.settings.maxDownloadBytes;
+  }
+
+  /**
+   * Whether the clip's largest allowed download still leaves `minFreeBytes`
+   * free; a clip that doesn't fit waits without spending an attempt.
+   * @private
+   */
+  async _roomToDownload (clip) {
+    try {
+      const disk = await fsp.statfs(this.dirs.tmp);
+      return disk.bavail * disk.bsize >= (this.settings.minFreeBytes || 0) + this._maxDownloadBytes(clip);
+    } catch (_) {
+      return true;
+    }
+  }
+
   // ---------------------------------------------------------------- media
 
   /**
@@ -588,7 +842,7 @@ class Clips {
     };
     if (this.settings.run) {
       return Promise.resolve().then(() => this.settings.run(command, args, opts)).catch((error) => { throw missing(error); }).then((out) => {
-        if (out && out.code) throw new Error(`${path.basename(command)} exited ${out.code}: ${String(out.stderr || '').trim().split('\n').slice(-3).join(' ')}`);
+        if (out && out.code && !opts.keepOutput) throw new Error(`${path.basename(command)} exited ${out.code}: ${String(out.stderr || '').trim().split('\n').slice(-3).join(' ')}`);
         return out || { code: 0, stdout: '', stderr: '' };
       });
     }
@@ -603,7 +857,7 @@ class Clips {
       child.stderr.on('data', (chunk) => { stderr = (stderr + chunk.toString()).slice(-16 * 1024); });
       child.on('error', (error) => reject(missing(error)));
       child.on('close', (code) => {
-        if (code) return reject(new Error(`${path.basename(command)} exited ${code}: ${stderr.trim().split('\n').slice(-3).join(' ')}`));
+        if (code && !opts.keepOutput) return reject(new Error(`${path.basename(command)} exited ${code}: ${stderr.trim().split('\n').slice(-3).join(' ')}`));
         resolve({ code, stdout, stderr });
       });
     });
@@ -690,7 +944,12 @@ class Clips {
    * Fetch a clip's full-resolution original to `dest` (yt-dlp for links).
    * @private
    */
-  _ytdlpFormat () {
+  _ytdlpFormat (clip) {
+    // Twitch serves sound and picture together, so a stream needs no merge.
+    if (clip && clip.stream) {
+      const h = this.settings.streams.maxSourceHeight;
+      return `b[height<=${h}]/bv*[height<=${h}]+ba/b`;
+    }
     const h = this.settings.maxSourceHeight;
     return `bv*[height<=${h}]+ba/b[height<=${h}]/b`;
   }
@@ -698,19 +957,39 @@ class Clips {
   async _fetchOriginal (clip, url, dest) {
     if (clip.kind === 'link') {
       const out = `${dest}.mp4`;
+      const max = this._maxDownloadBytes(clip);
       await this._run(this.settings.ytdlpPath, [
-        '--no-playlist', '--no-progress', '-f', this._ytdlpFormat(),
-        '--merge-output-format', 'mp4', '--max-filesize', String(this.settings.maxDownloadBytes),
-        '-o', out, url
+        '--no-playlist', '--no-progress', '-f', this._ytdlpFormat(clip),
+        '--merge-output-format', 'mp4', '--max-filesize', String(max),
+        ...(clip.stream ? ['--concurrent-fragments', '4'] : []),
+        '--write-info-json', '-o', out, url
       ]);
       if (fs.existsSync(out)) return out;
       // yt-dlp exits 0 without a file when the video is over --max-filesize, and may add an extension.
       const dir = path.dirname(out);
-      const saved = fs.readdirSync(dir).find((name) => name.startsWith(path.basename(out)) && !/\.(part|ytdl)$/.test(name));
-      if (!saved) throw new Error(`yt-dlp saved nothing (over the ${Math.round(this.settings.maxDownloadBytes / 1048576)} MB download limit?)`);
+      const saved = fs.readdirSync(dir).find((name) => name.startsWith(path.basename(out)) && !/\.(part|ytdl|info\.json)$/.test(name));
+      if (!saved) throw new Error(`yt-dlp saved nothing (over the ${Math.round(max / 1048576)} MB download limit?)`);
       return path.join(dir, saved);
     }
     return this._download(url, dest);
+  }
+
+  /**
+   * When the link's host says it had the video (yt-dlp's `timestamp`: Medal's
+   * clip creation, YouTube's upload), from the info JSON written beside `dest`.
+   * @private
+   */
+  async _hostTimestamp (dest) {
+    const dir = path.dirname(dest);
+    const name = (await fsp.readdir(dir).catch(() => [])).find((file) => file.startsWith(path.basename(dest)) && file.endsWith('.info.json'));
+    if (!name) return null;
+    try {
+      const info = JSON.parse(await fsp.readFile(path.join(dir, name), 'utf8'));
+      const seconds = Number(info.timestamp);
+      return Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000).toISOString() : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   async _probe (file) {
@@ -729,7 +1008,8 @@ class Clips {
       height: Number(video.height) || null,
       codec: video.codec_name || null,
       hasAudio: streams.some((s) => s.codec_type === 'audio'),
-      creationTime: tags.creation_time || tags.CREATION_TIME || tags.date || null
+      creationTime: tags.creation_time || tags.CREATION_TIME || tags.date || null,
+      timeTags: containerTimeTags(format.tags, video.tags)
     };
   }
 
@@ -783,7 +1063,38 @@ class Clips {
   }
 
   /**
-   * Proxy (low resolution, low frame rate) and thumbnail sprite for one clip.
+   * A clip's recording time from its name and what its file says (see
+   * `functions/clipRecordingTime.js`). Learns the uploader's UTC offset when the
+   * file's own metadata settles it, for their later clips.
+   * @private
+   * @param {Object} clip
+   * @param {Object} file `{ timeTags, creationTime, uploadedAt, durationMs }`
+   */
+  async _dateRecording (clip, file) {
+    const authorKey = clip.authorId ? `/authors/${clip.authorId}` : null;
+    const author = authorKey ? await this.store.get(authorKey) : null;
+    const recording = estimateRecordingTime({
+      filename: clip.filename,
+      timeTags: file.timeTags,
+      creationTime: file.creationTime,
+      uploadedAt: file.uploadedAt,
+      startedAt: clip.startedAt,
+      postedAt: clip.postedAt,
+      durationMs: file.durationMs
+    }, {
+      knownOffsetMinutes: author ? author.offsetMinutes : undefined,
+      defaultTimeZone: this.settings.defaultTimeZone
+    });
+    if (authorKey && recording.zone === 'metadata' && recording.confidence === 'high' && recording.offsetMinutes !== null &&
+      (!author || author.offsetMinutes !== recording.offsetMinutes)) {
+      await this.store.set(authorKey, { offsetMinutes: recording.offsetMinutes, learnedFrom: clip.id, at: this._iso() });
+    }
+    return recording;
+  }
+
+  /**
+   * Proxy (low resolution, low frame rate) and thumbnail sprite for one clip;
+   * for a screenshot, a preview image and a one-frame sprite.
    * @private
    */
   async _makeProxy (clip, url) {
@@ -792,20 +1103,14 @@ class Clips {
     try {
       const original = await this._fetchOriginal(clip, url, path.join(work, 'original'));
       const probe = await this._probe(original);
-      const authorKey = clip.authorId ? `/authors/${clip.authorId}` : null;
-      const author = authorKey ? await this.store.get(authorKey) : null;
-      const recording = estimateRecordingTime({
-        filename: clip.filename,
-        creationTime: probe.creationTime,
-        postedAt: clip.postedAt,
-        durationMs: probe.durationMs
-      }, {
-        knownOffsetMinutes: author ? author.offsetMinutes : undefined,
-        defaultTimeZone: this.settings.defaultTimeZone
-      });
-      if (authorKey && recording.source === 'metadata' && recording.confidence === 'high' && recording.offsetMinutes !== null) {
-        await this.store.set(authorKey, { offsetMinutes: recording.offsetMinutes, learnedFrom: clip.id, at: this._iso() });
+      if (isStill(clip)) {
+        probe.durationMs = 0;
+        probe.timeTags = imageTimeTags(await fsp.readFile(original)).concat(probe.timeTags);
       }
+      // A VOD's host time is when it went live (`startedAt`), not an upload.
+      probe.uploadedAt = clip.kind === 'link' && !clip.stream ? await this._hostTimestamp(path.join(work, 'original')) : null;
+      const recording = await this._dateRecording(clip, probe);
+      if (isStill(clip)) return await this._makeStill(clip, original, probe, recording, work);
 
       const h = this.settings.proxyHeight;
       const proxyPart = path.join(work, 'proxy.mp4');
@@ -847,6 +1152,8 @@ class Clips {
         codec: probe.codec,
         hasAudio: probe.hasAudio,
         creationTime: probe.creationTime,
+        timeTags: probe.timeTags,
+        uploadedAt: probe.uploadedAt,
         recording,
         proxy: {
           status: 'ready',
@@ -865,10 +1172,62 @@ class Clips {
   }
 
   /**
+   * A screenshot's preview (at most `stillHeight` tall, served as its proxy)
+   * and a one-frame thumbnail sprite, so it sits in a session like a clip.
+   * @private
+   */
+  async _makeStill (clip, original, probe, recording, work) {
+    const sh = this.settings.stillHeight;
+    const previewPart = path.join(work, 'preview.jpg');
+    await this._run(this.settings.ffmpegPath, [
+      '-y', '-hide_banner', '-nostdin', '-i', original,
+      '-vf', `scale=-2:trunc(min(${sh}\\,ih)/2)*2`,
+      '-frames:v', '1', '-q:v', '3', previewPart
+    ]);
+    const th = this.settings.thumbHeight;
+    const aspect = probe.width && probe.height ? probe.width / probe.height : 16 / 9;
+    const tw = Math.max(2, Math.round((th * aspect) / 2) * 2);
+    const spritePart = path.join(work, 'thumbs.jpg');
+    await this._run(this.settings.ffmpegPath, [
+      '-y', '-hide_banner', '-nostdin', '-i', original,
+      '-vf', `scale=${tw}:${th}`,
+      '-frames:v', '1', '-q:v', '5', spritePart
+    ]);
+    await fsp.rename(previewPart, this._mediaPath(clip.id, 'preview.jpg'));
+    await fsp.rename(spritePart, this._mediaPath(clip.id, 'jpg'));
+    const bytes = (await fsp.stat(this._mediaPath(clip.id, 'preview.jpg'))).size;
+    const previewHeight = probe.height ? Math.min(sh, Math.floor(probe.height / 2) * 2) : sh;
+    const master = await this._keepMaster(clip, original, probe);
+    return {
+      ...(master ? { master } : {}),
+      durationMs: null,
+      width: probe.width,
+      height: probe.height,
+      codec: probe.codec,
+      hasAudio: false,
+      creationTime: probe.creationTime,
+      timeTags: probe.timeTags,
+      uploadedAt: probe.uploadedAt,
+      recording,
+      proxy: {
+        status: 'ready',
+        attempts: (clip.proxy && clip.proxy.attempts) || 0,
+        error: null,
+        height: previewHeight,
+        width: Math.round((previewHeight * aspect) / 2) * 2,
+        bytes,
+        builtAt: this._iso(),
+        thumbs: { every: 1, count: 1, columns: 1, rows: 1, width: tw, height: th }
+      }
+    };
+  }
+
+  /**
    * Whether a link clip is downloaded (its host is in `externalLinks`).
    * @private
    */
   _importsLink (clip) {
+    if (clip.stream) return Boolean(this.settings.streams.download);
     const hosts = this.settings.externalLinks;
     if (hosts === true) return true;
     if (!Array.isArray(hosts) || !hosts.length) return false;
@@ -899,6 +1258,32 @@ class Clips {
       queued += 1;
     }
     return queued;
+  }
+
+  /**
+   * Date every stored clip again from what was saved about its file (name,
+   * metadata times, the host's upload, length), oldest post first so
+   * uploaders' zones are learned in order. `start` does this on every boot, so
+   * stored clips follow the current rules without downloading anything again.
+   * @returns {Promise<number>} clips whose estimate changed
+   */
+  async redate () {
+    const clips = (await this._allClips())
+      .filter((clip) => clip.recording)
+      .sort((a, b) => String(a.postedAt || '').localeCompare(String(b.postedAt || '')));
+    let changed = 0;
+    for (const clip of clips) {
+      const recording = await this._dateRecording(clip, {
+        timeTags: clip.timeTags,
+        creationTime: clip.creationTime,
+        uploadedAt: clip.uploadedAt,
+        durationMs: isStill(clip) ? 0 : clip.durationMs
+      });
+      if (JSON.stringify(recording) === JSON.stringify(clip.recording)) continue;
+      await this._updateClip(clip.id, (record) => { record.recording = recording; });
+      changed += 1;
+    }
+    return changed;
   }
 
   /**
@@ -959,7 +1344,9 @@ class Clips {
 
   _processInBackground () {
     if (this._processing || this._stopped) return this._processing;
-    this._processing = this.processPending()
+    this._processing = this.collectStreams()
+      .catch((error) => this._log(`stream announcements: ${error.message || error}`))
+      .then(() => this.processPending())
       .catch(() => {})
       .finally(() => { this._processing = null; });
     return this._processing;
@@ -972,6 +1359,8 @@ class Clips {
   async processPending () {
     let built = 0;
     let token = null;
+    const waiting = { clip: false, stream: false };
+    let noLinks = false;
     const ids = await this._list('clips');
     let index = 0;
     for (const id of ids) {
@@ -979,14 +1368,28 @@ class Clips {
       if (this._stopped) break;
       const clip = await this.store.get(`/clips/${id}`);
       if (!clip || !clip.proxy || clip.proxy.status !== 'pending') continue;
+      if (noLinks && clip.kind === 'link') continue;
+      const kind = clip.stream ? 'stream' : 'clip';
+      if (waiting[kind] || !(await this._roomToDownload(clip))) {
+        if (!waiting[kind]) this._log(`${clip.stream ? 'VODs' : 'Clips'} wait for disk space: one may take ${Math.round(this._maxDownloadBytes(clip) / 1073741824)} GB on top of minFreeBytes (${Math.round(this.settings.minFreeBytes / 1073741824)} GB)`);
+        waiting[kind] = true;
+        continue;
+      }
       try {
         if (!token) token = this._token();
         const urls = await this._freshUrls([clip], token);
         const made = await this._makeProxy(clip, urls.get(clip.id));
         await this._updateClip(id, (record) => Object.assign(record, made, { url: urls.get(clip.id) || record.url }));
         built += 1;
-        this._log(`[${index}/${ids.length}] ${clip.author}: ${clip.filename || clip.id} (${Math.round(made.durationMs / 1000)}s, recorded ${made.recording.recordedAt} from ${made.recording.source})`);
+        const length = isStill(clip) ? 'screenshot' : `${Math.round(made.durationMs / 1000)}s`;
+        this._log(`[${index}/${ids.length}] ${clip.author}: ${clip.filename || clip.id} (${length}, recorded ${made.recording.recordedAt} from ${made.recording.source})`);
       } catch (error) {
+        if (error.missingTool && error.missingTool === this.settings.ytdlpPath && clip.kind === 'link') {
+          // Only link clips need yt-dlp; uploads and embeds still get proxies.
+          this._log(`${error.message}: link clips wait until it is (nothing marked failed)`);
+          noLinks = true;
+          continue;
+        }
         if (error.missingTool) {
           this._log(`${error.message}: proxies wait until it is (nothing marked failed)`);
           break;
@@ -1012,7 +1415,7 @@ class Clips {
    * @private
    */
   async _availableHeight (clip) {
-    const { stdout } = await this._run(this.settings.ytdlpPath, ['--no-playlist', '--no-warnings', '-J', '-f', this._ytdlpFormat(), clip.url]);
+    const { stdout } = await this._run(this.settings.ytdlpPath, ['--no-playlist', '--no-warnings', '-J', '-f', this._ytdlpFormat(clip), clip.url]);
     let info;
     try { info = JSON.parse(stdout); } catch (_) { throw new Error('yt-dlp returned no metadata'); }
     const heights = [info.height].concat((info.requested_formats || []).map((format) => format.height)).map(Number).filter((n) => n > 0);
@@ -1065,11 +1468,12 @@ class Clips {
       const clip = await this.store.get(`/clips/${id}`);
       if (!clip || !clip.proxy || clip.proxy.status !== 'ready') continue;
       const stored = this._hasMaster(clip);
-      if (stored && clip.kind !== 'link') continue;
+      // A VOD never gets better, and Twitch deletes it in weeks.
+      if (stored && (clip.kind !== 'link' || clip.stream)) continue;
       const checkedAt = Date.parse((clip.master && clip.master.checkedAt) || '');
       if (Number.isFinite(checkedAt) && now - checkedAt < this.settings.recheckAfterMs) continue;
-      if (!(await this._roomForMasters())) {
-        this._log('rescan paused: the disk is below minFreeBytes');
+      if (!(await this._roomToDownload(clip))) {
+        this._log('rescan paused: a download would take the disk below minFreeBytes');
         break;
       }
       result.checked += 1;
@@ -1128,26 +1532,31 @@ class Clips {
   }
 
   /**
-   * The public view of a clip (no Discord user ids, no expiring URLs).
+   * The public view of a clip (no Discord user ids, no expiring URLs). A
+   * screenshot's `durationMs` is its display time on the timeline, and its
+   * `proxyUrl` the preview image.
    * @param {Object} clip
    * @returns {Object}
    */
   publicClip (clip) {
     const start = clipStartMs(clip);
     const ready = clip.proxy && clip.proxy.status === 'ready';
+    const still = isStill(clip);
     return {
       id: clip.id,
       kind: clip.kind,
+      media: still ? 'image' : 'video',
       author: clip.author,
       guild: clip.guildName,
       channel: clip.channelName,
       thread: clip.threadName || null,
       messageUrl: clip.messageUrl,
       linkUrl: clip.kind === 'link' ? clip.url : null,
+      stream: clip.stream ? { platform: clip.stream.platform, channel: clip.stream.channel, url: clip.stream.channel ? `https://www.twitch.tv/${clip.stream.channel}` : null } : null,
       caption: plainCaption(clip.caption),
       filename: clip.filename,
       postedAt: clip.postedAt,
-      durationMs: clip.durationMs,
+      durationMs: still ? this._stillMs() : clip.durationMs,
       width: clip.width,
       height: clip.height,
       hasAudio: clip.hasAudio,
@@ -1165,6 +1574,10 @@ class Clips {
       proxyUrl: ready ? `${BASE}/${clip.id}/proxy` : null,
       thumbsUrl: ready ? `${BASE}/${clip.id}/thumbs` : null
     };
+  }
+
+  _stillMs () {
+    return Math.round(Math.min(this.settings.stillSeconds, this.settings.maxStillSeconds) * 1000);
   }
 
   async list () {
@@ -1190,9 +1603,15 @@ class Clips {
     if (this.settings.poll && (!status.polledAt || Date.now() - Date.parse(status.polledAt) > this.settings.ttlMs)) {
       this._refreshInBackground({ throttle: true });
     }
+    const streams = { waiting: 0, collected: 0, none: 0, missed: 0 };
+    for (const id of await this._list('streams')) {
+      const entry = await this.store.get(`/streams/${id}`);
+      if (entry && Object.prototype.hasOwnProperty.call(streams, entry.status)) streams[entry.status] += 1;
+    }
     return {
       polling: !!this.settings.poll,
-      status: Object.assign({}, status, { ready: count('ready'), pending: count('pending'), failed: count('failed'), linksOnly: count('skipped') }),
+      status: Object.assign({}, status, { ready: count('ready'), pending: count('pending'), failed: count('failed'), linksOnly: count('skipped'), screenshots: clips.filter(isStill).length, vods: clips.filter((clip) => clip.stream).length, streams }),
+      stills: { seconds: this._stillMs() / 1000, maxSeconds: this.settings.maxStillSeconds },
       channels,
       clips: clips
         .sort((a, b) => String(b.postedAt).localeCompare(String(a.postedAt)))
@@ -1207,7 +1626,7 @@ class Clips {
   async sessions () {
     const clips = await this._allClips();
     const byId = new Map(clips.map((clip) => [clip.id, clip]));
-    return groupSessions(clips, { gapMs: this.settings.sessionGapMs }).map((session) => Object.assign(session, {
+    return groupSessions(clips, { gapMs: this.settings.sessionGapMs, stillMs: this._stillMs() }).map((session) => Object.assign(session, {
       clips: session.tracks.flatMap((track) => track.clips.map((entry) => this.publicClip(byId.get(entry.id))))
     }));
   }
@@ -1284,16 +1703,21 @@ class Clips {
   async _playableClips () {
     const map = {};
     for (const clip of await this._allClips()) {
-      if (clip.proxy && clip.proxy.status === 'ready' && clip.durationMs > 0) map[clip.id] = clip;
+      if (clip.proxy && clip.proxy.status === 'ready' && (isStill(clip) || clip.durationMs > 0)) map[clip.id] = clip;
     }
     return map;
   }
 
   async _segments (segments) {
-    return normalizeSegments(segments || [], await this._playableClips(), {
+    const out = normalizeSegments(segments || [], await this._playableClips(), {
       maxSegments: this.settings.maxSegments,
-      maxDurationMs: this.settings.maxRenderSeconds * 1000
+      maxDurationMs: this.settings.maxRenderSeconds * 1000,
+      maxStillMs: this.settings.maxStillSeconds * 1000
     });
+    // A render downloads every distinct source, so their number is capped too.
+    const sources = new Set(out.map((segment) => segment.clipId)).size;
+    if (sources > this.settings.maxRenderSources) throw fail(400, `A project uses at most ${this.settings.maxRenderSources} different clips.`);
+    return out;
   }
 
   async publicProject (project) {
@@ -1667,9 +2091,10 @@ class Clips {
     }
     if (parts.length === 2 && read && (second === 'proxy' || second === 'thumbs')) {
       if (!clip.proxy || clip.proxy.status !== 'ready') throw fail(404, 'This clip has no proxy yet.');
-      return second === 'proxy'
-        ? { file: this._mediaPath(clip.id, 'mp4'), type: 'video/mp4' }
-        : { file: this._mediaPath(clip.id, 'jpg'), type: 'image/jpeg' };
+      if (second === 'thumbs') return { file: this._mediaPath(clip.id, 'jpg'), type: 'image/jpeg' };
+      return isStill(clip)
+        ? { file: this._mediaPath(clip.id, 'preview.jpg'), type: 'image/jpeg' }
+        : { file: this._mediaPath(clip.id, 'mp4'), type: 'video/mp4' };
     }
     throw fail(parts.length > 2 ? 404 : 405, parts.length > 2 ? 'Not found' : 'Method not allowed');
   }

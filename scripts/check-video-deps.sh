@@ -191,13 +191,16 @@ if have "$YTDLP"; then
   if [ -n "$PY" ] && [ "${PY%%.*}" -eq 3 ] && [ "${PY#*.}" -lt 10 ]; then
     missing_ytdlp "yt-dlp runs on Python $PY, too old for current releases (Medal downloads fail with 'Could not find video information'). Install $(hint yt-dlp)"
   fi
+  case "$(command -v "$YTDLP")" in
+    "$HOME"/.local/bin/*) warn "this yt-dlp is in ~/.local/bin, ahead of /usr/local/bin on PATH: remove it (pipx uninstall yt-dlp, or rm ~/.local/bin/yt-dlp) or a new install there is never used" ;;
+  esac
   # Releases are dated YYYY.MM.DD; site extractors break within weeks of a stale build.
   if printf '%s' "$YV" | grep -Eq '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}'; then
     REL="$(printf '%s' "$YV" | cut -c1-10 | tr . -)"
     NOW_S="$(date +%s)"
     REL_S="$(date -d "$REL" +%s 2>/dev/null || date -j -f %Y-%m-%d "$REL" +%s 2>/dev/null || echo "$NOW_S")"
     AGE=$(( (NOW_S - REL_S) / 86400 ))
-    if [ "$AGE" -gt 60 ]; then warn "yt-dlp is $AGE days old; YouTube / Medal imports break on old releases. Update: $YTDLP -U, or $(hint yt-dlp)"; fi
+    if [ "$AGE" -gt 180 ]; then warn "yt-dlp is $AGE days old; YouTube / Medal imports break on old releases. Update: $YTDLP -U, or $(hint yt-dlp)"; fi
   fi
   if ! have deno; then
     warn "no deno: fine for Medal, but YouTube imports (GOON_CLIPS_LINKS=1) need it (https://deno.com)"
@@ -211,7 +214,7 @@ section "Node.js and storage"
 if have node; then
   NV="$(node -v)"
   NMAJ="$(printf '%s' "$NV" | sed -E 's/^v([0-9]+).*/\1/')"
-  WANT="v24.15.0"
+  WANT="v26.12.1"
   [ -f .nvmrc ] && WANT="$(tr -d '[:space:]' < .nvmrc)"
   if [ "$NMAJ" -lt 18 ]; then fail "node $NV is too old (needs fetch; project pins $WANT)"
   elif [ "$NV" != "$WANT" ]; then warn "node $NV (project pins $WANT)"
@@ -230,9 +233,10 @@ fi
 FREE_KB="$(df -Pk "$PROBE_DIR" 2>/dev/null | awk 'NR==2 {print $4}')"
 if [ -n "$FREE_KB" ]; then
   FREE_GB=$((FREE_KB / 1048576))
-  # Originals are downloaded up to 1 GiB each and kept as masters until the disk is down to minFreeBytes (10 GB).
-  if [ "$FREE_GB" -lt 2 ]; then fail "only ${FREE_GB} GB free at $PROBE_DIR (originals up to 1 GB each are downloaded while processing)"
-  elif [ "$FREE_GB" -lt 10 ]; then warn "${FREE_GB} GB free at $PROBE_DIR; under 10 GB no masters are kept, so renders download sources again"
+  # A download waits until its largest allowed size (1 GiB, 8 GiB for a VOD) still leaves minFreeBytes free.
+  MIN_FREE_GB="${GOON_CLIPS_MIN_FREE_GB:-20}"
+  if [ "$FREE_GB" -lt $((MIN_FREE_GB + 1)) ]; then fail "only ${FREE_GB} GB free at $PROBE_DIR; clips wait to download until $((MIN_FREE_GB + 1)) GB is free (GOON_CLIPS_MIN_FREE_GB=${MIN_FREE_GB} + 1 GB per clip)"
+  elif [ "$FREE_GB" -lt $((MIN_FREE_GB + 8)) ]; then warn "${FREE_GB} GB free at $PROBE_DIR; Twitch VODs wait to download until $((MIN_FREE_GB + 8)) GB is free"
   else pass "${FREE_GB} GB free at $PROBE_DIR"; fi
 fi
 if [ -d "$STORE/media" ]; then

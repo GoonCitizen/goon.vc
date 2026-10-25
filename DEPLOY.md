@@ -18,7 +18,7 @@ Passport / desktop login on goon.vc uses POST /sessions (proxied to Hub).
 
 ## Prerequisites
 - Ubuntu/Debian VPS with the `goon.vc` DNS A/AAAA records pointed at it
-- Node.js **24.15.0** (see `.nvmrc`)
+- Node.js **26.12.1** (see `.nvmrc`)
 - Caddy 2 — automatic Let's Encrypt
 - A reachable Hub at `FABRIC_HUB_ORIGIN` (production: `https://hub.fabric.pub`)
 

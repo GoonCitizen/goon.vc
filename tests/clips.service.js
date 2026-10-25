@@ -14,41 +14,46 @@ const CLIPS_CHANNEL = '1300000000000000001';
 const CDN = 'https://cdn.discordapp.com/attachments';
 
 function response (status, body, extra = {}) {
-  const raw = typeof body === 'string' ? body : JSON.stringify(body);
+  const raw = typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body);
   return Object.assign({
     status,
     ok: status >= 200 && status < 300,
     headers: { get: () => null },
-    text: async () => raw,
+    text: async () => raw.toString(),
     arrayBuffer: async () => Buffer.from(raw)
   }, extra);
 }
 
 describe('clips', function () {
   describe('extractClips', function () {
-    it('finds video attachments, direct video embeds, and clip-host links', function () {
+    it('finds video and screenshot attachments, direct video embeds, and clip-host links', function () {
       const clips = extractClips({
         id: '900',
         content: 'two angles https://medal.tv/games/star-citizen/clips/abc?invite=x and https://youtu.be/xyz.',
         attachments: [
           { id: '901', filename: 'Star Citizen 2026.10.19 - 21.33.12.02.DVR.mp4', content_type: 'video/mp4', size: 1000, width: 1920, height: 1080, url: `${CDN}/1/901/a.mp4?ex=1` },
           { id: '902', filename: 'screenshot.png', content_type: 'image/png', url: `${CDN}/1/902/b.png` },
-          { id: '903', filename: 'obs.mkv', url: `${CDN}/1/903/obs.mkv` }
+          { id: '903', filename: 'obs.mkv', url: `${CDN}/1/903/obs.mkv` },
+          { id: '905', filename: 'ScreenShot0001.JPG', url: `${CDN}/1/905/d.jpg` },
+          { id: '906', filename: 'lol.gif', content_type: 'image/gif', url: `${CDN}/1/906/e.gif` },
+          { id: '907', filename: 'notes.txt', content_type: 'text/plain', url: `${CDN}/1/907/f.txt` }
         ],
         embeds: [
           { type: 'video', video: { url: `${CDN}/1/904/c.webm`, width: 1280, height: 720 } },
           { type: 'video', provider: { name: 'YouTube' }, video: { url: 'https://www.youtube.com/embed/xyz' } }
         ]
       });
-      assert.deepStrictEqual(clips.map((c) => [c.id, c.kind, c.filename]), [
-        ['901', 'attachment', 'Star Citizen 2026.10.19 - 21.33.12.02.DVR.mp4'],
-        ['903', 'attachment', 'obs.mkv'],
-        ['900-e0', 'embed', 'c.webm'],
-        ['900-l0', 'link', null],
-        ['900-l1', 'link', null]
+      assert.deepStrictEqual(clips.map((c) => [c.id, c.kind, c.media, c.filename]), [
+        ['901', 'attachment', 'video', 'Star Citizen 2026.10.19 - 21.33.12.02.DVR.mp4'],
+        ['902', 'attachment', 'image', 'screenshot.png'],
+        ['903', 'attachment', 'video', 'obs.mkv'],
+        ['905', 'attachment', 'image', 'ScreenShot0001.JPG'],
+        ['900-e0', 'embed', 'video', 'c.webm'],
+        ['900-l0', 'link', 'video', null],
+        ['900-l1', 'link', 'video', null]
       ]);
-      assert.strictEqual(clips[3].url, 'https://medal.tv/games/star-citizen/clips/abc?invite=x');
-      assert.strictEqual(clips[4].url, 'https://youtu.be/xyz');
+      assert.strictEqual(clips[5].url, 'https://medal.tv/games/star-citizen/clips/abc?invite=x');
+      assert.strictEqual(clips[6].url, 'https://youtu.be/xyz');
     });
 
     it('makes captions readable without Discord ids', function () {
@@ -111,6 +116,28 @@ describe('clips', function () {
       assert.deepStrictEqual(plan.manifest.authors, ['Ace', 'Bix']);
       assert.strictEqual(creditsSrt(plan.manifest).split('\n')[1], '00:00:00,000 --> 00:00:04,000');
       assert.ok(/Bix · #clips · 2026-10-20 02:33 UTC/.test(plan.srt));
+    });
+
+    it('holds a screenshot for its display time', function () {
+      const all = Object.assign({
+        s: { id: 's', media: 'image', path: '/tmp/s.png', durationMs: null, hasAudio: false, author: 'Cy', channelName: 'screenshots', recording: { recordedAt: '2026-10-20T02:33:30.000Z', source: 'posted', confidence: 'low' } }
+      }, clips);
+      assert.deepStrictEqual(normalizeSegments([{ clipId: 's', in: 3, out: 7.5, audio: 'mute', volume: 2 }], all), [
+        { clipId: 's', in: 0, out: 4.5, audio: 'on', volume: 1 }
+      ], 'starts at 0 and keeps only how long it shows');
+      assert.throws(() => normalizeSegments([{ clipId: 's', in: 0, out: 61 }], all), /at most 60s/);
+      assert.throws(() => normalizeSegments([{ clipId: 's', in: 0, out: 20 }], all, { maxStillMs: 10000 }), /at most 10s/);
+      assert.throws(() => normalizeSegments([{ clipId: 's', in: 0, out: 0 }], all), /at least/);
+
+      const segments = normalizeSegments([{ clipId: 'a', in: 2, out: 6 }, { clipId: 's', in: 0, out: 3 }], all);
+      const plan = buildRenderPlan({ id: 'p2', name: 'Stills', revision: 1 }, segments, all, { output: '/tmp/out.mp4', width: 1280, height: 720, fps: 30 });
+      assert.strictEqual(plan.durationMs, 7000);
+      assert.deepStrictEqual(plan.args.slice(12, 21), ['-loop', '1', '-framerate', '30', '-t', '3', '-i', '/tmp/s.png', '-filter_complex']);
+      const graph = plan.args[plan.args.indexOf('-filter_complex') + 1].split(';');
+      assert.ok(graph[2].startsWith('[1:v]setpts=PTS-STARTPTS,scale=1280:720') && graph[2].endsWith('trim=duration=3[v1]'), graph[2]);
+      assert.ok(graph[3].startsWith('anullsrc='), 'silent audio under the screenshot');
+      const row = plan.manifest.segments[1];
+      assert.deepStrictEqual([row.at, row.duration, row.clip.media, row.recordedFrom, row.recordedTo], [4, 3, 'image', '2026-10-20T02:33:30.000Z', '2026-10-20T02:33:30.000Z']);
     });
   });
 
@@ -293,7 +320,12 @@ describe('clips', function () {
       assert.strictEqual(clip.proxy.status, 'ready', clip.proxy.error);
       assert.strictEqual(clip.durationMs, 30000);
       assert.strictEqual(clip.hasAudio, true);
-      assert.deepStrictEqual([clip.recording.recordedAt, clip.recording.source, clip.recording.confidence, clip.recording.offsetMinutes], ['2026-10-20T02:33:12.000Z', 'metadata', 'high', -300]);
+      assert.deepStrictEqual(
+        [clip.recording.recordedAt, clip.recording.source, clip.recording.confidence, clip.recording.offsetMinutes, clip.recording.zone, clip.recording.field],
+        ['2026-10-20T02:33:12.020Z', 'filename', 'high', -300, 'metadata', 'creation_time'],
+        'the file name dates it, the container tag gives the zone'
+      );
+      assert.deepStrictEqual(clip.timeTags, [{ field: 'creation_time', value: '2026-10-20T02:33:12.000Z' }]);
       assert.deepStrictEqual(await clips.store.get('/authors/7001').then((a) => a.offsetMinutes), -300, 'learns the uploader\'s zone');
       assert.ok(fs.existsSync(path.join(root, 'media', '5001.mp4')));
       assert.ok(fs.existsSync(path.join(root, 'media', '5001.jpg')));
@@ -364,10 +396,20 @@ describe('clips', function () {
       assert.strictEqual((await request('GET', `/services/clips/${M2}-l0/proxy`)).status, 404);
     });
 
+    it('re-dates stored clips under the current rules without downloading', async function () {
+      const before = await clips.getClip('5001');
+      await clips._updateClip('5001', (record) => { record.recording = { recordedAt: '2026-10-20T02:33:12.000Z', source: 'metadata', confidence: 'high', offsetMinutes: -300, pattern: 'shadowplay' }; });
+      runs = [];
+      assert.strictEqual(await clips.redate(), 1);
+      assert.deepStrictEqual((await clips.getClip('5001')).recording, before.recording);
+      assert.deepStrictEqual(runs, [], 'nothing fetched or probed');
+      assert.strictEqual(await clips.redate(), 0);
+    });
+
     it('records manual recording times and sync nudges', async function () {
       const res = await request('PATCH', '/services/clips/5001', { body: { syncOffsetMs: 1500 } });
       assert.strictEqual(res.status, 200, res.raw);
-      assert.strictEqual(res.json.recordedAt, '2026-10-20T02:33:13.500Z');
+      assert.strictEqual(res.json.recordedAt, '2026-10-20T02:33:13.520Z');
       assert.strictEqual(res.json.override.by, 'Ace');
       assert.strictEqual((await request('PATCH', '/services/clips/5001', { body: { syncOffsetMs: 3600000 } })).status, 400);
       const reset = await request('PATCH', '/services/clips/5001', { body: { syncOffsetMs: 0 } });
@@ -417,7 +459,7 @@ describe('clips', function () {
       const sources = await request('GET', `/services/clips/renders/${queued.json.id}/sources`);
       assert.strictEqual(sources.json.segments[0].clip.author, '[G00N] Ace');
       assert.strictEqual(sources.json.segments[0].clip.messageUrl, `https://discord.com/channels/${GUILD}/${CLIPS_CHANNEL}/${M1}`);
-      assert.strictEqual(sources.json.segments[0].recordedFrom, '2026-10-20T02:33:14.000Z');
+      assert.strictEqual(sources.json.segments[0].recordedFrom, '2026-10-20T02:33:14.020Z');
       assert.deepStrictEqual(fs.readdirSync(path.join(root, 'tmp')), [], 'drops the downloaded originals');
       const projectView = await request('GET', `/services/clips/projects/${project.id}`);
       assert.strictEqual(projectView.json.renders[0].id, queued.json.id);
@@ -623,6 +665,36 @@ describe('clips', function () {
       for (const id of ['a', 'b']) assert.deepStrictEqual((await clips.getClip(id)).proxy, { status: 'pending', attempts: 0, error: null });
     });
 
+    it('keeps building upload proxies while only yt-dlp is missing', async function () {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-noytdlp-'));
+      const own = new Clips({
+        path: dir,
+        discord: {},
+        poll: false,
+        fetch: () => Promise.resolve(response(404, {})),
+        run: async (command) => {
+          if (command === 'yt-dlp') throw Object.assign(new Error('spawn yt-dlp ENOENT'), { code: 'ENOENT' });
+          return { code: 1, stdout: '', stderr: 'no such file' };
+        },
+        resolveToken: () => ({ token: 'test-token', source: 'test' })
+      });
+      await own.start();
+      try {
+        const upload = { id: 'u', kind: 'attachment', guildId: '1', channelId: '2', messageId: '3', attachmentId: '4', filename: 'clip.mp4', author: 'Ace', postedAt: '2026-10-20T02:41:00.000Z', proxy: { status: 'pending', attempts: 0, error: null } };
+        for (const record of [linkClip('l1', { status: 'pending', attempts: 0, error: null }), upload, linkClip('l2', { status: 'pending', attempts: 0, error: null })]) {
+          await own.store.set(`/clips/${record.id}`, record);
+          await own._append('clips', record.id);
+        }
+        await own.processPending();
+        assert.deepStrictEqual((await own.getClip('l1')).proxy, { status: 'pending', attempts: 0, error: null });
+        assert.deepStrictEqual((await own.getClip('l2')).proxy, { status: 'pending', attempts: 0, error: null });
+        assert.strictEqual((await own.getClip('u')).proxy.attempts, 1, 'the upload after the link was still tried');
+      } finally {
+        await own.stop();
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     it('requeues clips that failed for a missing tool or codec, and every failure when asked', async function () {
       await seed([
         linkClip('c', { status: 'failed', attempts: 3, error: 'ffprobe is not installed' }),
@@ -684,6 +756,172 @@ describe('clips', function () {
     });
   });
 
+  describe('Clips screenshots', function () {
+    this.timeout(20000);
+
+    const SHOTS = '1300000000000000009';
+    const POSTED = '2026-10-20T02:40:00.000000+00:00';
+    const MESSAGE = snowflakeAt(Date.parse(POSTED));
+    const VIDEO_URL = `${CDN}/${SHOTS}/8001/raid.mp4`;
+    const IMAGE_URL = `${CDN}/${SHOTS}/8002/shot.png`;
+    // A PNG whose tIME chunk (UTC) says it was saved at 02:38:40.
+    const chunk = (type, data) => Buffer.concat([Buffer.from([0, 0, 0, data.length]), Buffer.from(type, 'latin1'), data, Buffer.alloc(4)]);
+    const PNG = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('tIME', Buffer.from([0x07, 0xea, 10, 20, 2, 38, 40])),
+      chunk('IEND', Buffer.alloc(0))
+    ]);
+    let root;
+    let clips;
+    let runs;
+    let server;
+    let port;
+
+    function fetchStub (url, opts = {}) {
+      if (url.startsWith('https://discord.com/api/v10/')) {
+        const api = url.slice('https://discord.com/api/v10'.length);
+        if (api.startsWith('/users/@me/guilds')) return Promise.resolve(response(200, [{ id: GUILD, name: 'G00N SQUAD' }]));
+        if (api === `/guilds/${GUILD}/channels`) return Promise.resolve(response(200, [{ id: SHOTS, type: 0, name: 'screenshots' }]));
+        if (api === `/guilds/${GUILD}/threads/active`) return Promise.resolve(response(200, { threads: [] }));
+        if (api.startsWith(`/channels/${SHOTS}/threads/archived/public?`)) return Promise.resolve(response(200, { threads: [], has_more: false }));
+        if (api.startsWith(`/channels/${SHOTS}/messages?after=`)) {
+          return Promise.resolve(response(200, api.includes(`after=${MESSAGE}`) ? [] : [{
+            id: MESSAGE,
+            timestamp: POSTED,
+            content: 'raid and a screenshot',
+            author: { id: '7003', username: 'cy', global_name: 'Cy' },
+            attachments: [
+              { id: '8001', filename: 'raid.mp4', content_type: 'video/mp4', url: VIDEO_URL },
+              { id: '8002', filename: 'Star Citizen Screenshot 2026.10.19 - 21.38.40.12.png', content_type: 'image/png', width: 1920, height: 1080, url: IMAGE_URL }
+            ]
+          }]));
+        }
+        if (api === `/guilds/${GUILD}/members/7003`) return Promise.resolve(response(200, { user: { id: '7003', username: 'cy', global_name: 'Cy' } }));
+        if (api === '/attachments/refresh-urls' && opts.method === 'POST') {
+          const asked = JSON.parse(opts.body).attachment_urls;
+          return Promise.resolve(response(200, { refreshed_urls: asked.map((original) => ({ original, refreshed: `${original}?ex=new` })) }));
+        }
+        return Promise.resolve(response(404, { message: 'Unknown' }));
+      }
+      if (url === `${VIDEO_URL}?ex=new`) return Promise.resolve(response(200, 'VIDEO'));
+      if (url === `${IMAGE_URL}?ex=new`) return Promise.resolve(response(200, PNG));
+      return Promise.resolve(response(404, 'nope'));
+    }
+
+    async function fakeRun (command, args) {
+      runs.push([command, args]);
+      const last = args[args.length - 1];
+      if (/^--?version$/.test(args[0])) return { code: 1, stdout: '', stderr: 'no versions in this test' };
+      if (command === 'ffprobe') {
+        const image = fs.readFileSync(last).equals(PNG);
+        return {
+          code: 0,
+          stderr: '',
+          stdout: JSON.stringify(image
+            ? { streams: [{ codec_type: 'video', codec_name: 'png', width: 1920, height: 1080 }], format: { duration: '0.04' } }
+            : { streams: [{ codec_type: 'video', codec_name: 'h264', width: 1920, height: 1080 }], format: { duration: '600.0' } })
+        };
+      }
+      fs.writeFileSync(last, 'FAKE-' + path.basename(last));
+      return { code: 0, stdout: '', stderr: '' };
+    }
+
+    before(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-shots-'));
+      runs = [];
+      clips = new Clips({
+        path: root,
+        discord: {},
+        refreshOnStart: false,
+        ttlMs: 0,
+        rescanEveryMs: 0,
+        minFreeBytes: 0,
+        externalLinks: false,
+        stillSeconds: 8,
+        fetch: fetchStub,
+        run: fakeRun,
+        resolveToken: () => ({ token: 'test-token', source: 'test' })
+      });
+      await clips.start();
+      const middleware = clips.middleware();
+      server = http.createServer((req, res) => middleware(req, res, () => { res.statusCode = 418; res.end(); }));
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      port = server.address().port;
+    });
+
+    after(async function () {
+      if (server) await new Promise((resolve) => server.close(resolve));
+      if (clips) await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    function get (pathname) {
+      return new Promise((resolve, reject) => {
+        http.get({ hostname: '127.0.0.1', port, path: pathname, headers: { Accept: 'application/json' } }, (res) => {
+          const chunks = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, raw: Buffer.concat(chunks).toString() }));
+        }).on('error', reject);
+      });
+    }
+
+    it('reads screenshots channels and builds a preview and a one-frame sprite', async function () {
+      const status = await clips.refresh();
+      assert.strictEqual(status.added, 2);
+      await clips._processing;
+      const shot = await clips.getClip('8002');
+      assert.strictEqual(shot.media, 'image');
+      assert.strictEqual(shot.proxy.status, 'ready', shot.proxy.error);
+      assert.strictEqual(shot.durationMs, null);
+      assert.strictEqual(shot.hasAudio, false);
+      assert.deepStrictEqual(
+        [shot.recording.recordedAt, shot.recording.source, shot.recording.pattern, shot.recording.offsetMinutes, shot.recording.zone, shot.recording.field],
+        ['2026-10-20T02:38:40.120Z', 'filename', 'shadowplay', -300, 'metadata', 'png:tIME'],
+        'the NVIDIA name dates it; the PNG tIME chunk gives the zone'
+      );
+      assert.deepStrictEqual(shot.timeTags, [{ field: 'png:tIME', value: '2026-10-20T02:38:40Z' }]);
+      assert.deepStrictEqual(await clips.store.get('/authors/7003').then((a) => a.offsetMinutes), -300);
+      assert.deepStrictEqual(shot.proxy.thumbs, { every: 1, count: 1, columns: 1, rows: 1, width: 120, height: 68 });
+      assert.strictEqual(shot.master.file, '8002.png');
+      assert.ok(fs.existsSync(path.join(root, 'media', '8002.preview.jpg')));
+      assert.ok(fs.existsSync(path.join(root, 'media', '8002.jpg')));
+      const ffmpeg = runs.filter(([command, args]) => command === 'ffmpeg' && args.some((arg) => arg.includes(`${path.sep}8002-`)));
+      assert.strictEqual(ffmpeg.length, 2, 'a preview and a sprite, no video proxy');
+      assert.ok(ffmpeg[0][1].includes('scale=-2:trunc(min(720\\,ih)/2)*2'), 'a preview at most 720p');
+      assert.ok(ffmpeg[1][1].includes('scale=120:68'));
+    });
+
+    it('serves the screenshot with its display time, in the same session as the video', async function () {
+      const list = JSON.parse((await get('/services/clips')).raw);
+      assert.strictEqual(list.status.screenshots, 1);
+      assert.deepStrictEqual(list.stills, { seconds: 8, maxSeconds: 60 });
+      const shot = list.clips.find((c) => c.id === '8002');
+      assert.deepStrictEqual([shot.media, shot.durationMs, shot.proxyUrl], ['image', 8000, '/services/clips/8002/proxy']);
+      assert.strictEqual(list.clips.find((c) => c.id === '8001').media, 'video');
+      const preview = await get('/services/clips/8002/proxy');
+      assert.strictEqual(preview.status, 200);
+      assert.strictEqual(preview.headers['content-type'], 'image/jpeg');
+      assert.strictEqual(preview.raw, 'FAKE-preview.jpg');
+      const [session] = JSON.parse((await get('/services/clips/sessions')).raw).sessions;
+      assert.deepStrictEqual([session.clipCount, session.screenshotCount], [2, 1]);
+      const entry = session.tracks[0].clips.find((c) => c.id === '8002');
+      assert.strictEqual(entry.durationMs, 8000);
+    });
+
+    it('cuts a screenshot into a project and renders it as a held frame', async function () {
+      const project = await clips.createProject({ name: 'Raid night', segments: [{ clipId: '8001', in: 0, out: 4 }, { clipId: '8002', in: 0, out: 6 }] });
+      assert.deepStrictEqual(project.segments[1], { clipId: '8002', in: 0, out: 6, audio: 'on', volume: 1 });
+      await assert.rejects(clips.createProject({ name: 'Too long', segments: [{ clipId: '8002', in: 0, out: 90 }] }), /at most 60s/);
+      runs = [];
+      const render = await clips.startRender(project.id);
+      await clips._renderChain;
+      assert.strictEqual((await clips.getRender(render.id)).status, 'complete');
+      const [, args] = runs.find(([command]) => command === 'ffmpeg');
+      const still = args.indexOf(path.join(root, 'masters', '8002.png'));
+      assert.deepStrictEqual(args.slice(still - 7, still + 1), ['-loop', '1', '-framerate', '30', '-t', '6', '-i', path.join(root, 'masters', '8002.png')]);
+    });
+  });
+
   describe('Clips masters and rescans', function () {
     this.timeout(20000);
 
@@ -701,7 +939,10 @@ describe('clips', function () {
       if (/^--?version$/.test(args[0])) return { code: 0, stderr: '', stdout: `${command} 1.0\n` };
       if (command === 'yt-dlp' && args.includes('-J')) return { code: 0, stderr: '', stdout: JSON.stringify({ height: offered, requested_formats: [{ height: offered }, { height: null }] }) };
       if (command === 'yt-dlp') {
-        fs.writeFileSync(args[args.indexOf('-o') + 1], `LINK-${offered}`);
+        const out = args[args.indexOf('-o') + 1];
+        fs.writeFileSync(out, `LINK-${offered}`);
+        // Medal's clip creation time, as yt-dlp reports it.
+        if (args.includes('--write-info-json')) fs.writeFileSync(out.replace(/\.mp4$/, '.info.json'), JSON.stringify({ timestamp: Date.parse('2026-10-20T02:35:00Z') / 1000 }));
         return { code: 0, stdout: '', stderr: '' };
       }
       if (command === 'ffprobe') {
@@ -768,6 +1009,8 @@ describe('clips', function () {
       assert.strictEqual(fs.readFileSync(path.join(root, 'masters', upload.master.file), 'utf8'), 'UPLOAD-1080');
       const link = await clips.getClip('9002-l0');
       assert.strictEqual(link.master.height, 720);
+      assert.strictEqual(link.uploadedAt, '2026-10-20T02:35:00.000Z');
+      assert.deepStrictEqual([link.recording.recordedAt, link.recording.source], ['2026-10-20T02:34:48.000Z', 'uploaded'], 'the host had it before the post');
       assert.deepStrictEqual(clips.publicClip(link).master, { width: 1280, height: 720 });
       assert.ok(!JSON.stringify(clips.publicClip(link)).includes(root), 'no server paths');
     });
@@ -811,6 +1054,243 @@ describe('clips', function () {
         assert.deepStrictEqual(await clips.rescan({ limit: Infinity }), { checked: 0, stored: 0, upgraded: 0 });
       } finally {
         clips.settings.minFreeBytes = 0;
+      }
+    });
+
+    it('waits for disk space before downloading a clip', async function () {
+      const pending = ready('6003', { kind: 'attachment', url: UPLOAD, filename: 'late.mp4', proxy: { status: 'pending', attempts: 0, error: null } });
+      await clips.store.set('/clips/6003', pending);
+      await clips._append('clips', '6003');
+      const max = clips.settings.maxDownloadBytes;
+      clips.settings.maxDownloadBytes = Number.MAX_SAFE_INTEGER;
+      try {
+        assert.strictEqual(await clips.processPending(), 0);
+        assert.deepStrictEqual((await clips.getClip('6003')).proxy.attempts, 0, 'no attempt spent');
+      } finally {
+        clips.settings.maxDownloadBytes = max;
+      }
+      assert.strictEqual(await clips.processPending(), 1);
+      assert.strictEqual((await clips.getClip('6003')).proxy.status, 'ready');
+    });
+  });
+
+  describe('Clips stream announcements', function () {
+    this.timeout(20000);
+
+    const STREAMS = '1300000000000000030';
+    const GENERAL = '1300000000000000031';
+    const at = (iso) => ({ id: snowflakeAt(Date.parse(iso)), timestamp: iso.replace('Z', '000+00:00') });
+    const STREAMCORD = { id: '1224890003667025973', username: 'Streamcord', bot: true };
+    const MESSAGES = [
+      Object.assign(at('2026-10-18T00:00:00.000Z'), { content: 'https://twitch.tv/ghost is live', author: STREAMCORD }),
+      Object.assign(at('2026-10-20T01:05:00.000Z'), {
+        content: '<@&1224891530313994365> **Neorion** is live!',
+        author: STREAMCORD,
+        embeds: [{ type: 'rich', url: 'https://www.twitch.tv/neorion', title: 'Night ops with the G00Ns', author: { name: 'Neorion', url: 'https://www.twitch.tv/neorion' } }]
+      }),
+      Object.assign(at('2026-10-20T02:00:00.000Z'), { content: 'catch the VOD https://www.twitch.tv/videos/555', author: { id: '7003', username: 'kersa' } }),
+      Object.assign(at('2026-10-20T03:00:00.000Z'), { content: 'still going https://twitch.tv/neorion', author: STREAMCORD }),
+      Object.assign(at('2026-10-20T04:00:00.000Z'), { content: 'lol https://www.twitch.tv/neorion/clip/FunnyClip-abc', author: { id: '7003', username: 'kersa' } }),
+      Object.assign(at('2026-10-21T11:40:00.000Z'), {
+        content: '**Neorion** is live!',
+        author: STREAMCORD,
+        embeds: [{ type: 'rich', url: 'https://www.twitch.tv/neorion', title: 'Mining', author: { name: 'Neorion' } }]
+      })
+    ];
+    const ARCHIVES = (id) => `https://www.twitch.tv/${id}/videos?filter=archives&sort=time`;
+    const row = (id, start, seconds, extra) => JSON.stringify(Object.assign({
+      id: `v${id}`, timestamp: Date.parse(start) / 1000, duration: seconds, is_live: false, uploader: 'Neorion', uploader_id: 'neorion', title: 'Night ops with the G00Ns'
+    }, extra));
+    let root;
+    let clips;
+    let clock;
+    let runs;
+    let calls;
+    let liveNow;
+
+    async function fakeRun (command, args) {
+      runs.push([command, args]);
+      const last = args[args.length - 1];
+      if (/^--?version$/.test(args[0])) return { code: 0, stderr: '', stdout: `${command} 1.0\n` };
+      if (command === 'yt-dlp' && args.includes('--print')) {
+        if (last === ARCHIVES('neorion')) {
+          return { code: 0, stderr: '', stdout: [
+            row(999, '2026-10-21T11:38:00Z', liveNow ? 1320 : 7200, { is_live: liveNow, title: 'Mining' }),
+            row(888, '2026-10-20T01:02:00Z', 10800),
+            row(777, '2026-10-18T20:00:00Z', 7200, { title: 'Bounties' })
+          ].join('\n') + '\n' };
+        }
+        if (last === 'https://www.twitch.tv/videos/555') return { code: 0, stderr: '', stdout: row(555, '2026-10-19T22:00:00Z', 3600, { uploader: 'Kersa', uploader_id: 'kersa', title: 'Hauling' }) + '\n' };
+        // A missing channel: yt-dlp prints nothing and fails.
+        return { code: 1, stderr: 'ERROR: [twitch:videos] ghost: Channel does not exist', stdout: '' };
+      }
+      if (command === 'yt-dlp') {
+        const out = args[args.indexOf('-o') + 1];
+        fs.writeFileSync(out, `VOD ${last}`);
+        fs.writeFileSync(out.replace(/\.mp4$/, '.info.json'), JSON.stringify({ timestamp: Date.parse('2026-10-20T01:02:00Z') / 1000, was_live: true }));
+        return { code: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'ffprobe') {
+        const seconds = /videos\/555/.test(fs.readFileSync(last, 'utf8')) ? 3600 : 10800;
+        return { code: 0, stderr: '', stdout: JSON.stringify({ streams: [{ codec_type: 'video', codec_name: 'h264', width: 1280, height: 720 }, { codec_type: 'audio' }], format: { duration: String(seconds) } }) };
+      }
+      fs.writeFileSync(last, 'FAKE');
+      return { code: 0, stdout: '', stderr: '' };
+    }
+
+    function fetchStub (url) {
+      calls.push(url);
+      const api = url.slice('https://discord.com/api/v10'.length);
+      const ok = (json) => Promise.resolve(response(200, json));
+      if (api.startsWith('/users/@me/guilds')) return ok([{ id: GUILD, name: 'G00N SQUAD' }]);
+      if (api === `/guilds/${GUILD}/channels`) {
+        return ok([{ id: STREAMS, type: 0, name: '📺│streams' }, { id: GENERAL, type: 0, name: 'general' }]);
+      }
+      if (api === `/guilds/${GUILD}/threads/active`) return ok({ threads: [] });
+      if (api.startsWith(`/channels/${STREAMS}/threads/archived/public?`)) return ok({ threads: [], has_more: false });
+      if (api.startsWith(`/channels/${STREAMS}/messages?after=`)) return ok(MESSAGES);
+      if (api.startsWith(`/guilds/${GUILD}/members/`)) return ok({ nick: 'Kersa', user: { id: '7003', username: 'kersa' } });
+      return Promise.resolve(response(404, { message: 'Unknown' }));
+    }
+
+    const ytdlpLists = () => runs.filter(([command, args]) => command === 'yt-dlp' && args.includes('--print')).map(([, args]) => args[args.length - 1]);
+
+    before(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-streams-'));
+      clock = Date.parse('2026-10-21T12:00:00Z');
+      runs = [];
+      calls = [];
+      liveNow = true;
+      clips = new Clips({
+        path: root,
+        discord: {},
+        refreshOnStart: false,
+        poll: false,
+        backfillDays: 0,
+        minFreeBytes: 0,
+        streams: { maxDownloadBytes: 1024 },
+        fetch: fetchStub,
+        run: fakeRun,
+        now: () => clock,
+        resolveToken: () => ({ token: 'test-token', source: 'test' })
+      });
+      await clips.start();
+    });
+
+    after(async function () {
+      if (clips) await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('reads #streams for go-live announcements, not other channels', async function () {
+      const status = await clips.refresh();
+      assert.strictEqual(status.channels, 1);
+      assert.strictEqual(status.added, 1, 'the Twitch clip link is a clip; the announcements are not');
+      assert.ok(!calls.some((c) => c.includes(`/channels/${GENERAL}/`)));
+      const announcements = await Promise.all((await clips._list('streams')).map((id) => clips.store.get(`/streams/${id}`)));
+      assert.deepStrictEqual(announcements.map((a) => [a.login, a.vodId]), [
+        ['ghost', null], ['neorion', null], [null, '555'], ['neorion', null], ['neorion', null]
+      ]);
+      assert.strictEqual(announcements[1].streamer, 'Neorion');
+      await clips._processing;
+    });
+
+    it('collects each finished broadcast once, dated by when it went live, by the streamer', async function () {
+      assert.deepStrictEqual(ytdlpLists().sort(), [ARCHIVES('ghost'), ARCHIVES('neorion'), 'https://www.twitch.tv/videos/555'].sort(), 'each channel listed once');
+      const vod = await clips.getClip('twitch-v888');
+      assert.deepStrictEqual([vod.author, vod.caption, vod.channelName, vod.postedAt], ['Neorion', 'Night ops with the G00Ns', '📺│streams', MESSAGES[1].timestamp]);
+      assert.deepStrictEqual(vod.stream, { platform: 'twitch', channel: 'neorion', vodId: '888', announcement: `${MESSAGES[1].id}-neorion` });
+      assert.deepStrictEqual([vod.recording.recordedAt, vod.recording.source, vod.recording.confidence], ['2026-10-20T01:02:00.000Z', 'broadcast', 'high']);
+      assert.strictEqual(vod.uploadedAt, null, 'a VOD\'s host time is its start, not an upload');
+      assert.deepStrictEqual([vod.proxy.status, vod.durationMs, vod.master.height], ['ready', 10800000, 720]);
+      const download = runs.find(([command, args]) => command === 'yt-dlp' && args.includes('-o') && args.includes('https://www.twitch.tv/videos/888'))[1];
+      assert.strictEqual(download[download.indexOf('-f') + 1], 'b[height<=720]/bv*[height<=720]+ba/b');
+      assert.strictEqual(download[download.indexOf('--max-filesize') + 1], '1024');
+
+      const direct = await clips.getClip('twitch-v555');
+      assert.deepStrictEqual([direct.author, direct.recording.recordedAt, direct.recording.source], ['Kersa', '2026-10-19T22:00:00.000Z', 'broadcast']);
+      assert.strictEqual(await clips.getClip('twitch-v999'), null, 'still live');
+      assert.strictEqual(await clips.getClip('twitch-v777'), null, 'never announced');
+
+      const byId = new Map();
+      for (const id of await clips._list('streams')) byId.set(id, await clips.store.get(`/streams/${id}`));
+      const status = (message, login) => byId.get(`${message.id}-${login}`);
+      assert.deepStrictEqual([status(MESSAGES[1], 'neorion').status, status(MESSAGES[3], 'neorion').status], ['collected', 'collected']);
+      assert.strictEqual(status(MESSAGES[3], 'neorion').clipId, 'twitch-v888', 'a re-announcement is the same broadcast');
+      assert.deepStrictEqual([status(MESSAGES[5], 'neorion').status, status(MESSAGES[5], 'neorion').vodId], ['waiting', '999']);
+      assert.deepStrictEqual([status(MESSAGES[0], 'ghost').status, status(MESSAGES[0], 'ghost').error], ['waiting', 'yt-dlp exited 1: ERROR: [twitch:videos] ghost: Channel does not exist']);
+
+      const pub = clips.publicClip(vod);
+      assert.deepStrictEqual(pub.stream, { platform: 'twitch', channel: 'neorion', url: 'https://www.twitch.tv/neorion' });
+      assert.strictEqual(pub.linkUrl, 'https://www.twitch.tv/videos/888');
+      const session = (await clips.sessions()).find((s) => s.clips.some((c) => c.id === 'twitch-v888'));
+      assert.ok(session.tracks.some((track) => track.author === 'Neorion'));
+      const list = await clips.list();
+      assert.deepStrictEqual([list.status.vods, list.status.streams], [2, { waiting: 2, collected: 3, none: 0, missed: 0 }]);
+    });
+
+    it('checks again only after checkEveryMs, and collects a broadcast once it is over', async function () {
+      runs = [];
+      assert.strictEqual((await clips.collectStreams()).checked, 0);
+      assert.deepStrictEqual(ytdlpLists(), []);
+      clock = Date.parse('2026-10-21T14:30:00Z');
+      liveNow = false;
+      const result = await clips.collectStreams();
+      assert.deepStrictEqual([result.collected, result.none], [1, 0]);
+      const vod = await clips.getClip('twitch-v999');
+      assert.deepStrictEqual([vod.caption, vod.durationMs, vod.recording.recordedAt, vod.proxy.status], ['Mining', 7200000, '2026-10-21T11:38:00.000Z', 'pending']);
+    });
+
+    it('gives up on announcements with no VOD, and on old ones', async function () {
+      const ghost = `${MESSAGES[0].id}-ghost`;
+      clips.settings.run = async (command, args) => (command === 'yt-dlp' && args.includes('--print') ? { code: 0, stdout: '', stderr: '' } : fakeRun(command, args));
+      try {
+        clock += 60 * 60 * 1000;
+        assert.strictEqual((await clips.collectStreams()).none, 1, 'listed, and nothing fits');
+        assert.strictEqual((await clips.store.get(`/streams/${ghost}`)).status, 'none');
+        await clips.store.set('/streams/old', { id: 'old', login: 'neorion', announcedAt: '2026-08-01T00:00:00.000Z', status: 'waiting' });
+        await clips._append('streams', 'old');
+        assert.strictEqual((await clips.collectStreams()).missed, 1);
+        assert.strictEqual((await clips.store.get('/streams/old')).status, 'missed');
+      } finally {
+        clips.settings.run = fakeRun;
+      }
+    });
+
+    it('waits for disk space before downloading a VOD', async function () {
+      clips.settings.streams.maxDownloadBytes = Number.MAX_SAFE_INTEGER;
+      try {
+        assert.strictEqual(await clips.processPending(), 0);
+        assert.strictEqual((await clips.getClip('twitch-v999')).proxy.attempts, 0, 'no attempt spent');
+      } finally {
+        clips.settings.streams.maxDownloadBytes = 1024;
+      }
+      assert.strictEqual(await clips.processPending(), 1);
+      assert.strictEqual((await clips.getClip('twitch-v999')).proxy.status, 'ready');
+    });
+
+    it('never rescans a stored VOD, and keeps its date on restart', async function () {
+      runs = [];
+      clock += 8 * 24 * 60 * 60 * 1000;
+      const result = await clips.rescan({ limit: Infinity });
+      assert.strictEqual(result.upgraded, 0);
+      assert.ok(!runs.some(([command, args]) => command === 'yt-dlp' && /videos\/\d+$/.test(args[args.length - 1])), 'Twitch not asked again');
+      assert.strictEqual(await clips.redate(), 0);
+    });
+
+    it('keeps VODs as links when downloads are off', async function () {
+      clips.settings.streams.download = false;
+      try {
+        const id = await clips._addVod(
+          { id: 'x', login: 'neorion', guildId: GUILD, channelId: STREAMS, channelName: 'streams', messageId: '1', messageUrl: 'u', announcedAt: '2026-10-22T00:05:00.000Z' },
+          { id: '1234', startedAt: '2026-10-22T00:00:00.000Z', startMs: Date.parse('2026-10-22T00:00:00Z'), durationMs: 3600000, streamer: 'Neorion', channel: 'neorion', title: 'Late' }
+        );
+        assert.strictEqual((await clips.getClip(id)).proxy.status, 'skipped');
+        assert.strictEqual(await clips.queueLinks(), 0);
+        const pub = clips.publicClip(await clips.getClip(id));
+        assert.deepStrictEqual([pub.durationMs, pub.recordedAt, pub.proxyUrl], [3600000, '2026-10-22T00:00:00.000Z', null], 'on the timeline at its real length');
+      } finally {
+        clips.settings.streams.download = true;
       }
     });
   });

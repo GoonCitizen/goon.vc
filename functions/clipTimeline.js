@@ -4,12 +4,18 @@
  * Group clips into recording sessions: clips whose recordings overlap, or
  * start within `gapMs` of the session so far, belong together. Inside a
  * session every uploader gets a track (one point of view), and a track's
- * clips that overlap each other go on separate lanes.
+ * clips that overlap each other go on separate lanes. Screenshots
+ * (`media: 'image'`) take their display time on the timeline.
  */
 
 // A play session runs for hours with long stretches between clips; separate
 // evenings are further apart than this.
 const DEFAULT_GAP_MS = 2 * 60 * 60 * 1000;
+const DEFAULT_STILL_MS = 5000;
+
+function isStill (clip) {
+  return Boolean(clip && clip.media === 'image');
+}
 
 /**
  * Start of a clip's recording in ms, after any manual override and sync nudge.
@@ -22,7 +28,15 @@ function clipStartMs (clip) {
   return base + (Number(override.syncOffsetMs) || 0);
 }
 
-function clipDurationMs (clip) {
+/**
+ * How long a clip runs on the timeline: a video's length, a screenshot's
+ * display time.
+ * @param {Object} clip
+ * @param {number} [stillMs] Display time of a screenshot.
+ * @returns {number}
+ */
+function clipDurationMs (clip, stillMs = DEFAULT_STILL_MS) {
+  if (isStill(clip)) return Math.max(0, Number(stillMs) || 0);
   return Math.max(0, Number(clip && clip.durationMs) || 0);
 }
 
@@ -49,14 +63,16 @@ function assignLanes (items) {
  * @param {Array<Object>} clips Clip records (`id`, `author`, `durationMs`, `recording`, `override`).
  * @param {Object} [opts]
  * @param {number} [opts.gapMs] Largest silence inside one session.
+ * @param {number} [opts.stillMs] Display time of a screenshot.
  * @returns {Array<Object>} sessions, newest first
  */
 function groupSessions (clips, opts = {}) {
   const gapMs = Number.isFinite(Number(opts.gapMs)) ? Math.max(0, Number(opts.gapMs)) : DEFAULT_GAP_MS;
+  const stillMs = Number.isFinite(Number(opts.stillMs)) ? Math.max(0, Number(opts.stillMs)) : DEFAULT_STILL_MS;
   const timed = (clips || [])
     .map((clip) => {
       const startMs = clipStartMs(clip);
-      return { clip, startMs, endMs: startMs + clipDurationMs(clip) };
+      return { clip, startMs, endMs: startMs + clipDurationMs(clip, stillMs) };
     })
     .filter((item) => Number.isFinite(item.startMs))
     .sort((a, b) => (a.startMs - b.startMs) || String(a.clip.id).localeCompare(String(b.clip.id)));
@@ -100,6 +116,7 @@ function groupSessions (clips, opts = {}) {
       endsAt: new Date(group.endMs).toISOString(),
       durationMs: group.endMs - group.startMs,
       clipCount: group.items.length,
+      screenshotCount: group.items.filter((item) => isStill(item.clip)).length,
       authors: tracks.map((track) => track.author),
       channels: Array.from(new Set(group.items.map((item) => item.clip.channelName).filter(Boolean))),
       tracks
@@ -109,6 +126,8 @@ function groupSessions (clips, opts = {}) {
 
 module.exports = {
   DEFAULT_GAP_MS,
+  DEFAULT_STILL_MS,
+  isStill,
   clipStartMs,
   clipDurationMs,
   assignLanes,

@@ -15,11 +15,14 @@ const Members = require('./members');
 const Events = require('./events');
 const Operations = require('./operations');
 const Presence = require('./presence');
+const Community = require('./community');
 const Tournaments = require('./tournaments');
 const Leagues = require('./leagues');
 const Leaderboard = require('./leaderboard');
 const Clips = require('./clips');
 const Commands = require('./commands');
+const FabricRelay = require('./fabricRelay');
+const Alliance = require('./alliance');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
@@ -138,6 +141,8 @@ class GoonVC {
     this.commands = null;
     this.leaderboard = null;
     this.clips = null;
+    this.fabric = null;
+    this.alliance = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
     this._listeners = {};
@@ -208,7 +213,9 @@ class GoonVC {
       [() => this.presence, pageMeta.findPage(pages, spa._site('idlerpgPath'))],
       [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
       [() => this.leagues, pageMeta.findPage(pages, spa._site('leaguesPath'))],
-      [() => this.clips, pageMeta.findPage(pages, spa._site('clipsPath'))]
+      [() => this.clips, pageMeta.findPage(pages, spa._site('clipsPath'))],
+      [() => this.alliance, pageMeta.findPage(pages, spa._site('permafleetVotesPath'))],
+      [() => this.alliance && { page: (pathname) => this.alliance.federationPage(pathname) }, pageMeta.findPage(pages, spa._site('federationsPath'))]
     ];
     const storedPage = async (pathname) => {
       for (const [service, index] of stores) {
@@ -263,7 +270,7 @@ class GoonVC {
   _canonicalPathMiddleware () {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const pages = spa.pages();
-    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
+    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath', 'permafleetVotesPath', 'federationsPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
     const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
       || prefixes.some((prefix) => pathname.toLowerCase().startsWith(prefix));
     return (req, res, next) => {
@@ -344,17 +351,27 @@ class GoonVC {
         ? path.resolve(discord.schedule.snapshot)
         : undefined,
       scheduleBrand: discord.schedule && discord.schedule.brand,
+      scheduleServers: discord.schedule && discord.schedule.servers,
       fetch: eventSettings.fetch,
       resolveToken: eventSettings.resolveToken
     });
     await this.events.start();
 
+    const fabricSettings = this.settings.fabric || {};
+    const communitySettings = this.settings.community || {};
     const operationSettings = this.settings.operations || {};
+    const communityGateway = Community.gateway(communitySettings);
+    const intents = [
+      ...(FabricRelay.enabled(fabricSettings) ? FabricRelay.INTENTS : []),
+      ...communityGateway.intents
+    ];
     this.operations = new Operations({
       path: operationSettings.path || './stores/operations',
       file: operationSettings.file ? path.resolve(operationSettings.file) : undefined,
       discord,
       gateway: operationSettings.gateway,
+      intents: intents.length ? intents : undefined,
+      partials: communityGateway.partials.length ? communityGateway.partials : undefined,
       flushMs: operationSettings.flushMs,
       tickMs: operationSettings.tickMs,
       Discord: operationSettings.Discord,
@@ -363,6 +380,25 @@ class GoonVC {
     this.operations.on('log', (...parts) => this.emit('log', ...parts));
     this.operations.on('error', (...parts) => this.emit('error', ...parts));
     await this.operations.start();
+
+    const spa = new GoonSite(this.settings.site || {}).spa;
+    this.community = new Community({
+      enabled: communitySettings.enabled,
+      path: communitySettings.path || './stores/community',
+      scripts: communitySettings.scripts ? path.resolve(communitySettings.scripts) : undefined,
+      token: communitySettings.token || null,
+      campaigns: communitySettings.campaigns,
+      siteUrl: spa._site('siteUrl'),
+      gateway: operationSettings.gateway,
+      operations: this.operations,
+      Doorman: communitySettings.Doorman,
+      Scripts: communitySettings.Scripts,
+      Campaigns: communitySettings.Campaigns,
+      DoormanDiscord: communitySettings.DoormanDiscord
+    });
+    this.community.on('log', (...parts) => this.emit('log', ...parts));
+    this.community.on('error', (...parts) => this.emit('error', ...parts));
+    await this.community.start();
 
     const presenceSettings = this.settings.presence || {};
     this.presence = new Presence({
@@ -374,6 +410,7 @@ class GoonVC {
       announcements: presenceSettings.announcements,
       gateway: presenceSettings.gateway,
       operations: this.operations,
+      community: this.community,
       Doorman: presenceSettings.Doorman,
       IdleRPG: presenceSettings.IdleRPG,
       DoormanDiscord: presenceSettings.DoormanDiscord
@@ -381,13 +418,12 @@ class GoonVC {
     this.presence.on('log', (...parts) => this.emit('log', ...parts));
     this.presence.on('error', (...parts) => this.emit('error', ...parts));
     await this.presence.start();
+    this.community.activity((target) => this.presence.lastSeen(target));
 
     const tournamentSettings = this.settings.tournaments || {};
-    const spa = new GoonSite(this.settings.site || {}).spa;
     const identify = async (req) => {
-      const current = await this.members._sessionFromRequest(req);
-      const member = current && await this.members.getMember(current.session.memberId);
-      return (member && member.displayName) || null;
+      const current = await this.members.currentMember(req);
+      return (current && current.member.displayName) || null;
     };
     const postResults = (report, by) => this.leagues.recordTournament(Leagues.OPEN_LEAGUE_ID, report, by).catch((error) => {
       this.emit('error', 'GOON.VC', `could not post tournament ${report.id} to the Open League: ${error.message}`);
@@ -411,17 +447,23 @@ class GoonVC {
         gateway: () => (this.operations && this.operations.discord ? this.operations.discord.client : null),
         fetch: leagueSettings.fetch,
         resolveToken: leagueSettings.resolveToken
-      })
+      }),
+      members: this.members
     });
     await this.leagues.start();
+    this.members.on('merged', () => this.leagues.relinkMembers().catch((error) => {
+      this.emit('error', 'GOON.VC', `could not relink league rosters after a member merge: ${error.message}`);
+    }));
     for (const report of await this.tournaments.resultReports()) await postResults(report);
 
     const commandSettings = this.settings.commands || {};
     this.commands = new Commands({
       operations: commandSettings.enabled === false ? null : this.operations,
       presence: this.presence,
+      community: this.community,
       leagues: this.leagues,
       members: this.members,
+      alliance: () => this.alliance,
       siteUrl: spa._site('siteUrl'),
       idlerpgPath: spa._site('idlerpgPath'),
       leaguesPath: spa._site('leaguesPath'),
@@ -454,6 +496,31 @@ class GoonVC {
     }));
     await this.clips.start();
 
+    this.fabric = new FabricRelay(Object.assign({}, fabricSettings, {
+      path: fabricSettings.path || './stores/fabric',
+      guildId: discord.guildId,
+      operations: this.operations
+    }));
+    this.fabric.on('log', (...parts) => this.emit('log', ...parts));
+    this.fabric.on('error', (...parts) => this.emit('error', ...parts));
+    await this.fabric.start();
+
+    const allianceSettings = this.settings.alliance || {};
+    this.alliance = new Alliance({
+      path: allianceSettings.path || './stores/alliance',
+      file: allianceSettings.file ? path.resolve(allianceSettings.file) : undefined,
+      organizationsPath: spa._site('organizationsPath'),
+      basePath: spa._site('permafleetVotesPath'),
+      federationsPath: spa._site('federationsPath'),
+      xprv: () => this.fabric.xprv,
+      members: this.members,
+      publish: (frame) => this.fabric.publish(frame),
+      bridge: Object.assign({ origin: spa._site('siteUrl') }, allianceSettings.bridge || {})
+    });
+    this.alliance.on('log', (...parts) => this.emit('log', ...parts));
+    this.alliance.on('error', (...parts) => this.emit('error', ...parts));
+    await this.alliance.start();
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -482,10 +549,13 @@ class GoonVC {
         events: this.events.middleware(),
         operations: this.operations.middleware(),
         presence: this.presence.middleware(),
+        community: this.community.middleware(),
         tournaments: this.tournaments.middleware(),
         leagues: this.leagues.middleware(),
         leaderboard: this.leaderboard.middleware(),
-        clips: this.clips.middleware()
+        clips: this.clips.middleware(),
+        fabric: this.fabric.middleware(),
+        alliance: this.alliance.middleware()
       }
     });
 
@@ -503,7 +573,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.commands, this.tournaments, this.leagues, this.leaderboard, this.clips, this.members, this.events, this.presence, this.operations]) {
+    for (const service of [this.http, this.alliance, this.fabric, this.commands, this.tournaments, this.leagues, this.leaderboard, this.clips, this.members, this.events, this.presence, this.community, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

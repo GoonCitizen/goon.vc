@@ -17,14 +17,12 @@ function renderScheduleCss () {
 
 /**
  * The PERMAFLEET week board: the same `<fabric-calendar>` as /events, pinned
- * to the home Discord server (drawn with the PERMAFLEET brand). The element
- * script comes from `EventsPage.script()`.
- * @param {Object} props
- * @param {string} props.server Home Discord server id.
+ * to the alliance's Discord servers together (`server=permafleet`, drawn with
+ * the PERMAFLEET brand). The element script comes from `EventsPage.script()`.
  */
-function renderScheduleMainHtml (props) {
+function renderScheduleMainHtml () {
   return `<main id="permafleet-schedule" class="schedule-page">
-      ${EventsPage.calendar({ server: props.server })}
+      ${EventsPage.calendar({ server: 'permafleet' })}
     </main>`;
 }
 

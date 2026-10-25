@@ -117,6 +117,15 @@ describe('Events', function () {
     assert.strictEqual(location.searchParams.get('client_id'), '444444444444444444');
     assert.strictEqual(location.searchParams.get('scope'), 'bot applications.commands');
     assert.strictEqual(location.searchParams.get('permissions'), '1024', 'View Channels only');
+
+    const channels = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      channels.end = resolve;
+      events.middleware()({ method: 'GET', url: '/services/discord/invite?for=channels' }, channels, () => resolve());
+    });
+    const permissions = BigInt(new URL(channels.headers.Location).searchParams.get('permissions'));
+    const bit = (n) => 1n << BigInt(n);
+    assert.strictEqual(permissions, bit(4) | bit(10) | bit(11) | bit(16) | bit(20) | bit(21), 'Manage Channels, plus what the PERMAFLEET channels open up: View, Send, Read History, Connect, Speak');
   });
 
   it('lists the home guild subscription tiers that are for sale', async function () {
@@ -171,12 +180,28 @@ describe('Events', function () {
     const before = calls.length;
     const home = await events.board({ server: GOON });
     assert.ok(home.startsWith('<svg'));
-    assert.ok(home.includes('>PERMAFLEET</text>'), 'home guild uses the PERMAFLEET brand');
-    assert.ok(home.includes('INFINITY INDUSTRIES'));
+    assert.ok(home.includes('>G00N SQUAD</text>'), 'the home server alone is drawn as itself');
+    assert.ok(!home.includes('INFINITY INDUSTRIES'));
     assert.ok(home.includes(`<a href="https://discord.com/events/${GOON}/11"`), 'events link to Discord');
     assert.ok(home.includes('FIGHTER FRIDAY'));
     assert.ok(!home.includes('Ally meetup'));
     assert.ok(!home.includes('npm run build:schedule'));
+
+    const alone = await events.board({ server: 'permafleet' });
+    assert.ok(alone.includes('>PERMAFLEET</text>') && alone.includes('INFINITY INDUSTRIES'), 'alliance board, PERMAFLEET brand + org chips');
+    assert.ok(alone.includes('FIGHTER FRIDAY') && !alone.includes('Ally meetup'), 'only the home server until others are listed');
+
+    events.settings.scheduleServers = [ALLY, GOON, ALLY];
+    try {
+      assert.deepStrictEqual(events.allianceServers(), [GOON, ALLY], 'home server first, no repeats');
+      const alliance = await events.board({ server: 'PERMAFLEET' });
+      assert.ok(alliance.includes('>PERMAFLEET</text>') && alliance.includes('INFINITY INDUSTRIES'));
+      assert.ok(alliance.includes('FIGHTER FRIDAY') && alliance.includes('Ally meetup'), 'every listed server');
+      assert.ok(alliance.includes(`<a href="https://discord.com/events/${ALLY}/21"`));
+      assert.ok(!alliance.includes('Locked Server'));
+    } finally {
+      events.settings.scheduleServers = [];
+    }
 
     const ally = await events.board({ server: ALLY });
     assert.ok(ally.includes('>ALLY ORG</text>'));

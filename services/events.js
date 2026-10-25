@@ -6,13 +6,17 @@ const startStore = require('../functions/startStore');
 const discordEvents = require('../functions/discordScheduledEvents');
 const scheduleGraphic = require('../functions/scheduleGraphic');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
+const allianceChannels = require('../functions/allianceChannels');
 
 const BASE = '/services/events';
 const BOARD_PATH = `${BASE}/schedule.svg`;
 const INVITE_PATH = '/services/discord/invite';
 const SUBSCRIPTIONS_PATH = '/services/discord/subscriptions';
+const ALLIANCE_SERVER = 'permafleet';
 // View Channels: enough to read scheduled events and voice presence; the bot never posts.
 const INVITE_PERMISSIONS = '1024';
+// `?for=channels`: also what the PERMAFLEET channel scripts need to create their channels.
+const CHANNEL_INVITE_PERMISSIONS = allianceChannels.invitePermissions();
 const LATEST_KEY = '/events/latest';
 // Store keys are JSON Pointer paths: the index must not sit above /events/guilds/<id>.
 const GUILD_INDEX_KEY = '/events/guildIndex';
@@ -145,7 +149,8 @@ class Events {
    * @param {number} [settings.refreshIntervalMs] Background poll interval (defaults to ttlMs; 0 disables).
    * @param {boolean} [settings.refreshOnStart] Poll Discord as soon as the service starts.
    * @param {string} [settings.snapshot] Single-guild schedule snapshot used before the first fetch.
-   * @param {string} [settings.scheduleBrand] Week-board brand for the home guild (settings.discord.guildId).
+   * @param {string} [settings.scheduleBrand] Brand of the alliance week board (`server=permafleet`).
+   * @param {string[]} [settings.scheduleServers] Discord servers whose events join the home server's on the alliance board (the bot must be in each).
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
    * @param {Function} [settings.resolveToken] Injected for tests; defaults to resolveDiscordToken.
    */
@@ -156,7 +161,8 @@ class Events {
       ttlMs: DEFAULT_TTL_MS,
       refreshOnStart: true,
       snapshot: null,
-      scheduleBrand: 'permafleet'
+      scheduleBrand: 'permafleet',
+      scheduleServers: []
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     if (this.settings.refreshIntervalMs === undefined) this.settings.refreshIntervalMs = this.settings.ttlMs;
     this._resolveToken = this.settings.resolveToken || resolveDiscordToken;
@@ -341,25 +347,42 @@ class Events {
   }
 
   /**
-   * Week board (same renderer as the PERMAFLEET schedule) for one guild, or
-   * every guild when `server` is omitted or `all`.
+   * The alliance's Discord servers: the home server first, then
+   * `scheduleServers`.
+   * @returns {string[]}
+   */
+  allianceServers () {
+    const home = this._homeGuildId();
+    const others = (this.settings.scheduleServers || []).map(String).filter((id) => id && id !== home);
+    return [home].concat(Array.from(new Set(others)));
+  }
+
+  /**
+   * Week board (same renderer as the PERMAFLEET schedule) for one guild,
+   * every guild when `server` is omitted or `all`, or the alliance's servers
+   * together (`server=permafleet`, drawn with `scheduleBrand`).
    * @param {{ server?: string, timeZone?: string }} [opts]
    * @returns {Promise<string>} SVG
    */
   async board (opts = {}) {
     const snapshot = await this.list();
     const server = opts.server && opts.server !== 'all' ? String(opts.server) : null;
-    const guild = server ? (snapshot.guilds || []).find((g) => g.id === server) : null;
-    const events = (snapshot.events || []).filter((e) => !server || e.guildId === server).map(scheduleRow);
-    const home = server === this._homeGuildId();
+    const alliance = server !== null && server.toLowerCase() === ALLIANCE_SERVER;
+    const servers = alliance ? this.allianceServers() : (server ? [server] : null);
+    const guild = server && !alliance ? (snapshot.guilds || []).find((g) => g.id === server) : null;
+    // Home server first, so its day themes win a day another server also themes.
+    const events = (snapshot.events || [])
+      .filter((e) => !servers || servers.includes(e.guildId))
+      .sort((a, b) => (servers ? servers.indexOf(a.guildId) - servers.indexOf(b.guildId) : 0))
+      .map(scheduleRow);
     return scheduleGraphic.renderWeekScheduleSvg({
       events,
       fetchedAt: snapshot.fetchedAt || undefined,
       timeZone: opts.timeZone,
-      brand: home ? this.settings.scheduleBrand : 'goon',
-      guildName: home ? undefined : (guild ? guild.name : 'ALL SERVERS').toUpperCase(),
-      orgs: home ? undefined : [],
-      subtitle: home ? undefined : 'Weekly events · day theme + training / ops blocks · Discord scheduled events',
+      brand: alliance ? this.settings.scheduleBrand : 'goon',
+      guildName: alliance ? undefined : (guild ? guild.name : 'ALL SERVERS').toUpperCase(),
+      orgs: alliance ? undefined : [],
+      subtitle: alliance ? undefined : 'Weekly events · day theme + training / ops blocks · Discord scheduled events',
       regenerateCommand: ''
     }).svg;
   }
@@ -380,13 +403,16 @@ class Events {
   }
 
   /**
-   * "Add to Discord" URL for the bot that feeds /events.
+   * "Add to Discord" URL for the bot that feeds /events. Re-running it on a
+   * server the bot is already in updates the bot's permissions there.
+   * @param {string} [purpose] `channels` adds what the PERMAFLEET channel scripts need.
    * @returns {Promise<string|null>}
    */
-  async inviteUrl () {
+  async inviteUrl (purpose = null) {
     const id = await this.applicationId();
     if (!id) return null;
-    const q = new URLSearchParams({ client_id: id, scope: 'bot applications.commands', permissions: INVITE_PERMISSIONS });
+    const permissions = purpose === 'channels' ? CHANNEL_INVITE_PERMISSIONS : INVITE_PERMISSIONS;
+    const q = new URLSearchParams({ client_id: id, scope: 'bot applications.commands', permissions });
     return `https://discord.com/oauth2/authorize?${q}`;
   }
 
@@ -459,7 +485,7 @@ class Events {
         return;
       }
       if (pathname === INVITE_PATH) {
-        this.inviteUrl().then((location) => {
+        this.inviteUrl(url.searchParams.get('for')).then((location) => {
           if (!location) return sendJson(res, 503, { error: 'Discord bot is not configured' });
           res.statusCode = 302;
           res.setHeader('Location', location);

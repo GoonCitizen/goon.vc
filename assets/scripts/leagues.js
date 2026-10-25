@@ -194,6 +194,7 @@
       case 'create': what = `League created (${esc(entry.kind)})${entry.players && entry.players.length ? ` with ${plural(entry.players.length, 'pilot')}` : ''}.`; break;
       case 'join': what = `${esc(entry.name)} joined.`; break;
       case 'link': what = `${esc(entry.name)} was linked to their Discord account.`; break;
+      case 'merge': what = `${esc(entry.name)} and ${esc(entry.other)} turned out to be the same member; ${esc(entry.other)} is no longer linked.`; break;
       case 'update': what = `Details edited: ${esc((entry.fields || []).join(', '))}.`; break;
       case 'duel': what = `<strong>${esc(entry.winner)}</strong> beat ${esc(entry.loser)} ${esc((entry.score || []).join('–'))} (best of ${esc(entry.bestOf)})${entry.confirmedBy ? `, confirmed by ${esc(entry.confirmedBy)} on Discord` : ''}.`; break;
       case 'void': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) voided${entry.reason ? `: ${esc(entry.reason)}` : ''}.`; break;

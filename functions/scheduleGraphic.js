@@ -568,6 +568,8 @@ function renderVerticalBoard (opts) {
  * @param {string} [opts.timeZone] IANA zone for days and clocks (default America/Chicago)
  * @returns {{svg:string, width:number, height:number, verticalWidth:number, verticalHeight:number, brand:ScheduleBrand, timeZone:string}}
  */
+const MORE_H = 22;
+
 function renderWeekScheduleSvg (opts = {}) {
   const events = opts.events || [];
   const timeZone = normalizeTimeZone(opts.timeZone);
@@ -671,7 +673,12 @@ function renderWeekScheduleSvg (opts = {}) {
       parts.push(`<text x="${x + 24}" y="${ty + 72}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12">Open play / training only</text>`);
     }
 
-    slots.forEach((slot, si) => {
+    // Only the slots that fit above the footer; the rest are counted.
+    const fit = Math.max(0, Math.floor((slotArea + slotGap) / (slotH + slotGap)));
+    const shown = slots.length > fit
+      ? slots.slice(0, Math.max(0, Math.floor((slotArea - MORE_H + slotGap) / (slotH + slotGap))))
+      : slots;
+    shown.forEach((slot, si) => {
       const sy = ty + themeH + slotGap + si * (slotH + slotGap);
       const slotStart = parts.length;
       const badge = badgeFor(slot);
@@ -715,6 +722,10 @@ function renderWeekScheduleSvg (opts = {}) {
       }
       linkBlock(parts, slotStart, slot.url);
     });
+    if (shown.length < slots.length) {
+      const my = ty + themeH + slotGap + shown.length * (slotH + slotGap) + 14;
+      parts.push(`<text class="schedule-more" x="${x + 24}" y="${my}" fill="${INK.muted}" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="700">+${slots.length - shown.length} more</text>`);
+    }
   });
 
   const fy = HEIGHT - margin - 18;

@@ -1,0 +1,52 @@
+{
+  "id": "permafleet-channel",
+  "title": "Set up #permafleet for PERMAFLEET",
+  "description": "Gives a member org's pilots a #permafleet channel for alliance talk. goon.vc's bot creates it, or the server's own channel is used.",
+  "start": "welcome",
+  "requires": ["ManageGuild"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! A **#permafleet** channel gives your pilots a place for alliance talk: ops, plans, and news from across the Protectorate. Let's set one up on **{{context.guildName}}**.",
+      "input": { "type": "confirm" },
+      "next": "channel"
+    },
+    "channel": {
+      "say": "Should goon.vc's bot create #permafleet, or is there a channel on **{{context.guildName}}** for it already?",
+      "input": { "type": "choice", "optionsFrom": "permafleet.channels.permafleet" },
+      "next": [
+        { "when": { "answers.channel": "new" }, "goto": "category" },
+        { "goto": "existing" }
+      ]
+    },
+    "category": {
+      "say": "Which category should #permafleet go in? It stays open to everyone on your server, whatever the category allows.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.categories", "optional": true },
+      "next": [
+        { "when": { "context.channelMissing": null }, "goto": "summary" },
+        { "goto": "permissions" }
+      ]
+    },
+    "permissions": {
+      "say": "To create #permafleet, goon.vc's bot needs **Manage Channels**, plus the permissions it opens up there. Missing on **{{context.guildName}}** right now: {{context.channelMissing}}.\nGrant them with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's the plan for **{{context.guildName}}**:\n- Create #permafleet, where everyone on your server can read and post\n- Category: {{labels.category|none, top of the channel list}}\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    },
+    "existing": {
+      "say": "I'll use {{labels.channel}} as #permafleet on **{{context.guildName}}** and leave its permissions as they are.\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "{{labels.result}} Run `/goon permafleet` again any time."
+  },
+  "cancelled": {
+    "say": "Nothing changed. Run `/goon permafleet` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.channel", "kind": "permafleet" }, { "action": "record" }]
+}

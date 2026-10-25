@@ -1,0 +1,26 @@
+digraph Roles {
+  "GREENBACK" ->
+  "PERMAFLEET" [label=" applies to join RSI organization"]
+  "PERMAFLEET" -> "Prospect I" [label=" first rank in the PERMAFLEET program"]
+  "Prospect I" -> "Prospect II" [label=" promoted by leadership"]
+  "Prospect II" -> "Prospect III" [label=" promoted by leadership"]
+  "Prospect III" -> "Prospect IV" [label=" promoted by leadership"]
+  "Prospect IV" -> "Prospect V" [label=" promoted by leadership"]
+  "Prospect V" -> "Prospect VI" [label=" promoted by leadership"]
+  "Prospect IV" -> "TURTLE BRIGADE" [label=" selected for basic infantry training"]
+  "TURTLE BRIGADE" -> "SHELLBACK" [label=" selected for elite infantry unit"]
+  "Prospect IV" -> "BRAVO SQUADRON" [label=" selected for fighter squadron"]
+  "BRAVO SQUADRON" -> "ALPHA SQUADRON" [label=" selected as top 5% of BRAVO"]
+  "Prospect IV" -> "RAT SQUADRON" [label=" selected for piracy unit"]
+  "Prospect IV" -> "PERMAFLEET OFFICER" [label=" selected for officer training"]
+  "PERMAFLEET OFFICER" -> "LIEUTENANT" [label=" selected by a Captain"]
+  "LIEUTENANT" -> "CAPTAIN" [label=" selected by a Major"]
+  "CAPTAIN" -> "MAJOR" [label=" promoted by leadership"]
+
+  {
+    "Prospect IV"
+  } -> "Enlisted 1" [label=" selected into an official team"]
+
+   "Enlisted 1" -> "Enlisted 2" [label=" rewarded for performance and skill"]
+   "Enlisted 2" -> "Enlisted 3" [label=" rewarded for performance and skill"]
+}

@@ -170,17 +170,20 @@ function readRequestBody (req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
-    req.on('data', (chunk) => {
+    const onData = (chunk) => {
       size += chunk.length;
       if (size > MAX_BODY_BYTES) {
         const err = new Error('Request body too large');
         err.code = 'EBODYTOOLARGE';
-        req.destroy();
+        // Keep the socket for the 413; the rest of the body is discarded.
+        req.removeListener('data', onData);
+        req.resume();
         reject(err);
         return;
       }
       chunks.push(chunk);
-    });
+    };
+    req.on('data', onData);
     req.on('end', () => resolve(chunks.length ? Buffer.concat(chunks) : null));
     req.on('error', reject);
   });
@@ -287,7 +290,10 @@ async function proxyHubApiRequest (hubs, req, res, opts = {}) {
   try {
     body = await readRequestBody(req);
   } catch (err) {
-    if (err && err.code === 'EBODYTOOLARGE') return sendError(res, 413, 'Request body too large');
+    if (err && err.code === 'EBODYTOOLARGE') {
+      if (!res.headersSent) res.setHeader('Connection', 'close');
+      return sendError(res, 413, 'Request body too large');
+    }
     return sendError(res, 400, 'Could not read request body');
   }
 

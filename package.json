@@ -9,8 +9,10 @@
     "build:organizations": "node scripts/organizations.js",
     "build:downloads": "node scripts/downloads.js",
     "collect:clips": "node scripts/clips.js",
+    "campaigns:recruiting": "node --env-file-if-exists=.env scripts/recruiting.js",
+    "alliance:sign": "node scripts/alliance-sign.js",
     "check:video": "bash scripts/check-video-deps.sh",
-    "start": "node scripts/node.js",
+    "start": "node --env-file-if-exists=.env scripts/node.js",
     "test": "mocha tests --exit",
     "coverage": "c8 npm test",
     "report:install": "rm -rf node_modules && mkdir -p reports && rm -f package-lock.json && echo \"$ npm i --allow-git=all\" > reports/install.log && npm i --allow-git=all >> reports/install.log 2>&1",
@@ -36,7 +38,7 @@
   "dependencies": {
     "@fabric/discord": "FabricLabs/fabric-discord#feature/channels",
     "@fabric/doorman": "FabricLabs/doorman#feature/channels",
-    "@fabric/http": "FabricLabs/fabric-http#feature/channels",
+    "@fabric/http": "FabricLabs/fabric-http#feature/fomantic",
     "idlerpg": "FabricLabs/idlerpg#feature/channels"
   },
   "devDependencies": {
@@ -44,7 +46,7 @@
     "mocha": "=10.8.2"
   },
   "engines": {
-    "node": "24.15.0",
+    "node": "26.12.1",
     "npm": ">=12.0.0"
   }
 }

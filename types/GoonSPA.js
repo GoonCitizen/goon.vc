@@ -12,6 +12,9 @@ const PermafleetOperation = require('../components/PermafleetOperation');
 const PermafleetSchedule = require('../components/PermafleetSchedule');
 const PermafleetHeader = require('../components/PermafleetHeader');
 const PermafleetSquadrons = require('../components/PermafleetSquadrons');
+const PermafleetOnboarding = require('../components/PermafleetOnboarding');
+const PermafleetVotes = require('../components/PermafleetVotes');
+const Federations = require('../components/Federations');
 const Login = require('../components/Login');
 const EventsPage = require('../components/EventsPage');
 const OperationsIndex = require('../components/OperationsIndex');
@@ -102,8 +105,8 @@ const DEFAULTS = {
   // Clips: /clips library, /clips/timeline session timeline, /clips/projects/<id> editor (services/clips.js).
   clipsPath: '/clips',
   clipsHeading: 'CLIPS',
-  clipsTagline: 'Every clip from our Discord clip channels, in one library.',
-  clipsIntro: 'Every clip posted in our Discord clip channels, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best ones together and render the film.',
+  clipsTagline: 'Every clip, screenshot, and stream from our Discord, in one library.',
+  clipsIntro: 'Every clip and screenshot posted in our Discord clip channels, and the VOD of every stream announced in #streams, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best moments together and render the film.',
   clipsDocumentTitle: 'CLIPS — GOON SQUAD',
   clipsTimelineDocumentTitle: 'CLIP TIMELINE — GOON SQUAD',
   clipsTimelineDescription: 'One recording session from our Discord clips, every pilot on their own track, lined up by when it happened.',
@@ -138,6 +141,19 @@ const DEFAULTS = {
   permafleetSquadronsDescription: 'Your path to PERMAFLEET membership: join, fly with the fleet, and get selected for a cross-org squadron.',
   permafleetSchedulePath: '/operations/PERMAFLEET/schedule',
   permafleetScheduleDocumentTitle: 'PERMAFLEET Weekly Ops — GOON SQUAD',
+  // How an organization joins the Protectorate (components/PermafleetOnboarding.js).
+  permafleetOnboardingPath: '/operations/PERMAFLEET/onboarding',
+  permafleetOnboardingDocumentTitle: 'PERMAFLEET Onboarding — GOON SQUAD',
+  permafleetOnboardingDescription: 'Bring your organization into the PERMAFLEET Protectorate: open an embassy, tag your pilots, name your stewards, and run your own #embassy, public PERMAFLEET voice channel, and Prospect ranks.',
+  // Alliance votes, one per member org (services/alliance.js, components/PermafleetVotes.js).
+  permafleetVotesPath: '/operations/PERMAFLEET/votes',
+  permafleetVotesDocumentTitle: 'PERMAFLEET Votes — GOON SQUAD',
+  permafleetVotesDescription: 'Decisions for the PERMAFLEET Protectorate: one vote per member organization, cast by its Org Stewards and signed as a Fabric Federation.',
+  // The Fabric federations behind alliance votes (components/Federations.js); not in the PERMAFLEET menu.
+  federationsPath: '/federations',
+  federationsDocumentTitle: 'Federations — GOON SQUAD',
+  federationsDescription: 'The Fabric federations behind PERMAFLEET alliance votes: the alliance of member organizations, and each org that decides by its officers.',
+  embassyUrl: 'https://discord.com/channels/1190527980120850493/1205022843402977310',
   discordWidgetId: '1190527980120850493',
   discordRosterTitle: 'Discord',
   // Front-page overview; facts, logo, and motto come from the G00N record in organizationsFile.
@@ -243,6 +259,9 @@ class GoonSPA extends FabricSPA {
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
       page(this._site('permafleetSquadronsPath'), this._site('permafleetSquadronsDocumentTitle'), this._site('permafleetSquadronsDescription'), permafleet),
+      page(this._site('permafleetOnboardingPath'), this._site('permafleetOnboardingDocumentTitle'), this._site('permafleetOnboardingDescription'), permafleet),
+      page(this._site('permafleetVotesPath'), this._site('permafleetVotesDocumentTitle'), this._site('permafleetVotesDescription'), permafleet),
+      page(this._site('federationsPath'), this._site('federationsDocumentTitle'), this._site('federationsDescription'), permafleet),
       ...PermafleetSquadrons.pageEntries(this._site('permafleetSquadronsPath')).map((entry) => page(
         entry.path,
         `${entry.name} — ${title}`,
@@ -307,6 +326,12 @@ class GoonSPA extends FabricSPA {
     const scheduleTitleJson = JSON.stringify(this._site('permafleetScheduleDocumentTitle'));
     const squadronsPath = this._site('permafleetSquadronsPath');
     const squadronsTitleJson = JSON.stringify(this._site('permafleetSquadronsDocumentTitle'));
+    const onboardingPath = this._site('permafleetOnboardingPath');
+    const onboardingTitleJson = JSON.stringify(this._site('permafleetOnboardingDocumentTitle'));
+    const votesPath = this._site('permafleetVotesPath');
+    const votesTitleJson = JSON.stringify(this._site('permafleetVotesDocumentTitle'));
+    const federationsPath = this._site('federationsPath');
+    const federationsTitleJson = JSON.stringify(this._site('federationsDocumentTitle'));
     const titleJson = JSON.stringify(title);
     const widgetId = this._site('discordWidgetId');
     const bitcoinAddress = this._site('bitcoinAddress');
@@ -444,7 +469,7 @@ class GoonSPA extends FabricSPA {
         name: 'Clips',
         path: clipsPath,
         tagline: this._site('clipsTagline'),
-        summary: 'Every clip from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.',
+        summary: 'Every clip and screenshot from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.',
         openLabel: 'Clips'
       }, {
         name: '1v1 Leaderboard',
@@ -552,6 +577,7 @@ class GoonSPA extends FabricSPA {
       organizations: orgData.organizations,
       fetchedAt: orgData.fetchedAt,
       embassyUrl: joinUrl,
+      onboardingPath,
       allianceName: this._site('permafleetHeading'),
       alliancePath: permafleetPath,
       loginPath,
@@ -589,8 +615,28 @@ class GoonSPA extends FabricSPA {
     const squadronMainsHtml = PermafleetSquadrons.SQUADRONS
       .map((squadron) => PermafleetSquadrons.renderSquadron(squadron, squadronProps))
       .join('\n');
+    const onboardingMainHtml = PermafleetOnboarding.render({
+      joinUrl,
+      embassyUrl: this._site('embassyUrl'),
+      botInviteUrl: '/services/discord/invite',
+      schedulePath,
+      squadronsPath,
+      organizationsPath,
+      memberOrgs: orgData.organizations.map((org) => ({
+        name: org.displayName || org.name,
+        symbol: org.symbol,
+        href: Organizations.organizationPath(org, organizationsPath)
+      }))
+    });
+    const votesProps = { basePath: votesPath, loginPath, onboardingPath, siteTitle: title };
+    const votesMainHtml = PermafleetVotes.render(votesProps);
+    const voteMainHtml = PermafleetVotes.renderProposal(votesProps);
+    const federationsProps = { basePath: federationsPath, votesPath, siteTitle: title };
+    const federationsMainHtml = Federations.render(federationsProps);
+    const federationMainHtml = Federations.renderFederation(federationsProps);
     const permafleetMainHtml = PermafleetOperation.render({
       squadronsPath,
+      onboardingPath,
       memberOrgs: orgData.organizations.length
         ? orgData.organizations.map((org) => ({
           name: org.displayName || org.name,
@@ -610,7 +656,7 @@ class GoonSPA extends FabricSPA {
       bitcoinAddress,
       copyright
     });
-    const scheduleMainHtml = PermafleetSchedule.render({ server: widgetId });
+    const scheduleMainHtml = PermafleetSchedule.render();
     const permafleetHeaderHtml = PermafleetHeader.render({
       heading: escapeHtml(this._site('permafleetHeading')),
       homeLabel: escapeHtml(title),
@@ -668,6 +714,9 @@ ${HomePage.styles()}
 ${PermafleetOperation.styles({ heroImage: this._site('permafleetHeroImage') })}
 ${PermafleetSchedule.styles()}
 ${PermafleetSquadrons.styles()}
+${PermafleetOnboarding.styles()}
+${PermafleetVotes.styles()}
+${Federations.styles()}
 ${Login.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
@@ -709,6 +758,11 @@ ${tournamentMainsHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
 ${squadronMainsHtml}
+    ${onboardingMainHtml}
+    ${votesMainHtml}
+    ${voteMainHtml}
+    ${federationsMainHtml}
+    ${federationMainHtml}
     <script type="text/javascript">
       (function () {
         var loginPath = ${JSON.stringify(loginPath)};
@@ -757,6 +811,15 @@ ${squadronMainsHtml}
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var isOnboarding = path.toLowerCase() === ${JSON.stringify(onboardingPath.toLowerCase())};
+        var isVotes = path.toLowerCase() === ${JSON.stringify(votesPath.toLowerCase())};
+        var voteEl = path.toLowerCase().indexOf(${JSON.stringify(votesPath.toLowerCase() + '/')}) === 0
+          ? document.getElementById('pf-vote-page')
+          : null;
+        var isFederations = path.toLowerCase() === ${JSON.stringify(federationsPath.toLowerCase())};
+        var federationEl = path.toLowerCase().indexOf(${JSON.stringify(federationsPath.toLowerCase() + '/')}) === 0
+          ? document.getElementById('federation-page')
+          : null;
         var squadronEl = null;
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           if (el.getAttribute('data-path').toLowerCase() === path.toLowerCase()) squadronEl = el;
@@ -769,7 +832,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -817,7 +880,17 @@ ${squadronMainsHtml}
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           el.style.display = el === squadronEl ? 'block' : 'none';
         });
-        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);
+        var onboardingEl = document.getElementById('onboarding-page');
+        if (onboardingEl) onboardingEl.style.display = isOnboarding ? 'block' : 'none';
+        var votesEl = document.getElementById('pf-votes-page');
+        if (votesEl) votesEl.style.display = isVotes ? 'block' : 'none';
+        var votePageEl = document.getElementById('pf-vote-page');
+        if (votePageEl) votePageEl.style.display = voteEl ? 'block' : 'none';
+        var federationsEl = document.getElementById('federations-page');
+        if (federationsEl) federationsEl.style.display = isFederations ? 'block' : 'none';
+        var federationPageEl = document.getElementById('federation-page');
+        if (federationPageEl) federationPageEl.style.display = federationEl ? 'block' : 'none';
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = ${loginTitleJson};
         else if (isEvents) document.title = ${eventsTitleJson};
@@ -839,6 +912,9 @@ ${squadronMainsHtml}
         else if (isSchedule) document.title = ${scheduleTitleJson};
         else if (isSquadrons) document.title = ${squadronsTitleJson};
         else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
+        else if (isOnboarding) document.title = ${onboardingTitleJson};
+        else if (isVotes || voteEl) document.title = ${votesTitleJson};
+        else if (isFederations || federationEl) document.title = ${federationsTitleJson};
         else document.title = ${titleJson};
       })();
     </script>
@@ -858,6 +934,8 @@ ${squadronMainsHtml}
     ${leaguesScript}
     ${clipsScript}
     ${permafleetScript}
+    ${PermafleetVotes.script()}
+    ${Federations.script()}
     ${applicationScript}
   </body>
 </html>

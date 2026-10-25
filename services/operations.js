@@ -50,7 +50,7 @@ function errorMessage (error) {
 
 /**
  * Cross-org operations and their metrics. A `@fabric/discord` gateway client
- * (non-privileged intents only, no replies) feeds Discord voice and message
+ * (non-privileged intents unless `intents` asks for more, no replies) feeds Discord voice and message
  * events through a `MetricsPipeline`; plugin state lives in an on-disk
  * `@fabric/core` Store, so metrics survive restarts and Discord outages.
  * Only aggregate counts leave this process — never member ids or content.
@@ -62,6 +62,8 @@ class Operations {
    * @param {string} [settings.file] Operations contract (contracts/operations.json).
    * @param {Object} [settings.discord] settings.discord (token / secretsFile).
    * @param {boolean} [settings.gateway] Connect to the Discord gateway (default true).
+   * @param {string[]} [settings.intents] More GatewayIntentBits names for other consumers of this client.
+   * @param {string[]} [settings.partials] discord.js Partials names (e.g. `Channel` for DMs).
    * @param {Array<Object>} [settings.plugins] Metrics plugins (default voice + messages).
    * @param {number} [settings.flushMs]
    * @param {number} [settings.tickMs]
@@ -137,7 +139,8 @@ class Operations {
     const Discord = this.settings.Discord || require('@fabric/discord');
     const discord = new Discord({
       token: auth.token,
-      intents: gatewayIntents(this.pipeline),
+      intents: gatewayIntents([this.pipeline, { intents: this.settings.intents || [] }]),
+      partials: this.settings.partials || [],
       autoCommands: false
     });
     discord.on('error', (error) => this.emit('error', 'operations discord', errorMessage(error)));

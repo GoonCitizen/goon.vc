@@ -77,6 +77,18 @@ describe('clipTimeline', function () {
     assert.strictEqual(sessions[1].durationMs, 291 * MIN);
   });
 
+  it('puts screenshots on the timeline for their display time', function () {
+    const shot = (id, author, startMin) => clip(id, author, startMin, 0, { media: 'image', durationMs: null });
+    const [session] = groupSessions([clip('a', 'Ace', 0, 2), shot('s1', 'Bix', 1), shot('s2', 'Ace', 1.95)], { stillMs: 10000 });
+    assert.strictEqual(session.clipCount, 3);
+    assert.strictEqual(session.screenshotCount, 2);
+    assert.strictEqual(session.endsAt, new Date(T0 + 1.95 * MIN + 10000).toISOString(), 'a screenshot near the end stretches the session');
+    const ace = session.tracks.find((track) => track.author === 'Ace');
+    assert.deepStrictEqual(ace.clips.map((c) => [c.id, c.lane, c.durationMs]), [['a', 0, 2 * MIN], ['s2', 1, 10000]], 'overlaps the video, so its own lane');
+    assert.deepStrictEqual(session.tracks.find((track) => track.author === 'Bix').clips[0].durationMs, 10000);
+    assert.strictEqual(groupSessions([shot('s', 'Bix', 0)])[0].durationMs, 5000, 'five seconds by default');
+  });
+
   it('stacks one pilot\'s overlapping clips on lanes', function () {
     const [session] = groupSessions([clip('a', 'Ace', 0, 5), clip('b', 'Ace', 2, 1)]);
     assert.strictEqual(session.tracks[0].lanes, 2);

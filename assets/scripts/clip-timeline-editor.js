@@ -18,6 +18,9 @@
  * `GET|POST /projects`, `GET|PATCH /projects/<id>` `{ revision, name, segments }`,
  * `POST /projects/<id>/renders`. Clips carry `proxyUrl` / `thumbsUrl` and
  * `proxy.thumbs` `{ every, count, columns, rows, width, height }` for the sprite.
+ * A screenshot (`media: 'image'`) shows as an image for its `durationMs` (the
+ * library's `stills.seconds`); in the program its segment is `{ in: 0, out }`,
+ * `out` being how long it shows (up to `stills.maxSeconds`).
  *
  * Emits `projectopen` (cancelable; `detail: { id, path }`) before navigating
  * to a project, `projectsave` / `renderstart` after those succeed, and
@@ -37,6 +40,10 @@
 
   function esc (value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function isStill (clip) {
+    return Boolean(clip && clip.media === 'image');
   }
 
   function clockTime (ms, withSeconds = true) {
@@ -71,11 +78,19 @@
   }
 
   const SOURCE_LABEL = {
+    broadcast: 'stream start',
     metadata: 'file metadata',
     filename: 'file name',
+    uploaded: 'host upload time',
     posted: 'Discord post time',
     manual: 'set by hand',
     unknown: 'unknown'
+  };
+  const ZONE_LABEL = {
+    metadata: 'zone from file metadata',
+    author: 'uploader\'s zone',
+    post: 'zone fitted to the post',
+    default: 'default zone'
   };
 
   const STYLE = `
@@ -99,7 +114,7 @@
     .stage { display: grid; gap: 0.75em; grid-template-columns: minmax(0, 3fr) minmax(14em, 2fr); margin-bottom: 0.75em; }
     @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
     .viewer { background: #000; border-radius: 6px; overflow: hidden; }
-    .viewer video { aspect-ratio: 16 / 9; background: #000; display: block; width: 100%; }
+    .viewer video, .viewer img { aspect-ratio: 16 / 9; background: #000; display: block; object-fit: contain; width: 100%; }
     .transport { align-items: center; background: var(--panel); display: flex; flex-wrap: wrap; gap: 0.4em; padding: 0.45em; }
     .transport .tc { font-variant-numeric: tabular-nums; margin-left: auto; }
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.7em 0.8em; }
@@ -123,6 +138,7 @@
     .clip.pending { background-image: repeating-linear-gradient(45deg, #3b3b3b 0 6px, #2a2a2a 6px 12px); }
     .clip.failed { background-color: #5b1f1f; }
     .clip.link { background-color: #1f3b5b; border-style: dashed; }
+    .clip.still, .segment.still { background-color: #2a4a3b; background-repeat: repeat-x; border-style: dotted; }
     .clip.used::after { background: var(--accent); content: ''; height: 3px; left: 0; position: absolute; right: 0; top: 0; }
     .playhead { background: #ff5a5a; bottom: 0; pointer-events: none; position: absolute; top: 0; width: 2px; z-index: 3; }
     .program { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; gap: 3px; min-height: 64px; overflow-x: auto; padding: 6px; }
@@ -162,6 +178,7 @@
       <div class="stage">
         <div class="viewer">
           <video data-ref="video" playsinline preload="metadata"></video>
+          <img data-ref="still" class="hidden" alt="">
           <div class="transport">
             <button type="button" data-action="play" title="Play / pause (Space)">Play</button>
             <button type="button" data-action="mark-in" title="Mark in (I)">In</button>
@@ -340,6 +357,7 @@
       for (const clip of library.clips || []) this.state.clips[clip.id] = clip;
       this.state.status = library.status || null;
       this.state.polling = !!library.polling;
+      this.state.stills = library.stills || { seconds: 5, maxSeconds: 60 };
       this.state.channels = library.channels || [];
       this.state.sessions = sessions || [];
       for (const session of this.state.sessions) {
@@ -409,7 +427,7 @@
         this.ref.library.textContent = '';
         return;
       }
-      const parts = [`${s.ready || 0} clips ready`];
+      const parts = [`${s.ready || 0} clips ready${s.screenshots ? ` (${s.screenshots} screenshot${s.screenshots === 1 ? '' : 's'})` : ''}`];
       if (s.pending) parts.push(`${s.pending} processing`);
       if (s.failed) parts.push(`${s.failed} could not be read`);
       if (s.linksOnly) parts.push(`${s.linksOnly} links (not imported)`);
@@ -428,7 +446,9 @@
       }
       select.disabled = false;
       select.innerHTML = this.state.sessions.map((s) => {
-        const label = `${dateTime(Date.parse(s.startsAt))} · ${duration(s.durationMs / 1000)} · ${s.authors.slice(0, 4).join(', ')}${s.authors.length > 4 ? ` +${s.authors.length - 4}` : ''} (${s.clipCount} clip${s.clipCount === 1 ? '' : 's'})`;
+        const videos = s.clipCount - (s.screenshotCount || 0);
+        const counts = [videos ? `${videos} clip${videos === 1 ? '' : 's'}` : '', s.screenshotCount ? `${s.screenshotCount} screenshot${s.screenshotCount === 1 ? '' : 's'}` : ''].filter(Boolean).join(', ');
+        const label = `${dateTime(Date.parse(s.startsAt))} · ${duration(s.durationMs / 1000)} · ${s.authors.slice(0, 4).join(', ')}${s.authors.length > 4 ? ` +${s.authors.length - 4}` : ''} (${counts})`;
         return `<option value="${esc(s.id)}"${s.id === this.state.sessionId ? ' selected' : ''}>${esc(label)}</option>`;
       }).join('');
     }
@@ -472,11 +492,11 @@
       const tracks = session.tracks.map((track) => {
         const blocks = track.clips.map((entry) => {
           const clip = this._clip(entry.id) || {};
-          const status = clip.kind === 'link' ? 'link' : (clip.proxy && clip.proxy.status);
-          const cls = ['clip', status === 'ready' ? '' : status, entry.id === this.state.clipId ? 'selected' : '', used.has(entry.id) ? 'used' : ''].filter(Boolean).join(' ');
+          const status = clip.kind === 'link' && !clip.proxyUrl ? 'link' : (clip.proxy && clip.proxy.status);
+          const cls = ['clip', status === 'ready' ? '' : status, isStill(clip) ? 'still' : '', entry.id === this.state.clipId ? 'selected' : '', used.has(entry.id) ? 'used' : ''].filter(Boolean).join(' ');
           const left = (entry.offsetMs / 1000) * pps;
           const w = Math.max(6, (entry.durationMs / 1000) * pps);
-          const title = `${clip.author || ''} · ${clip.filename || clip.linkUrl || ''} · ${clockTime(this._clipStartMs(clip))}${status !== 'ready' ? ` · ${status === 'link' ? 'link only' : status}` : ''}`;
+          const title = `${clip.author || ''} · ${isStill(clip) ? 'screenshot · ' : ''}${clip.filename || clip.linkUrl || ''} · ${clockTime(this._clipStartMs(clip))}${status !== 'ready' ? ` · ${status === 'link' ? 'link only' : status}` : ''}`;
           return `<div class="${cls}" data-clip="${esc(entry.id)}" title="${esc(title)}" style="left:${left}px;top:${entry.lane * LANE_H + 3}px;width:${w}px;${this._sprite(clip, 0, LANE_H - 6)}"><span>${esc(clip.filename || clip.author || '')}</span></div>`;
         }).join('');
         return `<div class="track"><div class="track-label" style="height:${track.lanes * LANE_H}px" title="${esc(track.author)}">${esc(track.author)}</div>` +
@@ -496,6 +516,10 @@
       if (offset < 0 || offset > session.durationMs / 1000 + 1) return head.classList.add('hidden');
       head.classList.remove('hidden');
       head.style.left = `${LABEL_W + offset * this._timelinePps}px`;
+      if (isStill(clip)) {
+        this.ref.tc.textContent = `Screenshot · ${clockTime(this._clipStartMs(clip))}`;
+        return;
+      }
       this.ref.tc.textContent = `${timecode(this.ref.video.currentTime)} / ${timecode(clip.durationMs / 1000)}` +
         `${this.state.markIn !== null ? ` · in ${timecode(this.state.markIn)}` : ''}${this.state.markOut !== null ? ` · out ${timecode(this.state.markOut)}` : ''}` +
         ` · ${clockTime(this._clipStartMs(clip) + (this.ref.video.currentTime || 0) * 1000)}`;
@@ -524,7 +548,7 @@
       const source = manual ? 'manual' : rec.source;
       const sync = (clip.override && clip.override.syncOffsetMs) || 0;
       const angles = this._anglesNow();
-      const status = clip.kind === 'link' ? 'Link only (not imported)' : clip.proxy.status === 'ready' ? null : clip.proxy.status === 'failed' ? `Could not be read: ${clip.proxy.error || 'unknown error'}` : 'Still processing';
+      const status = clip.kind === 'link' && !clip.proxyUrl ? 'Link only (not imported)' : clip.proxy.status === 'ready' ? null : clip.proxy.status === 'failed' ? `Could not be read: ${clip.proxy.error || 'unknown error'}` : 'Still processing';
       el.innerHTML = `
         <h3>${segment ? `Segment ${this.state.segmentIndex + 1}` : 'Clip'}</h3>
         <dl>
@@ -533,9 +557,11 @@
           <dt>Source</dt><dd><a href="${esc(clip.messageUrl)}" target="_blank" rel="noopener noreferrer">Discord message</a>${clip.linkUrl ? ` · <a href="${esc(clip.linkUrl)}" target="_blank" rel="noopener noreferrer">link</a>` : ''}</dd>
           ${clip.filename ? `<dt>File</dt><dd>${esc(clip.filename)}</dd>` : ''}
           ${clip.caption ? `<dt>Caption</dt><dd>${esc(clip.caption)}</dd>` : ''}
-          <dt>Recorded</dt><dd>${esc(dateTime(this._clipStartMs(clip)))} <span class="muted">${esc(clockTime(this._clipStartMs(clip)))}</span><br><span class="muted">from ${esc(SOURCE_LABEL[source] || source || 'unknown')}${manual ? '' : ` · ${esc(rec.confidence || 'low')} confidence`}${sync ? ` · nudged ${sync > 0 ? '+' : ''}${(sync / 1000).toFixed(1)}s` : ''}</span></dd>
+          <dt>Recorded</dt><dd>${esc(dateTime(this._clipStartMs(clip)))} <span class="muted">${esc(clockTime(this._clipStartMs(clip)))}</span><br><span class="muted">from ${esc(SOURCE_LABEL[source] || source || 'unknown')}${!manual && ZONE_LABEL[rec.zone] ? ` · ${esc(ZONE_LABEL[rec.zone])}` : ''}${manual ? '' : ` · ${esc(rec.confidence || 'low')} confidence`}${sync ? ` · nudged ${sync > 0 ? '+' : ''}${(sync / 1000).toFixed(1)}s` : ''}</span></dd>
           <dt>Posted</dt><dd>${esc(dateTime(Date.parse(clip.postedAt)))}</dd>
-          <dt>Length</dt><dd>${clip.durationMs ? esc(duration(clip.durationMs / 1000)) : '—'}${clip.width ? ` · ${clip.width}×${clip.height}` : ''}${clip.hasAudio === false ? ' · no audio' : ''}</dd>
+          ${isStill(clip)
+            ? `<dt>Screenshot</dt><dd>${clip.width ? `${clip.width}×${clip.height} · ` : ''}shows ${esc(duration(clip.durationMs / 1000))} on the timeline</dd>`
+            : `<dt>Length</dt><dd>${clip.durationMs ? esc(duration(clip.durationMs / 1000)) : '—'}${clip.width ? ` · ${clip.width}×${clip.height}` : ''}${clip.hasAudio === false ? ' · no audio' : ''}</dd>`}
           ${status ? `<dt>Status</dt><dd class="${clip.proxy.status === 'failed' ? 'error' : 'muted'}">${esc(status)}</dd>` : ''}
         </dl>
         <div class="row" title="Shift this clip on the timeline to line it up with the other angles">
@@ -549,11 +575,26 @@
           <button type="button" data-action="set-recorded">Set start</button>
           ${manual ? '<button type="button" data-action="clear-recorded">Use estimate</button>' : ''}
         </div>
-        ${angles.length ? `<div class="row angles"><span class="muted">Other angles now:</span>${angles.map((a) => `<button type="button" data-angle="${esc(a.clip.id)}" data-at="${a.at}">${esc(a.clip.author)}</button>`).join('')}</div>` : ''}
-        ${segment ? this._segmentControls(segment) : ''}`;
+        ${angles.length ? `<div class="row angles"><span class="muted">Other angles now:</span>${angles.map((a) => `<button type="button" data-angle="${esc(a.clip.id)}" data-at="${a.at}">${esc(a.clip.author)}${isStill(a.clip) ? ' (screenshot)' : ''}</button>`).join('')}</div>` : ''}
+        ${segment ? this._segmentControls(segment, clip) : ''}`;
     }
 
-    _segmentControls (segment) {
+    _segmentControls (segment, clip) {
+      const order = `
+        <div class="row">
+          <button type="button" data-action="seg-left">← Earlier</button>
+          <button type="button" data-action="seg-right">Later →</button>
+          <button type="button" data-action="seg-remove">Remove</button>
+        </div>`;
+      if (isStill(clip)) {
+        const max = (this.state.stills && this.state.stills.maxSeconds) || 60;
+        return `
+        <h3 style="margin-top:0.8em">Segment</h3>
+        <div class="row">
+          <label>Show for <input type="number" step="0.5" min="0.5" max="${max}" data-seg="hold" value="${segment.out - segment.in}" style="width:6em"> s</label>
+          <span class="muted">up to ${max}s</span>
+        </div>${order}`;
+      }
       return `
         <h3 style="margin-top:0.8em">Segment</h3>
         <div class="row">
@@ -568,12 +609,7 @@
         <div class="row">
           <label><input type="checkbox" data-seg="mute"${segment.audio === 'mute' ? ' checked' : ''}> Mute</label>
           <label>Volume <input type="range" min="0" max="2" step="0.05" data-seg="volume" value="${segment.volume === undefined ? 1 : segment.volume}"></label>
-        </div>
-        <div class="row">
-          <button type="button" data-action="seg-left">← Earlier</button>
-          <button type="button" data-action="seg-right">Later →</button>
-          <button type="button" data-action="seg-remove">Remove</button>
-        </div>`;
+        </div>${order}`;
     }
 
     _renderProgram () {
@@ -590,10 +626,12 @@
       const pps = Math.max(2, Math.min(40, width / Math.max(1, total)));
       el.innerHTML = segs.map((seg, i) => {
         const clip = this._clip(seg.clipId) || {};
-        const cls = ['segment', i === this.state.segmentIndex ? 'selected' : '', i === this.state.programPlaying ? 'playing' : ''].filter(Boolean).join(' ');
+        const still = isStill(clip);
+        const cls = ['segment', still ? 'still' : '', i === this.state.segmentIndex ? 'selected' : '', i === this.state.programPlaying ? 'playing' : ''].filter(Boolean).join(' ');
         const w = Math.max(48, (seg.out - seg.in) * pps);
-        return `<div class="${cls}" draggable="true" data-segment="${i}" title="${esc(`${clip.author || ''} · ${timecode(seg.in)}–${timecode(seg.out)}`)}" style="width:${w}px;${this._sprite(clip, seg.in, 52)}">` +
-          `${seg.audio === 'mute' ? '<b class="mute">muted</b>' : ''}<span>${i + 1}. ${esc(clip.author || '?')} · ${esc(duration(seg.out - seg.in))}</span></div>`;
+        const title = still ? `${clip.author || ''} · screenshot for ${timecode(seg.out - seg.in)}` : `${clip.author || ''} · ${timecode(seg.in)}–${timecode(seg.out)}`;
+        return `<div class="${cls}" draggable="true" data-segment="${i}" title="${esc(title)}" style="width:${w}px;${this._sprite(clip, seg.in, 52)}">` +
+          `${seg.audio === 'mute' && !still ? '<b class="mute">muted</b>' : ''}<span>${i + 1}. ${esc(clip.author || '?')} · ${still ? 'still ' : ''}${esc(duration(seg.out - seg.in))}</span></div>`;
       }).join('');
     }
 
@@ -615,7 +653,7 @@
             <td>${esc(clip.author || '?')}</td>
             <td>#${esc(clip.channel || '?')}<br><a href="${esc(clip.messageUrl || '#')}" target="_blank" rel="noopener noreferrer">message</a></td>
             <td>${esc(clip.filename || clip.linkUrl || '')}</td>
-            <td class="num">${esc(timecode(seg.in))}–${esc(timecode(seg.out))}</td>
+            <td class="num">${isStill(clip) ? `screenshot, ${esc(timecode(seg.out - seg.in))}` : `${esc(timecode(seg.in))}–${esc(timecode(seg.out))}`}</td>
             <td>${esc(clockTime(this._clipStartMs(clip) + seg.in * 1000))}<br><span class="muted">${esc(SOURCE_LABEL[manual ? 'manual' : rec.source] || '')}${manual ? '' : `, ${esc(rec.confidence || 'low')}`}</span></td>
           </tr>`;
         at += seg.out - seg.in;
@@ -670,8 +708,22 @@
         this.state.markIn = null;
         this.state.markOut = null;
       }
+      if (this._stillTimer) clearTimeout(this._stillTimer);
+      this._stillTimer = null;
       const video = this.ref.video;
-      if (clip.proxyUrl) {
+      const still = isStill(clip);
+      video.classList.toggle('hidden', still);
+      this.ref.still.classList.toggle('hidden', !still);
+      if (still) {
+        video.pause();
+        if (video.getAttribute('src')) {
+          video.removeAttribute('src');
+          video.load();
+        }
+        if (clip.proxyUrl) this.ref.still.src = clip.proxyUrl;
+        else this.ref.still.removeAttribute('src');
+        this.ref.still.alt = clip.caption || `Screenshot by ${clip.author || 'a pilot'}`;
+      } else if (clip.proxyUrl) {
         const seek = () => { video.currentTime = Math.max(0, Math.min(at || 0, (clip.durationMs || 0) / 1000)); };
         if (changed || !video.src) {
           video.src = clip.proxyUrl;
@@ -716,6 +768,13 @@
     _addToProgram () {
       const clip = this._clip();
       if (!this.editing || !clip || !clip.proxyUrl) return;
+      if (isStill(clip)) {
+        const at = this.state.segmentIndex !== null ? this.state.segmentIndex + 1 : this.state.segments.length;
+        this.state.segments.splice(at, 0, { clipId: clip.id, in: 0, out: (clip.durationMs || 5000) / 1000, audio: 'on', volume: 1 });
+        this.state.segmentIndex = at;
+        this._changed();
+        return;
+      }
       const length = (clip.durationMs || 0) / 1000;
       let start = this.state.markIn !== null ? this.state.markIn : 0;
       let end = this.state.markOut !== null ? this.state.markOut : length;
@@ -758,12 +817,30 @@
         this._renderTimeline();
       }
       this._selectClip(seg.clipId, seg.in, true);
-      if (play) {
-        const video = this.ref.video;
-        const start = () => video.play().catch(() => {});
-        if (video.readyState >= 1) start();
-        else video.addEventListener('loadedmetadata', start, { once: true });
+      if (!play) return;
+      if (isStill(this._clip(seg.clipId))) {
+        this._stillTimer = setTimeout(() => {
+          this._stillTimer = null;
+          if (this.state.programPlaying === index) this._nextProgramSegment();
+        }, Math.max(100, (seg.out - seg.in) * 1000));
+        return;
       }
+      const video = this.ref.video;
+      const start = () => video.play().catch(() => {});
+      if (video.readyState >= 1) start();
+      else video.addEventListener('loadedmetadata', start, { once: true });
+    }
+
+    _nextProgramSegment () {
+      const next = this.state.programPlaying + 1;
+      if (next >= this.state.segments.length) {
+        this.ref.video.pause();
+        this.state.programPlaying = null;
+        this._renderProgram();
+        return;
+      }
+      this.state.programPlaying = next;
+      this._selectSegment(next, true);
     }
 
     _playProgram () {
@@ -781,17 +858,7 @@
         this.state.programPlaying = null;
         return;
       }
-      if (this.ref.video.currentTime >= seg.out - 0.03) {
-        const next = playing + 1;
-        if (next >= this.state.segments.length) {
-          this.ref.video.pause();
-          this.state.programPlaying = null;
-          this._renderProgram();
-          return;
-        }
-        this.state.programPlaying = next;
-        this._selectSegment(next, true);
-      }
+      if (this.ref.video.currentTime >= seg.out - 0.03) this._nextProgramSegment();
     }
 
     // ------------------------------------------------------------ actions
@@ -908,6 +975,11 @@
       if (!seg) return;
       const clip = this._clip(seg.clipId) || {};
       const length = (clip.durationMs || 0) / 1000;
+      if (field === 'hold') {
+        const max = (this.state.stills && this.state.stills.maxSeconds) || 60;
+        seg.in = 0;
+        seg.out = Math.max(0.1, Math.min(max, Number(value) || 0));
+      }
       if (field === 'in') seg.in = Math.max(0, Math.min(Number(value) || 0, seg.out - 0.1));
       if (field === 'out') seg.out = Math.min(length || Infinity, Math.max(Number(value) || 0, seg.in + 0.1));
       if (field === 'mute') seg.audio = value ? 'mute' : 'on';
@@ -1020,7 +1092,7 @@
         const field = event.target.getAttribute && event.target.getAttribute('data-seg');
         if (!field) return;
         this._updateSegment(field, field === 'mute' ? event.target.checked : event.target.value);
-        if (field === 'in' || field === 'out') this._renderInspector();
+        if (field === 'in' || field === 'out' || field === 'hold') this._renderInspector();
       });
 
       sr.addEventListener('click', (event) => {

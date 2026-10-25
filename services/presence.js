@@ -59,10 +59,11 @@ function errorMessage (error) {
 }
 
 /**
- * Global presence statistic, accumulated by IdleRPG running inside an
- * embedded `@fabric/doorman` host. Doorman gets no HTTP server and no gateway
- * of its own: the Operations service hands over its `@fabric/discord` client
- * (`gateway` event) and a Doorman Discord adapter maps voice occupancy into
+ * Global presence statistic, accumulated by IdleRPG running inside the
+ * embedded `@fabric/doorman` host (services/community.js's, or our own when
+ * there is none). Doorman gets no HTTP server and no gateway of its own: the
+ * Operations service hands over its `@fabric/discord` client (`gateway`
+ * event) and a Doorman Discord adapter maps voice occupancy into
  * `join` / `part` / `presence` events for the game. Player ids stay in the
  * on-disk Store (`stores/presence`). The IdleRPG application is mounted at
  * `/services/idlerpg`: browsers get the page, JSON clients get aggregates
@@ -82,6 +83,9 @@ class Presence {
    *   announcements. The only thing the game posts; its `!` commands are never answered
    *   (`/idlerpg` is services/commands.js).
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
+   * @param {Object} [settings.community] services/community.js: plug the game into its shared
+   *   Doorman and Discord adapter instead of running our own (`operations` then only reports
+   *   gateway status).
    * @param {boolean} [settings.gateway] Attach to the Discord gateway when available (default true).
    * @param {Function} [settings.Doorman] Injected for tests; defaults to @fabric/doorman.
    * @param {Function} [settings.IdleRPG] Injected for tests; defaults to idlerpg/services/idlerpg.
@@ -105,6 +109,7 @@ class Presence {
     this.gateway = { status: 'disabled', error: null };
     this._listeners = {};
     this._onGateway = (discord) => this.attach(discord);
+    this._onAttached = (discord, adapter) => this._attached(discord, adapter);
   }
 
   on (event, handler) {
@@ -121,12 +126,9 @@ class Presence {
   }
 
   async start () {
-    const Doorman = this.settings.Doorman || require('@fabric/doorman');
     const IdleRPG = this.settings.IdleRPG || require('idlerpg/services/idlerpg');
-
-    this.doorman = new Doorman({ name: 'GOON.VC:doorman', http: false, local: false });
-    this.doorman.on('error', (error) => this.emit('error', 'presence doorman', errorMessage(error)));
-    this.doorman.use(IdleRPG, {
+    const community = this.settings.community;
+    const settings = {
       name: 'GOON.VC:presence',
       path: this.settings.path,
       tickMs: this.settings.tickMs,
@@ -138,21 +140,34 @@ class Presence {
       penalties: this.announcementTargets().length > 0,
       persistent: true,
       verbosity: 1
-    });
-    this.game = this.doorman.plugins.idlerpg;
+    };
+
+    if (community) {
+      this.doorman = community.doorman;
+      this.game = community.plug(IdleRPG, settings);
+    } else {
+      const Doorman = this.settings.Doorman || require('@fabric/doorman');
+      this.doorman = new Doorman({ name: 'GOON.VC:doorman', http: false, local: false });
+      this.doorman.on('error', (error) => this.emit('error', 'presence doorman', errorMessage(error)));
+      this.doorman.use(IdleRPG, settings);
+      this.game = this.doorman.plugins.idlerpg;
+    }
     this.game.on('error', (error) => this.emit('error', 'presence game', errorMessage(error)));
     this.game.on('message', (message) => {
       this.announce(message).catch((error) => this.emit('error', 'presence announce', errorMessage(error)));
     });
-    // Doorman#start() resolves once every plugin has started (Store open,
-    // prior state restored).
-    await this.doorman.start();
+    // Both resolve once the plugin has started (Store open, prior state restored).
+    if (community) await community.ready(this.game);
+    else await this.doorman.start();
     await assertStoreOpen(this.game.store);
 
     if (this.settings.gateway !== false) {
       this.gateway = { status: 'waiting', error: null };
       const operations = this.settings.operations;
-      if (operations) {
+      if (community) {
+        if (community.adapter) this._attached(community.discord, community.adapter);
+        else community.on('attached', this._onAttached);
+      } else if (operations) {
         if (operations.discord) this.attach(operations.discord);
         else if (typeof operations.on === 'function') operations.on('gateway', this._onGateway);
       }
@@ -192,9 +207,22 @@ class Presence {
   attach (discord) {
     if (!discord || this.adapter) return this;
     const DoormanDiscord = this.settings.DoormanDiscord || require('@fabric/doorman/services/discord');
+    const adapter = new DoormanDiscord({ client: discord, replies: false });
+    this.doorman.enable('discord', adapter);
+    return this._attached(discord, adapter);
+  }
+
+  /**
+   * Post and name players through a Doorman Discord adapter that is already
+   * enabled (ours, or the shared one in services/community.js).
+   * @param {Object} discord `@fabric/discord` client
+   * @param {Object} adapter Doorman Discord adapter
+   * @returns {Presence}
+   */
+  _attached (discord, adapter) {
+    if (!discord || this.adapter) return this;
     this.discord = discord;
-    this.adapter = new DoormanDiscord({ client: discord, replies: false });
-    this.doorman.enable('discord', this.adapter);
+    this.adapter = adapter;
     this.gateway = { status: 'attached', error: null };
     this.emit('log', 'GOON.VC', 'presence: attached to the Discord gateway');
     const backfill = () => this.backfillNames(discord).catch((error) => this.emit('error', 'presence names', errorMessage(error)));
@@ -241,8 +269,11 @@ class Presence {
 
   async stop () {
     const operations = this.settings.operations;
+    const community = this.settings.community;
     if (operations && typeof operations.removeListener === 'function') operations.removeListener('gateway', this._onGateway);
-    if (this.doorman) await this.doorman.stop();
+    // A shared Doorman is stopped (with every plugin) by its owner.
+    if (community) community.removeListener('attached', this._onAttached);
+    else if (this.doorman) await this.doorman.stop();
     return this;
   }
 
@@ -295,6 +326,17 @@ class Presence {
   async discordPlayer (userId) {
     const record = this.game ? this.game.playerFor(`discord/users/${userId}`) : null;
     return record ? this.player(record.id) : null;
+  }
+
+  /**
+   * When a member was last present in a voice channel, or null when they
+   * have never played.
+   * @param {string} target Doorman user id (`discord/users/<id>`).
+   * @returns {string|null} ISO time
+   */
+  lastSeen (target) {
+    const record = this.game && typeof this.game.playerFor === 'function' ? this.game.playerFor(target) : null;
+    return record && record.lastSeen ? record.lastSeen : null;
   }
 
   /**

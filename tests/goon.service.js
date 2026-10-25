@@ -273,6 +273,7 @@ describe('goon.vc HTTP', function () {
         path: path.join(os.tmpdir(), `goonvc-operations-test-${process.pid}`),
         gateway: false
       },
+      community: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-community-test-')) },
       presence: {
         path: path.join(os.tmpdir(), `goonvc-presence-test-${process.pid}`),
         tickMs: 0,
@@ -292,6 +293,8 @@ describe('goon.vc HTTP', function () {
         }
       },
       clips: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-test-')), poll: false },
+      fabric: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-fabric-test-')) },
+      alliance: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-alliance-test-')) },
       listen: true
     });
     await site.start();
@@ -524,7 +527,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(bravoMain.includes('<dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></dd>'));
     assert.ok(bravoMain.includes('<a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a>'));
     assert.ok(bravoMain.includes('Not in PERMAFLEET yet?'));
-    assert.ok(index.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);"));
+    assert.ok(index.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
     const ids = [...index.body.matchAll(/\sid="([^"$]+)"/g)].map((m) => m[1]);
     assert.deepStrictEqual(ids.filter((id, i) => ids.indexOf(id) !== i), [], 'element ids are unique');
   });
@@ -552,7 +555,7 @@ describe('goon.vc HTTP', function () {
     const calendar = page.match(/<fabric-calendar[\s\S]*?<\/fabric-calendar>/);
     assert.ok(calendar, 'same <fabric-calendar> as /events');
     assert.ok(calendar[0].includes('board="/services/events/schedule.svg"'));
-    assert.ok(calendar[0].includes('server="1190527980120850493"'), 'pinned to the home server');
+    assert.ok(calendar[0].includes('server="permafleet"'), 'pinned to the alliance servers together');
     assert.ok(!calendar[0].includes('src='), 'no server picker');
     assert.ok(calendar[0].includes('storage-key="goon.events.timeZone"'), 'shares the zone picked on /events');
     assert.ok(!page.includes('<img'), 'no static poster');
@@ -865,7 +868,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 19 members</span>'));
     assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 8, 'every tile is badged as a member');
     const tiles = [...charter.matchAll(/<li><a class="([^"]+)" href="([^"]+)">/g)].map((m) => `${m[1]} ${m[2]}`);
-    assert.strictEqual(tiles[tiles.length - 1], `op-member op-member-add ${base}#add-your-organization`, 'last tile invites new orgs');
+    assert.strictEqual(tiles[tiles.length - 1], 'op-member op-member-add /operations/PERMAFLEET/onboarding', 'last tile invites new orgs to onboarding');
     assert.ok(charter.includes('<span class="op-member-name">Your org here</span>'));
     assert.ok(res.body.includes('>Apply on RSI</a>'));
     assert.ok(res.body.includes('pf-section'), 'organizations pages are part of the PERMAFLEET section');
@@ -880,6 +883,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(cta.includes('<h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>'));
     const hotline = /#embassy chat on the <a href="([^"]+)"/.exec(index.body)[1];
     assert.ok(cta.includes(`<a class="goon-button" href="${hotline}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>`), 'same Discord as the #embassy hotline');
+    assert.ok(cta.includes('See <a href="/operations/PERMAFLEET/onboarding">how onboarding works</a>'), 'points org leaders at onboarding');
     assert.ok(orgIndex.indexOf('org-roster-cta') < orgIndex.indexOf('</main>'), 'on the index');
     assert.strictEqual(index.body.split('class="org-roster-cta"').length, 2, 'index only, not each org profile');
   });
@@ -901,7 +905,105 @@ describe('goon.vc HTTP', function () {
       'Join https://discord.gg/permafleet'
     ]);
     assert.ok(!res.body.includes('class="op-nav"') && !res.body.includes('class="schedule-nav"'), 'replaces the per-page crumbs');
-    assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);"));
+    assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
+  });
+
+  it('serves the PERMAFLEET onboarding page for new member organizations', async function () {
+    const res = await fetchJson('/operations/PERMAFLEET/onboarding', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('<meta property="og:title" content="PERMAFLEET Onboarding — GOON SQUAD">'));
+    assert.ok(res.body.includes('<meta property="og:url" content="https://goon.vc/operations/PERMAFLEET/onboarding">'));
+    const start = res.body.indexOf('<main id="onboarding-page"');
+    assert.ok(start > 0, 'onboarding page');
+    const page = res.body.slice(start, res.body.indexOf('</main>', start));
+    const steps = [...page.matchAll(/<li>\s*<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
+    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your stewards', 'Set up your Discord']);
+    const expectations = page.slice(page.indexOf('id="onboarding-expectations"'), page.indexOf('id="onboarding-benefits"'));
+    assert.deepStrictEqual([...expectations.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]), [
+      'An #embassy channel',
+      'A public PERMAFLEET voice channel',
+      'The Prospect system'
+    ], 'every member org keeps an #embassy, a public PERMAFLEET voice channel, and Prospect ranks');
+    assert.ok(expectations.includes('<a href="/operations/PERMAFLEET/squadrons">How the ranks work &raquo;</a>'));
+    assert.ok(page.includes('href="https://discord.com/channels/1190527980120850493/1205022843402977310"'), '#embassy');
+    assert.ok(page.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'tag up on RSI');
+    assert.ok(page.includes('href="/services/discord/invite"'), 'add the bot');
+    assert.ok(page.includes('href="/operations/PERMAFLEET/squadrons"'));
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+      assert.ok(page.includes(`<li><a href="/organizations/${symbol}">[${symbol}] `), `${symbol} listed`);
+    }
+    assert.ok(!/\d{17,}/.test(page.replace(/https:\/\/discord\.com\/[^"]+/g, '')), 'no Discord ids outside Discord links');
+    assert.ok(res.body.includes('var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";'));
+  });
+
+  it('serves PERMAFLEET votes: the pages, the alliance federation, and steward-only writes', async function () {
+    const res = await fetchJson('/operations/PERMAFLEET/votes', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('<meta property="og:title" content="PERMAFLEET Votes — GOON SQUAD">'));
+    assert.ok(res.body.includes('<main id="pf-votes-page" class="pf-page pf-votes" data-api="/services/alliance"'));
+    assert.ok(res.body.includes('<main id="pf-vote-page"'));
+    assert.ok(res.body.includes('<script src="/scripts/alliance-votes.js" defer></script>'));
+    const proposalPage = await fetchJson('/operations/PERMAFLEET/votes/0123456789ab', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(proposalPage.status, 200, 'proposal pages are the SPA');
+
+    const overview = await fetchJson('/services/alliance');
+    assert.strictEqual(overview.status, 200);
+    assert.strictEqual(overview.json.status, 'ready');
+    assert.strictEqual(overview.json.name, 'PERMAFLEET');
+    assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']);
+    assert.strictEqual(overview.json.federation.threshold, 4, 'majority of seven orgs');
+    assert.strictEqual(overview.json.federation.id.length, 64);
+    assert.deepStrictEqual(overview.json.you, { signedIn: false, organizations: [], officers: [] });
+    assert.ok(!overview.body.includes('discord:'), 'no account keys');
+    assert.ok(!/\d{17,}/.test(overview.body.replace(/https?:\/\/[^"]+/g, '').replace(/[0-9a-f]{64,}/g, '')), 'no Discord ids outside URLs and signed frames');
+
+    const refused = await fetchJson('/services/alliance/proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Adopt the charter' })
+    });
+    assert.strictEqual(refused.status, 401, 'only signed-in stewards propose');
+
+    assert.strictEqual(overview.json.bridge.descriptor.type, 'FabricBridge');
+    assert.deepStrictEqual(overview.json.bridge.descriptor.platforms, ['discord', 'fabric']);
+    const bridge = await fetchJson('/services/alliance/bridge');
+    assert.strictEqual(bridge.status, 200);
+    assert.strictEqual(bridge.json.id, overview.json.bridge.id);
+    const memberVote = await fetchJson('/services/alliance/proposals/0123456789ab/member-votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choice: 'yes' })
+    });
+    assert.strictEqual(memberVote.status, 401, 'members sign in to vote on the web');
+  });
+
+  it('serves /federations outside the PERMAFLEET menu, with the alliance federation', async function () {
+    const res = await fetchJson('/federations', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('<meta property="og:title" content="Federations — GOON SQUAD">'));
+    assert.ok(res.body.includes('<main id="federations-page" class="pf-page pf-votes pf-federations" data-api="/services/alliance/federations"'));
+    assert.ok(res.body.includes('<main id="federation-page"'));
+    assert.ok(res.body.includes('<script src="/scripts/federations.js" defer></script>'));
+    const header = res.body.slice(res.body.indexOf('id="permafleet-header"'), res.body.indexOf('</header>', res.body.indexOf('id="permafleet-header"')));
+    assert.ok(!header.includes('/federations') && !header.includes('/votes'), 'neither federations nor votes are in the PERMAFLEET menu');
+
+    const list = await fetchJson('/services/alliance/federations');
+    assert.strictEqual(list.status, 200);
+    const overview = await fetchJson('/services/alliance');
+    const alliance = list.json.federations.find((row) => row.kind === 'alliance' && row.current);
+    assert.strictEqual(alliance.id, overview.json.federation.id);
+    assert.strictEqual(alliance.path, `/federations/${alliance.id.slice(0, 12)}`);
+    assert.strictEqual(overview.json.federation.path, alliance.path);
+
+    const page = await fetchJson(alliance.path, { headers: { Accept: 'text/html' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('<meta property="og:title" content="PERMAFLEET federation — GOON SQUAD">'));
+    assert.ok(page.body.includes('4 of 7 member orgs decide'));
+    const detail = await fetchJson(`/services/alliance/federations/${alliance.shortId}`);
+    assert.strictEqual(detail.status, 200);
+    assert.deepStrictEqual(detail.json.organizations.map((org) => org.symbol), overview.json.federation.organizations.map((org) => org.symbol));
+    assert.ok(!detail.body.includes('discord:'), 'no account keys');
+    assert.strictEqual((await fetchJson('/services/alliance/federations/000000000000')).status, 404);
   });
 
   it('serves /resources with a dedicated GoonCitizen page', async function () {
@@ -1193,11 +1295,14 @@ describe('goon.vc page paths', function () {
       members: { path: path.join(root, 'members') },
       events: Object.assign({ path: path.join(root, 'events') }, tokenless),
       operations: { path: path.join(root, 'operations'), gateway: false },
+      community: { path: path.join(root, 'community') },
       presence: { path: path.join(root, 'presence'), tickMs: 0, gateway: false },
       tournaments: { path: path.join(root, 'tournaments') },
       leagues: { path: path.join(root, 'leagues') },
       leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
       clips: { path: path.join(root, 'clips'), poll: false },
+      fabric: { path: path.join(root, 'fabric') },
+      alliance: { path: path.join(root, 'alliance') },
       listen: true
     });
     await site.start();
@@ -1230,11 +1335,14 @@ describe('goon.vc page paths', function () {
     assert.deepStrictEqual(await get('/tournaments//?from=discord'), { status: 301, location: '/tournaments?from=discord' });
     assert.deepStrictEqual(await get('/tournaments/saturday-1v1/2026-10-17/'), { status: 301, location: '/tournaments/saturday-1v1/2026-10-17' });
     assert.deepStrictEqual(await get('/operations/PERMAFLEET/squadrons/'), { status: 301, location: '/operations/PERMAFLEET/squadrons' });
+    assert.deepStrictEqual(await get('/operations/PERMAFLEET/onboarding/'), { status: 301, location: '/operations/PERMAFLEET/onboarding' });
     assert.deepStrictEqual(await get('/leagues/'), { status: 301, location: '/leagues' });
     assert.deepStrictEqual(await get('/leagues/gladius-ladder/?season=2'), { status: 301, location: '/leagues/gladius-ladder?season=2' });
     assert.deepStrictEqual(await get('/clips/'), { status: 301, location: '/clips' });
     assert.deepStrictEqual(await get('/clips/timeline/'), { status: 301, location: '/clips/timeline' });
     assert.deepStrictEqual(await get('/clips/projects/abc123/'), { status: 301, location: '/clips/projects/abc123' });
+    assert.deepStrictEqual(await get('/federations/'), { status: 301, location: '/federations' });
+    assert.deepStrictEqual(await get('/federations/0123456789ab/'), { status: 301, location: '/federations/0123456789ab' });
   });
 
   it('keeps the configured redirects', async function () {

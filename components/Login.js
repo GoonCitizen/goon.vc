@@ -18,7 +18,11 @@ function renderLoginCss () {
         padding: 1em;
       }
       .login-session img { border-radius: 50%; height: 48px; width: 48px; }
-      .login-session .goon-button { font-size: 0.8em; margin-top: 0.75em; padding: 0.35em 0.8em; }`;
+      .login-session .goon-button { font-size: 0.8em; margin-top: 0.75em; padding: 0.35em 0.8em; }
+      .login-accounts { list-style: none; margin: 1em 0 0; padding: 0; }
+      .login-accounts li { align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; gap: 0.5em; justify-content: space-between; padding: 0.4em 0; }
+      .login-accounts small { color: #999; }
+      .login-accounts .goon-button { margin-top: 0; }`;
 }
 
 /**
@@ -45,7 +49,9 @@ function renderLoginHtml (props) {
  * Runs on every page: hides Login CTAs when neither the Hub proxy nor Discord
  * login is available. On the login page, wires the three sign-in methods;
  * Passport and desktop both sign a Hub session (same-origin `/sessions` proxy)
- * that the members service redeems at `/services/members/passport`.
+ * that the members service redeems at `/services/members/passport`. Signed
+ * in, the same three buttons link another account to the member instead, and
+ * the member's linked accounts are listed with Unlink.
  * @param {Object} props
  * @param {string} props.path SPA path for the login page.
  */
@@ -65,6 +71,7 @@ function renderLoginScript (props) {
         var discordAvailable = false;
         var busy = false;
         var pollTimer = null;
+        var signedIn = null;
 
         function getJson (url, opts) {
           return window.fetch(url, Object.assign({ cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}))
@@ -74,6 +81,9 @@ function renderLoginScript (props) {
         }
 
         function render () {
+          btnDiscord.textContent = signedIn ? 'Link Discord' : 'Discord';
+          btnPassport.textContent = signedIn ? 'Link a Passport identity' : 'Passport';
+          btnDesktop.textContent = signedIn ? 'Link a GoonCitizen desktop' : 'GoonCitizen desktop';
           btnDiscord.disabled = busy || !discordAvailable;
           btnPassport.disabled = busy || !hubAvailable;
           btnDesktop.disabled = busy || !hubAvailable;
@@ -128,11 +138,53 @@ function renderLoginScript (props) {
           expired_state: 'That sign-in link expired. Try again.',
           invalid_request: 'Discord returned an invalid response. Try again.',
           discord_failed: 'Could not complete Discord sign-in. Try again.',
-          discord_unavailable: 'Discord could not be reached. Try again in a minute.'
+          discord_unavailable: 'Discord could not be reached. Try again in a minute.',
+          not_signed_in: 'Sign in first, then link another account.',
+          link_failed: 'That link was started from a different sign-in. Try again.'
         };
+        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric' };
+
+        function linkedMessage (what, merged) {
+          return (what === 'discord' ? 'Discord account' : 'Fabric identity') + ' linked.' +
+            (merged ? ' It had its own profile, so the two are now one.' : '');
+        }
+
+        function showAccounts (list, accounts) {
+          list.textContent = '';
+          accounts.forEach(function (account) {
+            var li = document.createElement('li');
+            var label = document.createElement('span');
+            label.textContent = account.label + ' ';
+            var small = document.createElement('small');
+            small.textContent = (PLATFORMS[account.platform] || account.platform) + (account.via === 'cluster' ? ' · linked device' : '');
+            label.appendChild(small);
+            li.appendChild(label);
+            var unlink = document.createElement('button');
+            unlink.type = 'button';
+            unlink.className = 'goon-button';
+            unlink.textContent = 'Unlink';
+            unlink.disabled = accounts.length < 2;
+            unlink.title = accounts.length < 2 ? 'Your only account stays linked.' : '';
+            unlink.addEventListener('click', function () {
+              if (!window.confirm('Unlink ' + account.label + ' from your profile?')) return;
+              getJson('/services/members/accounts/' + encodeURIComponent(account.key), { method: 'DELETE' }).then(function (r) {
+                if (!r.ok) {
+                  status.textContent = (r.j && r.j.error) || 'Could not unlink that account.';
+                  return;
+                }
+                status.textContent = account.label + ' unlinked.';
+                showAccounts(list, r.j.accounts || []);
+              });
+            });
+            li.appendChild(unlink);
+            list.appendChild(li);
+          });
+        }
 
         function showMember (member) {
           sessionBox.textContent = '';
+          signedIn = member || null;
+          render();
           if (!member) {
             sessionBox.style.display = 'none';
             return;
@@ -150,6 +202,13 @@ function renderLoginScript (props) {
           line.appendChild(strong);
           line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : 'Fabric')));
           sessionBox.appendChild(line);
+          var accounts = document.createElement('ul');
+          accounts.className = 'login-accounts';
+          accounts.setAttribute('aria-label', 'Linked accounts');
+          sessionBox.appendChild(accounts);
+          getJson('/services/members/accounts').then(function (r) {
+            if (r.ok && r.j && r.j.accounts) showAccounts(accounts, r.j.accounts);
+          }).catch(function () {});
           var out = document.createElement('button');
           out.type = 'button';
           out.className = 'goon-button';
@@ -166,8 +225,9 @@ function renderLoginScript (props) {
 
         var params = new URLSearchParams(window.location.search);
         if (params.get('error')) status.textContent = ERRORS[params.get('error')] || 'Sign-in failed.';
+        else if (params.get('linked')) status.textContent = linkedMessage(params.get('linked'), params.get('merged'));
         else if (params.get('signedIn')) status.textContent = 'Welcome back.';
-        if (params.get('error') || params.get('signedIn')) {
+        if (params.get('error') || params.get('signedIn') || params.get('linked')) {
           window.history.replaceState(null, '', loginPath);
         }
 
@@ -178,11 +238,12 @@ function renderLoginScript (props) {
         btnDiscord.addEventListener('click', function () {
           setBusy(true);
           status.textContent = 'Redirecting to Discord…';
-          window.location.href = '/services/members/discord';
+          window.location.href = '/services/members/discord' + (signedIn ? '?link=1' : '');
         });
 
         // The Hub releases a signed session exactly once, so only the members service may redeem it.
         function pollClaim (sessionId, pollSecret) {
+          var linking = !!signedIn;
           var tries = 0;
           var inFlight = false;
           if (pollTimer) clearInterval(pollTimer);
@@ -199,17 +260,17 @@ function renderLoginScript (props) {
             getJson('/services/members/passport', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null })
+              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null, link: linking })
             }).then(function (r) {
               inFlight = false;
               if (r.status === 202) return;
               clearInterval(pollTimer);
               setBusy(false);
               if (!r.ok) {
-                status.textContent = 'Sign-in failed: ' + ((r.j && r.j.error) || r.status);
+                status.textContent = (linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status);
                 return;
               }
-              status.textContent = 'Signed in.';
+              status.textContent = r.j.linked ? linkedMessage(r.j.linked, r.j.merged) : 'Signed in.';
               showMember(r.j.member);
             }).catch(function () { inFlight = false; });
           }, 1500);

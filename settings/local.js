@@ -44,6 +44,15 @@ module.exports = {
     redirectUri: process.env.DISCORD_REDIRECT_URI || null,
     schedule: {
       brand: process.env.DISCORD_SCHEDULE_BRAND || 'permafleet',
+      // Member orgs' Discord servers whose events join guildId's on the
+      // PERMAFLEET schedule. The bot must be in each to see their events.
+      servers: process.env.DISCORD_SCHEDULE_SERVERS
+        ? process.env.DISCORD_SCHEDULE_SERVERS.split(',').map((id) => id.trim()).filter(Boolean)
+        : [
+            '1145511542637482114', // 4M-CONTRACTORS (discord.gg/4m-contractors)
+            '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
+            '1439226629867044976' // AIMOS (discord.gg/aimos)
+          ],
       // Last successful fetch; reused when Discord is unreachable.
       snapshot: 'stores/discord/scheduled-events.json'
     }
@@ -64,6 +73,30 @@ module.exports = {
     path: process.env.GOON_OPERATIONS_STORE || 'stores/operations',
     file: 'contracts/operations.json',
     gateway: process.env.GOON_OPERATIONS_GATEWAY !== '0'
+  },
+
+  // The one in-process Doorman (IdleRPG plugs into it) and its DM scripts, e.g.
+  // `/goon setup`, which walks a server admin through connecting their server.
+  // Answers are recorded per server in the Fabric Store; nothing reads them yet.
+  community: {
+    enabled: process.env.GOON_COMMUNITY !== '0',
+    path: process.env.GOON_COMMUNITY_STORE || 'stores/community',
+    scripts: 'contracts/scripts',
+    // Unlocks PUT /services/doorman/scripts/<id> and GET …/<id>/results, and the
+    // campaigns API. Env only (this file is tracked).
+    token: process.env.GOON_SCRIPTS_TOKEN || null,
+    // Campaigns: one DM to every member a filter selects (`/goon campaign`, or
+    // the API). Opt-in: listing members needs the privileged Server Members
+    // intent, and Discord refuses the whole gateway connection when it is asked
+    // for without being enabled in the Developer Portal (Bot → Privileged
+    // Gateway Intents) first.
+    campaigns: {
+      enabled: process.env.GOON_CAMPAIGNS === '1',
+      path: process.env.GOON_CAMPAIGNS_STORE || 'stores/campaigns',
+      intervalMs: 2000, // one DM every 2 seconds
+      maxAudience: 500, // per server campaign
+      guildCooldownMs: 24 * 60 * 60 * 1000 // one server campaign a day
+    }
   },
 
   // /services/idlerpg: global IdleRPG presence statistic (Doorman in-process,
@@ -88,6 +121,13 @@ module.exports = {
   leagues: {
     path: process.env.GOON_LEAGUES_STORE || 'stores/leagues'
   },
+  // /operations/PERMAFLEET/votes: one vote per member org, as a Fabric Federation.
+  // Orgs and their stewards' account keys are in contracts/alliance.json; each
+  // org's validator key is derived from goon.vc's Fabric key (fabric.xprv / stores/fabric).
+  alliance: {
+    path: process.env.GOON_ALLIANCE_STORE || 'stores/alliance',
+    file: process.env.GOON_ALLIANCE_ROSTER || 'contracts/alliance.json'
+  },
 
   // Discord application commands /idlerpg and /1v1, answered on the operations gateway client.
   commands: {
@@ -102,15 +142,20 @@ module.exports = {
     channelName: '1v1-challenges'
   },
 
-  // /clips: videos from the Discord clip channels, low-res proxies for the
+  // /clips: videos and screenshots from the Discord clip channels, low-res proxies for the
   // storyboard editor, and server-side renders (Fabric Store + media on disk).
-  // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)",
+  // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)"/"screenshot(s)",
   // plus every media channel); threads under a matched channel are read too.
   // Needs ffmpeg + ffprobe on PATH; the bot needs View Channel + Read Message History.
   // Medal links are downloaded with yt-dlp; GOON_CLIPS_LINKS=1 (or "all") also imports
   // YouTube / Streamable / Twitch, "0" keeps every link as a source only, or list hosts.
   // Each clip's best download (up to 1080p) is kept in <store>/masters for renders, and
   // links are re-checked weekly for a better version; GOON_CLIPS_MASTERS=0 keeps proxies only.
+  // Go-live announcements in #streams (GOON_CLIPS_STREAM_CHANNELS, same matchers) are followed
+  // to the Twitch broadcast (VOD) once it ends, downloaded up to 720p and kept like a clip;
+  // GOON_CLIPS_STREAMS=links puts VODs on the timeline as links only, "0" ignores announcements.
+  // Downloads wait while the largest allowed file (1 GB, 8 GB for a VOD) would leave less than
+  // GOON_CLIPS_MIN_FREE_GB (default 20) free on the disk.
   clips: {
     path: process.env.GOON_CLIPS_STORE || 'stores/clips',
     channels: process.env.GOON_CLIPS_CHANNELS
@@ -124,7 +169,33 @@ module.exports = {
       return links.split(',').map((s) => s.trim()).filter(Boolean);
     })(),
     keepMasters: process.env.GOON_CLIPS_MASTERS !== '0',
+    minFreeBytes: process.env.GOON_CLIPS_MIN_FREE_GB
+      ? Number(process.env.GOON_CLIPS_MIN_FREE_GB) * 1024 * 1024 * 1024
+      : undefined,
+    streams: {
+      enabled: process.env.GOON_CLIPS_STREAMS !== '0',
+      download: process.env.GOON_CLIPS_STREAMS !== 'links',
+      channels: process.env.GOON_CLIPS_STREAM_CHANNELS
+        ? process.env.GOON_CLIPS_STREAM_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined
+    },
     poll: process.env.GOON_CLIPS !== '0'
+  },
+
+  // Relay of G00N SQUAD public channels (@everyone can view; text / announcement,
+  // not age-restricted) to the Fabric network as GoonCitizen chat packs for one
+  // Federation group: set GOON_FABRIC_GROUP (and that group's contract id) from
+  // GoonCitizen, then add the relay key (logged on start, GET /services/fabric)
+  // to the group. Needs the Message Content intent on the bot. The key is
+  // GOON_FABRIC_XPRV, else one generated once and kept in the store. The Peer
+  // only dials out; GOON_FABRIC_RELAY=0 turns relaying off.
+  fabric: {
+    path: process.env.GOON_FABRIC_STORE || 'stores/fabric',
+    xprv: process.env.GOON_FABRIC_XPRV || null,
+    peers: (process.env.GOON_FABRIC_PEERS ?? 'hub.fabric.pub:7777,relay.goon.vc:7777').split(',').map((s) => s.trim()).filter(Boolean),
+    group: process.env.GOON_FABRIC_GROUP || null,
+    contract: process.env.GOON_FABRIC_GROUP_CONTRACT || null,
+    relay: process.env.GOON_FABRIC_RELAY !== '0'
   },
 
   site: {

@@ -1,0 +1,106 @@
+{
+  "id": "recruit-turtle-brigade",
+  "title": "TURTLE BRIGADE recruiting",
+  "description": "Puts a Prospect IV forward for TURTLE BRIGADE, PERMAFLEET's infantry (offered by the recruiting campaign in contracts/recruiting.json). Answers are recorded per member for PERMAFLEET leadership, who select who joins.",
+  "start": "welcome",
+  "requires": ["[P4] Prospect IV"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Your answers go to PERMAFLEET leadership, who select who joins **TURTLE BRIGADE**. Nothing is sent until you confirm at the end, and Cancel stops at any point.",
+      "input": { "type": "confirm" },
+      "next": "experience"
+    },
+    "experience": {
+      "say": "How much FPS have you played in Star Citizen?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "new", "label": "New to FPS" },
+          { "id": "some", "label": "Some", "description": "Bunkers and FPS missions now and then" },
+          { "id": "regular", "label": "Regularly", "description": "FPS is most of what I play" },
+          { "id": "competitive", "label": "Competitive", "description": "PvP, Star Marine, or other shooters at a high level" }
+        ]
+      },
+      "next": "fireteam"
+    },
+    "fireteam": {
+      "say": "What do you like to do on the ground? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "rifleman", "label": "Rifleman" },
+          { "id": "medic", "label": "Medic" },
+          { "id": "marksman", "label": "Marksman" },
+          { "id": "breacher", "label": "Breacher / close quarters" },
+          { "id": "heavy", "label": "Heavy weapons" },
+          { "id": "lead", "label": "Squad lead" }
+        ]
+      },
+      "next": "region"
+    },
+    "region": {
+      "say": "Where do you play from?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "na", "label": "North America" },
+          { "id": "sa", "label": "South America" },
+          { "id": "eu", "label": "Europe" },
+          { "id": "oce", "label": "Oceania" },
+          { "id": "asia", "label": "Asia" }
+        ]
+      },
+      "next": "when"
+    },
+    "when": {
+      "say": "When do you usually play (your local time)? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "weeknights", "label": "Weekday evenings" },
+          { "id": "late", "label": "Weekday late nights" },
+          { "id": "weekend-days", "label": "Weekend days" },
+          { "id": "weekend-nights", "label": "Weekend evenings" },
+          { "id": "varies", "label": "It varies" }
+        ]
+      },
+      "next": "handle"
+    },
+    "handle": {
+      "say": "What's your RSI handle? It's the name in your RSI profile link (robertsspaceindustries.com/citizens/<handle>).",
+      "input": { "type": "text", "label": "RSI handle", "placeholder": "Your RSI handle", "maxLength": 60, "pattern": "^[A-Za-z0-9_-]{3,60}$" },
+      "next": "application"
+    },
+    "application": {
+      "say": "Have you filled out the squadron application? One application covers every squadron, and it's also required to join G00N SQUAD: {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/squadrons#squadron-apply",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "yes", "label": "Yes, it's in" },
+          { "id": "now", "label": "I'll do it now" },
+          { "id": "unsure", "label": "Not sure" }
+        ]
+      },
+      "next": "notes"
+    },
+    "notes": {
+      "say": "Anything leadership should know? Past units or orgs, clips, a squadmate who can vouch for you. Skip if not.",
+      "input": { "type": "text", "label": "Notes for leadership", "maxLength": 500, "multiline": true, "optional": true },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll send to PERMAFLEET leadership:\n- FPS: {{labels.experience}}\n- On the ground: {{labels.fireteam}}\n- Region: {{labels.region}}\n- Plays: {{labels.when}}\n- RSI handle: {{answers.handle}}\n- Squadron application: {{labels.application}}\n- Notes: {{answers.notes|none}}\n\nSend it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Sent. PERMAFLEET leadership reviews every name and selects who joins TURTLE BRIGADE; you'll hear from them on Discord. Until then, keep showing up for ops: {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/schedule"
+  },
+  "cancelled": {
+    "say": "No problem, nothing was sent. When you're ready, the squadron application is at {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/squadrons#squadron-apply"
+  },
+  "onComplete": [{ "action": "record" }]
+}

@@ -100,7 +100,7 @@ function injectMeta (html, tags, title) {
   const end = html.indexOf(END, start);
   if (start === -1 || end === -1) return html;
   return (html.slice(0, start) + tags + html.slice(end + END.length))
-    .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`);
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`);
 }
 
 module.exports = {

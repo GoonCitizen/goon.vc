@@ -759,6 +759,87 @@
         .pf-path { grid-template-columns: 1fr; }
       }
 
+      .pf-onboarding .pf-facts { margin-top: 0; }
+      .pf-onboarding .pf-facts dd { font-weight: 500; color: var(--pf-muted); }
+      .pf-onboarding .pf-facts dd strong { color: var(--pf-text); }
+      .pf-onboarding .pf-facts dd a { font-weight: 700; color: var(--pf-signal); text-decoration: none; }
+      .pf-onboarding .pf-facts dd a:hover { text-decoration: underline; }
+      .pf-onboarding code, .pf-rules code { color: var(--pf-text); }
+      .pf-rules {
+        max-width: 38rem;
+        margin: 0 auto;
+        padding: 1rem 1.2rem 1rem 2.6rem;
+        background: var(--pf-glass);
+        border: 1px solid var(--pf-line);
+        border-left: 3px solid var(--pf-cyan);
+        line-height: 1.6;
+      }
+      .pf-rules strong { color: var(--pf-text); }
+      .pf-onboarding-orgs { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+      .pf-onboarding-orgs a {
+        display: inline-block;
+        padding: 0.3rem 0.7rem;
+        border: 1px solid var(--pf-line);
+        background: var(--pf-glass);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+      }
+      .pf-onboarding-orgs a:hover { color: #fff; border-color: var(--pf-cyan); }
+      .pf-onboarding > .pf-links { margin-top: 2rem; text-align: center; }
+
+      .pf-votes [hidden] { display: none !important; }
+      .pf-votes-orgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+      .pf-votes-orgs li { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem; background: var(--pf-glass); border: 1px solid var(--pf-line); }
+      .pf-votes-orgs img { width: 2rem; height: 2rem; object-fit: cover; border: 1px solid var(--pf-line); }
+      .pf-votes-orgs a { color: var(--pf-text); font-weight: 700; text-decoration: none; }
+      .pf-votes-orgs a:hover { color: #fff; }
+      .pf-votes-orgs small { display: block; color: var(--pf-muted); font-size: 0.78rem; letter-spacing: 0.08em; }
+      .pf-votes-choice { flex-shrink: 0; margin-left: auto; white-space: nowrap; padding: 0.1rem 0.45rem; border: 1px solid var(--pf-line); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pf-muted); }
+      .pf-votes-choice.yes { border-color: rgba(0, 212, 255, 0.7); color: var(--pf-signal); }
+      .pf-votes-choice.no { border-color: rgba(255, 59, 59, 0.6); color: #ff8a8a; }
+      .pf-votes-list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+      .pf-votes-list li { padding: 0.9rem 1.1rem; background: var(--pf-glass); border: 1px solid var(--pf-line); border-left: 3px solid var(--pf-accent); }
+      .pf-votes-list li.open { border-left-color: var(--pf-cyan); }
+      .pf-votes-list li.failed, .pf-votes-list li.expired { opacity: 0.75; }
+      .pf-votes-list h3 { margin: 0; font-family: "Rajdhani", sans-serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; }
+      .pf-votes-list h3 a { color: #fff; text-decoration: none; }
+      .pf-votes-list h3 a:hover { color: var(--pf-signal); }
+      .pf-votes-meta { margin: 0.25rem 0 0; color: var(--pf-muted); font-size: 0.9rem; }
+      .pf-votes-status { display: inline-block; margin-right: 0.5rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pf-signal); }
+      .pf-votes-status.passed { color: #7dffb0; }
+      .pf-votes-status.failed, .pf-votes-status.expired { color: #ff8a8a; }
+      .pf-votes-bar { display: flex; height: 0.4rem; margin-top: 0.6rem; background: rgba(142, 191, 208, 0.12); }
+      .pf-votes-bar span { display: block; height: 100%; }
+      .pf-votes-bar .yes { background: var(--pf-cyan); }
+      .pf-votes-bar .no { background: #ff3b3b; }
+      .pf-votes-bar .abstain { background: var(--pf-muted); }
+      .pf-votes-panel { margin-top: 1.25rem; padding: 1.1rem 1.15rem 1.2rem; background: var(--pf-glass); border: 1px solid var(--pf-line); border-left: 3px solid var(--pf-cyan); }
+      .pf-page .pf-votes-panel h2 { margin: 0 0 0.6rem; text-align: left; font-family: "Rajdhani", sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.16em; }
+      .pf-votes-form { display: grid; gap: 0.75rem; max-width: 36rem; }
+      .pf-votes-form label { display: grid; gap: 0.3rem; font-weight: 600; }
+      .pf-votes-form input, .pf-votes-form textarea, .pf-votes-form select { padding: 0.5rem 0.6rem; background: rgba(5, 10, 24, 0.85); border: 1px solid var(--pf-line); color: var(--pf-text); font: inherit; }
+      .pf-votes-form textarea { min-height: 7rem; resize: vertical; }
+      .pf-votes-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .pf-votes .goon-button[aria-pressed="true"] { border-color: var(--pf-cyan); color: var(--pf-signal); }
+      .pf-votes-command { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0; }
+      .pf-votes-command code { flex: 1 1 18rem; padding: 0.45rem 0.6rem; background: rgba(5, 10, 24, 0.85); border: 1px solid var(--pf-line); color: var(--pf-text); word-break: break-all; }
+      .pf-votes-officers { margin-top: 1rem; }
+      .pf-votes-form textarea[name="frame"] { min-height: 4rem; font-family: monospace; font-size: 0.8rem; }
+      .pf-votes-note { margin: 0.5rem 0 0; color: var(--pf-muted); }
+      .pf-votes-note.error { color: #ff8a8a; }
+      #pf-votes-status .pf-votes-note { text-align: center; }
+      .pf-votes-summary { max-width: 42rem; margin: 1rem auto 0; line-height: 1.5; white-space: pre-wrap; color: var(--pf-text); }
+      .pf-votes-proof { margin-top: 2rem; color: var(--pf-muted); font-size: 0.9rem; }
+      .pf-votes-proof summary { cursor: pointer; font-weight: 700; color: var(--pf-accent); }
+      .pf-votes-proof code, .pf-votes-proof pre { color: var(--pf-text); word-break: break-all; white-space: pre-wrap; }
+      .pf-votes-proof pre { max-height: 16rem; overflow: auto; padding: 0.6rem; background: rgba(5, 10, 24, 0.85); border: 1px solid var(--pf-line); }
+
+      .pf-federations-list h3 small { margin-left: 0.5rem; color: var(--pf-muted); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+      .pf-federations-list li.organization { border-left-color: var(--pf-cyan); }
+      .pf-federations-list li.retired { opacity: 0.7; }
+      .pf-federation-id { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+
       .login-page { display: none; margin: 3em auto; max-width: 30em; padding: 0 1em; }
       .login-intro { color: #bbb; line-height: 1.45; }
       .login-buttons { display: flex; flex-direction: column; gap: 0.75em; margin: 2em auto; max-width: 22em; }
@@ -774,6 +855,10 @@
       }
       .login-session img { border-radius: 50%; height: 48px; width: 48px; }
       .login-session .goon-button { font-size: 0.8em; margin-top: 0.75em; padding: 0.35em 0.8em; }
+      .login-accounts { list-style: none; margin: 1em 0 0; padding: 0; }
+      .login-accounts li { align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; gap: 0.5em; justify-content: space-between; padding: 0.4em 0; }
+      .login-accounts small { color: #999; }
+      .login-accounts .goon-button { margin-top: 0; }
 
       .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
       .events-add-bot { padding-top: 2em; text-align: center; }
@@ -1280,7 +1365,7 @@
       </div>
       <section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
-        <p>Talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
+        <p>See <a href="/operations/PERMAFLEET/onboarding">how onboarding works</a>, then talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
         <a class="goon-button" href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>
       </section>
       <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-06.</p>
@@ -1585,8 +1670,8 @@
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/clips">Clips</a></h2>
-          <p class="operation-tagline">Every clip from our Discord clip channels, in one library.</p>
-          <p class="operation-summary">Every clip from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.</p>
+          <p class="operation-tagline">Every clip, screenshot, and stream from our Discord, in one library.</p>
+          <p class="operation-summary">Every clip and screenshot from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.</p>
           
           <div class="operation-links"><a class="goon-button" href="/clips">Clips</a></div>
         </article>
@@ -1817,7 +1902,7 @@
     </main>
     <main id="clips-page" class="clips-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline" data-login="/sessions">
       <h1>CLIPS</h1>
-      <p class="operations-intro">Every clip posted in our Discord clip channels, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best ones together and render the film.</p>
+      <p class="operations-intro">Every clip and screenshot posted in our Discord clip channels, and the VOD of every stream announced in #streams, grouped into the sessions they were recorded in. Watch every angle of a fight, then cut the best moments together and render the film.</p>
       <clip-library></clip-library>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
@@ -1922,7 +2007,7 @@
               <span class="op-member-name">A.I.M.O.S.</span>
               <span class="op-member-meta">[AIMOS] · 146 members</span>
             </a></li>
-            <li><a class="op-member op-member-add" href="/organizations#add-your-organization">
+            <li><a class="op-member op-member-add" href="/operations/PERMAFLEET/onboarding">
               <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
               <span class="op-member-name">Your org here</span>
               <span class="op-member-meta">Add your organization &raquo;</span>
@@ -1948,7 +2033,7 @@
     <main id="permafleet-schedule" class="schedule-page">
       <fabric-calendar
         board="/services/events/schedule.svg"
-        server="1190527980120850493"
+        server="permafleet"
         default-time-zone="America/Chicago"
         default-time-zone-label="Central (G00N SQUAD)"
         storage-key="goon.events.timeZone"></fabric-calendar>
@@ -2108,6 +2193,120 @@
       </dl>
       <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.gg/permafleet" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
     </main>
+    <main id="onboarding-page" class="pf-page pf-onboarding">
+      <p class="pf-eyebrow">For organization leaders</p>
+      <h1>Bring your org into the Protectorate</h1>
+      <p class="pf-intro">PERMAFLEET is an alliance of organizations, together known as the Protectorate. Member orgs keep their own name, leaders, and gameplay, and fly under one tag with a 24/7 quick reaction force behind them.</p>
+      <ol class="pf-path">
+        <li>
+          <h3>Open an embassy</h3>
+          <p>Org leaders start in <strong>#embassy</strong> on the G00N SQUAD Discord. Tell alliance leadership who you are, what you fly, and who speaks for your org.</p>
+          <p class="pf-links"><a href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener noreferrer">Join the Discord &raquo;</a> · <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Open #embassy &raquo;</a></p>
+        </li>
+        <li>
+          <h3>Tag your pilots</h3>
+          <p>Every pilot joins the <code>[PERMAFLEET]</code> org on RSI before undocking. Many of our operators shoot first and ask questions later; the tag is how they know you’re ours.</p>
+          <p class="pf-links"><a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI &raquo;</a></p>
+        </li>
+        <li>
+          <h3>Name your stewards</h3>
+          <p>Pick the officers who speak for your org. They get the <strong>Org Steward</strong> role and a direct line to alliance leadership. Tell us when your stewards change.</p>
+        </li>
+        <li>
+          <h3>Set up your Discord</h3>
+          <p>Open an <strong>#embassy</strong> channel and a public <strong>PERMAFLEET</strong> voice channel on your server, then add our bot so leadership can put your events on the alliance schedule.</p>
+          <p>Our bot can make them for you: run <code>/goon embassy</code> and <code>/goon voice</code> in your server. <code>/goon council</code> adds a private <strong>#council</strong> where your officers settle alliance votes, and <code>/goon permafleet</code> a <strong>#permafleet</strong> channel for alliance talk.</p>
+          <p class="pf-links"><a href="/services/discord/invite" target="_blank" rel="noopener noreferrer">Add our bot &raquo;</a> · <a href="/operations/PERMAFLEET/schedule">Weekly schedule &raquo;</a></p>
+        </li>
+      </ol>
+      <h2 id="onboarding-expectations">What we expect</h2>
+      <p class="pf-intro">Every member organization keeps these up.</p>
+      <dl class="pf-facts">
+        <div><dt>An #embassy channel</dt><dd>A text channel on your Discord where other orgs and alliance leadership can reach yours.</dd></div>
+        <div><dt>A public PERMAFLEET voice channel</dt><dd>A voice channel on your Discord, open to every PERMAFLEET pilot, so anyone in the alliance can drop in and fly with you.</dd></div>
+        <div><dt>The Prospect system</dt><dd>New members start at <strong>Prospect I</strong> and move up the Prospect ranks by showing up, attending scheduled events, and doing well at what they’re given. <a href="/operations/PERMAFLEET/squadrons">How the ranks work &raquo;</a></dd></div>
+      </dl>
+      <h2 id="onboarding-benefits">What your org gets</h2>
+      <dl class="pf-facts">
+        <div><dt>A seat on the Council</dt><dd>Your org joins PERMAFLEET’s Council of 12 and gets a profile on our Organizations page, linked to your RSI page.</dd></div>
+        <div><dt>24/7 security</dt><dd>Special Operators and the quick reaction force answer in the in-game <code>PERMAFLEET</code> chat group and in <strong>#beacon</strong> on Discord.</dd></div>
+        <div><dt>Events</dt><dd>Scrimmages, practices, parties, and the weekly ops. On patch days the whole alliance runs one party, with contract shares.</dd></div>
+        <div><dt>Your own channel</dt><dd>A channel and role for your org in the PERMAFLEET section of the G00N SQUAD Discord, and recruiting threads in <strong>#recruiting</strong>.</dd></div>
+        <div><dt>Escorts and industry</dt><dd>Miners, haulers, and crafters trade work across the alliance, and the squadrons fly escort.</dd></div>
+        <div><dt>Squadrons</dt><dd>Prospects from every member org can be selected for the cross-org squadrons. <a href="/operations/PERMAFLEET/squadrons">The path to membership &raquo;</a></dd></div>
+      </dl>
+      <h2 id="onboarding-rules">Ground rules</h2>
+      <ul class="pf-rules">
+        <li>No drama, no politics, no bullying.</li>
+        <li>Set your Discord nickname to your in-game name.</li>
+        <li>Wear the <code>[PERMAFLEET]</code> tag whenever you expect safety.</li>
+        <li>Stay in the in-game <code>ALLIANCE</code> and <code>PERMAFLEET</code> chat groups.</li>
+        <li>Report trouble in the ’verse right away, with as much detail as you can gather.</li>
+        <li>Take grievances to <strong>#embassy</strong> on the G00N SQUAD Discord.</li>
+      </ul>
+      <h2 id="onboarding-members">Already in the Protectorate</h2>
+      <p class="pf-intro">You’ll be flying with these orgs.</p>
+      <ul class="pf-onboarding-orgs" aria-label="Member organizations">
+        <li><a href="/organizations/G00N">[G00N] G00N SQUAD</a></li>
+        <li><a href="/organizations/INFN">[INFN] Infinity Industries</a></li>
+        <li><a href="/organizations/TRDE">[TRDE] Trans-Galactic Trade</a></li>
+        <li><a href="/organizations/LCRP">[LCRP] Legacy Corporation</a></li>
+        <li><a href="/organizations/DOUBLEDOGZ">[DOUBLEDOGZ] DoubleDog Delivery, Inc.</a></li>
+        <li><a href="/organizations/4MCONTRACT">[4MCONTRACT] 4M Contractors</a></li>
+        <li><a href="/organizations/AIMOS">[AIMOS] A.I.M.O.S.</a></li>
+      </ul>
+      <p class="pf-links">Ready? <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Talk to us in #embassy &raquo;</a> · <a href="/organizations">Member organizations &raquo;</a></p>
+    </main>
+    <main id="pf-votes-page" class="pf-page pf-votes" data-api="/services/alliance" data-base="/operations/PERMAFLEET/votes" data-login="/sessions">
+      <p class="pf-eyebrow">Alliance business</p>
+      <h1>PERMAFLEET Votes</h1>
+      <p class="pf-intro">Decisions for the Protectorate, one vote per member organization.</p>
+      <div id="pf-votes-status"><p class="pf-intro">Loading…</p></div>
+      <section class="pf-votes-panel" id="pf-votes-propose" hidden>
+        <h2>New proposal</h2>
+        <form class="pf-votes-form" id="pf-votes-form">
+          <label>Title <input name="title" maxlength="120" required placeholder="Adopt the PERMAFLEET charter"></label>
+          <label>Details <textarea name="summary" maxlength="2000" placeholder="What the orgs are voting on, and where to discuss it."></textarea></label>
+          <label>Voting stays open <select name="days">
+            <option value="3">3 days</option>
+            <option value="7" selected>7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+          </select></label>
+          <label data-org-picker hidden>For <select name="org"></select></label>
+          <div class="pf-votes-buttons"><button class="goon-button" type="submit">Propose</button></div>
+          <p class="pf-votes-note" role="status"></p>
+        </form>
+      </section>
+      <section class="pf-votes-panel" id="pf-votes-officers" hidden></section>
+      <h2>Proposals</h2>
+      <div id="pf-votes-list"><p class="pf-intro">Loading…</p></div>
+      <h2>Member organizations</h2>
+      <div id="pf-votes-orgs"></div>
+      <h2>How alliance votes work</h2>
+      <dl class="pf-facts">
+        <div><dt>One vote per org</dt><dd>Every member organization holds one vote. Its Org Stewards cast it; a later steward vote replaces an earlier one while voting is open.</dd></div>
+        <div><dt>Majority of the alliance</dt><dd>A proposal passes once a majority of all member orgs vote yes. It fails as soon as it no longer can, or when its voting window closes.</dd></div>
+        <div><dt>Signed and public</dt><dd>The alliance is a Fabric Federation: each org has its own signing key, and every proposal and vote is a message signed with it. Anyone can check the count.</dd></div>
+        <div><dt>Orgs of officers</dt><dd>An org can decide by its officers instead: it becomes its own federation of their keys, a majority of them (or the number the org sets) must sign the same choice with their own Fabric keys, and the org's vote carries their signatures.</dd></div>
+        <div><dt>Members have a say</dt><dd>Every member can vote too, on the proposal page or with <code>/vote</code> in any Discord server with our bot. It is advice to the orgs, one vote per member (the latest from any of your linked accounts), signed by a key goon.vc holds for your account and vouches for, without naming you.</dd></div>
+      </dl>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/onboarding">Who are the Org Stewards? &raquo;</a></p>
+    </main>
+    <main id="pf-vote-page" class="pf-page pf-votes" data-api="/services/alliance" data-base="/operations/PERMAFLEET/votes" data-login="/sessions" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/operations/PERMAFLEET/votes">&larr; All votes</a></p>
+      <div id="pf-vote-view"><p class="pf-intro">Loading…</p></div>
+    </main>
+    <main id="federations-page" class="pf-page pf-votes pf-federations" data-api="/services/alliance/federations" data-base="/federations">
+      <p class="pf-eyebrow">Fabric</p>
+      <h1>Federations</h1>
+      <p class="pf-intro">The signing groups behind <a href="/operations/PERMAFLEET/votes">alliance votes</a>: the alliance of member orgs, and each org that decides by its officers.</p>
+      <div id="federations-list"><p class="pf-intro">Loading…</p></div>
+    </main>
+    <main id="federation-page" class="pf-page pf-votes pf-federations" data-api="/services/alliance/federations" data-base="/federations" data-votes="/operations/PERMAFLEET/votes" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/federations">&larr; All federations</a></p>
+      <div id="federation-view"><p class="pf-intro">Loading…</p></div>
+    </main>
     <script type="text/javascript">
       (function () {
         var loginPath = "/sessions";
@@ -2156,6 +2355,15 @@
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";
+        var isVotes = path.toLowerCase() === "/operations/permafleet/votes";
+        var voteEl = path.toLowerCase().indexOf("/operations/permafleet/votes/") === 0
+          ? document.getElementById('pf-vote-page')
+          : null;
+        var isFederations = path.toLowerCase() === "/federations";
+        var federationEl = path.toLowerCase().indexOf("/federations/") === 0
+          ? document.getElementById('federation-page')
+          : null;
         var squadronEl = null;
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           if (el.getAttribute('data-path').toLowerCase() === path.toLowerCase()) squadronEl = el;
@@ -2168,7 +2376,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
@@ -2216,7 +2424,17 @@
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           el.style.display = el === squadronEl ? 'block' : 'none';
         });
-        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOrganizations || !!orgEl);
+        var onboardingEl = document.getElementById('onboarding-page');
+        if (onboardingEl) onboardingEl.style.display = isOnboarding ? 'block' : 'none';
+        var votesEl = document.getElementById('pf-votes-page');
+        if (votesEl) votesEl.style.display = isVotes ? 'block' : 'none';
+        var votePageEl = document.getElementById('pf-vote-page');
+        if (votePageEl) votePageEl.style.display = voteEl ? 'block' : 'none';
+        var federationsEl = document.getElementById('federations-page');
+        if (federationsEl) federationsEl.style.display = isFederations ? 'block' : 'none';
+        var federationPageEl = document.getElementById('federation-page');
+        if (federationPageEl) federationPageEl.style.display = federationEl ? 'block' : 'none';
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = "Login — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
@@ -2238,6 +2456,9 @@
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
         else if (isSquadrons) document.title = "PERMAFLEET Squadrons — GOON SQUAD";
         else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
+        else if (isOnboarding) document.title = "PERMAFLEET Onboarding — GOON SQUAD";
+        else if (isVotes || voteEl) document.title = "PERMAFLEET Votes — GOON SQUAD";
+        else if (isFederations || federationEl) document.title = "Federations — GOON SQUAD";
         else document.title = "GOON SQUAD";
       })();
     </script>
@@ -2275,6 +2496,7 @@
         var discordAvailable = false;
         var busy = false;
         var pollTimer = null;
+        var signedIn = null;
 
         function getJson (url, opts) {
           return window.fetch(url, Object.assign({ cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}))
@@ -2284,6 +2506,9 @@
         }
 
         function render () {
+          btnDiscord.textContent = signedIn ? 'Link Discord' : 'Discord';
+          btnPassport.textContent = signedIn ? 'Link a Passport identity' : 'Passport';
+          btnDesktop.textContent = signedIn ? 'Link a GoonCitizen desktop' : 'GoonCitizen desktop';
           btnDiscord.disabled = busy || !discordAvailable;
           btnPassport.disabled = busy || !hubAvailable;
           btnDesktop.disabled = busy || !hubAvailable;
@@ -2338,11 +2563,53 @@
           expired_state: 'That sign-in link expired. Try again.',
           invalid_request: 'Discord returned an invalid response. Try again.',
           discord_failed: 'Could not complete Discord sign-in. Try again.',
-          discord_unavailable: 'Discord could not be reached. Try again in a minute.'
+          discord_unavailable: 'Discord could not be reached. Try again in a minute.',
+          not_signed_in: 'Sign in first, then link another account.',
+          link_failed: 'That link was started from a different sign-in. Try again.'
         };
+        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric' };
+
+        function linkedMessage (what, merged) {
+          return (what === 'discord' ? 'Discord account' : 'Fabric identity') + ' linked.' +
+            (merged ? ' It had its own profile, so the two are now one.' : '');
+        }
+
+        function showAccounts (list, accounts) {
+          list.textContent = '';
+          accounts.forEach(function (account) {
+            var li = document.createElement('li');
+            var label = document.createElement('span');
+            label.textContent = account.label + ' ';
+            var small = document.createElement('small');
+            small.textContent = (PLATFORMS[account.platform] || account.platform) + (account.via === 'cluster' ? ' · linked device' : '');
+            label.appendChild(small);
+            li.appendChild(label);
+            var unlink = document.createElement('button');
+            unlink.type = 'button';
+            unlink.className = 'goon-button';
+            unlink.textContent = 'Unlink';
+            unlink.disabled = accounts.length < 2;
+            unlink.title = accounts.length < 2 ? 'Your only account stays linked.' : '';
+            unlink.addEventListener('click', function () {
+              if (!window.confirm('Unlink ' + account.label + ' from your profile?')) return;
+              getJson('/services/members/accounts/' + encodeURIComponent(account.key), { method: 'DELETE' }).then(function (r) {
+                if (!r.ok) {
+                  status.textContent = (r.j && r.j.error) || 'Could not unlink that account.';
+                  return;
+                }
+                status.textContent = account.label + ' unlinked.';
+                showAccounts(list, r.j.accounts || []);
+              });
+            });
+            li.appendChild(unlink);
+            list.appendChild(li);
+          });
+        }
 
         function showMember (member) {
           sessionBox.textContent = '';
+          signedIn = member || null;
+          render();
           if (!member) {
             sessionBox.style.display = 'none';
             return;
@@ -2360,6 +2627,13 @@
           line.appendChild(strong);
           line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : 'Fabric')));
           sessionBox.appendChild(line);
+          var accounts = document.createElement('ul');
+          accounts.className = 'login-accounts';
+          accounts.setAttribute('aria-label', 'Linked accounts');
+          sessionBox.appendChild(accounts);
+          getJson('/services/members/accounts').then(function (r) {
+            if (r.ok && r.j && r.j.accounts) showAccounts(accounts, r.j.accounts);
+          }).catch(function () {});
           var out = document.createElement('button');
           out.type = 'button';
           out.className = 'goon-button';
@@ -2376,8 +2650,9 @@
 
         var params = new URLSearchParams(window.location.search);
         if (params.get('error')) status.textContent = ERRORS[params.get('error')] || 'Sign-in failed.';
+        else if (params.get('linked')) status.textContent = linkedMessage(params.get('linked'), params.get('merged'));
         else if (params.get('signedIn')) status.textContent = 'Welcome back.';
-        if (params.get('error') || params.get('signedIn')) {
+        if (params.get('error') || params.get('signedIn') || params.get('linked')) {
           window.history.replaceState(null, '', loginPath);
         }
 
@@ -2388,11 +2663,12 @@
         btnDiscord.addEventListener('click', function () {
           setBusy(true);
           status.textContent = 'Redirecting to Discord…';
-          window.location.href = '/services/members/discord';
+          window.location.href = '/services/members/discord' + (signedIn ? '?link=1' : '');
         });
 
         // The Hub releases a signed session exactly once, so only the members service may redeem it.
         function pollClaim (sessionId, pollSecret) {
+          var linking = !!signedIn;
           var tries = 0;
           var inFlight = false;
           if (pollTimer) clearInterval(pollTimer);
@@ -2409,17 +2685,17 @@
             getJson('/services/members/passport', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null })
+              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null, link: linking })
             }).then(function (r) {
               inFlight = false;
               if (r.status === 202) return;
               clearInterval(pollTimer);
               setBusy(false);
               if (!r.ok) {
-                status.textContent = 'Sign-in failed: ' + ((r.j && r.j.error) || r.status);
+                status.textContent = (linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status);
                 return;
               }
-              status.textContent = 'Signed in.';
+              status.textContent = r.j.linked ? linkedMessage(r.j.linked, r.j.merged) : 'Signed in.';
               showMember(r.j.member);
             }).catch(function () { inFlight = false; });
           }, 1500);
@@ -2795,8 +3071,8 @@
         var g = data.gateway || {};
         var text = '';
         if (g.status === 'attached' && g.discord && g.discord !== 'connected') text = 'Discord gateway ' + g.discord + ' \u2014 showing saved statistics.';
+        else if (g.status === 'disabled' || g.discord === 'disabled' || g.discord === 'no-token') text = 'Live tracking is off \u2014 showing saved statistics.';
         else if (g.status === 'waiting') text = 'Waiting for the Discord gateway \u2014 showing saved statistics.';
-        else if (g.status === 'disabled') text = 'Live tracking is off \u2014 showing saved statistics.';
         note.textContent = text;
         note.hidden = !text;
       }
@@ -3505,6 +3781,8 @@
         });
       })();
     </script>
+    <script src="/scripts/alliance-votes.js" defer></script>
+    <script src="/scripts/federations.js" defer></script>
     <script type="text/javascript">
       (function () {
         var form = document.getElementById("squadron-application-form");

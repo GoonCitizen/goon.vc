@@ -339,6 +339,7 @@ async function discordGet (apiPath, token, opts = {}) {
     return { status: 0, json: null, error: 'fetch unavailable' };
   }
   const maxAttempts = Number.isFinite(Number(opts.retries)) ? Number(opts.retries) : 3;
+  const timeoutMs = Number(opts.timeoutMs) > 0 ? Number(opts.timeoutMs) : 15000;
   let attempt = 0;
   while (attempt < maxAttempts) {
     attempt += 1;
@@ -347,7 +348,8 @@ async function discordGet (apiPath, token, opts = {}) {
         Authorization: 'Bot ' + token,
         'User-Agent': 'GoonVCDiscordEvents/0.1',
         Accept: 'application/json'
-      }
+      },
+      signal: AbortSignal.timeout(timeoutMs)
     });
     let json = null;
     const text = await r.text();

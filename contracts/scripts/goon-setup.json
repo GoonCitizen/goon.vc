@@ -1,0 +1,87 @@
+{
+  "id": "goon-setup",
+  "title": "Connect your server to goon.vc",
+  "description": "Walks a server admin through what goon.vc should do for their Discord server. The answers are recorded per server for alliance leadership.",
+  "start": "welcome",
+  "requires": ["ManageGuild"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Let's connect **{{context.guildName}}** to goon.vc. It takes a couple of minutes: I'll record your answers, and alliance leadership finishes the hookup.",
+      "input": { "type": "confirm" },
+      "next": "features"
+    },
+    "features": {
+      "say": "What should goon.vc do for **{{context.guildName}}**? Pick everything you want.",
+      "input": { "type": "choice", "optionsFrom": "goon.features", "multiple": true },
+      "next": [
+        { "when": { "answers.features": "calendar" }, "goto": "calendar" },
+        { "when": { "answers.features": "clips" }, "goto": "clips" },
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "calendar": {
+      "say": "Your scheduled events show on the goon.vc calendar. Should they also go on the alliance-wide PERMAFLEET schedule?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "permafleet", "label": "Yes, on the PERMAFLEET schedule" },
+          { "id": "own", "label": "No, only our own calendar" }
+        ]
+      },
+      "next": [
+        { "when": { "answers.features": "clips" }, "goto": "clips" },
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "clips": {
+      "say": "Which channel do your members post clips in? goon.vc collects the videos and Medal links posted there into the clip library.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.textChannels", "optional": true },
+      "saveAs": "clipsChannel",
+      "next": [
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "announcements": {
+      "say": "Which channel should IdleRPG post in? It welcomes new players and announces level-ups, battles, and finds there. Chatting in that channel costs players XP, so pick a quiet one.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.textChannels", "optional": true },
+      "saveAs": "idlerpgChannel",
+      "next": [
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "org": {
+      "say": "Which org is joining PERMAFLEET? Give its name or RSI symbol. Every pilot joins the [PERMAFLEET] org on RSI before undocking; the tag is how our operators know you're ours.",
+      "input": { "type": "text", "label": "Org name or RSI symbol", "placeholder": "G00N SQUAD", "maxLength": 60 },
+      "next": "stewards"
+    },
+    "stewards": {
+      "say": "Who are your Org Stewards, the officers who speak for your org? They get the Org Steward role and a direct line to alliance leadership. Give their Discord names.",
+      "input": { "type": "text", "label": "Org Stewards", "placeholder": "Discord names, separated by commas", "maxLength": 300, "multiline": true },
+      "next": "permissions"
+    },
+    "permissions": {
+      "say": "goon.vc's bot needs **View Channels**, **Send Messages**, and **Read Message History** in the channels you picked. Missing on **{{context.guildName}}** right now: {{context.botMissing|nothing, you're set}}.\nAdd the bot, or update its permissions: {{context.inviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll record for **{{context.guildName}}**:\n- Features: {{labels.features|none}}\n- Calendar: {{labels.calendar|n/a}}\n- Clips channel: {{labels.clipsChannel|n/a}}\n- IdleRPG channel: {{labels.idlerpgChannel|n/a}}\n- Org: {{answers.org|n/a}}\n- Org Stewards: {{answers.stewards|n/a}}\n\nSave it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Saved. Alliance leadership will finish connecting **{{context.guildName}}**; ask in #embassy on the G00N SQUAD Discord if anything comes up. Run `/goon setup` again any time to change your answers."
+  },
+  "cancelled": {
+    "say": "Setup cancelled, and nothing was saved. Run `/goon setup` in your server to start again."
+  },
+  "onComplete": [{ "action": "record" }]
+}

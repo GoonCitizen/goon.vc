@@ -234,8 +234,8 @@ function renderIdleRPGScript (opts = {}) {
         var g = data.gateway || {};
         var text = '';
         if (g.status === 'attached' && g.discord && g.discord !== 'connected') text = 'Discord gateway ' + g.discord + ' \\u2014 showing saved statistics.';
+        else if (g.status === 'disabled' || g.discord === 'disabled' || g.discord === 'no-token') text = 'Live tracking is off \\u2014 showing saved statistics.';
         else if (g.status === 'waiting') text = 'Waiting for the Discord gateway \\u2014 showing saved statistics.';
-        else if (g.status === 'disabled') text = 'Live tracking is off \\u2014 showing saved statistics.';
         note.textContent = text;
         note.hidden = !text;
       }
