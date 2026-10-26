@@ -1,0 +1,94 @@
+{
+  "id": "checkin",
+  "title": "G00N SQUAD check-in",
+  "description": "A friendly check-in with a member who has gone quiet (offered by the check-in campaigns in contracts/checkin.json): how they've been, what kept them away, and what would bring them back. Answers are recorded per member for G00N SQUAD leadership.",
+  "start": "welcome",
+  "requires": ["G00N SQUAD member"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}, thanks for stopping by! A few quick questions so we know what would make G00N SQUAD worth coming back to. Your answers go to G00N SQUAD leadership. Nothing is sent until you confirm at the end, and Cancel stops at any point.",
+      "input": { "type": "confirm" },
+      "next": "away"
+    },
+    "away": {
+      "say": "What's kept you away lately? Pick everything that fits, or Skip.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "optional": true,
+        "options": [
+          { "id": "busy", "label": "Busy with life or work" },
+          { "id": "break", "label": "Taking a break from Star Citizen" },
+          { "id": "other-games", "label": "Playing other games" },
+          { "id": "patch", "label": "Waiting on a patch", "description": "Bugs, performance, or a feature I want" },
+          { "id": "crew", "label": "Hard to find people to play with" },
+          { "id": "times", "label": "Ops don't fit my schedule" },
+          { "id": "unaware", "label": "Didn't know what was going on" },
+          { "id": "community", "label": "Something in the community didn't sit right" }
+        ]
+      },
+      "next": "back"
+    },
+    "back": {
+      "say": "What would bring you back? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "ops", "label": "Fleet ops at times I can make" },
+          { "id": "dogfighting", "label": "Dogfighting", "description": "Friday Night Fights, 1v1s, BRAVO SQUADRON" },
+          { "id": "fps", "label": "FPS", "description": "TURTLE BRIGADE, bunkers, boarding" },
+          { "id": "industry", "label": "Mining, salvage, or hauling" },
+          { "id": "crew", "label": "A regular crew or wingman" },
+          { "id": "help", "label": "Help getting back up to speed" },
+          { "id": "voice", "label": "Just hanging out in voice" },
+          { "id": "nothing", "label": "Nothing for now, I'm fine" }
+        ]
+      },
+      "next": "when"
+    },
+    "when": {
+      "say": "When do you usually play (your local time)? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "weeknights", "label": "Weekday evenings" },
+          { "id": "late", "label": "Weekday late nights" },
+          { "id": "weekend-days", "label": "Weekend days" },
+          { "id": "weekend-nights", "label": "Weekend evenings" },
+          { "id": "varies", "label": "It varies" }
+        ]
+      },
+      "next": "reach"
+    },
+    "reach": {
+      "say": "Would you like someone from G00N SQUAD to reach out when something's on that fits?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "yes", "label": "Yes, ping me" },
+          { "id": "no", "label": "No thanks, I'll check the schedule" }
+        ]
+      },
+      "next": "notes"
+    },
+    "notes": {
+      "say": "Anything else you want leadership to know? Skip if not.",
+      "input": { "type": "text", "label": "Notes for leadership", "maxLength": 500, "multiline": true, "optional": true },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll send to G00N SQUAD leadership:\n- Kept away by: {{labels.away|nothing in particular}}\n- Would bring you back: {{labels.back|nothing in particular}}\n- Plays: {{labels.when}}\n- Reach out: {{labels.reach}}\n- Notes: {{answers.notes|none}}\n\nSend it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Thanks, that's with G00N SQUAD leadership now. This week's events are at {{context.siteUrl|https://goon.vc}}/events, and voice is open any time. Hope to see you in the 'verse!"
+  },
+  "cancelled": {
+    "say": "No worries, nothing was sent. The door's always open: this week's events are at {{context.siteUrl|https://goon.vc}}/events"
+  },
+  "onComplete": [{ "action": "record" }]
+}

@@ -13,8 +13,8 @@ const GoonVC = require('../services/goon.vc');
 describe('goon.vc', function () {
   describe('Hub API zipper', function () {
     it('allowlists Hub API prefixes only', function () {
-      assert.ok(isHubApiPath('/sessions'));
-      assert.ok(isHubApiPath('/sessions/abc'));
+      assert.ok(!isHubApiPath('/sessions'), 'the login page is goon.vc\'s own');
+      assert.ok(!isHubApiPath('/sessions/abc'));
       assert.ok(isHubApiPath('/device-links/xyz/signatures'));
       assert.ok(isHubApiPath('/services/rpc'));
       assert.ok(isHubApiPath('/identity/cluster'));
@@ -22,23 +22,22 @@ describe('goon.vc', function () {
       assert.ok(!isHubApiPath('/services/bitcoin'));
       assert.ok(!isHubApiPath('/'));
       assert.ok(!isHubApiPath('/organizations'));
-      assert.ok(HUB_API_PREFIXES.includes('/sessions'));
+      assert.ok(!HUB_API_PREFIXES.includes('/sessions'));
     });
 
-    it('does not proxy HTML navigation to /sessions', function () {
+    it('never proxies /sessions, and keeps HTML navigation to /device-links here', function () {
+      for (const method of ['GET', 'POST']) {
+        assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions', headers: { accept: 'application/json' } }), false);
+        assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions/deadbeef', headers: { accept: 'application/json' } }), false);
+      }
       assert.strictEqual(shouldProxyHubApi({
         method: 'GET',
-        url: '/sessions',
+        url: '/device-links',
         headers: { accept: 'text/html' }
       }), false);
       assert.strictEqual(shouldProxyHubApi({
-        method: 'POST',
-        url: '/sessions',
-        headers: { accept: 'application/json' }
-      }), true);
-      assert.strictEqual(shouldProxyHubApi({
         method: 'GET',
-        url: '/sessions/deadbeef',
+        url: '/device-links/deadbeef',
         headers: { accept: 'application/json' }
       }), true);
     });
@@ -70,7 +69,7 @@ describe('goon.vc', function () {
           const req = http.request({
             hostname: '127.0.0.1',
             port: edgePort,
-            path: '/sessions',
+            path: '/services/rpc',
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
           }, (res) => {
@@ -129,7 +128,7 @@ describe('goon.vc', function () {
         const req = http.request({
           hostname: '127.0.0.1',
           port: edge.address().port,
-          path: '/sessions',
+          path: '/services/rpc',
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
         }, (res) => {
@@ -197,6 +196,7 @@ describe('goon.vc', function () {
         listen: false,
         storePath: path.join(root, 'site'),
         members: { path: path.join(root, 'members') },
+        hangar: { path: path.join(root, 'hangar') },
         events: { path: path.join(root, 'events'), resolveToken: () => ({ token: null, source: null }) },
         operations: { path: path.join(root, 'operations'), gateway: false }
       });
@@ -292,9 +292,14 @@ describe('goon.vc HTTP', function () {
           return { status: /\/pins$|\/members\/111$/.test(url) ? 200 : 404, headers: { get: () => null }, text: async () => JSON.stringify(body) };
         }
       },
+      activity: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-activity-test-')), sync: false },
+      checkins: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-checkins-test-')) },
+      welcome: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-welcome-test-')) },
+      hangar: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-hangar-test-')) },
       clips: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-test-')), poll: false },
       fabric: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-fabric-test-')) },
       alliance: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-alliance-test-')) },
+      market: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-market-test-')), sync: false, rateUrl: null },
       listen: true
     });
     await site.start();
@@ -321,7 +326,7 @@ describe('goon.vc HTTP', function () {
           const body = Buffer.concat(chunks).toString('utf8');
           let json = null;
           try { json = JSON.parse(body); } catch (_) { json = body; }
-          resolve({ status: res.statusCode, json, body });
+          resolve({ status: res.statusCode, headers: res.headers, json, body });
         });
       });
       req.on('error', reject);
@@ -367,7 +372,7 @@ describe('goon.vc HTTP', function () {
     const login = await fetchJson('/sessions', { headers: { Accept: 'text/html' } });
     assert.strictEqual(meta(login.body, 'og:title'), 'Login — GOON SQUAD');
     const api = await fetchJson('/sessions', { headers: { Accept: 'application/json' } });
-    assert.ok(!String(api.body).includes('og:title'), 'JSON /sessions still goes to the Hub');
+    assert.ok(!String(api.body).includes('sessionId'), 'JSON /sessions never reaches the Hub');
   });
 
   it('escapes page metadata', function () {
@@ -917,7 +922,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(start > 0, 'onboarding page');
     const page = res.body.slice(start, res.body.indexOf('</main>', start));
     const steps = [...page.matchAll(/<li>\s*<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
-    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your stewards', 'Set up your Discord']);
+    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your officers', 'Set up your Discord']);
     const expectations = page.slice(page.indexOf('id="onboarding-expectations"'), page.indexOf('id="onboarding-benefits"'));
     assert.deepStrictEqual([...expectations.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]), [
       'An #embassy channel',
@@ -936,7 +941,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";'));
   });
 
-  it('serves PERMAFLEET votes: the pages, the alliance federation, and steward-only writes', async function () {
+  it('serves PERMAFLEET votes: the pages, the alliance federation, and officer-only writes', async function () {
     const res = await fetchJson('/operations/PERMAFLEET/votes', { headers: { Accept: 'text/html' } });
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('<meta property="og:title" content="PERMAFLEET Votes — GOON SQUAD">'));
@@ -953,7 +958,7 @@ describe('goon.vc HTTP', function () {
     assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']);
     assert.strictEqual(overview.json.federation.threshold, 4, 'majority of seven orgs');
     assert.strictEqual(overview.json.federation.id.length, 64);
-    assert.deepStrictEqual(overview.json.you, { signedIn: false, organizations: [], officers: [] });
+    assert.deepStrictEqual(overview.json.you, { signedIn: false, officers: [] });
     assert.ok(!overview.body.includes('discord:'), 'no account keys');
     assert.ok(!/\d{17,}/.test(overview.body.replace(/https?:\/\/[^"]+/g, '').replace(/[0-9a-f]{64,}/g, '')), 'no Discord ids outside URLs and signed frames');
 
@@ -962,7 +967,13 @@ describe('goon.vc HTTP', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'Adopt the charter' })
     });
-    assert.strictEqual(refused.status, 401, 'only signed-in stewards propose');
+    assert.strictEqual(refused.status, 401, 'officers sign in to propose');
+    const voteRefused = await fetchJson('/services/alliance/proposals/0123456789ab/votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choice: 'yes' })
+    });
+    assert.strictEqual(voteRefused.status, 401, 'officers sign in to vote for their org');
 
     assert.strictEqual(overview.json.bridge.descriptor.type, 'FabricBridge');
     assert.deepStrictEqual(overview.json.bridge.descriptor.platforms, ['discord', 'fabric']);
@@ -1109,7 +1120,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.location, '/operations/PERMAFLEET');
   });
 
-  it('serves the login page at /sessions with every sign-in method', async function () {
+  it('serves the login page at /sessions with Discord and Passport, and no one may frame it', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
         hostname: '127.0.0.1',
@@ -1121,17 +1132,76 @@ describe('goon.vc HTTP', function () {
         incoming.on('data', (c) => chunks.push(c));
         incoming.on('end', () => resolve({
           status: incoming.statusCode,
+          headers: incoming.headers,
           body: Buffer.concat(chunks).toString('utf8')
         }));
       }).on('error', reject);
     });
     assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['content-security-policy'], "frame-ancestors 'none'");
     assert.ok(res.body.includes('id="login-page"'));
     assert.ok(res.body.includes('id="login-discord"'));
     assert.ok(res.body.includes('id="login-passport"'));
-    assert.ok(res.body.includes('id="login-desktop"'));
+    assert.ok(!res.body.includes('id="login-desktop"'), 'desktop apps sign through Passport');
+    assert.ok(res.body.includes("type: 'PASSPORT_CHALLENGE'"));
+    assert.ok(res.body.includes('[channel.port2]'), 'Passport answers on a private MessagePort');
+    assert.ok(!res.body.includes("'FABRIC_MESSAGE'"), 'no v1 page messages');
+    assert.ok(res.body.includes('/services/members/passport/challenges'));
+    assert.ok(!res.body.includes('FABRIC_SITE_LOGIN_REQUEST'), 'no Hub session');
     assert.ok(res.body.includes('class="footer-login-button" href="/sessions"'));
     assert.ok(!res.body.includes('member-login'));
+
+    const home = await fetchJson('/', { headers: { Accept: 'text/html' } });
+    assert.ok(!home.headers['content-security-policy'], 'only the login page carries frame-ancestors');
+  });
+
+  it('issues Passport challenges for the site origin without a Hub', async function () {
+    const { readChallenge } = require('@fabric/core/functions/passport');
+    const res = await fetchJson('/services/members/passport/challenges', { method: 'POST', headers: { Accept: 'application/json' } });
+    assert.strictEqual(res.status, 200, JSON.stringify(res.json));
+    const read = readChallenge(res.json.challenge);
+    assert.ok(read.ok, read.error);
+    assert.strictEqual(read.challenge.origin, 'http://127.0.0.1:' + sitePort);
+    assert.ok(/^goon\.passport=[0-9a-f]{64};/.test([].concat(res.headers['set-cookie'])[0]));
+  });
+
+  it('serves the waiting area for Discord sign-ins awaiting review', async function () {
+    const res = await fetchJson('/waiting', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="waiting-page"'));
+    assert.ok(res.body.includes('data-path="/waiting"'));
+    assert.ok(res.body.includes('<script src="/scripts/waiting.js" defer></script>'));
+    assert.ok(res.body.includes('<title>Waiting area — GOON SQUAD</title>'), 'its own link preview');
+    assert.ok(res.body.includes('var waitingPath = "/waiting";'), 'the login page points waiting members there');
+    const script = await fetchJson('/scripts/waiting.js');
+    assert.strictEqual(script.status, 200);
+  });
+
+  it('serves /members and member profiles, and a profile link for signed-in members', async function () {
+    const index = await fetchJson('/members', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('id="members-page"'));
+    assert.ok(index.body.includes('id="member-page"'));
+    assert.ok(index.body.includes('<script src="/scripts/members.js" defer></script>'));
+    assert.ok(index.body.includes('<title>Members — GOON SQUAD</title>'));
+    const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(index.body)[1];
+    assert.ok(!nav.includes('/members') && !nav.includes('PROFILE'), 'no profile link in the header');
+    assert.ok(index.body.includes('<footer id="site-member-footer" class="site-member-footer" hidden>'), 'the footer card stands in where a page has no footer of its own');
+    assert.ok(index.body.includes("el.classList.toggle('footer-member', !!member);"), 'footer Login buttons become the member card');
+    assert.ok(index.body.includes('var membersPath = "/members";'));
+    assert.ok(index.body.includes('id="member-add-discord"') && index.body.includes('id="member-add-passport"'), 'profiles add accounts');
+    assert.ok(index.body.includes('window.goonPassport = askPassport;'), 'every page can link Passport');
+    assert.ok(index.body.includes('id="member-rename-choice"'), 'profiles pick a display name');
+    assert.ok(index.body.includes('window.goonMember = markMember;'), 'a rename redraws the footer card');
+
+    const profile = await fetchJson('/members/0123456789abcdef', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(profile.status, 200);
+    assert.ok(profile.body.includes('<title>Member profile — GOON SQUAD</title>'), 'a preview that names no one');
+    const slash = await fetchJson('/members/0123456789abcdef/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(slash.status, 301);
+
+    assert.strictEqual((await fetchJson('/services/members/directory')).status, 401);
+    assert.strictEqual((await fetchJson('/scripts/members.js')).status, 200);
   });
 
   it('redirects the retired /members/login page to /sessions', async function () {
@@ -1207,6 +1277,22 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.status, 503);
   });
 
+  it('serves the Market page to browsers and its catalog to JSON clients', async function () {
+    const json = await fetchJson('/services/market');
+    assert.strictEqual(json.status, 200);
+    assert.ok(Array.isArray(json.json.listings));
+    assert.strictEqual(json.json.rate.source, 'mempool.space');
+    const html = await fetchJson('/services/market', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(html.status, 200);
+    assert.ok(html.body.includes('id="market-page"'));
+    const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(html.body)[1];
+    assert.ok(!nav.includes('/services/market'), 'not in the site header');
+    const resources = html.body.slice(html.body.indexOf('id="resources-page"'), html.body.indexOf('</main>', html.body.indexOf('id="resources-page"')));
+    assert.ok(resources.includes('<a href="/services/market">Market</a>'), 'listed in resources');
+    const mine = await fetchJson('/services/market/mine');
+    assert.strictEqual(mine.status, 401);
+  });
+
   it('hides subscription tiers without a Discord bot token', async function () {
     const res = await fetchJson('/services/discord/subscriptions');
     assert.strictEqual(res.status, 200);
@@ -1229,13 +1315,13 @@ describe('goon.vc HTTP', function () {
   it('reports member login capabilities', async function () {
     const res = await fetchJson('/services/members');
     assert.strictEqual(res.status, 200);
-    assert.deepStrictEqual(res.json, { discord: false, passport: true });
+    assert.deepStrictEqual(res.json, { discord: false, passport: true, review: false });
     const session = await fetchJson('/services/members/session');
     assert.strictEqual(session.status, 401);
     assert.ok(Number.isFinite(site.members.settings.sessionTtlMs) && site.members.settings.sessionTtlMs > 0);
   });
 
-  it('proxies POST /sessions to the Hub', async function () {
+  it('never sends POST /sessions to the Hub', async function () {
     const res = await fetchJson('/sessions', {
       method: 'POST',
       headers: {
@@ -1245,9 +1331,8 @@ describe('goon.vc HTTP', function () {
       },
       body: JSON.stringify({ origin: 'http://127.0.0.1:' + sitePort })
     });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual(res.json.ok, true);
-    assert.strictEqual(res.json.sessionId, 'stub');
+    assert.notStrictEqual(res.status, 200);
+    assert.ok(!String(res.body).includes('sessionId'), 'a Hub session could never sign anyone in here');
   });
 
   it('does not mount /services/star-citizen', async function () {
@@ -1300,9 +1385,14 @@ describe('goon.vc page paths', function () {
       tournaments: { path: path.join(root, 'tournaments') },
       leagues: { path: path.join(root, 'leagues') },
       leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
+      activity: { path: path.join(root, 'activity'), sync: false },
+      checkins: { path: path.join(root, 'checkins') },
+      welcome: { path: path.join(root, 'welcome') },
+      hangar: { path: path.join(root, 'hangar') },
       clips: { path: path.join(root, 'clips'), poll: false },
       fabric: { path: path.join(root, 'fabric') },
       alliance: { path: path.join(root, 'alliance') },
+      market: { path: path.join(root, 'market'), sync: false, rateUrl: null },
       listen: true
     });
     await site.start();

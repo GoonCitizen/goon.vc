@@ -1,0 +1,33 @@
+{
+  "about": "Friendly check-ins with G00N SQUAD members who have gone quiet (`npm run campaigns:checkin`). Last active is the later of being in a voice channel the bot can see and posting in the server (services/activity.js). Three tiers, sent most inactive first: very old (120+ days), somewhat old (60 to 120), getting old (30 to 60); within a tier the most inactive go first too. Members active in the last 30 days are never contacted, nor members with no activity on record. Each tier reaches a member once (later runs skip everyone an earlier campaign of the same tier reached), and no one gets a second check-in within `spacingDays` of the first, so a member who keeps drifting gets at most three touches, one per tier. `requirement.name` is the DM script's `requires` entry; its role is the server's @everyone role (id = the server id), so the script runs only for members of the G00N SQUAD server and `/goon campaign` never offers it.",
+  "guildId": "1190527980120850493",
+  "spacingDays": 30,
+  "requirement": {
+    "name": "G00N SQUAD member",
+    "roles": { "@everyone": "1190527980120850493" }
+  },
+  "script": "checkin",
+  "tiers": [
+    {
+      "id": "very-old",
+      "name": "very old (120+ days)",
+      "inactiveForDays": 120,
+      "activeWithinDays": null,
+      "message": "**We miss you at G00N SQUAD!**\nIt's been a while since we've seen you, so here's a friendly hello. Plenty has happened since: PERMAFLEET runs ops with orgs across the alliance every week, the squadrons train on Friday Night Fights, and voice is busy most nights.\n\nWhenever you feel like jumping back in, you're welcome, no catching up required. If you have a minute, press **Start** and tell us what would bring you back. Here's this week: https://goon.vc/events"
+    },
+    {
+      "id": "somewhat-old",
+      "name": "somewhat old (60 to 120 days)",
+      "inactiveForDays": 60,
+      "activeWithinDays": 120,
+      "message": "**Hey from G00N SQUAD, it's been a couple of months!**\nWe noticed you haven't been around lately and wanted to check in. No pressure at all: life happens, and so do patches.\n\nIf something would make it easier or more fun to fly with us again, we'd like to hear it. Press **Start** for a quick check-in (about a minute). Here's what's on this week: https://goon.vc/events"
+    },
+    {
+      "id": "getting-old",
+      "name": "getting old (30 to 60 days)",
+      "inactiveForDays": 30,
+      "activeWithinDays": 60,
+      "message": "**Hey, it's G00N SQUAD, just checking in.**\nWe haven't seen you around for a few weeks and wanted to say hi. Hope things are good!\n\nIf anything's been getting in the way of playing with us (times, ops, finding a crew), press **Start** and let us know (about a minute). Or just drop into voice: this week's events are at https://goon.vc/events"
+    }
+  ]
+}

@@ -10,7 +10,10 @@
     "build:downloads": "node scripts/downloads.js",
     "collect:clips": "node scripts/clips.js",
     "campaigns:recruiting": "node --env-file-if-exists=.env scripts/recruiting.js",
-    "alliance:sign": "node scripts/alliance-sign.js",
+    "campaigns:checkin": "node --env-file-if-exists=.env scripts/checkin.js",
+    "collect:activity": "node --env-file-if-exists=.env scripts/activity.js",
+    "market:sign": "node scripts/market-sign.js",
+    "collect:market": "node --env-file-if-exists=.env scripts/market.js",
     "check:video": "bash scripts/check-video-deps.sh",
     "start": "node --env-file-if-exists=.env scripts/node.js",
     "test": "mocha tests --exit",
@@ -38,7 +41,7 @@
   "dependencies": {
     "@fabric/discord": "FabricLabs/fabric-discord#feature/channels",
     "@fabric/doorman": "FabricLabs/doorman#feature/channels",
-    "@fabric/http": "FabricLabs/fabric-http#feature/fomantic",
+    "@fabric/http": "FabricLabs/fabric-http#54cabec9c4d13a8399d9677834c33f91a5ef9818",
     "idlerpg": "FabricLabs/idlerpg#feature/channels"
   },
   "devDependencies": {

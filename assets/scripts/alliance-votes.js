@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * PERMAFLEET alliance votes: the index (member orgs, every proposal, and the
- * proposal form for Org Stewards) and one page per proposal (each org's vote,
- * the steward's Yes / No / Abstain, officer progress and the signing command
- * for orgs that decide by their officers, a box for posting signed frames,
- * every member's advisory vote, and the signed Federation messages), all
- * through the alliance service.
+ * PERMAFLEET alliance votes: the index (member orgs, every proposal, and a
+ * proposal form for officers) and one page per proposal (each org's vote,
+ * an officer ballot with the votes of fellow officers, every member's
+ * advisory vote, and the signed Federation messages), all through the
+ * alliance service. Officers act while signed in with the account
+ * leadership has on record; goon.vc signs for them.
  */
 (function () {
   const indexEl = document.getElementById('pf-votes-page');
@@ -22,6 +22,7 @@
   if (!onIndex && !onProposal) return;
 
   const STATUS = { open: 'Open', passed: 'Passed', failed: 'Failed', expired: 'Expired' };
+  const CHOICES = ['yes', 'no', 'abstain'];
 
   function esc (value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,6 +51,10 @@
     return date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
+  function capital (word) {
+    return word[0].toUpperCase() + word.slice(1);
+  }
+
   function statusLine (proposal, withClose) {
     const t = proposal.tally;
     const close = withClose && proposal.status === 'open' ? ` · Open until ${esc(when(proposal.closesAt))}` : '';
@@ -76,50 +81,42 @@
     return org ? `[${org.symbol}] ${org.name}` : 'Unknown org';
   }
 
+  function orgList (orgs) {
+    return orgs.map((org) => esc(orgLabel(org))).join(' and ');
+  }
+
   function orgItem (org, extra) {
     const logo = org.logoUrl ? `<img src="${esc(org.logoUrl)}" alt="" loading="lazy">` : '';
     return `<li>${logo}<span><a href="${esc(org.path)}">${esc(org.name)}</a><small>${esc(org.symbol)}${extra && extra.sub ? ` · ${esc(extra.sub)}` : ''}</small></span>${extra && extra.badge ? extra.badge : ''}</li>`;
   }
 
-  function custodyOf (federation, symbol) {
-    const org = federation && federation.organizations.find((o) => o.symbol === symbol);
-    return org ? org.custody : null;
+  function voterNote (you) {
+    if (!you || !you.signedIn) return `<p class="pf-votes-note">Only a member org's officers vote for it. Officers <a href="${esc(loginPath)}">sign in</a> with the Discord account alliance leadership has on record.</p>`;
+    if ((you.officers || []).length) return `<p class="pf-votes-note">You are an officer of ${orgList(you.officers)}: propose for your org, and vote on any open proposal.</p>`;
+    return '<p class="pf-votes-note">You are signed in, but your account isn\'t on record as an officer of a member org. Officers are put on record by alliance leadership; ask in #embassy on the G00N SQUAD Discord.</p>';
   }
 
-  function signCommand (args) {
-    const origin = window.location.origin === 'https://goon.vc' ? '' : ` --origin ${window.location.origin}`;
-    return `npm run alliance:sign -- ${args}${origin}`;
-  }
-
-  function commandBlock (command) {
-    return `<p class="pf-votes-command"><code>${esc(command)}</code><button class="goon-button" type="button" data-copy="${esc(command)}">Copy</button></p>`;
-  }
-
-  function stewardNote (you, federation) {
-    const officerOf = (you.officers || []).map((symbol) => {
-      const org = federation && federation.organizations.find((o) => o.symbol === symbol);
-      return esc(org ? orgLabel(org) : symbol);
-    });
-    const officerNote = officerOf.length ? `<p class="pf-votes-note">You are an officer of ${officerOf.join(' and ')}: sign proposals and votes with your own Fabric key.</p>` : '';
-    if (!you.signedIn) return `<p class="pf-votes-note">Org Stewards <a href="${esc(loginPath)}">sign in</a> to propose and vote for their org; officers of an org that decides by its officers sign with their own Fabric keys.</p>`;
-    const stewarded = you.organizations.filter((symbol) => custodyOf(federation, symbol) !== 'officers');
-    if (!stewarded.length) return officerNote || '<p class="pf-votes-note">You are signed in, but not listed as an Org Steward or officer of a member organization. Link the Discord account or Fabric key your org named on the sign-in page.</p>';
-    const names = stewarded.map((symbol) => {
-      const org = federation && federation.organizations.find((o) => o.symbol === symbol);
-      return esc(org ? orgLabel(org) : symbol);
-    });
-    return `<p class="pf-votes-note">You vote for ${names.join(' and ')}.</p>${officerNote}`;
-  }
-
-  function bindCopy (root) {
-    root.querySelectorAll('[data-copy]').forEach((button) => button.addEventListener('click', async () => {
+  function bindForm (form, submit) {
+    let choice = null;
+    form.querySelectorAll('button[value]').forEach((button) => button.addEventListener('click', () => { choice = button.value; }));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = form.querySelector('.pf-votes-note[role="status"]');
+      form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      status.className = 'pf-votes-note';
+      status.textContent = 'Signing…';
       try {
-        await navigator.clipboard.writeText(button.getAttribute('data-copy'));
-        button.textContent = 'Copied';
-      } catch (e) {
-        button.textContent = 'Select and copy';
+        await submit(choice, new FormData(form));
+      } catch (error) {
+        status.className = 'pf-votes-note error';
+        status.textContent = error.message;
+        form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
       }
-    }));
+    });
+  }
+
+  function choiceButtons (current) {
+    return `<div class="pf-votes-buttons">${CHOICES.map((choice) => `<button class="goon-button" type="submit" value="${choice}" aria-pressed="${current === choice}">${capital(choice)}</button>`).join('')}</div>`;
   }
 
   /* ---------- index ---------- */
@@ -137,56 +134,49 @@
 
   function orgSub (org) {
     if (org.federation) return `${org.federation.threshold} of ${org.federation.officers} officers decide`;
-    return `${org.stewards} steward${org.stewards === 1 ? '' : 's'}${org.custody === 'own' ? ' · own key' : ''}`;
+    if (org.custody === 'own') return 'casts its own vote';
+    return 'no officers on record yet';
   }
 
   function renderOrgs (federation) {
+    const voting = federation.voting === undefined ? federation.orgs : federation.voting;
+    const short = voting < federation.threshold
+      ? ` Only ${esc(voting)} ${voting === 1 ? 'org has' : 'orgs have'} officers on record, so nothing can pass until more orgs name theirs.`
+      : '';
     return `<ul class="pf-votes-orgs">${federation.organizations.map((org) => orgItem(org, { sub: orgSub(org) })).join('')}</ul>
-      <p class="pf-votes-note">${esc(federation.threshold)} of ${esc(federation.orgs)} orgs must vote yes for a proposal to pass.${federation.path ? ` <a href="${esc(federation.path)}">The alliance federation &raquo;</a>` : ''}</p>`;
+      <p class="pf-votes-note">${esc(federation.threshold)} of ${esc(federation.orgs)} orgs must vote yes for a proposal to pass.${short}${federation.path ? ` <a href="${esc(federation.path)}">The alliance federation &raquo;</a>` : ''}</p>`;
   }
 
-  function renderOfficerPropose (data) {
+  function renderPropose (data) {
     const el = document.getElementById('pf-votes-officers');
     if (!el) return;
-    const orgs = data.federation.organizations.filter((org) => org.federation);
-    if (!orgs.length) return;
-    const mine = (data.you.officers || []).filter((symbol) => orgs.some((org) => org.symbol === symbol));
-    const flag = mine.length === 1 ? ` --org ${mine[0]}` : '';
-    el.hidden = false;
-    el.innerHTML = `<h2>Officers</h2>
-      <p class="pf-votes-note">${esc(orgs.map((org) => org.symbol).join(', '))} ${orgs.length === 1 ? 'decides' : 'decide'} by ${orgs.length === 1 ? 'its' : 'their'} officers' signatures. Officers propose and vote with their own Fabric key (<code>FABRIC_XPRV</code> or <code>--key-file</code>); <code>pubkey</code> prints the key to list as an officer.</p>
-      ${commandBlock(signCommand(`propose "Title" --summary "Details" --days 7${flag}`))}`;
-    bindCopy(el);
-  }
-
-  function setupForm (data) {
-    const panel = document.getElementById('pf-votes-propose');
-    const form = document.getElementById('pf-votes-form');
-    const orgs = data.you.organizations.filter((symbol) => custodyOf(data.federation, symbol) !== 'officers');
-    if (!orgs.length) return;
-    panel.hidden = false;
-    const picker = form.querySelector('[data-org-picker]');
-    if (orgs.length > 1) {
-      picker.hidden = false;
-      picker.querySelector('select').innerHTML = orgs.map((symbol) => `<option value="${esc(symbol)}">${esc(symbol)}</option>`).join('');
+    const mine = data.you.officers || [];
+    if (!mine.length) {
+      el.hidden = true;
+      return;
     }
-    const status = form.querySelector('.pf-votes-note');
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const fields = new FormData(form);
-      const body = { title: fields.get('title'), summary: fields.get('summary'), days: Number(fields.get('days')) };
-      if (orgs.length > 1) body.org = fields.get('org');
-      form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-      status.className = 'pf-votes-note';
-      status.textContent = 'Signing…';
-      try {
-        const proposal = await request('POST', `${api}/proposals`, body);
-        window.location.href = proposal.path;
-      } catch (error) {
-        status.className = 'pf-votes-note error';
-        status.textContent = error.message;
-        form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-      }
+    el.hidden = false;
+    const pick = mine.length > 1
+      ? `<label>For <select name="org">${mine.map((org) => `<option value="${esc(org.symbol)}">${esc(orgLabel(org))}</option>`).join('')}</select></label>`
+      : '';
+    el.innerHTML = `<h2>Propose</h2>
+      <form class="pf-votes-form" data-propose>
+        <p class="pf-votes-note">As an officer of ${orgList(mine)}, you put a proposal to every member org. goon.vc signs it for you.</p>
+        ${pick}
+        <label>Title <input name="title" maxlength="120" required></label>
+        <label>Details <textarea name="summary" maxlength="2000"></textarea></label>
+        <label>Open for <select name="days">${[3, 7, 14, 30].map((days) => `<option value="${days}"${days === 7 ? ' selected' : ''}>${days} days</option>`).join('')}</select></label>
+        <div class="pf-votes-buttons"><button class="goon-button" type="submit">Propose</button></div>
+        <p class="pf-votes-note" role="status"></p>
+      </form>`;
+    bindForm(el.querySelector('[data-propose]'), async (choice, fields) => {
+      const proposal = await request('POST', `${api}/proposals`, {
+        title: fields.get('title'),
+        summary: fields.get('summary'),
+        days: Number(fields.get('days')),
+        org: fields.get('org') || undefined
+      });
+      window.location.assign(proposal.path);
     });
   }
 
@@ -201,11 +191,10 @@
         listEl.innerHTML = '';
         return;
       }
-      statusEl.innerHTML = stewardNote(data.you, data.federation);
+      statusEl.innerHTML = voterNote(data.you);
       listEl.innerHTML = renderList(data.proposals);
       orgsEl.innerHTML = renderOrgs(data.federation);
-      setupForm(data);
-      renderOfficerPropose(data);
+      renderPropose(data);
     } catch (error) {
       statusEl.innerHTML = `<p class="pf-votes-note error">${esc(error.message)}</p>`;
       listEl.innerHTML = '';
@@ -220,92 +209,89 @@
 
   function officerLine (org) {
     const o = org.officers;
-    const counts = ['yes', 'no', 'abstain'].filter((choice) => o[choice]).map((choice) => `${o[choice]} ${choice}`);
+    if (o.yes === undefined) return `${o.threshold} of ${o.total} officers decide`;
+    const counts = CHOICES.filter((choice) => o[choice]).map((choice) => `${o[choice]} ${choice}`);
     return `officers: ${counts.length ? counts.join(', ') : 'none yet'} (${o.threshold} of ${o.total} decide)`;
   }
 
-  function renderOfficerBallot (proposal, you) {
-    const orgs = proposal.organizations.filter((org) => org.officers);
-    if (!orgs.length) return '';
-    const mine = (you.officers || []).filter((symbol) => orgs.some((org) => org.symbol === symbol));
-    const flag = mine.length === 1 ? ` --org ${mine[0]}` : '';
-    return `<div class="pf-votes-officers">
-        <p class="pf-votes-note">${esc(orgs.map((org) => org.symbol).join(', '))} ${orgs.length === 1 ? 'votes' : 'vote'} once enough of ${orgs.length === 1 ? 'its' : 'their'} officers sign the same choice with their own Fabric keys:</p>
-        ${commandBlock(signCommand(`vote ${proposal.shortId} yes${flag}`))}
-        <p class="pf-votes-note">Use <code>no</code> or <code>abstain</code> in place of <code>yes</code>. A later vote from the same officer replaces their earlier one.</p>
-      </div>`;
+  // Each fellow officer's latest vote on the viewer's orgs.
+  function fellowVotes (proposal, symbol) {
+    const latest = new Map();
+    for (const vote of proposal.officerVotes || []) {
+      if (vote.org === symbol) latest.set(vote.officer, vote);
+    }
+    return Array.from(latest.values());
   }
 
-  function renderPaste (proposal) {
-    return `<form class="pf-votes-form" data-paste>
-        <label>Post a signed frame <textarea name="frame" spellcheck="false" placeholder="Hex from npm run alliance:sign -- vote ${esc(proposal.shortId)} yes --print"></textarea></label>
-        <div class="pf-votes-buttons"><button class="goon-button" type="submit">Post</button></div>
+  function renderOfficerBallot (proposal) {
+    const seats = (proposal.you && proposal.you.officers) || [];
+    const orgs = proposal.organizations.filter((org) => seats.some((seat) => seat.symbol === org.symbol));
+    const current = seats.length && seats.every((seat) => seat.choice === seats[0].choice) ? seats[0].choice : null;
+    const rules = orgs.map((org) => `${esc(org.name)} votes once ${esc(org.officers.threshold)} of its ${esc(org.officers.total)} officers agree${org.choice ? `; it votes <strong>${esc(org.choice)}</strong> now` : ''}.`).join(' ');
+    const fellows = orgs.map((org) => {
+      const rows = fellowVotes(proposal, org.symbol);
+      return `<p class="pf-votes-note">${esc(org.name)} officers: ${rows.length ? rows.map((vote) => `${esc(vote.by || 'an officer')} <strong>${esc(vote.choice)}</strong> (${esc(when(vote.castAt))})`).join(' · ') : 'no votes yet'}.</p>`;
+    }).join('');
+    const yours = seats.length
+      ? seats.map((seat) => `${esc(seat.symbol)}: ${seat.choice ? `<strong>${esc(seat.choice)}</strong> (${esc(when(seat.castAt))})` : 'not voted'}`).join(' · ')
+      : '';
+    return `<form class="pf-votes-form" data-officer-ballot>
+        <p class="pf-votes-note">You are an officer of ${orgList(orgs)}. Your vote signs for your org and is also your member vote. ${rules} Only your org's officers see each officer's vote.</p>
+        <p class="pf-votes-note">Your vote: ${yours}</p>
+        ${choiceButtons(current)}
         <p class="pf-votes-note" role="status"></p>
-      </form>`;
+      </form>${fellows}`;
   }
 
   function renderBallot (proposal, overview) {
-    const you = overview.you;
     if (proposal.status !== 'open') return '';
-    const extras = proposal.organizations.some((org) => org.custody === 'officers' || org.custody === 'own')
-      ? `${renderOfficerBallot(proposal, you)}${renderPaste(proposal)}`
-      : '';
-    const stewarded = (you.organizations || []).filter((symbol) => {
-      const org = proposal.organizations.find((o) => o.symbol === symbol);
-      return !org || org.custody !== 'officers';
-    });
-    if (!you.signedIn || !stewarded.length) return `<section class="pf-votes-panel"><h2>Vote</h2>${stewardNote(you, overview.federation)}${extras}</section>`;
-    const mine = proposal.organizations.filter((org) => stewarded.includes(org.symbol));
-    if (!mine.length) return `<section class="pf-votes-panel"><h2>Vote</h2><p class="pf-votes-note">Your org was not a member of the alliance when this proposal was made.</p>${extras}</section>`;
-    return `<section class="pf-votes-panel"><h2>Vote</h2>${mine.map((org) => {
-      if (org.custody === 'own') return `<p class="pf-votes-note">${esc(orgLabel(org))} votes with its own key: post a signed <code>FederationVote</code> below or to <code>${esc(api)}/messages</code>.</p>`;
-      return `<form class="pf-votes-form" data-ballot="${esc(org.symbol)}">
-        <p class="pf-votes-note">For ${esc(orgLabel(org))}${org.choice ? ` — currently <strong>${esc(org.choice)}</strong>${org.by ? ` (${esc(org.by)})` : ''}` : ''}</p>
-        <div class="pf-votes-buttons">${['yes', 'no', 'abstain'].map((choice) => `<button class="goon-button" type="submit" value="${choice}" aria-pressed="${org.choice === choice}">${choice[0].toUpperCase() + choice.slice(1)}</button>`).join('')}</div>
-        <p class="pf-votes-note" role="status"></p>
-      </form>`;
-    }).join('')}${extras}</section>`;
+    const seats = (proposal.you && proposal.you.officers) || [];
+    if (seats.length) return `<section class="pf-votes-panel"><h2>Vote for your org</h2>${renderOfficerBallot(proposal)}</section>`;
+    const voting = proposal.organizations.some((org) => org.custody === 'officers' || org.custody === 'own');
+    const none = voting ? '' : '<p class="pf-votes-note">No member org of this federation has officers on record, so none can vote on it.</p>';
+    return `<section class="pf-votes-panel"><h2>Vote</h2>${voterNote(overview.you)}${none}</section>`;
   }
 
   function renderMemberBallot (proposal, overview) {
     const mine = proposal.you && proposal.you.memberVote;
+    const officer = ((proposal.you && proposal.you.officers) || []).length > 0;
     const counts = `<p class="pf-intro">${memberLine(proposal.members)}</p>${memberBar(proposal.members)}`;
     const how = '<p class="pf-votes-note">Every member has a say: one vote each, the latest from any of your linked accounts counts. It is advice to the member orgs, who decide. On Discord, run <code>/vote</code> in any server with our bot.</p>';
     if (proposal.status !== 'open') return `<section class="pf-votes-panel"><h2>Members</h2>${counts}</section>`;
     if (!proposal.bridge) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}<p class="pf-votes-note">Member votes are not set up right now.</p></section>`;
     if (!overview.you || !overview.you.signedIn) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}<p class="pf-votes-note"><a href="${esc(loginPath)}">Sign in</a> to vote here.</p></section>`;
+    const yours = `<p class="pf-votes-note">${mine ? `Your vote: <strong>${esc(mine.choice)}</strong> (${esc(when(mine.castAt))})` : 'You have not voted.'}</p>`;
+    if (officer) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}${yours}<p class="pf-votes-note">Your vote for your org above sets it.</p></section>`;
     return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}
       <form class="pf-votes-form" data-member-ballot>
-        <p class="pf-votes-note">${mine ? `Your vote: <strong>${esc(mine.choice)}</strong> (${esc(when(mine.castAt))})` : 'You have not voted.'}</p>
-        <div class="pf-votes-buttons">${['yes', 'no', 'abstain'].map((choice) => `<button class="goon-button" type="submit" value="${choice}" aria-pressed="${!!mine && mine.choice === choice}">${choice[0].toUpperCase() + choice.slice(1)}</button>`).join('')}</div>
+        ${yours}
+        ${choiceButtons(mine ? mine.choice : null)}
         <p class="pf-votes-note" role="status"></p>
       </form></section>`;
   }
 
   function endorsementList (endorsements) {
     if (!endorsements || !endorsements.length) return '';
-    return `<br>Endorsed by officer frames ${endorsements.map((e) => `<code>${esc(e.id)}</code>`).join(', ')}`;
+    return `<br>Signed by ${endorsements.length} officer${endorsements.length === 1 ? '' : 's'}: ${endorsements.map((e) => `<code>${esc(e.id)}</code>`).join(', ')}`;
   }
 
   function renderProof (proposal) {
     const votes = proposal.votes.map((vote) => `<li>${esc(vote.org || 'Unknown')} ${esc(vote.choice)} · ${esc(when(vote.castAt))}${vote.by ? ` · ${esc(vote.by)}` : ''}${endorsementList(vote.endorsements)}<br><code>${esc(vote.frame)}</code></li>`).join('');
-    const officerVotes = (proposal.officerVotes || []).map((vote) => `<li>${esc(vote.org)} officer ${esc(vote.by || '')} ${esc(vote.choice)} · ${esc(when(vote.castAt))} · <code>${esc(vote.id)}</code><br><code>${esc(vote.frame)}</code></li>`).join('');
     const fedLink = (id, href) => (href ? `<a href="${esc(href)}"><code>${esc(id)}</code></a>` : `<code>${esc(id)}</code>`);
     const orgFederations = (proposal.orgFederations || []).map((org) => `<p>${esc(org.symbol)} officers, federation ${fedLink(org.id, org.path)}</p><pre>${esc(JSON.stringify(org.descriptor, null, 2))}</pre>`).join('');
-    const memberVotes = (proposal.memberVotes || []).map((vote) => `<li>${esc(vote.choice)} · ${esc(when(vote.castAt))} · ${esc(vote.bridge ? `${vote.platform} account, attested` : 'own Fabric key')} · key <code>${esc(vote.signer.slice(0, 16))}…</code><br><code>${esc(vote.frame)}</code></li>`).join('');
+    const memberVotes = (proposal.memberVotes || []).map((vote) => `<li>${esc(vote.choice)} · ${esc(when(vote.castAt))} · ${esc(vote.bridge ? `${vote.platform} account, attested` : `${vote.platform} account`)}<br><code>${esc(vote.frame)}</code></li>`).join('');
     const bridges = [proposal.bridge].concat(proposal.bridges || []).filter(Boolean);
     const bridgeProof = bridges.map((b) => `<p>Bridge <code>${esc(b.id)}</code></p><pre>${esc(JSON.stringify(b.descriptor, null, 2))}</pre>`).join('');
     return `<details class="pf-votes-proof">
         <summary>Verify this vote</summary>
-        <p>Every proposal and vote is a Fabric <code>CONTRACT_MESSAGE</code> signed by the org's key, under federation ${fedLink(proposal.federationId, proposal.federationPath)}${proposal.current ? '' : ' (the alliance has changed since; this proposal keeps the federation it was made in)'}. The federation id is the SHA-256 of the descriptor below.</p>
+        <p>Every proposal and vote is a signed Fabric <code>CONTRACT_MESSAGE</code> under federation ${fedLink(proposal.federationId, proposal.federationPath)}${proposal.current ? '' : ' (the alliance has changed since; this proposal keeps the federation it was made in)'}. The federation id is the SHA-256 of the descriptor below.</p>
         <p>Descriptor</p>
         <pre>${esc(JSON.stringify(proposal.descriptor, null, 2))}</pre>
-        ${orgFederations ? `<p>An org that decides by its officers is its own federation of their keys. Its alliance messages carry its officers' signed messages as <code>endorsements</code>: one officer for a proposal, the org threshold agreeing for a vote.</p>${orgFederations}` : ''}
+        ${orgFederations ? `<p>An org that decides by its officers is its own federation of them. Its alliance messages carry its officers' signed messages as <code>endorsements</code>: one officer for a proposal, the org threshold agreeing for a vote.</p>${orgFederations}` : ''}
         <p>Proposal <code>${esc(proposal.id)}</code>${endorsementList(proposal.endorsements)}</p>
         <pre>${esc(proposal.frame)}</pre>
         ${votes ? `<p>Votes, in the order received</p><ol>${votes}</ol>` : ''}
-        ${officerVotes ? `<p>Officer votes, in the order received</p><ol>${officerVotes}</ol>` : ''}
-        ${memberVotes || bridgeProof ? `<p>Member votes are <code>FederationMemberVote</code> messages under the same federation. goon.vc is a Bridge: it holds a key for each account that votes and signs a <code>BridgeAttestation</code> for it with the bridge key (the attestation carries the account's key, never its id or name). The account key signs the vote, which carries the attestation. A member may also sign with a Fabric key linked to their goon.vc account. The latest vote per member counts.</p>${bridgeProof}` : ''}
+        ${memberVotes || bridgeProof ? `<p>Member votes are <code>FederationMemberVote</code> messages under the same federation. goon.vc is a Bridge: it vouches for each account that votes with a <code>BridgeAttestation</code>, which never names the account, and signs the vote for it. The latest vote per member counts.</p>${bridgeProof}` : ''}
         ${memberVotes ? `<p>Member votes counted</p><ol>${memberVotes}</ol>` : ''}
       </details>`;
   }
@@ -324,7 +310,7 @@
       <ul class="pf-votes-orgs">${proposal.organizations.map((org) => orgItem(org, {
         sub: org.officers
           ? officerLine(org)
-          : (org.castAt ? `${when(org.castAt)}${org.by ? ` · ${org.by}` : ''}` : ''),
+          : (org.castAt ? `${when(org.castAt)}${org.by ? ` · ${org.by}` : ''}` : (org.custody === 'none' ? 'no officers on record' : '')),
         badge: choiceBadge(org.choice)
       })).join('')}</ul>
       ${renderProof(proposal)}`;
@@ -336,65 +322,17 @@
     async function draw () {
       const [proposal, overview] = await Promise.all([
         request('GET', `${api}/proposals/${encodeURIComponent(id)}`),
-        request('GET', api).catch(() => ({ you: { signedIn: false, organizations: [] } }))
+        request('GET', api).catch(() => ({ you: { signedIn: false, officers: [] } }))
       ]);
       view.innerHTML = renderProposal(proposal, overview);
-      bindCopy(view);
-      view.querySelectorAll('[data-paste]').forEach((form) => form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const status = form.querySelector('.pf-votes-note[role="status"]');
-        const frame = String(new FormData(form).get('frame') || '').replace(/\s+/g, '');
-        if (!frame) return;
-        form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-        status.className = 'pf-votes-note';
-        status.textContent = 'Checking…';
-        try {
-          await request('POST', `${api}/messages`, { frame });
-          await draw();
-        } catch (error) {
-          status.className = 'pf-votes-note error';
-          status.textContent = error.message;
-          form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-        }
+      view.querySelectorAll('[data-officer-ballot]').forEach((form) => bindForm(form, async (choice) => {
+        await request('POST', `${api}/proposals/${encodeURIComponent(proposal.id)}/votes`, { choice });
+        await draw();
       }));
-      view.querySelectorAll('[data-ballot]').forEach((form) => {
-        let choice = null;
-        form.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { choice = button.value; }));
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const status = form.querySelector('.pf-votes-note[role="status"]');
-          form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-          status.className = 'pf-votes-note';
-          status.textContent = 'Signing…';
-          try {
-            await request('POST', `${api}/proposals/${encodeURIComponent(proposal.id)}/votes`, { choice, org: form.getAttribute('data-ballot') });
-            await draw();
-          } catch (error) {
-            status.className = 'pf-votes-note error';
-            status.textContent = error.message;
-            form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-          }
-        });
-      });
-      view.querySelectorAll('[data-member-ballot]').forEach((form) => {
-        let choice = null;
-        form.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { choice = button.value; }));
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const status = form.querySelector('.pf-votes-note[role="status"]');
-          form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-          status.className = 'pf-votes-note';
-          status.textContent = 'Signing…';
-          try {
-            await request('POST', `${api}/proposals/${encodeURIComponent(proposal.id)}/member-votes`, { choice });
-            await draw();
-          } catch (error) {
-            status.className = 'pf-votes-note error';
-            status.textContent = error.message;
-            form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-          }
-        });
-      });
+      view.querySelectorAll('[data-member-ballot]').forEach((form) => bindForm(form, async (choice) => {
+        await request('POST', `${api}/proposals/${encodeURIComponent(proposal.id)}/member-votes`, { choice });
+        await draw();
+      }));
     }
     try {
       await draw();

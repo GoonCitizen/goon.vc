@@ -20,7 +20,7 @@
   if (!onIndex && !onFederation) return;
 
   const STATUS = { open: 'Open', passed: 'Passed', failed: 'Failed', expired: 'Expired' };
-  const CUSTODY = { 'goon.vc': 'stewards vote, goon.vc signs', own: 'holds its own key', officers: 'decided by its officers' };
+  const CUSTODY = { none: 'no officers on record yet', own: 'casts its own vote', officers: 'decided by its officers' };
 
   function esc (value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -93,7 +93,7 @@
   function renderAlliance (fed) {
     return `<h2>Member organizations</h2>
       <ul class="pf-votes-orgs">${fed.organizations.map(orgItem).join('')}</ul>
-      <p class="pf-votes-note">Each org signs with its own validator key; ${esc(fed.threshold)} yes votes pass a proposal.</p>
+      <p class="pf-votes-note">Each org casts one vote; ${esc(fed.threshold)} yes votes pass a proposal.</p>
       <h2>Proposals</h2>
       ${fed.proposals.length
         ? `<ul class="pf-votes-list">${fed.proposals.slice().reverse().map(proposalItem).join('')}</ul>`
@@ -102,8 +102,8 @@
 
   function renderOrganization (fed) {
     return `<h2>Officers</h2>
-      <ul class="pf-votes-orgs">${fed.officers.map((officer) => `<li><span>${esc(officer.name)}<small class="pf-federation-id">${esc(officer.pubkey)}</small></span></li>`).join('')}</ul>
-      <p class="pf-votes-note">${esc(fed.threshold)} of ${esc(fed.officers.length)} officers must sign the same choice for <a href="${esc(fed.organization.path)}">${esc(fed.name)}</a> to vote; goon.vc then signs the org's alliance vote with a key derived for this federation, carrying their signatures.</p>
+      <ul class="pf-votes-orgs">${fed.officers.map((officer) => `<li><span>${esc(officer.name)}</span></li>`).join('')}</ul>
+      <p class="pf-votes-note">${esc(fed.threshold)} of ${esc(fed.officers.length)} officers must agree for <a href="${esc(fed.organization.path)}">${esc(fed.name)}</a> to vote; goon.vc then signs the org's alliance vote, carrying their signatures.</p>
       <h2>Decides for</h2>
       <ul class="pf-votes-list pf-federations-list">${fed.alliances.map(item).join('')}</ul>`;
   }

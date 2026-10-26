@@ -33,11 +33,10 @@ function renderLoginCss () {
 function renderLoginHtml (props) {
   return `<main id="login-page" class="login-page">
       <h1>${props.title}</h1>
-      <p class="login-intro">Sign in with Discord, Fabric Passport, or the GoonCitizen desktop app.</p>
+      <p class="login-intro">Sign in with Discord or Fabric Passport. Passport can also ask a GoonCitizen desktop app you linked to it to sign.</p>
       <div class="login-buttons">
         <button type="button" id="login-discord" class="goon-button">Discord</button>
         <button type="button" id="login-passport" class="goon-button">Passport</button>
-        <button type="button" id="login-desktop" class="goon-button">GoonCitizen desktop</button>
       </div>
       <p id="login-status" class="login-status"></p>
       <div id="login-session" class="login-session"></div>
@@ -46,32 +45,57 @@ function renderLoginHtml (props) {
 }
 
 /**
- * Runs on every page: hides Login CTAs when neither the Hub proxy nor Discord
- * login is available. On the login page, wires the three sign-in methods;
- * Passport and desktop both sign a Hub session (same-origin `/sessions` proxy)
- * that the members service redeems at `/services/members/passport`. Signed
- * in, the same three buttons link another account to the member instead, and
- * the member's linked accounts are listed with Unlink.
+ * The site-wide footer card, shown only on pages whose own footer has no
+ * Login button (and never on the login page).
+ * @param {Object} props
+ * @param {string} props.loginPath
+ * @param {string} props.loginLabel Trusted HTML.
+ */
+function renderFooterHtml (props) {
+  return `<footer id="site-member-footer" class="site-member-footer" hidden>
+      <div><a class="footer-login-button" href="${escapeHtml(props.loginPath)}">${props.loginLabel}</a></div>
+    </footer>`;
+}
+
+/**
+ * Runs on every page: hides Login CTAs when neither Passport nor Discord
+ * login is available. On the login page, wires both: the members service
+ * issues a Passport v2 challenge for its pinned origin (bound to this browser
+ * by a cookie holding a binding secret), the page hands it to Passport with a
+ * private `MessagePort`, and the assertion that comes back on that port is
+ * redeemed by the members service. No Hub is involved. Signed in, the same
+ * buttons link another account to the member instead, after a confirmation
+ * naming that member, and the member's linked accounts are listed with Unlink.
+ * Every page gets `window.goonPassport(linking, say)`, the Passport flow as a
+ * promise, so profile pages can link a Passport identity in place,
+ * `window.goonEscrowKey(say)` for the Market's "Link your escrow key" (a
+ * challenge asking Passport for its cosigner key on the escrow network),
+ * `window.goonConfirmLink(what)` for their other Link buttons, and
+ * `window.goonMember(member)` to redraw the footer card after a rename.
  * @param {Object} props
  * @param {string} props.path SPA path for the login page.
+ * @param {string} [props.waitingPath] Where members waiting for review are sent.
+ * @param {string} [props.membersPath] Profiles are `<membersPath>/<id>`; signed in,
+ *   the footer Login buttons become a card for the member linking there.
  */
 function renderLoginScript (props) {
   return `<script type="text/javascript">
       (function () {
         var loginPath = ${JSON.stringify(props.path)};
+        var waitingPath = ${JSON.stringify(props.waitingPath || '/waiting')};
+        var membersPath = ${JSON.stringify(props.membersPath || '/members')};
         var path = (window.location.pathname || '/').replace(/\\/+$/, '') || '/';
         var onLoginPage = path === loginPath;
 
         var btnDiscord = document.getElementById('login-discord');
         var btnPassport = document.getElementById('login-passport');
-        var btnDesktop = document.getElementById('login-desktop');
         var status = document.getElementById('login-status');
         var sessionBox = document.getElementById('login-session');
-        var hubAvailable = false;
+        var passportAvailable = false;
         var discordAvailable = false;
         var busy = false;
-        var pollTimer = null;
         var signedIn = null;
+        var waiting = null;
 
         function getJson (url, opts) {
           return window.fetch(url, Object.assign({ cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}))
@@ -80,13 +104,19 @@ function renderLoginScript (props) {
             });
         }
 
+        function postJson (url, body) {
+          return getJson(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(body || {})
+          });
+        }
+
         function render () {
           btnDiscord.textContent = signedIn ? 'Link Discord' : 'Discord';
           btnPassport.textContent = signedIn ? 'Link a Passport identity' : 'Passport';
-          btnDesktop.textContent = signedIn ? 'Link a GoonCitizen desktop' : 'GoonCitizen desktop';
           btnDiscord.disabled = busy || !discordAvailable;
-          btnPassport.disabled = busy || !hubAvailable;
-          btnDesktop.disabled = busy || !hubAvailable;
+          btnPassport.disabled = busy || !passportAvailable;
         }
 
         function setBusy (value) {
@@ -94,38 +124,159 @@ function renderLoginScript (props) {
           render();
         }
 
-        var hubProbe = window.fetch('/services/rpc', {
-          method: 'OPTIONS',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store'
-        }).then(function (res) {
-          if (res.status >= 502) return false;
-          return res.text().then(function (t) {
-            try {
-              var j = t ? JSON.parse(t) : null;
-              return !(j && (j.error === 'hub-unreachable' || j.error === 'Hub unreachable'));
-            } catch (e) { return true; }
+        var siteFooter = document.getElementById('site-member-footer');
+        if (siteFooter) {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
           });
-        }).catch(function () { return false; });
-        var membersProbe = getJson('/services/members')
-          .then(function (r) { return !!(r.ok && r.j && r.j.discord); })
-          .catch(function () { return false; });
+          siteFooter.hidden = onLoginPage || pages.some(function (el) { return !!el.querySelector('.footer-login-button'); });
+        }
 
-        Promise.all([hubProbe, membersProbe]).then(function (results) {
-          hubAvailable = results[0];
-          discordAvailable = results[1];
-          if (!hubAvailable && !discordAvailable) {
+        var footerLogins = Array.prototype.slice.call(document.querySelectorAll('a.footer-login-button[href="' + loginPath + '"]'));
+        footerLogins.forEach(function (el) { el.setAttribute('data-login-label', el.textContent); });
+
+        // Signed in, each footer Login button becomes a card for the member
+        // that links to their profile.
+        function markMember (member) {
+          var profilePath = member ? membersPath + '/' + member.id : null;
+          footerLogins.forEach(function (el) {
+            el.textContent = '';
+            el.classList.toggle('footer-member', !!member);
+            if (!member) {
+              el.href = loginPath;
+              el.removeAttribute('title');
+              el.removeAttribute('aria-current');
+              el.textContent = el.getAttribute('data-login-label');
+              return;
+            }
+            el.href = profilePath;
+            el.title = 'Your profile';
+            if (path.toLowerCase() === profilePath) el.setAttribute('aria-current', 'page');
+            else el.removeAttribute('aria-current');
+            if (member.avatarUrl) {
+              var img = document.createElement('img');
+              img.src = member.avatarUrl;
+              img.alt = '';
+              el.appendChild(img);
+            }
+            var text = document.createElement('span');
+            var name = document.createElement('strong');
+            name.textContent = member.displayName || 'Member';
+            var small = document.createElement('small');
+            small.textContent = 'YOUR PROFILE';
+            text.appendChild(name);
+            text.appendChild(small);
+            el.appendChild(text);
+          });
+        }
+
+        window.goonMember = markMember;
+
+        var sessionCheck = getJson('/services/members/session').then(function (r) {
+          return r.ok && r.j && r.j.member ? r.j.member : null;
+        }).catch(function () { return null; });
+        sessionCheck.then(markMember);
+
+        var PASSPORT_ERRORS = {
+          rejected: 'Sign-in was rejected in Passport.',
+          timeout: 'Timed out waiting for approval. Unlock Passport and try again.',
+          expired: 'The sign-in expired before it was approved. Try again.',
+          busy: 'Passport is busy with other sign-ins. Finish those first.',
+          replaced: 'Another sign-in on this page replaced this one.',
+          challenge_replayed: 'Passport already answered that sign-in. Try again.',
+          passport_unavailable: 'Passport is not ready. Unlock it and try again.',
+          invalid_challenge: 'Passport could not read the sign-in request.',
+          origin_mismatch: 'Passport saw a different address than this page.',
+          passport_outdated: 'Update Fabric Passport, or the desktop app it asked, to sign in here.'
+        };
+
+        // Linking adds an account to whoever is signed in here, so say who.
+        function confirmLink (what) {
+          return sessionCheck.then(function (member) {
+            var name = (signedIn && signedIn.displayName) || (member && member.displayName) || 'this profile';
+            if (!window.confirm('Link ' + what + ' to ' + name + '? Anyone signed in as ' + name + ' will be able to use it.')) {
+              throw new Error('Linking cancelled.');
+            }
+          });
+        }
+        window.goonConfirmLink = confirmLink;
+
+        // Passport answers only on the MessagePort handed over with the
+        // challenge, so nothing else on the page can read or forge it.
+        function passportPort (challenge, expiresAt) {
+          return new Promise(function (resolve) {
+            var channel = new window.MessageChannel();
+            var done = false;
+            var wait = Math.min(210000, Math.max(5000, Number(expiresAt) - Date.now() || 0));
+            var timer = setTimeout(function () { finish({ ok: false, error: 'timeout' }); }, wait);
+            function finish (result) {
+              if (done) return;
+              done = true;
+              clearTimeout(timer);
+              try { channel.port1.close(); } catch (_) {}
+              waiting = null;
+              resolve(result);
+            }
+            waiting = { cancel: function () { finish({ ok: false, error: 'cancelled' }); } };
+            channel.port1.onmessage = function (event) {
+              var d = event && event.data;
+              if (!d || typeof d !== 'object') return;
+              if (d.ok === true && d.type === 'PASSPORT_ASSERTION' && typeof d.assertion === 'string') finish({ ok: true, assertion: d.assertion });
+              else if (d.ok === false) finish({ ok: false, error: typeof d.error === 'string' && d.error ? d.error : 'rejected' });
+            };
+            window.postMessage({ source: 'fabric-site', type: 'PASSPORT_CHALLENGE', challenge: challenge }, window.location.origin, [channel.port2]);
+          });
+        }
+
+        // Signs in with Passport, or links its identity to the signed-in
+        // member. Resolves with the members service's answer.
+        function askPassport (linking, say, options) {
+          say = say || function () {};
+          var escrow = !!(options && options.escrow);
+          if (escrow) linking = true;
+          var marker = document.documentElement.getAttribute('data-fabric-passport');
+          if (marker === null) {
+            return Promise.reject(new Error('Fabric Passport extension not detected. Install or enable it, then reload this page.'));
+          }
+          if (marker !== '2') return Promise.reject(new Error('Update Fabric Passport to sign in here.'));
+          if (typeof window.MessageChannel !== 'function') return Promise.reject(new Error('This browser cannot talk to Passport.'));
+          if (waiting) return Promise.reject(new Error('Passport is already asking. Approve or reject that request first.'));
+          return (linking ? confirmLink(escrow ? 'your Market escrow key' : 'a Passport identity') : Promise.resolve()).then(function () {
+            say('Starting Passport sign-in…');
+            return postJson('/services/members/passport/challenges', escrow ? { escrow: true } : undefined);
+          }).then(function (r) {
+            if (!r.ok || !r.j || typeof r.j.challenge !== 'string') {
+              throw new Error('Could not start sign-in: ' + ((r.j && r.j.error) || r.status));
+            }
+            say(escrow ? 'Open Passport and approve sharing your escrow key…' : 'Open Passport and approve the sign-in…');
+            return passportPort(r.j.challenge, r.j.expiresAt);
+          }).then(function (d) {
+            if (!d.ok) throw new Error(PASSPORT_ERRORS[d.error] || ('Passport: ' + d.error));
+            say(linking ? 'Linking…' : 'Signing in…');
+            return postJson('/services/members/passport', { assertion: d.assertion, link: linking });
+          }).then(function (r) {
+            if (!r.ok) throw new Error((linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status));
+            if (escrow && !r.j.escrowKey) throw new Error('Passport did not share an escrow key. Try again and allow it.');
+            return r.j;
+          });
+        }
+        window.goonPassport = askPassport;
+        window.goonEscrowKey = function (say) { return askPassport(true, say, { escrow: true }); };
+
+        getJson('/services/members').then(function (r) {
+          discordAvailable = !!(r.ok && r.j && r.j.discord);
+          passportAvailable = !!(r.ok && r.j && r.j.passport);
+        }).catch(function () {}).then(function () {
+          if (!passportAvailable && !discordAvailable) {
             document.querySelectorAll('a.footer-login-button[href="' + loginPath + '"], .site-nav a[href="' + loginPath + '"]').forEach(function (el) {
               (el.closest('.site-nav-item') || el).style.display = 'none';
             });
           }
           if (!onLoginPage) return;
           btnDiscord.title = discordAvailable ? '' : 'Discord login is not configured on this server.';
-          btnPassport.title = btnDesktop.title = hubAvailable ? '' : 'The Fabric Hub is unreachable.';
-          if (!hubAvailable && !status.textContent) {
-            status.textContent = discordAvailable
-              ? 'Passport and desktop sign-in are unavailable: the Fabric Hub is unreachable.'
-              : 'Login unavailable: the Fabric Hub is unreachable and Discord login is not configured.';
+          btnPassport.title = passportAvailable ? '' : 'Passport login is not available on this server.';
+          if (!passportAvailable && !discordAvailable && !status.textContent) {
+            status.textContent = 'Login is unavailable on this server.';
           }
           render();
         });
@@ -140,9 +291,11 @@ function renderLoginScript (props) {
           discord_failed: 'Could not complete Discord sign-in. Try again.',
           discord_unavailable: 'Discord could not be reached. Try again in a minute.',
           not_signed_in: 'Sign in first, then link another account.',
-          link_failed: 'That link was started from a different sign-in. Try again.'
+          link_failed: 'That link was started from a different sign-in. Try again.',
+          one_time_link: 'You signed in with a one-time link. Sign in with Discord or Passport first, then link another account.',
+          one_discord: 'Your profile already has a Discord account. A profile holds one: unlink it first to link a different one.'
         };
-        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric' };
+        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric', rsi: 'RSI' };
 
         function linkedMessage (what, merged) {
           return (what === 'discord' ? 'Discord account' : 'Fabric identity') + ' linked.' +
@@ -184,6 +337,7 @@ function renderLoginScript (props) {
         function showMember (member) {
           sessionBox.textContent = '';
           signedIn = member || null;
+          markMember(signedIn);
           render();
           if (!member) {
             sessionBox.style.display = 'none';
@@ -200,8 +354,24 @@ function renderLoginScript (props) {
           strong.textContent = member.displayName || member.id;
           line.appendChild(document.createTextNode('Signed in as '));
           line.appendChild(strong);
-          line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : 'Fabric')));
+          line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : member.provider === 'rsi-link' ? 'a Discord link' : 'Fabric')));
           sessionBox.appendChild(line);
+          var profileLine = document.createElement('p');
+          var profileLink = document.createElement('a');
+          profileLink.href = membersPath + '/' + member.id;
+          profileLink.textContent = 'View your profile »';
+          profileLine.appendChild(profileLink);
+          sessionBox.appendChild(profileLine);
+          if (member.review && member.review.status !== 'approved') {
+            var reviewLine = document.createElement('p');
+            var reviewLink = document.createElement('a');
+            reviewLink.href = waitingPath;
+            reviewLink.textContent = member.review.status === 'pending'
+              ? 'Your sign-in is waiting for review »'
+              : 'Your sign-in was not approved »';
+            reviewLine.appendChild(reviewLink);
+            sessionBox.appendChild(reviewLine);
+          }
           var accounts = document.createElement('ul');
           accounts.className = 'login-accounts';
           accounts.setAttribute('aria-label', 'Linked accounts');
@@ -231,118 +401,32 @@ function renderLoginScript (props) {
           window.history.replaceState(null, '', loginPath);
         }
 
-        getJson('/services/members/session').then(function (r) {
-          if (r.ok && r.j && r.j.member) showMember(r.j.member);
-        }).catch(function () {});
-
-        btnDiscord.addEventListener('click', function () {
-          setBusy(true);
-          status.textContent = 'Redirecting to Discord…';
-          window.location.href = '/services/members/discord' + (signedIn ? '?link=1' : '');
+        sessionCheck.then(function (member) {
+          if (member) showMember(member);
         });
 
-        // The Hub releases a signed session exactly once, so only the members service may redeem it.
-        function pollClaim (sessionId, pollSecret) {
+        btnDiscord.addEventListener('click', function () {
           var linking = !!signedIn;
-          var tries = 0;
-          var inFlight = false;
-          if (pollTimer) clearInterval(pollTimer);
-          pollTimer = setInterval(function () {
-            if (inFlight) return;
-            tries += 1;
-            if (tries > 90) {
-              clearInterval(pollTimer);
-              status.textContent = 'Timed out waiting for approval. Unlock your wallet and try again.';
-              setBusy(false);
-              return;
-            }
-            inFlight = true;
-            getJson('/services/members/passport', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null, link: linking })
-            }).then(function (r) {
-              inFlight = false;
-              if (r.status === 202) return;
-              clearInterval(pollTimer);
-              setBusy(false);
-              if (!r.ok) {
-                status.textContent = (linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status);
-                return;
-              }
-              status.textContent = r.j.linked ? linkedMessage(r.j.linked, r.j.merged) : 'Signed in.';
-              showMember(r.j.member);
-            }).catch(function () { inFlight = false; });
-          }, 1500);
-        }
-
-        function startSession (startLabel, onCreated) {
           setBusy(true);
-          status.textContent = startLabel;
-          getJson('/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ origin: window.location.origin })
-          }).then(function (r) {
-            if (!r.ok || !r.j || !r.j.ok) {
-              status.textContent = r.status >= 502
-                ? 'Sign-in is unavailable: the Fabric Hub is unreachable' + (r.j && r.j.detail ? ' (' + r.j.detail + ')' : '') + '.'
-                : 'Could not start sign-in: ' + ((r.j && r.j.error) || r.status);
-              setBusy(false);
-              return;
-            }
-            onCreated(r.j);
-            pollClaim(r.j.sessionId, r.j.pollSecret);
+          (linking ? confirmLink('a Discord account') : Promise.resolve()).then(function () {
+            status.textContent = 'Redirecting to Discord…';
+            window.location.href = '/services/members/discord' + (linking ? '?link=1' : '');
           }).catch(function (error) {
-            status.textContent = 'Could not start sign-in: ' + error.message;
             setBusy(false);
+            status.textContent = error.message;
           });
-        }
-
-        var PASSPORT_ERRORS = {
-          hub_not_allowed: 'Passport does not trust this site’s Hub.',
-          origin_mismatch: 'Passport rejected the request (origin mismatch).',
-          passport_rejected: 'Sign-in was rejected in Passport.'
-        };
-
-        window.addEventListener('message', function (event) {
-          if (event.origin !== window.location.origin) return;
-          var d = event.data;
-          if (!d || d.source !== 'fabric-passport' || d.type !== 'FABRIC_SITE_LOGIN_RESULT' || d.ok) return;
-          if (pollTimer) clearInterval(pollTimer);
-          status.textContent = PASSPORT_ERRORS[d.error] || ('Passport: ' + (d.error || 'rejected'));
-          setBusy(false);
         });
 
         btnPassport.addEventListener('click', function () {
-          if (!document.documentElement.hasAttribute('data-fabric-passport')) {
-            status.textContent = 'Fabric Passport extension not detected. Install or enable it, then reload this page.';
-            return;
-          }
-          startSession('Starting Passport sign-in…', function (session) {
-            window.postMessage({
-              source: 'fabric-site',
-              type: 'FABRIC_SITE_LOGIN_REQUEST',
-              sessionId: session.sessionId,
-              hub: window.location.origin,
-              origin: window.location.origin,
-              message: session.message
-            }, window.location.origin);
-            status.textContent = 'Open Passport and approve the sign-in…';
-          });
-        });
-
-        btnDesktop.addEventListener('click', function () {
-          startSession('Starting desktop sign-in…', function (session) {
-            var a = document.createElement('a');
-            a.href = session.protocolUrl ||
-              ('fabric://login?sessionId=' + encodeURIComponent(session.sessionId) +
-                '&hub=' + encodeURIComponent(window.location.origin));
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            status.textContent = 'Approve the request in GoonCitizen (or your Fabric desktop app)…';
+          var linking = !!signedIn;
+          setBusy(true);
+          askPassport(linking, function (text) { status.textContent = text; }).then(function (j) {
+            setBusy(false);
+            status.textContent = j.linked ? linkedMessage(j.linked, j.merged) : 'Signed in.';
+            showMember(j.member);
+          }).catch(function (error) {
+            setBusy(false);
+            status.textContent = error.message;
           });
         });
       })();
@@ -353,5 +437,6 @@ module.exports = {
   id: 'login-page',
   styles: renderLoginCss,
   render: renderLoginHtml,
+  footer: renderFooterHtml,
   script: renderLoginScript
 };

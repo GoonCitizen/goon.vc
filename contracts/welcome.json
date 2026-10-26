@@ -1,0 +1,32 @@
+{
+  "about": "Welcome DMs inviting new members of the G00N SQUAD Discord to join PERMAFLEET and earn their Prospect tags (services/welcome.js, `/goon welcome`; off until someone with Manage Server turns it on). Members get it about `delayHours` after joining the server, so stewards have time to tag alliance members first; when first turned on, everyone who joined in the last `windowDays` gets it too. Each member is welcomed once, ever. Members holding any `exclude` role are skipped: alliance org members (meant to be at least E1 already), Org Stewards, and anyone already in the PERMAFLEET program. `requirement.name` is the DM script's `requires` entry; its role is the server's @everyone role (id = the server id), so the script runs only for members of the G00N SQUAD server and `/goon campaign` never offers it. Role ids are G00N SQUAD Discord role snowflakes.",
+  "guildId": "1190527980120850493",
+  "title": "Welcome: join PERMAFLEET",
+  "delayHours": 24,
+  "windowDays": 30,
+  "requirement": {
+    "name": "G00N SQUAD member",
+    "roles": { "@everyone": "1190527980120850493" }
+  },
+  "script": "permafleet-apply",
+  "exclude": {
+    "alliance": {
+      "G00N SQUAD": "1330815820716183622",
+      "[INFN] INFINITY INDUSTRIES": "1203196310333947954",
+      "[TRDE] TRANS-GALACTIC": "1254340363888627723",
+      "[LCRP] LEGACY CORP": "1254340464367243335",
+      "DOUBLEDOG DELIVERY, INC.": "1510330347349344256",
+      "[4M] 4M Contractors": "1501216787084218440",
+      "[AIM] A.I.M.O.S.": "1531627253216051312",
+      "ORG STEWARDS": "1477493178721636565"
+    },
+    "permafleet": {
+      "PERMAFLEET": "1298457632431931413",
+      "[P] Prospect I": "1234735430587514970",
+      "Enlisted": "1227751144814542858",
+      "[E1] Enlisted 1": "1480982433003475036",
+      "[E2] Enlisted 2": "1487994103860953118"
+    }
+  },
+  "message": "**Welcome to G00N SQUAD!**\nGlad you found us. G00N SQUAD flies with PERMAFLEET, an alliance of orgs that runs ops together every week, and joining PERMAFLEET is how you earn your Prospect tags here: you start at **Prospect I** and move up the ranks by showing up and flying with the fleet.\n\nIt takes two minutes: apply to PERMAFLEET on RSI (https://robertsspaceindustries.com/orgs/PERMAFLEET, then **Join us now!**), and press **Start** so leadership can match your application and tag you. This week's ops: https://goon.vc/operations/PERMAFLEET/schedule"
+}

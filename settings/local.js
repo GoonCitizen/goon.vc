@@ -60,7 +60,20 @@ module.exports = {
 
   // Members, login sessions, and OAuth state (Fabric Store).
   members: {
-    path: process.env.GOON_MEMBERS_STORE || 'stores/members'
+    path: process.env.GOON_MEMBERS_STORE || 'stores/members',
+    // Origins Passport may sign in to (comma list, e.g. https://goon.vc). Unset:
+    // the origin each request came in on, which trusts the Host header.
+    origins: process.env.GOON_MEMBERS_ORIGINS
+      ? process.env.GOON_MEMBERS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+      : undefined,
+    // New Discord sign-ins wait at /waiting until a reviewer approves them;
+    // members from before reviews began count as approved. Reviewers are
+    // Discord user ids (default @remaeus), DMed when someone new is waiting.
+    review: {
+      enabled: process.env.GOON_MEMBERS_REVIEW !== '0',
+      reviewers: (process.env.GOON_MEMBERS_REVIEWERS || '420222636954615808')
+        .split(',').map((id) => id.trim()).filter(Boolean)
+    }
   },
 
   // /events: scheduled events from every guild the Discord bot is in (Fabric Store cache).
@@ -122,11 +135,35 @@ module.exports = {
     path: process.env.GOON_LEAGUES_STORE || 'stores/leagues'
   },
   // /operations/PERMAFLEET/votes: one vote per member org, as a Fabric Federation.
-  // Orgs and their stewards' account keys are in contracts/alliance.json; each
-  // org's validator key is derived from goon.vc's Fabric key (fabric.xprv / stores/fabric).
+  // Orgs and their officers' accounts (discord:<id>) are in contracts/alliance.json;
+  // only officers vote, signed in to goon.vc, which signs for them from its Fabric
+  // key (fabric.xprv / stores/fabric).
   alliance: {
     path: process.env.GOON_ALLIANCE_STORE || 'stores/alliance',
     file: process.env.GOON_ALLIANCE_ROSTER || 'contracts/alliance.json'
+  },
+
+  // /services/market: the G00N SQUAD Market forum mirrored both ways (each thread is a
+  // listing), BTC prices, and 2-of-3 escrow (buyer, seller, goon.vc as arbiter) through the
+  // Hub's federation mailbox. The forum is an id, exact name, or "/regex/" in discord.guildId,
+  // mirrored only while @everyone can view it. The bot needs View Channel, Read Message History,
+  // Send Messages in Threads, Create Posts, Manage Threads, and Manage Webhooks there
+  // (/services/discord/invite?for=market) plus the Message Content intent. Escrow runs on the
+  // Hub's network; set GOON_MARKET_NETWORK to refuse any other (mainnet needs allowMainnet).
+  // Arbiters are account keys (discord:<id>, fabric:<pubkey>) who may rule on disputes.
+  // GOON_MARKET=0 turns the market off; GOON_MARKET_SYNC=0 serves it without the forum.
+  market: {
+    enabled: process.env.GOON_MARKET !== '0',
+    path: process.env.GOON_MARKET_STORE || 'stores/market',
+    forum: process.env.GOON_MARKET_FORUM || '/market/',
+    sync: process.env.GOON_MARKET_SYNC !== '0',
+    webhook: true,
+    network: process.env.GOON_MARKET_NETWORK || null,
+    dibsHours: 24,
+    payGraceHours: 24,
+    deliveryDays: 7,
+    confirmDays: 3,
+    arbiters: (process.env.GOON_MARKET_ARBITERS || '').split(',').map((s) => s.trim()).filter(Boolean)
   },
 
   // Discord application commands /idlerpg and /1v1, answered on the operations gateway client.
@@ -140,6 +177,33 @@ module.exports = {
     path: process.env.GOON_LEADERBOARD_STORE || 'stores/leaderboard',
     channelId: '1229937640116064276',
     channelName: '1v1-challenges'
+  },
+
+  // When each member of the home server last posted (author ids + times only), for check-ins
+  // with members who went quiet. History is read once over REST (`npm run collect:activity`
+  // reads it all with the server stopped), new posts come from the gateway, and every channel
+  // is polled hourly. The bot needs View Channel + Read Message History; GOON_ACTIVITY=0 stops
+  // reading history (new posts from the gateway are still noted).
+  activity: {
+    path: process.env.GOON_ACTIVITY_STORE || 'stores/activity',
+    sync: process.env.GOON_ACTIVITY !== '0'
+  },
+
+  // Check-ins with quiet members (contracts/checkin.json). Off until someone
+  // with Manage Server turns them on with `/goon checkins`; then a weekly pass.
+  checkins: {
+    path: process.env.GOON_CHECKINS_STORE || 'stores/checkins'
+  },
+
+  // Welcome DMs inviting new members to join PERMAFLEET (contracts/welcome.json).
+  // Off until someone with Manage Server turns them on with `/goon welcome`.
+  welcome: {
+    path: process.env.GOON_WELCOME_STORE || 'stores/welcome'
+  },
+
+  // Members' ships from Hangar Export JSON (`/hangar import`); public totals at /services/hangar.
+  hangar: {
+    path: process.env.GOON_HANGAR_STORE || 'stores/hangar'
   },
 
   // /clips: videos and screenshots from the Discord clip channels, low-res proxies for the

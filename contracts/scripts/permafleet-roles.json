@@ -1,0 +1,45 @@
+{
+  "id": "permafleet-roles",
+  "title": "Set up PERMAFLEET Prospect ranks",
+  "description": "Gives a member org the Prospect ranks every PERMAFLEET member org keeps for new members, named the same everywhere. goon.vc's bot adds the ones the server lacks (recommended), or the server keeps its own. Only the org's officers on record can run it.",
+  "start": "welcome",
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Every PERMAFLEET member org keeps the same **Prospect ranks** for new members to climb. Let's set them up on **{{context.guildName}}** for {{context.permafleetOrgNames}}.",
+      "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
+      "next": "prospects"
+    },
+    "prospects": {
+      "say": "New members start at **Prospect I** and climb the ranks by showing up. Should goon.vc's bot add the Prospect ranks **{{context.guildName}}** doesn't have yet, named like `[P1] Prospect I`? That's the recommended way: they read the same on every member org's Discord. Missing right now: {{context.prospectsMissing|none, you have all six}}. Ranks you already have stay as they are.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.roles.prospects" },
+      "next": [
+        { "when": { "answers.prospects": "keep" }, "goto": "summary" },
+        { "when": { "context.rolesMissing": null }, "goto": "summary" },
+        { "goto": "permissions" }
+      ]
+    },
+    "permissions": {
+      "say": "To make these ranks, goon.vc's bot needs **Manage Roles**. Missing on **{{context.guildName}}** right now: {{context.rolesMissing}}.\nGrant it with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's the plan for **{{context.guildName}}**:\n- Prospect ranks: {{labels.prospects}}\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "{{labels.result}}\n\nRun `/goon roles` again any time."
+  },
+  "cancelled": {
+    "say": "Nothing changed. Run `/goon roles` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.roles" }, { "action": "record" }]
+}

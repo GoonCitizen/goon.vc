@@ -3,15 +3,20 @@
   "title": "Set up the PERMAFLEET voice channel",
   "description": "Gives a member org a public PERMAFLEET voice channel, open to every PERMAFLEET pilot. goon.vc's bot creates it, or the server's own channel is used.",
   "start": "welcome",
-  "requires": ["ManageGuild"],
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
   "steps": {
     "welcome": {
       "say": "Hi {{user.name}}! Every PERMAFLEET member org keeps a public **PERMAFLEET** voice channel, open to every PERMAFLEET pilot, so anyone in the alliance can drop in and fly with you. Let's set one up on **{{context.guildName}}**.",
       "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
       "next": "channel"
     },
     "channel": {
-      "say": "Should goon.vc's bot create the PERMAFLEET voice channel, or is there one on **{{context.guildName}}** already?",
+      "say": "Should goon.vc's bot create the PERMAFLEET voice channel? That's the recommended way: it's set up the same on every member org's Discord. Or pick a voice channel **{{context.guildName}}** already has.",
       "input": { "type": "choice", "optionsFrom": "permafleet.channels.voice" },
       "next": [
         { "when": { "answers.channel": "new" }, "goto": "category" },

@@ -92,13 +92,13 @@ function renderHtml (props) {
           <p class="pf-links">${external(PERMAFLEET_RSI_URL, 'Apply on RSI &raquo;', 'Opens the RSI org page; choose “Join us now!” there')}</p>
         </li>
         <li>
-          <h3>Name your stewards</h3>
-          <p>Pick the officers who speak for your org. They get the <strong>Org Steward</strong> role and a direct line to alliance leadership. Tell us when your stewards change.</p>
+          <h3>Name your officers</h3>
+          <p>Pick the officers who speak for your org and tell alliance leadership in #embassy who they are on Discord; we put their Discord accounts on record. Each officer then <a href="/sessions">signs in to goon.vc</a> with that Discord account to vote for your org on the <a href="/operations/PERMAFLEET/votes">votes page</a>, or runs <code>/vote</code> on Discord. Only officers on record vote and set up PERMAFLEET for your org, and only they see your <strong>#council</strong> and have a direct line to alliance leadership. Tell us when your officers change.</p>
         </li>
         <li>
           <h3>Set up your Discord</h3>
           <p>Open an <strong>#embassy</strong> channel and a public <strong>PERMAFLEET</strong> voice channel on your server, then add our bot so leadership can put your events on the alliance schedule.</p>
-          <p>Our bot can make them for you: run <code>/goon embassy</code> and <code>/goon voice</code> in your server. <code>/goon council</code> adds a private <strong>#council</strong> where your officers settle alliance votes, and <code>/goon permafleet</code> a <strong>#permafleet</strong> channel for alliance talk.</p>
+          <p>Our bot can set it all up for you, the same way on every member org’s Discord. That’s the way we recommend: one of your officers runs <code>/goon setup</code> in your server, picks PERMAFLEET membership, then <strong>Set it all up</strong>. That makes <strong>#embassy</strong>, the <strong>PERMAFLEET</strong> voice channel, <strong>#permafleet</strong> for alliance talk, a private <strong>#council</strong> open only to your officers on record, where they settle alliance votes, and the Prospect ranks. To do one piece at a time, or use channels and roles you already have, run <code>/goon embassy</code>, <code>/goon voice</code>, <code>/goon permafleet</code>, <code>/goon council</code>, or <code>/goon roles</code>.</p>
           <p class="pf-links">${external(props.botInviteUrl, 'Add our bot &raquo;')} · <a href="${escapeHtml(props.schedulePath)}">Weekly schedule &raquo;</a></p>
         </li>
       </ol>

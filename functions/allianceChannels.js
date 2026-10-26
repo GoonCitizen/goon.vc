@@ -7,7 +7,8 @@ const PERMISSIONS = {
   SendMessages: 1n << 11n,
   ReadMessageHistory: 1n << 16n,
   Connect: 1n << 20n,
-  Speak: 1n << 21n
+  Speak: 1n << 21n,
+  ManageRoles: 1n << 28n
 };
 const PERMISSION_NAMES = {
   ManageChannels: 'Manage Channels',
@@ -15,7 +16,8 @@ const PERMISSION_NAMES = {
   SendMessages: 'Send Messages',
   ReadMessageHistory: 'Read Message History',
   Connect: 'Connect',
-  Speak: 'Speak'
+  Speak: 'Speak',
+  ManageRoles: 'Manage Roles'
 };
 
 const TEXT = 0; // GuildText
@@ -28,7 +30,8 @@ const TALK = ['ViewChannel', 'SendMessages', 'ReadMessageHistory'];
 /**
  * The channels every PERMAFLEET member org keeps on its own Discord. `access`
  * is `public` (@everyone may use it, whatever its category says) or `roles`
- * (hidden from @everyone; only the roles the admin picks, and the bot).
+ * (hidden from @everyone; only the org's officers on record or the roles the
+ * admin picks, and the bot).
  * Each has a DM script started with `/goon <subcommand>`.
  */
 const CHANNELS = [
@@ -137,25 +140,37 @@ function needs (entry) {
  * @param {string} ids.everyone The @everyone role id (the guild id).
  * @param {string} [ids.bot] The bot's user id (kept able to see a private channel).
  * @param {Array<string>} [ids.roles] Roles that may use a `roles` channel.
+ * @param {Array<string>} [ids.members] Members (user ids) that may use a `roles` channel.
  * @returns {Array<{ id: string, type: number, allow: bigint, deny: bigint }>}
  */
-function overwrites (entry, { everyone, bot = null, roles = [] }) {
+function overwrites (entry, { everyone, bot = null, roles = [], members = [] }) {
   const allow = mask(entry.allow);
   if (entry.access !== 'roles') return [{ id: String(everyone), type: ROLE, allow, deny: 0n }];
+  const people = [...new Set(members.map(String))].filter((id) => !bot || id !== String(bot));
   return [
     { id: String(everyone), type: ROLE, allow: 0n, deny: PERMISSIONS.ViewChannel },
     ...roles.map((id) => ({ id: String(id), type: ROLE, allow, deny: 0n })),
+    ...people.map((id) => ({ id, type: MEMBER, allow, deny: 0n })),
     ...(bot ? [{ id: String(bot), type: MEMBER, allow, deny: 0n }] : [])
   ];
 }
 
 /**
- * The bot permission integer that covers creating every channel here (for
- * the `?for=channels` Discord invite).
+ * Everything the bot must hold server-wide to set up PERMAFLEET from scratch:
+ * every channel here, plus Manage Roles for the Prospect ranks.
+ * @returns {Array<string>} permission names (keys of PERMISSIONS)
+ */
+function setupNeeds () {
+  return [...new Set([...CHANNELS.flatMap(needs), 'ManageRoles'])];
+}
+
+/**
+ * The bot permission integer that covers {@link setupNeeds} (for the
+ * `?for=channels` Discord invite).
  * @returns {string}
  */
 function invitePermissions () {
-  return String(mask([...new Set(CHANNELS.flatMap(needs))]));
+  return String(mask(setupNeeds()));
 }
 
 module.exports = {
@@ -167,6 +182,7 @@ module.exports = {
   needs,
   normalize,
   overwrites,
+  setupNeeds,
   spec,
   types
 };

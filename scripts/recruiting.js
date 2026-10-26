@@ -2,18 +2,22 @@
 
 /**
  * Save the PERMAFLEET recruiting campaigns (contracts/recruiting.json) as
- * drafts on the running goon.vc server, through the campaigns API, and show
- * how many members each would reach. Nothing is sent without --send or --at.
+ * drafts on the running goon.vc server, through the campaigns API, and list
+ * every member each would reach, by name. Nothing is sent: the run ends
+ * with the exact command that sends those previews, and only that command
+ * sends them (to the members listed who still qualify; a draft edited since
+ * is refused).
  * Each campaign DMs members who hold the qualifying rank (Prospect IV) and
  * none of the unit's roles, with a Start button for the unit's DM script.
  * Running it again updates open drafts and skips members an earlier campaign
  * for the same unit already reached. Needs GOON_SCRIPTS_TOKEN and a server
  * running with GOON_CAMPAIGNS=1.
  *
- *   npm run campaigns:recruiting                          (save drafts, preview)
+ *   npm run campaigns:recruiting                          (save drafts, list recipients)
  *   npm run campaigns:recruiting -- --unit bravo-squadron (only this unit)
- *   npm run campaigns:recruiting -- --send                (send now)
- *   npm run campaigns:recruiting -- --at 2026-11-01T18:00:00-05:00
+ *   npm run campaigns:recruiting -- --send <campaign>:<preview> [--send …]
+ *                                                         (send what a preview listed)
+ *   … --send … --at 2026-11-01T18:00:00-05:00             (schedule)
  *   npm run campaigns:recruiting -- --origin https://goon.vc
  */
 
@@ -21,12 +25,13 @@ const settings = require('../settings/local');
 const recruiting = require('../functions/recruiting');
 
 const BY = 'npm run campaigns:recruiting';
+const APPROVAL = /^([0-9a-f]{12}):([0-9a-f]{8})$/;
 
 function parseArgs (argv) {
   const http = settings.http || {};
   const args = {
     units: [],
-    send: false,
+    send: [],
     at: null,
     origin: `http://127.0.0.1:${http.port || 8080}`,
     file: recruiting.FILE
@@ -35,13 +40,18 @@ function parseArgs (argv) {
   while (list.length) {
     const a = list.shift();
     if (a === '--unit') args.units.push(list.shift());
-    else if (a === '--send') args.send = true;
+    else if (a === '--send') {
+      const match = APPROVAL.exec(String(list.shift() || ''));
+      if (!match) throw new Error('--send needs <campaign>:<preview>, as printed by a run without --send');
+      args.send.push({ campaign: match[1], preview: match[2] });
+    }
     else if (a === '--at') args.at = list.shift();
     else if (a === '--origin') args.origin = String(list.shift() || '').replace(/\/+$/, '');
     else if (a === '--file') args.file = list.shift();
     else throw new Error(`Unknown flag: ${a}`);
   }
   if (args.at && Number.isNaN(Date.parse(args.at))) throw new Error('--at needs a date, e.g. 2026-11-01T18:00:00-05:00');
+  if (args.at && !args.send.length) throw new Error('--at applies to the previews you name with --send');
   return args;
 }
 
@@ -70,7 +80,16 @@ async function main () {
     return json;
   };
 
+  if (args.send.length) {
+    for (const { campaign, preview } of args.send) {
+      const sent = await api('POST', `/${campaign}/schedule`, { preview, sendAt: args.at || undefined, by: BY });
+      log(`${sent.title}: ${sent.status}${sent.status === 'scheduled' ? ` for ${sent.sendAt}` : ''}, to ${sent.preview ? sent.preview.reach : 0} of the members previewed.`);
+    }
+    return;
+  }
+
   const contract = recruiting.load(args.file);
+  const approvals = [];
   const wanted = recruiting.drafts(contract).filter((entry) => !args.units.length || args.units.includes(entry.unit));
   if (!wanted.length) throw new Error(`No units to recruit for${args.units.length ? `: ${args.units.join(', ')}` : ''}`);
 
@@ -87,18 +106,18 @@ async function main () {
       : await api('PATCH', `/${step.id}`, { title: step.draft.title, content: step.draft.content, filter: step.draft.filter, by: BY });
     const preview = await api('POST', `/${saved.id}/preview`, {});
     const skipped = [
-      preview.inactive ? `${preview.inactive} not in voice in ${draft.filter.activeWithinDays} days` : null,
+      preview.inactive ? `${preview.inactive} not in voice or posting in ${draft.filter.activeWithinDays} days` : null,
       preview.optedOut ? `${preview.optedOut} opted out` : null,
       preview.excluded ? `${preview.excluded} already asked` : null
     ].filter(Boolean);
     log(`${unit}: ${step.action === 'create' ? 'saved' : 'updated'} draft ${saved.id}: reaches ${preview.reach} of ${preview.found} found${skipped.length ? ` (skipped: ${skipped.join(', ')})` : ''}.`);
-
-    if (args.send || args.at) {
-      const sent = await api('POST', `/${saved.id}/schedule`, { sendAt: args.at || undefined, by: BY });
-      log(`${unit}: ${sent.status}${sent.status === 'scheduled' ? ` for ${sent.sendAt}` : ''}.`);
-    }
+    (preview.recipients || []).forEach((recipient, index) => console.log(`  ${index + 1}. ${recipient.name || 'Unnamed member'}`));
+    if (preview.reach > 0) approvals.push(`--send ${saved.id}:${preview.id}`);
   }
-  if (!args.send && !args.at) log('Drafts only. Send with --send, or schedule with --at <date>.');
+  if (!approvals.length) return log('Nobody to reach; nothing to send.');
+  log('Nothing was sent. To send exactly these previews, run:');
+  console.log(`  npm run campaigns:recruiting -- ${approvals.join(' ')}${args.origin === parseArgs(['', '']).origin ? '' : ` --origin ${args.origin}`}`);
+  log('Add --at <date> to schedule. A preview goes stale when its draft changes or this runs again.');
 }
 
 main().catch((error) => {

@@ -28,6 +28,10 @@ const TournamentsPage = require('../components/TournamentsPage');
 const LeaguesPage = require('../components/LeaguesPage');
 const DuelLeaderboard = require('../components/DuelLeaderboard');
 const ClipsPage = require('../components/ClipsPage');
+const MarketPage = require('../components/MarketPage');
+const RsiClaimPage = require('../components/RsiClaimPage');
+const WaitingPage = require('../components/WaitingPage');
+const MembersPage = require('../components/MembersPage');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -37,13 +41,26 @@ const DEFAULTS = {
   // Absolute origin for og:url / og:image (link previews need absolute URLs).
   siteUrl: 'https://goon.vc',
   homeDescription: 'G00N SQUAD: Star Citizen security and infiltration, with friends in most corners of the ’verse. A core member of the PERMAFLEET Protectorate. Membership is by invitation only.',
-  loginDescription: 'Sign in to GOON SQUAD with Discord, Fabric Passport, or the GoonCitizen desktop app.',
+  loginDescription: 'Sign in to GOON SQUAD with Discord or Fabric Passport.',
   heading: 'GOON SQUAD<sup>&trade;</sup>',
   joinLabel: 'Join the Squad &raquo;',
   joinUrl: 'https://discord.com/servers/g00n-squad-1190527980120850493',
   loginLabel: '&gt; LOGIN &lt;',
   loginPath: '/sessions',
   loginDocumentTitle: 'Login — GOON SQUAD',
+  // RSI profile claims (components/RsiClaimPage.js); `/rsi claim` on Discord links here.
+  rsiClaimPath: '/rsi',
+  rsiClaimDocumentTitle: 'Claim your RSI profile — GOON SQUAD',
+  rsiClaimDescription: 'Link your Star Citizen handle to your G00N SQUAD profile with a one-time code in your RSI bio, then sync your hangar.',
+  // Waiting area for Discord sign-ins awaiting review (components/WaitingPage.js).
+  waitingPath: '/waiting',
+  waitingDocumentTitle: 'Waiting area — GOON SQUAD',
+  waitingDescription: 'New G00N SQUAD members wait here after signing in with Discord, until an alliance administrator approves them.',
+  // Member directory and profiles (components/MembersPage.js). Until the
+  // directory opens, members see only themselves.
+  membersPath: '/members',
+  membersDocumentTitle: 'Members — GOON SQUAD',
+  membersDescription: 'G00N SQUAD members. Sign in to see your profile.',
   eventsPath: '/events',
   eventsLabel: 'EVENTS',
   eventsIntro: 'Upcoming scheduled events from every Discord server we fly with.',
@@ -110,6 +127,18 @@ const DEFAULTS = {
   clipsDocumentTitle: 'CLIPS — GOON SQUAD',
   clipsTimelineDocumentTitle: 'CLIP TIMELINE — GOON SQUAD',
   clipsTimelineDescription: 'One recording session from our Discord clips, every pilot on their own track, lined up by when it happened.',
+  // Market: /services/market catalog, listings, sellers, orders, and /mine (services/market.js),
+  // mirrored both ways with the Market forum on the G00N SQUAD Discord.
+  marketPath: '/services/market',
+  marketLabel: 'MARKET',
+  marketHeading: 'MARKET',
+  marketTagline: 'Ships, paints, and packs from G00N SQUAD members, priced in bitcoin.',
+  marketIntro: 'The G00N SQUAD Market forum on the web: every thread is a listing here, and every listing here is a thread there. Prices are in BTC; buy with 2-of-3 escrow between you, the seller, and goon.vc.',
+  marketGreyMarket: 'This is a grey market. Pledges change hands by RSI gifting, outside anything RSI supports, so trade with people you know or use escrow. goon.vc never holds your keys or your coins.',
+  marketDocumentTitle: 'MARKET — GOON SQUAD',
+  marketMineDocumentTitle: 'YOUR MARKET — GOON SQUAD',
+  marketMineDescription: 'Your G00N SQUAD Market listings and escrow orders.',
+  marketInstallPath: '/services/discord/install',
   // 1v1 ladder from the pinned message in G00N SQUAD #1v1-challenges (services/leaderboard.js).
   leaderboardPath: '/resources/1v1-leaderboard',
   leaderboardEndpoint: '/services/leaderboards/1v1',
@@ -144,11 +173,11 @@ const DEFAULTS = {
   // How an organization joins the Protectorate (components/PermafleetOnboarding.js).
   permafleetOnboardingPath: '/operations/PERMAFLEET/onboarding',
   permafleetOnboardingDocumentTitle: 'PERMAFLEET Onboarding — GOON SQUAD',
-  permafleetOnboardingDescription: 'Bring your organization into the PERMAFLEET Protectorate: open an embassy, tag your pilots, name your stewards, and run your own #embassy, public PERMAFLEET voice channel, and Prospect ranks.',
+  permafleetOnboardingDescription: 'Bring your organization into the PERMAFLEET Protectorate: open an embassy, tag your pilots, name your officers, and run your own #embassy, public PERMAFLEET voice channel, and Prospect ranks.',
   // Alliance votes, one per member org (services/alliance.js, components/PermafleetVotes.js).
   permafleetVotesPath: '/operations/PERMAFLEET/votes',
   permafleetVotesDocumentTitle: 'PERMAFLEET Votes — GOON SQUAD',
-  permafleetVotesDescription: 'Decisions for the PERMAFLEET Protectorate: one vote per member organization, cast by its Org Stewards and signed as a Fabric Federation.',
+  permafleetVotesDescription: 'Decisions for the PERMAFLEET Protectorate: one vote per member organization, cast by its officers and signed as a Fabric Federation.',
   // The Fabric federations behind alliance votes (components/Federations.js); not in the PERMAFLEET menu.
   federationsPath: '/federations',
   federationsDocumentTitle: 'Federations — GOON SQUAD',
@@ -239,6 +268,9 @@ class GoonSPA extends FabricSPA {
     return [
       page('/', title, this._site('homeDescription')),
       page(this._site('loginPath'), this._site('loginDocumentTitle'), this._site('loginDescription')),
+      page(this._site('rsiClaimPath'), this._site('rsiClaimDocumentTitle'), this._site('rsiClaimDescription')),
+      page(this._site('waitingPath'), this._site('waitingDocumentTitle'), this._site('waitingDescription')),
+      page(this._site('membersPath'), this._site('membersDocumentTitle'), this._site('membersDescription')),
       page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
       page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
@@ -255,6 +287,8 @@ class GoonSPA extends FabricSPA {
       page(this._site('tournamentsPath'), this._site('tournamentsDocumentTitle'), this._site('tournamentsIntro')),
       page(this._site('leaguesPath'), this._site('leaguesDocumentTitle'), this._site('leaguesIntro')),
       page(this._site('clipsPath'), this._site('clipsDocumentTitle'), this._site('clipsIntro')),
+      page(this._site('marketPath'), this._site('marketDocumentTitle'), this._site('marketIntro')),
+      page(`${this._site('marketPath')}/mine`, this._site('marketMineDocumentTitle'), this._site('marketMineDescription')),
       page(ClipsPage.timelinePath(this._site('clipsPath')), this._site('clipsTimelineDocumentTitle'), this._site('clipsTimelineDescription')),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
@@ -295,6 +329,9 @@ class GoonSPA extends FabricSPA {
     const loginLabel = this._site('loginLabel');
     const loginPath = this._site('loginPath');
     const loginTitleJson = JSON.stringify(this._site('loginDocumentTitle'));
+    const rsiClaimPath = this._site('rsiClaimPath');
+    const waitingPath = this._site('waitingPath');
+    const membersPath = this._site('membersPath');
     const eventsPath = this._site('eventsPath');
     const eventsTitleJson = JSON.stringify(this._site('eventsDocumentTitle'));
     const operationsPath = this._site('operationsPath');
@@ -319,6 +356,8 @@ class GoonSPA extends FabricSPA {
     const leaguesTitleJson = JSON.stringify(this._site('leaguesDocumentTitle'));
     const clipsPath = this._site('clipsPath');
     const clipsTitleJson = JSON.stringify(this._site('clipsDocumentTitle'));
+    const marketPath = this._site('marketPath');
+    const marketTitleJson = JSON.stringify(this._site('marketDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
     const permafleetInviteUrl = this._site('permafleetInviteUrl');
@@ -376,7 +415,7 @@ class GoonSPA extends FabricSPA {
       copyright
     });
     const loginMainHtml = Login.render({ title: loginLabel, joinUrl });
-    const loginScript = Login.script({ path: loginPath });
+    const loginScript = Login.script({ path: loginPath, waitingPath, membersPath });
     const eventsMainHtml = EventsPage.render({
       description: this._site('eventsIntro'),
       loginPath,
@@ -471,6 +510,13 @@ class GoonSPA extends FabricSPA {
         tagline: this._site('clipsTagline'),
         summary: 'Every clip and screenshot from our Discord, grouped by when it was recorded so every angle of a fight sits side by side. Cut them into a film; the render credits each pilot and links back to the Discord post.',
         openLabel: 'Clips'
+      }, {
+        name: 'Market',
+        path: marketPath,
+        tagline: this._site('marketTagline'),
+        summary: this._site('marketIntro'),
+        openLabel: 'Market',
+        links: [{ label: 'Add /market to your Discord', href: this._site('marketInstallPath') }]
       }, {
         name: '1v1 Leaderboard',
         path: leaderboardPath,
@@ -570,6 +616,18 @@ class GoonSPA extends FabricSPA {
     const clipTimelineMainHtml = ClipsPage.renderTimeline(clipsProps);
     const clipProjectMainHtml = ClipsPage.renderProject(clipsProps);
     const clipsScript = ClipsPage.script(clipsProps);
+    const marketProps = {
+      heading: escapeHtml(this._site('marketHeading')),
+      intro: escapeHtml(this._site('marketIntro')),
+      greyMarket: escapeHtml(this._site('marketGreyMarket')),
+      basePath: marketPath,
+      installPath: this._site('marketInstallPath'),
+      siteTitle: title,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    };
     const orgProps = {
       heading: escapeHtml(this._site('organizationsHeading')),
       intro: escapeHtml(this._site('organizationsIntro')),
@@ -706,6 +764,11 @@ class GoonSPA extends FabricSPA {
         text-decoration: none;
       }
       .footer-login-button:hover, .goon-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+      .footer-login-button.footer-member { align-items: center; display: inline-flex; gap: 0.6em; letter-spacing: 0.04em; text-align: left; }
+      .footer-member img { border-radius: 50%; height: 36px; width: 36px; }
+      .site-member-footer { position: relative; z-index: 3; }
+      .footer-member strong { display: block; font-weight: 400; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .footer-member small { color: #bbb; display: block; font-family: Arial, sans-serif; font-size: 0.7em; letter-spacing: 0.08em; }
       .goon-button:disabled { cursor: default; opacity: 0.45; }
       .page-back { text-align: center; margin-bottom: 1.5em; }
 ${SiteHeader.styles()}
@@ -718,6 +781,9 @@ ${PermafleetOnboarding.styles()}
 ${PermafleetVotes.styles()}
 ${Federations.styles()}
 ${Login.styles()}
+${RsiClaimPage.styles()}
+${WaitingPage.styles()}
+${MembersPage.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
 ${IdleRPGPage.styles()}
@@ -729,6 +795,7 @@ ${TournamentsPage.styles()}
 ${LeaguesPage.styles()}
 ${DuelLeaderboard.styles()}
 ${ClipsPage.styles()}
+${MarketPage.styles()}
     </style>
   </head>
   <body>
@@ -736,6 +803,9 @@ ${ClipsPage.styles()}
     ${permafleetHeaderHtml}
     ${homeMainHtml}
     ${loginMainHtml}
+    ${RsiClaimPage.render({ path: rsiClaimPath, loginPath, joinUrl })}
+    ${WaitingPage.render({ path: waitingPath, loginPath, joinUrl, eventsPath, squadronsPath, rsiClaimPath })}
+    ${MembersPage.render({ path: membersPath, loginPath, waitingPath, rsiClaimPath })}
     ${eventsMainHtml}
     ${operationsMainHtml}
     ${idlerpgMainHtml}
@@ -754,6 +824,11 @@ ${tournamentMainsHtml}
     ${clipsMainHtml}
     ${clipTimelineMainHtml}
     ${clipProjectMainHtml}
+    ${MarketPage.render(marketProps)}
+    ${MarketPage.renderListing(marketProps)}
+    ${MarketPage.renderSeller(marketProps)}
+    ${MarketPage.renderOrder(marketProps)}
+    ${MarketPage.renderMine(marketProps)}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
@@ -763,6 +838,7 @@ ${squadronMainsHtml}
     ${voteMainHtml}
     ${federationsMainHtml}
     ${federationMainHtml}
+    ${Login.footer({ loginPath, loginLabel })}
     <script type="text/javascript">
       (function () {
         var loginPath = ${JSON.stringify(loginPath)};
@@ -778,6 +854,10 @@ ${squadronMainsHtml}
           }
         }
         var isLogin = path === loginPath;
+        var isRsiClaim = path.toLowerCase() === ${JSON.stringify(rsiClaimPath.toLowerCase())};
+        var isWaiting = path.toLowerCase() === ${JSON.stringify(waitingPath.toLowerCase())};
+        var isMembers = path.toLowerCase() === ${JSON.stringify(membersPath.toLowerCase())};
+        var isMember = path.toLowerCase().indexOf(${JSON.stringify(membersPath.toLowerCase() + '/')}) === 0;
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
         var isIdleRPG = path.toLowerCase() === ${JSON.stringify(idlerpgPath.toLowerCase())};
@@ -808,6 +888,16 @@ ${squadronMainsHtml}
         var clipProjectEl = path.toLowerCase().indexOf(${JSON.stringify(clipsPath.toLowerCase() + '/projects/')}) === 0
           ? document.getElementById('clip-project-page')
           : null;
+        var marketBase = ${JSON.stringify(marketPath.toLowerCase())};
+        var marketRest = path.toLowerCase().indexOf(marketBase + '/') === 0 ? path.toLowerCase().slice(marketBase.length + 1).split('/') : null;
+        var isMarket = path.toLowerCase() === marketBase;
+        var marketEl = isMarket ? document.getElementById('market-page')
+          : !marketRest ? null
+          : marketRest.length === 1 && marketRest[0] === 'mine' ? document.getElementById('market-mine-page')
+          : marketRest.length === 2 && marketRest[0] === 'listings' ? document.getElementById('market-listing-page')
+          : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
+          : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -832,9 +922,17 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
+        var rsiClaimEl = document.getElementById('rsi-page');
+        if (rsiClaimEl) rsiClaimEl.style.display = isRsiClaim ? 'block' : 'none';
+        var waitingEl = document.getElementById('waiting-page');
+        if (waitingEl) waitingEl.style.display = isWaiting ? 'block' : 'none';
+        var membersEl = document.getElementById('members-page');
+        if (membersEl) membersEl.style.display = isMembers ? 'block' : 'none';
+        var memberEl = document.getElementById('member-page');
+        if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -871,6 +969,9 @@ ${squadronMainsHtml}
         if (clipTimelineEl) clipTimelineEl.style.display = isClipTimeline ? 'block' : 'none';
         var clipProjectPageEl = document.getElementById('clip-project-page');
         if (clipProjectPageEl) clipProjectPageEl.style.display = clipProjectEl ? 'block' : 'none';
+        document.querySelectorAll('.market-page').forEach(function (el) {
+          el.style.display = el === marketEl ? 'block' : 'none';
+        });
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -893,6 +994,10 @@ ${squadronMainsHtml}
         document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = ${loginTitleJson};
+        else if (isRsiClaim) document.title = ${JSON.stringify(this._site('rsiClaimDocumentTitle'))};
+        else if (isWaiting) document.title = ${JSON.stringify(this._site('waitingDocumentTitle'))};
+        else if (isMembers) document.title = ${JSON.stringify(this._site('membersDocumentTitle'))};
+        else if (isMember) document.title = 'Member profile — ' + ${titleJson};
         else if (isEvents) document.title = ${eventsTitleJson};
         else if (isOperations) document.title = ${operationsTitleJson};
         else if (isIdleRPG || idlerpgPlayerEl) document.title = ${idlerpgTitleJson};
@@ -907,6 +1012,7 @@ ${squadronMainsHtml}
         else if (isLeagues || leagueEl) document.title = ${leaguesTitleJson};
         else if (isClipTimeline) document.title = ${JSON.stringify(this._site('clipsTimelineDocumentTitle'))};
         else if (isClips || clipProjectEl) document.title = ${clipsTitleJson};
+        else if (marketEl) document.title = ${marketTitleJson};
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
@@ -921,6 +1027,9 @@ ${squadronMainsHtml}
     ${SiteHeader.script()}
     ${PermafleetHeader.script()}
     ${loginScript}
+    ${RsiClaimPage.script()}
+    ${WaitingPage.script()}
+    ${MembersPage.script()}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
     ${operationsScript}
@@ -933,6 +1042,7 @@ ${squadronMainsHtml}
     ${tournamentsScript}
     ${leaguesScript}
     ${clipsScript}
+    ${MarketPage.script()}
     ${permafleetScript}
     ${PermafleetVotes.script()}
     ${Federations.script()}

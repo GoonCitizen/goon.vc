@@ -5,12 +5,13 @@ const https = require('https');
 const { URL } = require('url');
 
 /**
- * Same-origin Hub API paths the public site (Passport / GoonCitizen login,
- * device-link, JSON-RPC, identity cluster) needs. Everything else stays
- * HTML or 404 — not a Hub, not LiveRelay.
+ * Same-origin Hub API paths the public site (device-link, JSON-RPC, identity
+ * cluster) needs. Everything else stays HTML or 404 — not a Hub, not
+ * LiveRelay. `/sessions` is goon.vc's own login page: a Passport challenge is
+ * pinned to the origin it was issued for, so the Hub's sessions could never
+ * sign anyone in here.
  */
 const HUB_API_PREFIXES = Object.freeze([
-  '/sessions',
   '/device-links',
   '/services/rpc',
   '/identity/cluster',
@@ -62,7 +63,7 @@ function wantsHtmlNavigation (req) {
 }
 
 /**
- * Browser GET /sessions (and /device-links) should render GoonSPA, not Hub JSON.
+ * Browser GET /device-links should render GoonSPA, not Hub JSON.
  * JSON polls and all mutating methods still proxy.
  * @param {import('http').IncomingMessage} req
  * @returns {boolean}
@@ -72,7 +73,7 @@ function shouldProxyHubApi (req) {
   if (!isHubApiPath(pathname)) return false;
   const method = String((req && req.method) || 'GET').toUpperCase();
   if (method === 'GET' || method === 'HEAD') {
-    if ((pathname === '/sessions' || pathname === '/device-links') && wantsHtmlNavigation(req)) {
+    if (pathname === '/device-links' && wantsHtmlNavigation(req)) {
       return false;
     }
   }
@@ -91,8 +92,8 @@ function normalizeHubOrigin (raw) {
 
 /**
  * Ordered Hubs: requests go to the Hub that answered last, then the others in
- * order. One list is shared by everything that talks to the Hub, so a member's
- * Passport session is polled where it was created.
+ * order. One list is shared by everything that talks to the Hub, so a session
+ * started through the proxy is polled where it was created.
  * @param {string|string[]} origins
  * @returns {{ origins: string[], order: function(): string[], answered: function(string): void }}
  */

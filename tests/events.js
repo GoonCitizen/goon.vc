@@ -125,7 +125,30 @@ describe('Events', function () {
     });
     const permissions = BigInt(new URL(channels.headers.Location).searchParams.get('permissions'));
     const bit = (n) => 1n << BigInt(n);
-    assert.strictEqual(permissions, bit(4) | bit(10) | bit(11) | bit(16) | bit(20) | bit(21), 'Manage Channels, plus what the PERMAFLEET channels open up: View, Send, Read History, Connect, Speak');
+    assert.strictEqual(permissions, bit(4) | bit(10) | bit(11) | bit(16) | bit(20) | bit(21) | bit(28), 'Manage Channels and Manage Roles, plus what the PERMAFLEET channels open up: View, Send, Read History, Connect, Speak');
+
+    const market = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      market.end = resolve;
+      events.middleware()({ method: 'GET', url: '/services/discord/invite?for=market' }, market, () => resolve());
+    });
+    assert.strictEqual(BigInt(new URL(market.headers.Location).searchParams.get('permissions')),
+      bit(10) | bit(11) | bit(16) | bit(29) | bit(34) | bit(35) | bit(38),
+      'View, Send (new posts), Read History, Manage Webhooks, Manage Threads, Create Public Threads, Send in Threads');
+  });
+
+  it('redirects to a user install of the application commands', async function () {
+    const res = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      res.end = resolve;
+      events.middleware()({ method: 'GET', url: '/services/discord/install' }, res, () => resolve());
+    });
+    assert.strictEqual(res.statusCode, 302);
+    const location = new URL(res.headers.Location);
+    assert.strictEqual(location.searchParams.get('client_id'), '444444444444444444');
+    assert.strictEqual(location.searchParams.get('integration_type'), '1');
+    assert.strictEqual(location.searchParams.get('scope'), 'applications.commands');
+    assert.strictEqual(location.searchParams.get('permissions'), null);
   });
 
   it('lists the home guild subscription tiers that are for sale', async function () {

@@ -14,12 +14,13 @@ const bridgeAttestation = require('../functions/bridgeAttestation');
 const SYMBOLS = ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS'];
 const DAY = 24 * 60 * 60 * 1000;
 
-function steward (symbol, n = 1) {
-  return `discord:${100000 + SYMBOLS.indexOf(symbol) * 10 + n}`;
+// One officer per org (so one officer decides), by Discord account.
+function officerAccount (symbol) {
+  return `discord:31415926535897932${SYMBOLS.indexOf(symbol)}`;
 }
 
-function member (symbol, n = 1) {
-  return { id: `${symbol.toLowerCase()}${n}`.padEnd(16, '0').slice(0, 16), displayName: `${symbol} steward ${n}`, accounts: [{ key: steward(symbol, n) }] };
+function member (symbol) {
+  return { id: `${symbol.toLowerCase()}1`.padEnd(16, '0').slice(0, 16), displayName: `${symbol} officer`, accounts: [{ key: officerAccount(symbol) }] };
 }
 
 function roster (overrides = {}) {
@@ -27,15 +28,15 @@ function roster (overrides = {}) {
     name: 'PERMAFLEET',
     network: 'mainnet',
     publisher: 'G00N',
-    organizations: SYMBOLS.map((symbol) => ({ symbol, stewards: [steward(symbol, 1), steward(symbol, 2)] }))
+    organizations: SYMBOLS.map((symbol) => ({ symbol, officers: [officerAccount(symbol)] }))
   }, overrides);
 }
 
-// INFN decides by its officers; everyone else by stewards.
-function officerRoster (keys, extra = {}) {
+// INFN has three officers, two of whom decide.
+function officerRoster (accounts, extra = {}) {
   const json = roster();
   const infn = json.organizations.find((org) => org.symbol === 'INFN');
-  infn.officers = keys.map((key, i) => (i % 2 ? key.pubkey : `fabric:${key.pubkey.slice(2)}`));
+  infn.officers = accounts.slice();
   Object.assign(infn, extra);
   return json;
 }
@@ -54,6 +55,7 @@ function route (service, method, url, { body = {}, as = null } = {}) {
 
 describe('alliance federation', function () {
   const xprv = new Key().xprv;
+  const accounts = ['discord:300000000000000001', 'discord:300000000000000002', 'discord:300000000000000003'];
 
   it('derives one stable, distinct key per org', function () {
     const a = federation.orgKey(xprv, 'G00N').pubkey;
@@ -61,6 +63,15 @@ describe('alliance federation', function () {
     const all = SYMBOLS.map((symbol) => federation.orgKey(xprv, symbol).pubkey);
     assert.strictEqual(new Set(all).size, SYMBOLS.length);
     assert.notStrictEqual(federation.orgKey(new Key().xprv, 'G00N').pubkey, a);
+  });
+
+  it('derives one stable officer key per account, apart from member-vote keys', function () {
+    const a = federation.officerKey(xprv, accounts[0]).pubkey;
+    assert.strictEqual(federation.officerKey(xprv, accounts[0]).pubkey, a);
+    assert.notStrictEqual(federation.officerKey(xprv, accounts[1]).pubkey, a);
+    assert.notStrictEqual(federation.officerKey(new Key().xprv, accounts[0]).pubkey, a, 'only goon.vc’s key makes it');
+    assert.notStrictEqual(bridgeAttestation.accountKey(xprv, accounts[0]).pubkey, a, 'a member vote can’t be matched to an officer signature');
+    assert.throws(() => federation.officerKey(xprv, 'nope'), /invalid officer account/);
   });
 
   it('builds a core FabricFederationDescriptor with a majority threshold', function () {
@@ -97,7 +108,12 @@ describe('alliance federation', function () {
   it('refuses rosters with bad symbols, duplicate orgs, or an outside publisher', function () {
     assert.throws(() => federation.parseRoster(roster({ publisher: 'NOPE' })), /publisher/);
     assert.throws(() => federation.parseRoster(roster({ organizations: [{ symbol: 'G00N' }, { symbol: 'g00n' }] })), /twice/);
-    assert.throws(() => federation.parseRoster(roster({ organizations: [{ symbol: 'G00N', stewards: ['nope'] }] })), /steward/);
+  });
+
+  it('leaves an org without officers out of the vote', function () {
+    const parsed = federation.parseRoster(roster({ organizations: [{ symbol: 'G00N', officers: [] }] }));
+    assert.deepStrictEqual(parsed.organizations, [{ symbol: 'G00N', pubkey: null, officers: [], threshold: null }]);
+    assert.strictEqual(federation.validatorsFor(parsed, xprv)[0].custody, 'none');
   });
 
   it('counts the latest vote per org and a majority of all orgs', function () {
@@ -120,14 +136,15 @@ describe('alliance federation', function () {
   });
 
   it('builds an org federation of officers and ties the org key to it', function () {
-    const officers = [new Key(), new Key(), new Key()];
-    const withOfficers = (keys, extra = {}) => federation.parseRoster(officerRoster(keys, extra));
-    const parsed = withOfficers(officers);
+    const withOfficers = (list, extra = {}) => federation.parseRoster(officerRoster(list, extra));
+    const parsed = withOfficers(accounts);
     const infn = parsed.organizations.find((org) => org.symbol === 'INFN');
-    const descriptor = federation.orgDescriptor(parsed, infn);
+    assert.deepStrictEqual(infn.officers, accounts);
+    const descriptor = federation.orgDescriptor(parsed, infn, xprv);
     assert.strictEqual(descriptor.type, 'FabricFederationDescriptor');
     assert.strictEqual(descriptor.threshold, 2);
-    assert.deepStrictEqual(descriptor.validators.map((v) => v.slice(2)).sort(), officers.map((k) => k.pubkey.slice(2)).sort());
+    assert.deepStrictEqual(descriptor.validators.slice().sort(), accounts.map((a) => federation.officerKey(xprv, a).pubkey).sort());
+    assert.strictEqual(descriptor.publisher, federation.officerKey(xprv, accounts[0]).pubkey);
     const validators = federation.validatorsFor(parsed, xprv);
     const entry = validators.find((v) => v.symbol === 'INFN');
     assert.strictEqual(entry.custody, 'officers');
@@ -135,29 +152,29 @@ describe('alliance federation', function () {
     assert.strictEqual(entry.pubkey, federation.orgKey(xprv, 'INFN', entry.federation.id).pubkey);
     assert.notStrictEqual(entry.pubkey, federation.orgKey(xprv, 'INFN').pubkey);
     const allianceId = federation.descriptorId(federation.allianceDescriptor(parsed, validators));
-    const swapped = withOfficers([officers[0], officers[1], new Key()]);
+    const swapped = withOfficers([accounts[0], accounts[1], 'discord:300000000000000009']);
     const swappedValidators = federation.validatorsFor(swapped, xprv);
     assert.notStrictEqual(swappedValidators.find((v) => v.symbol === 'INFN').pubkey, entry.pubkey);
     assert.notStrictEqual(federation.descriptorId(federation.allianceDescriptor(swapped, swappedValidators)), allianceId);
-    const stricter = withOfficers(officers, { threshold: 3 });
-    assert.strictEqual(federation.orgDescriptor(stricter, stricter.organizations.find((org) => org.symbol === 'INFN')).threshold, 3);
+    const stricter = withOfficers(accounts, { threshold: 3 });
+    assert.strictEqual(federation.orgDescriptor(stricter, stricter.organizations.find((org) => org.symbol === 'INFN'), xprv).threshold, 3);
     assert.notStrictEqual(federation.validatorsFor(stricter, xprv).find((v) => v.symbol === 'INFN').pubkey, entry.pubkey);
   });
 
   it('refuses bad officer lists', function () {
-    const k = new Key();
     const bad = (org) => () => federation.parseRoster(roster({ organizations: [Object.assign({ symbol: 'G00N' }, org)] }));
-    assert.throws(bad({ officers: [`fabric:${k.pubkey.slice(2)}`], pubkey: new Key().pubkey }), /not both/);
-    assert.throws(bad({ officers: [k.pubkey], threshold: 2 }), /threshold/);
-    assert.throws(bad({ officers: [k.pubkey, `fabric:${k.pubkey.slice(2)}`] }), /twice/);
+    assert.throws(bad({ officers: [accounts[0]], pubkey: new Key().pubkey }), /not both/);
+    assert.throws(bad({ officers: [accounts[0]], threshold: 2 }), /threshold/);
+    assert.throws(bad({ officers: [accounts[0], ` ${accounts[0]} `] }), /twice/);
     assert.throws(bad({ threshold: 1 }), /threshold needs officers/);
-    assert.throws(bad({ officers: ['discord:123456789012345678'] }), /invalid officer/);
-    assert.throws(bad({ officers: Array.from({ length: federation.MAX_OFFICERS + 1 }, () => new Key().pubkey) }), /at most/);
+    assert.throws(bad({ officers: [new Key().pubkey] }), /invalid officer account/);
+    assert.throws(bad({ officers: 'discord:300000000000000001' }), /list of accounts/);
+    assert.throws(bad({ officers: Array.from({ length: federation.MAX_OFFICERS + 1 }, (_, i) => `discord:4000000000000000${String(i).padStart(2, '0')}`) }), /at most/);
   });
 
   it('counts officers and checks the endorsements an org vote rests on', function () {
-    const officers = [new Key(), new Key(), new Key()];
-    const parsed = federation.parseRoster(officerRoster(officers));
+    const officers = accounts.map((account) => federation.officerKey(xprv, account));
+    const parsed = federation.parseRoster(officerRoster(accounts));
     const validators = federation.validatorsFor(parsed, xprv);
     const alliance = federation.allianceDescriptor(parsed, validators);
     const allianceId = federation.descriptorId(alliance);
@@ -246,9 +263,25 @@ describe('Alliance service', function () {
   let service;
   const names = {};
   const members = {
-    currentMember: async (req) => (req.member ? { member: req.member } : null),
+    currentMember: async (req) => (req.member ? { member: req.member, via: 'discord' } : null),
     resolve: async (key) => (names[key] ? { displayName: names[key] } : null)
   };
+
+  const post = (frame) => route(service, 'POST', '/services/alliance/messages', { body: { frame } });
+  const overviewNow = async (as = null) => (await route(service, 'GET', '/services/alliance', { as })).body;
+  const entryOf = (overview, symbol) => overview.federation.organizations.find((org) => org.symbol === symbol);
+  const iso = () => new Date(clock).toISOString();
+
+  // An org's officer proposes, signed in; goon.vc signs the officer and org proposals.
+  function propose (symbol, title, { days = 7, summary = '', as = member(symbol) } = {}) {
+    return route(service, 'POST', '/services/alliance/proposals', { body: { title, summary, days }, as });
+  }
+
+  // An org's (only) officer votes, which decides the org's vote.
+  function vote (proposal, symbol, choice, as = member(symbol)) {
+    clock += 1;
+    return route(service, 'POST', `/services/alliance/proposals/${proposal.id}/votes`, { body: { choice }, as });
+  }
 
   async function open (rosterJson, extra = {}) {
     if (service) await service.stop();
@@ -269,6 +302,7 @@ describe('Alliance service', function () {
     clock = Date.parse('2026-10-25T12:00:00Z');
     xprv = new Key().xprv;
     service = null;
+    for (const symbol of SYMBOLS) names[officerAccount(symbol)] = `${symbol} officer`;
     await open(roster());
   });
 
@@ -283,30 +317,49 @@ describe('Alliance service', function () {
     assert.strictEqual(anon.body.status, 'ready');
     assert.strictEqual(anon.body.federation.threshold, 4);
     assert.strictEqual(anon.body.federation.organizations.length, 7);
-    assert.strictEqual(anon.body.federation.organizations[0].stewards, 2);
-    assert.deepStrictEqual(anon.body.you, { signedIn: false, organizations: [], officers: [] });
-    assert.ok(!JSON.stringify(anon.body).includes('discord:'), 'no steward account keys');
+    assert.strictEqual(anon.body.federation.voting, 7);
+    assert.deepStrictEqual(anon.body.you, { signedIn: false, officers: [] });
+    const served = JSON.stringify(anon.body);
+    assert.ok(!served.includes('discord:') && !SYMBOLS.some((symbol) => served.includes(officerAccount(symbol).slice(8))), 'no account ids');
     const invite = federation.openFrame(anon.body.federation.invite);
     assert.strictEqual(invite.body.type, 'FederationInvite');
     assert.strictEqual(invite.signer, anon.body.federation.descriptor.publisher.slice(2));
-    const signed = await route(service, 'GET', '/services/alliance', { as: member('TRDE') });
-    assert.deepStrictEqual(signed.body.you, { signedIn: true, organizations: ['TRDE'], officers: [] });
+    const signed = await overviewNow(member('TRDE'));
+    assert.deepStrictEqual([signed.you.signedIn, signed.you.officers.map((org) => org.symbol)], [true, ['TRDE']]);
+    const rando = { id: 'aaaaaaaaaaaaaaaa', displayName: 'Rando', accounts: [{ key: 'discord:999999' }] };
+    assert.deepStrictEqual((await overviewNow(rando)).you, { signedIn: true, officers: [] });
   });
 
-  it('lets only stewards propose, signed with their org key', async function () {
-    const body = { title: 'Adopt the PERMAFLEET charter', summary: 'Text in #alliance.', days: 3 };
-    assert.strictEqual((await route(service, 'POST', '/services/alliance/proposals', { body })).status, 401);
-    const outsider = { id: 'aaaaaaaaaaaaaaaa', displayName: 'Rando', accounts: [{ key: 'discord:999999' }] };
-    assert.strictEqual((await route(service, 'POST', '/services/alliance/proposals', { body, as: outsider })).status, 403);
-    const made = await route(service, 'POST', '/services/alliance/proposals', { body, as: member('INFN') });
-    assert.strictEqual(made.status, 201);
+  it('lets only signed-in officers on record propose and vote', async function () {
+    const rando = { id: 'aaaaaaaaaaaaaaaa', displayName: 'Rando', accounts: [{ key: 'discord:999999' }] };
+    const anon = await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Try' } });
+    assert.strictEqual(anon.status, 401);
+    const outsider = await propose('G00N', 'Try', { as: rando });
+    assert.strictEqual(outsider.status, 403);
+    assert.match(outsider.body.error, /officers on record/);
+    assert.ok(!/key/i.test(outsider.body.error), 'no keys in the message');
+    assert.strictEqual((await propose('G00N', '')).status, 400);
+    assert.strictEqual((await propose('G00N', 'Too long', { days: 31 })).status, 400);
+    const made = (await propose('G00N', 'Joint op')).body;
+    const url = `/services/alliance/proposals/${made.id}/votes`;
+    assert.strictEqual((await route(service, 'POST', url, { body: { choice: 'yes' } })).status, 401);
+    assert.strictEqual((await route(service, 'POST', url, { body: { choice: 'yes' }, as: rando })).status, 403);
+    assert.strictEqual((await vote(made, 'G00N', 'maybe')).status, 400);
+    assert.strictEqual((await route(service, 'GET', `/services/alliance/proposals/${made.id}`)).body.tally.yes, 0);
+  });
+
+  it('takes a proposal from an officer, signed for the org', async function () {
+    const made = await propose('INFN', 'Adopt the PERMAFLEET charter', { days: 3, summary: 'Text in #alliance.' });
+    assert.strictEqual(made.status, 200, JSON.stringify(made.body));
     assert.strictEqual(made.body.proposer.symbol, 'INFN');
-    assert.strictEqual(made.body.by, 'INFN steward 1');
+    assert.strictEqual(made.body.by, 'INFN officer');
     assert.strictEqual(made.body.status, 'open');
+    assert.deepStrictEqual(made.body.you.signed, ['INFN']);
     assert.strictEqual(Date.parse(made.body.closesAt) - clock, 3 * DAY);
     const opened = federation.openFrame(made.body.frame);
     assert.strictEqual(opened.body.type, 'FederationProposal');
-    assert.strictEqual(opened.signer, federation.orgKey(xprv, 'INFN').pubkey.slice(2));
+    assert.strictEqual(opened.signer, entryOf(await overviewNow(), 'INFN').pubkey.slice(2));
+    assert.strictEqual(federation.openFrame(opened.body.endorsements[0]).signer, federation.officerKey(xprv, officerAccount('INFN')).pubkey.slice(2));
     assert.strictEqual(federation.proposalId(opened.body), made.body.id);
     const short = await route(service, 'GET', `/services/alliance/proposals/${made.body.shortId}`);
     assert.strictEqual(short.body.id, made.body.id);
@@ -314,88 +367,108 @@ describe('Alliance service', function () {
   });
 
   it('gives each org one vote, passes on a majority, then closes', async function () {
-    const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Joint op on Saturday' }, as: member('G00N') })).body;
-    const vote = (symbol, choice, n = 1) => route(service, 'POST', `/services/alliance/proposals/${made.id}/votes`, { body: { choice }, as: member(symbol, n) });
-    assert.strictEqual((await vote('G00N', 'yes')).status, 200);
-    const changed = await vote('G00N', 'no', 2);
+    const made = (await propose('G00N', 'Joint op on Saturday')).body;
+    assert.strictEqual((await vote(made, 'G00N', 'yes')).status, 200);
+    const changed = await vote(made, 'G00N', 'no');
     assert.strictEqual(changed.body.tally.yes, 0);
-    assert.strictEqual(changed.body.tally.no, 1, 'a second steward changes the org vote, not adds one');
+    assert.strictEqual(changed.body.tally.no, 1, 'a later officer vote changes the org vote, not adds one');
     assert.strictEqual(changed.body.votes.length, 2);
-    assert.strictEqual(changed.body.organizations.find((org) => org.symbol === 'G00N').by, 'G00N steward 2');
-    assert.strictEqual((await vote('G00N', 'maybe')).status, 400);
-    await vote('G00N', 'yes');
-    await vote('INFN', 'yes');
-    await vote('TRDE', 'abstain');
-    const third = await vote('LCRP', 'yes');
+    assert.strictEqual(changed.body.organizations.find((org) => org.symbol === 'G00N').by, 'G00N officer');
+    assert.deepStrictEqual(changed.body.you.signed, ['G00N']);
+    assert.strictEqual(changed.body.you.memberVote.choice, 'no', 'an officer’s vote is also their member vote');
+    await vote(made, 'G00N', 'yes');
+    await vote(made, 'INFN', 'yes');
+    await vote(made, 'TRDE', 'abstain');
+    const third = await vote(made, 'LCRP', 'yes');
     assert.strictEqual(third.body.status, 'open');
-    const passed = await vote('AIMOS', 'yes');
+    const passed = await vote(made, 'AIMOS', 'yes');
     assert.strictEqual(passed.body.status, 'passed');
     assert.deepStrictEqual([passed.body.tally.yes, passed.body.tally.waiting, passed.body.tally.threshold], [4, 2, 4]);
-    const late = await vote('4MCONTRACT', 'no');
+    assert.deepStrictEqual(passed.body.members, { yes: 4, no: 0, abstain: 1, total: 5 });
+    const late = await vote(made, '4MCONTRACT', 'no');
     assert.strictEqual(late.status, 409);
+    const overview = await overviewNow();
     for (const row of passed.body.votes) {
       const opened = federation.openFrame(row.frame);
       assert.strictEqual(opened.body.proposalId, made.id);
-      assert.strictEqual(opened.signer, federation.orgKey(xprv, row.org).pubkey.slice(2));
+      assert.strictEqual(opened.signer, entryOf(overview, row.org).pubkey.slice(2));
     }
     const listed = await route(service, 'GET', '/services/alliance/proposals');
     assert.strictEqual(listed.body.proposals[0].status, 'passed');
   });
 
   it('fails a proposal that can no longer pass, and expires one at its deadline', async function () {
-    const doomed = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Rename the fleet' }, as: member('G00N') })).body;
-    for (const symbol of ['G00N', 'INFN', 'TRDE']) await route(service, 'POST', `/services/alliance/proposals/${doomed.id}/votes`, { body: { choice: 'no' }, as: member(symbol) });
-    const failed = await route(service, 'POST', `/services/alliance/proposals/${doomed.id}/votes`, { body: { choice: 'no' }, as: member('LCRP') });
+    const doomed = (await propose('G00N', 'Rename the fleet')).body;
+    for (const symbol of ['G00N', 'INFN', 'TRDE']) await vote(doomed, symbol, 'no');
+    const failed = await vote(doomed, 'LCRP', 'no');
     assert.strictEqual(failed.body.status, 'failed');
-    const slow = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Slow one', days: 1 }, as: member('G00N') })).body;
+    const slow = (await propose('G00N', 'Slow one', { days: 1 })).body;
     clock += DAY + 1;
     assert.strictEqual((await route(service, 'GET', `/services/alliance/proposals/${slow.id}`)).body.status, 'expired');
-    assert.strictEqual((await route(service, 'POST', `/services/alliance/proposals/${slow.id}/votes`, { body: { choice: 'yes' }, as: member('G00N') })).status, 409);
+    assert.strictEqual((await vote(slow, 'G00N', 'yes')).status, 409);
+  });
+
+  it('leaves an org without officers on record out until it has some', async function () {
+    const rosterJson = roster();
+    rosterJson.organizations.find((org) => org.symbol === 'LCRP').officers = [];
+    await open(rosterJson);
+    const overview = await overviewNow();
+    assert.strictEqual(entryOf(overview, 'LCRP').custody, 'none');
+    assert.strictEqual(overview.federation.voting, 6);
+    assert.deepStrictEqual((await overviewNow(member('LCRP'))).you.officers, []);
+    const made = (await propose('G00N', 'Joint op')).body;
+    assert.strictEqual((await vote(made, 'LCRP', 'yes')).status, 403);
+    const body = federation.voteBody(overview.federation.id, { proposalId: made.id, choice: 'yes', castAt: iso() });
+    const refused = await post(federation.signFrame(body, federation.orgKey(xprv, 'LCRP')).frame);
+    assert.strictEqual(refused.status, 403);
+    assert.match(refused.body.error, /LCRP has no officers on record/);
+    const proposal = federation.proposalBody(overview.federation.id, { title: 'Sneaky', summary: '', proposer: federation.orgKey(xprv, 'LCRP').pubkey, createdAt: iso(), closesAt: new Date(clock + DAY).toISOString() });
+    assert.strictEqual((await post(federation.signFrame(proposal, federation.orgKey(xprv, 'LCRP')).frame)).status, 403);
   });
 
   it('accepts frames from an org that holds its own key and refuses forgeries', async function () {
     const own = new Key();
     const rosterJson = roster();
-    rosterJson.organizations.find((org) => org.symbol === 'TRDE').pubkey = own.pubkey;
+    const trde = rosterJson.organizations.find((org) => org.symbol === 'TRDE');
+    delete trde.officers;
+    trde.pubkey = own.pubkey;
     await open(rosterJson);
-    const overview = (await route(service, 'GET', '/services/alliance')).body;
-    assert.strictEqual(overview.federation.organizations.find((org) => org.symbol === 'TRDE').custody, 'own');
-    const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Shared hangar' }, as: member('G00N') })).body;
-    const refused = await route(service, 'POST', `/services/alliance/proposals/${made.id}/votes`, { body: { choice: 'yes' }, as: member('TRDE') });
-    assert.strictEqual(refused.status, 409);
+    const overview = await overviewNow();
+    assert.strictEqual(entryOf(overview, 'TRDE').custody, 'own');
+    const made = (await propose('G00N', 'Shared hangar')).body;
     const body = federation.voteBody(overview.federation.id, { proposalId: made.id, choice: 'yes', castAt: new Date(clock).toISOString() });
-    const accepted = await route(service, 'POST', '/services/alliance/messages', { body: { frame: federation.signFrame(body, own).frame } });
+    const accepted = await post(federation.signFrame(body, own).frame);
     assert.strictEqual(accepted.status, 200);
     assert.strictEqual(accepted.body.organizations.find((org) => org.symbol === 'TRDE').choice, 'yes');
     clock += 1000;
     const no = federation.voteBody(overview.federation.id, { proposalId: made.id, choice: 'no', castAt: new Date(clock).toISOString() });
-    assert.strictEqual((await route(service, 'POST', '/services/alliance/messages', { body: { frame: federation.signFrame(no, own).frame } })).body.tally.no, 1);
-    const replay = await route(service, 'POST', '/services/alliance/messages', { body: { frame: federation.signFrame(body, own).frame } });
+    assert.strictEqual((await post(federation.signFrame(no, own).frame)).body.tally.no, 1);
+    const replay = await post(federation.signFrame(body, own).frame);
     assert.strictEqual(replay.body.organizations.find((org) => org.symbol === 'TRDE').choice, 'no', 'replaying an older vote changes nothing');
     const stale = federation.voteBody(overview.federation.id, { proposalId: made.id, choice: 'abstain', castAt: new Date(clock - 500).toISOString() });
-    assert.strictEqual((await route(service, 'POST', '/services/alliance/messages', { body: { frame: federation.signFrame(stale, own).frame } })).status, 409);
-    const forged = await route(service, 'POST', '/services/alliance/messages', { body: { frame: federation.signFrame(body, new Key()).frame } });
+    assert.strictEqual((await post(federation.signFrame(stale, own).frame)).status, 409);
+    const forged = await post(federation.signFrame(body, new Key()).frame);
     assert.strictEqual(forged.status, 403);
     const tampered = federation.signFrame(body, own).frame.replace(/7965/, '6e6f');
-    assert.ok([400, 403].includes((await route(service, 'POST', '/services/alliance/messages', { body: { frame: tampered } })).status));
+    assert.ok([400, 403].includes((await post(tampered)).status));
   });
 
   it('starts a new federation when the roster changes, keeping old proposals with theirs', async function () {
-    const first = (await route(service, 'GET', '/services/alliance')).body.federation.id;
-    const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Before the new org' }, as: member('G00N') })).body;
+    const first = (await overviewNow()).federation.id;
+    const made = (await propose('G00N', 'Before the new org')).body;
+    const newcomer = { id: 'eeeeeeeeeeeeeeee', displayName: 'Newcomer', accounts: [{ key: 'discord:500000000000000001' }] };
     const rosterJson = roster();
-    rosterJson.organizations.push({ symbol: 'NEWORG', stewards: ['discord:555555'] });
+    rosterJson.organizations.push({ symbol: 'NEWORG', officers: ['discord:500000000000000001'] });
     await open(rosterJson);
-    const now = (await route(service, 'GET', '/services/alliance')).body;
+    const now = await overviewNow();
     assert.notStrictEqual(now.federation.id, first);
     assert.strictEqual(now.federation.threshold, 5);
     const old = (await route(service, 'GET', `/services/alliance/proposals/${made.id}`)).body;
     assert.strictEqual(old.federationId, first);
     assert.strictEqual(old.current, false);
     assert.strictEqual(old.organizations.length, 7);
-    const newcomer = { id: 'bbbbbbbbbbbbbbbb', displayName: 'New', accounts: [{ key: 'discord:555555' }] };
-    assert.strictEqual((await route(service, 'POST', `/services/alliance/proposals/${made.id}/votes`, { body: { choice: 'yes' }, as: newcomer })).status, 403);
-    assert.strictEqual((await route(service, 'POST', `/services/alliance/proposals/${made.id}/votes`, { body: { choice: 'yes' }, as: member('G00N') })).status, 200);
+    assert.strictEqual((await vote(old, 'NEWORG', 'yes', newcomer)).status, 403, 'an org that joined later has no say on it');
+    assert.strictEqual((await vote(old, 'G00N', 'yes')).status, 200);
   });
 
   it('turns itself off on a broken roster instead of failing the site', async function () {
@@ -406,27 +479,27 @@ describe('Alliance service', function () {
     service.on('error', (...parts) => errors.push(parts.join(' ')));
     await service.start();
     assert.strictEqual((await route(service, 'GET', '/services/alliance')).body.status, 'unconfigured');
-    assert.strictEqual((await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'x' }, as: member('G00N') })).status, 503);
+    assert.strictEqual((await route(service, 'POST', '/services/alliance/messages', { body: { frame: '00' } })).status, 503);
     assert.ok(errors.length);
   });
 
   describe('an org of officers', function () {
-    let officers;
+    const accounts = ['discord:300000000000000001', 'discord:300000000000000002', 'discord:300000000000000003'];
+    const officer = (i) => ({ id: `0ff1ce000000000${i}`, displayName: ['Ada', 'Bea', 'Cy'][i], accounts: [{ key: accounts[i] }] });
     let overview;
     let infn;
 
-    const post = (frame) => route(service, 'POST', '/services/alliance/messages', { body: { frame } });
-    const iso = () => new Date(clock).toISOString();
-    const officerVote = (key, proposal, choice, fields = {}) => federation.signFrame(federation.officerVoteBody(infn.federation.id, Object.assign({
-      allianceFederationId: overview.federation.id, org: 'INFN', proposalId: proposal.id, choice, castAt: iso()
-    }, fields)), key).frame;
+    const orgOf = (view) => view.organizations.find((org) => org.symbol === 'INFN');
+    const officerVote = (i, proposal, choice, fields = {}) => {
+      clock += 1000;
+      return route(service, 'POST', `/services/alliance/proposals/${proposal.id}/votes`, { body: Object.assign({ choice }, fields), as: officer(i) });
+    };
 
     beforeEach(async function () {
-      officers = [new Key(), new Key(), new Key()];
-      names[`fabric:${officers[0].pubkey.slice(2)}`] = 'Ada';
-      await open(officerRoster(officers));
-      overview = (await route(service, 'GET', '/services/alliance')).body;
-      infn = overview.federation.organizations.find((org) => org.symbol === 'INFN');
+      names[accounts[0]] = 'Ada';
+      await open(officerRoster(accounts));
+      overview = await overviewNow();
+      infn = entryOf(overview, 'INFN');
     });
 
     it('serves the org federation and who among the signed-in members is an officer', async function () {
@@ -434,118 +507,164 @@ describe('Alliance service', function () {
       assert.deepStrictEqual([infn.federation.threshold, infn.federation.officers], [2, 3]);
       assert.strictEqual(federation.descriptorId(infn.federation.descriptor), infn.federation.id);
       assert.strictEqual(infn.pubkey, federation.orgKey(xprv, 'INFN', infn.federation.id).pubkey);
-      const officer = { id: 'cccccccccccccccc', displayName: 'Ada', accounts: [{ key: `fabric:${officers[0].pubkey.slice(2)}` }] };
-      assert.deepStrictEqual((await route(service, 'GET', '/services/alliance', { as: officer })).body.you.officers, ['INFN']);
+      assert.deepStrictEqual((await overviewNow(officer(0))).you.officers.map((org) => org.symbol), ['INFN']);
+    });
+
+    it('knows whom an account acts for through the accounts linked to it, and who is on record', async function () {
+      const ada = { id: 'cccccccccccccccc', displayName: 'Ada', accounts: [{ key: 'discord:424242' }, { key: accounts[0] }] };
+      const goon = { id: 'dddddddddddddddd', displayName: 'Gus', accounts: [{ key: 'discord:777777' }, { key: officerAccount('G00N') }] };
+      const linked = { 'discord:424242': ada, [accounts[0]]: ada, 'discord:777777': goon, [officerAccount('G00N')]: goon };
+      await open(officerRoster(accounts), { members: Object.assign({}, members, { resolve: async (key) => linked[key] || null }) });
+      const brief = (orgs) => orgs.map((org) => [org.symbol, org.officer]);
+
+      assert.deepStrictEqual(brief(await service.representing('discord:424242')), [['INFN', true]], 'an officer through the account on record linked to their Discord');
+      assert.deepStrictEqual(brief(await service.representing(accounts[1])), [['INFN', true]], 'an officer on record without a goon.vc profile yet');
+      assert.deepStrictEqual(brief(await service.representing('discord:777777')), [['G00N', true]]);
+      assert.deepStrictEqual(await service.representing('discord:999999'), [], 'nobody else acts for an org');
+      assert.deepStrictEqual(await service.representing(null), []);
+      assert.deepStrictEqual((await service.actorFor('discord:424242')).officers, ['INFN']);
+
+      assert.deepStrictEqual(await service.representatives('infn'), [
+        { name: 'Ada', discord: ['300000000000000001', '424242'], officer: true },
+        { name: null, discord: ['300000000000000002'], officer: true },
+        { name: null, discord: ['300000000000000003'], officer: true }
+      ]);
+      assert.deepStrictEqual(await service.representatives('G00N'), [{ name: 'Gus', discord: ['314159265358979320', '777777'], officer: true }]);
+      assert.deepStrictEqual(await service.representatives('NOPE'), []);
+      const served = JSON.stringify((await route(service, 'GET', '/services/alliance', { as: ada })).body);
+      assert.ok(!served.includes('424242') && !served.includes('300000000000000001'), 'the Discord ids stay inside goon.vc');
     });
 
     it('votes for the org once enough officers agree, and follows them when they change', async function () {
-      const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Joint op' }, as: member('G00N') })).body;
-      const orgOf = (view) => view.organizations.find((org) => org.symbol === 'INFN');
-      let res = await post(officerVote(officers[0], made, 'yes'));
-      assert.strictEqual(res.status, 200);
+      const made = (await propose('G00N', 'Joint op')).body;
+      let res = await officerVote(0, made, 'yes');
+      assert.strictEqual(res.status, 200, JSON.stringify(res.body));
       assert.strictEqual(orgOf(res.body).choice, null, 'one officer of three is not enough');
       assert.deepStrictEqual(orgOf(res.body).officers, { threshold: 2, total: 3, yes: 1, no: 0, abstain: 0, waiting: 2 });
       assert.strictEqual(res.body.officerVotes[0].by, 'Ada');
-      clock += 1000;
-      res = await post(officerVote(officers[1], made, 'yes'));
+      assert.deepStrictEqual(res.body.you.officers.map((row) => [row.symbol, row.choice]), [['INFN', 'yes']]);
+      res = await officerVote(1, made, 'yes');
       assert.strictEqual(orgOf(res.body).choice, 'yes');
       assert.strictEqual(res.body.tally.yes, 1);
       const vote = res.body.votes.find((row) => row.org === 'INFN');
       const opened = federation.openFrame(vote.frame);
-      assert.strictEqual(opened.signer, infn.pubkey.slice(2), 'the org key signs the alliance vote');
+      assert.strictEqual(opened.signer, infn.pubkey.slice(2), 'goon.vc signs the org’s alliance vote');
       assert.strictEqual(opened.body.orgFederationId, infn.federation.id);
-      assert.deepStrictEqual(opened.body.endorsements.map((frame) => federation.openFrame(frame).signer).sort(), [officers[0], officers[1]].map((k) => k.pubkey.slice(2)).sort());
+      assert.deepStrictEqual(opened.body.endorsements.map((frame) => federation.openFrame(frame).signer).sort(), accounts.slice(0, 2).map((a) => federation.officerKey(xprv, a).pubkey.slice(2)).sort());
       assert.strictEqual(vote.endorsements.length, 2);
       assert.match(vote.by, /Ada/);
-      clock += 1000;
-      res = await post(officerVote(officers[0], made, 'no'));
+      res = await officerVote(0, made, 'no');
       assert.strictEqual(orgOf(res.body).choice, 'yes', 'losing quorum keeps the last org vote');
-      clock += 1000;
-      res = await post(officerVote(officers[2], made, 'no'));
+      res = await officerVote(2, made, 'no');
       assert.strictEqual(orgOf(res.body).choice, 'no');
       assert.deepStrictEqual([res.body.tally.yes, res.body.tally.no], [0, 1]);
       assert.strictEqual(res.body.votes.filter((row) => row.org === 'INFN').length, 2);
       assert.strictEqual(res.body.officerVotes.length, 4);
-      assert.ok(!JSON.stringify(res.body).includes('discord:'), 'no steward account keys');
-      assert.strictEqual((await post(officerVote(officers[2], made, 'yes', { castAt: new Date(clock - 500).toISOString() }))).status, 409, 'an older officer vote cannot replace a newer one');
+      assert.deepStrictEqual(new Set(res.body.officerVotes.map((row) => row.officer)).size, 3);
+      assert.deepStrictEqual(res.body.members, { yes: 1, no: 2, abstain: 0, total: 3 }, 'each officer’s latest vote is their member vote');
+      assert.ok(!JSON.stringify(res.body).includes('discord:'), 'no account keys');
     });
 
-    it('refuses outsiders, mismatched frames, short endorsements, and steward buttons', async function () {
-      const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Shared hangar' }, as: member('G00N') })).body;
-      assert.strictEqual((await post(officerVote(new Key(), made, 'yes'))).status, 403);
-      assert.strictEqual((await post(officerVote(officers[0], made, 'yes', { org: 'TRDE' }))).status, 403);
-      assert.strictEqual((await post(officerVote(officers[0], made, 'yes', { proposalId: 'b'.repeat(64) }))).status, 404);
-      assert.strictEqual((await post(officerVote(officers[0], made, 'yes', { allianceFederationId: 'c'.repeat(64) }))).status, 404);
+    it('shows each officer’s vote only to that org’s officers', async function () {
+      const made = (await propose('G00N', 'Joint op')).body;
+      await officerVote(0, made, 'yes');
+      await officerVote(1, made, 'yes');
+      for (const as of [null, member('G00N'), { id: 'aaaaaaaaaaaaaaaa', displayName: 'Rando', accounts: [{ key: 'discord:999999' }] }]) {
+        const seen = (await route(service, 'GET', `/services/alliance/proposals/${made.id}`, { as })).body;
+        assert.deepStrictEqual(seen.officerVotes, []);
+        assert.deepStrictEqual(orgOf(seen).officers, { threshold: 2, total: 3 });
+        assert.strictEqual(orgOf(seen).choice, 'yes', 'the org’s vote is public');
+        assert.strictEqual(seen.votes.find((row) => row.org === 'INFN').by, null);
+        assert.ok(!JSON.stringify(seen).includes('Ada'));
+      }
+      const fellow = (await route(service, 'GET', `/services/alliance/proposals/${made.id}`, { as: officer(2) })).body;
+      assert.deepStrictEqual(fellow.officerVotes.map((row) => [row.by, row.choice]), [['Ada', 'yes'], ['an officer', 'yes']]);
+      assert.deepStrictEqual(fellow.you.officers.map((row) => [row.symbol, row.choice]), [['INFN', null]]);
+    });
+
+    it('refuses outsiders and mismatched org votes, and short endorsements', async function () {
+      const made = (await propose('G00N', 'Shared hangar')).body;
+      assert.strictEqual((await officerVote(0, made, 'yes', { org: 'TRDE' })).status, 403);
+      assert.strictEqual((await route(service, 'POST', `/services/alliance/proposals/${'b'.repeat(64)}/votes`, { body: { choice: 'yes' }, as: officer(0) })).status, 404);
+      const stranger = federation.signFrame(federation.officerVoteBody(infn.federation.id, {
+        allianceFederationId: overview.federation.id, org: 'INFN', proposalId: made.id, choice: 'yes', castAt: iso()
+      }), new Key()).frame;
+      assert.strictEqual((await post(stranger)).status, 403);
+      const signed = federation.signFrame(federation.officerVoteBody(infn.federation.id, {
+        allianceFederationId: overview.federation.id, org: 'INFN', proposalId: made.id, choice: 'yes', castAt: iso()
+      }), federation.officerKey(xprv, accounts[0])).frame;
       const short = federation.voteBody(overview.federation.id, {
-        proposalId: made.id, choice: 'yes', castAt: iso(), orgFederationId: infn.federation.id, endorsements: [officerVote(officers[0], made, 'yes')]
+        proposalId: made.id, choice: 'yes', castAt: iso(), orgFederationId: infn.federation.id, endorsements: [signed]
       });
       const forced = await post(federation.signFrame(short, federation.orgKey(xprv, 'INFN', infn.federation.id)).frame);
       assert.strictEqual(forced.status, 403);
       assert.match(forced.body.error, /needs 2 officers/);
-      const steward = await route(service, 'POST', `/services/alliance/proposals/${made.id}/votes`, { body: { choice: 'yes' }, as: member('INFN') });
-      assert.strictEqual(steward.status, 409);
-      assert.match(steward.body.error, /officers/);
-      assert.strictEqual((await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Steward try' }, as: member('INFN') })).status, 409);
     });
 
     it('wraps an officer proposal into the org proposal, once', async function () {
-      const body = federation.officerProposalBody(infn.federation.id, {
-        allianceFederationId: overview.federation.id,
-        org: 'INFN',
-        title: 'Adopt the charter',
-        summary: 'Text in #alliance.',
-        proposer: officers[0].pubkey,
-        createdAt: iso(),
-        closesAt: new Date(clock + 3 * DAY).toISOString()
-      });
-      const frame = federation.signFrame(body, officers[0]).frame;
-      const made = await post(frame);
-      assert.strictEqual(made.status, 200);
+      const made = await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Adopt the charter', summary: 'Text in #alliance.', days: 3 }, as: officer(0) });
+      assert.strictEqual(made.status, 200, JSON.stringify(made.body));
       assert.strictEqual(made.body.proposer.symbol, 'INFN');
       assert.strictEqual(made.body.by, 'Ada');
       assert.strictEqual(made.body.endorsements.length, 1);
       const opened = federation.openFrame(made.body.frame);
       assert.strictEqual(opened.signer, infn.pubkey.slice(2));
-      assert.strictEqual(federation.openFrame(opened.body.endorsements[0]).signer, officers[0].pubkey.slice(2));
-      assert.strictEqual((await post(frame)).body.id, made.body.id);
+      assert.strictEqual(federation.openFrame(opened.body.endorsements[0]).signer, federation.officerKey(xprv, accounts[0]).pubkey.slice(2));
+      assert.strictEqual((await post(made.body.endorsements[0].frame)).body.id, made.body.id, 'the same officer frame makes the same proposal');
       assert.strictEqual((await route(service, 'GET', '/services/alliance/proposals')).body.proposals.length, 1);
-      assert.strictEqual(made.body.orgFederations[0].id, infn.federation.id);
-      const outsider = federation.signFrame(Object.assign({}, body, { proposer: new Key().pubkey }), new Key()).frame;
-      assert.strictEqual((await post(outsider)).status, 403);
+      assert.strictEqual(made.body.orgFederations.find((row) => row.symbol === 'INFN').id, infn.federation.id);
+    });
+
+    it('asks an officer of two orgs which one proposes, and signs for both when voting', async function () {
+      const both = { id: 'b0th000000000000', displayName: 'Both', accounts: [{ key: accounts[0] }, { key: officerAccount('G00N') }] };
+      const unsure = await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Which org?' }, as: both });
+      assert.strictEqual(unsure.status, 400);
+      assert.match(unsure.body.error, /G00N and INFN|INFN and G00N/);
+      const made = await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'For G00N', org: 'G00N' }, as: both });
+      assert.strictEqual(made.body.proposer.symbol, 'G00N');
+      const voted = await route(service, 'POST', `/services/alliance/proposals/${made.body.id}/votes`, { body: { choice: 'yes' }, as: both });
+      assert.deepStrictEqual(voted.body.you.signed.slice().sort(), ['G00N', 'INFN']);
+      assert.strictEqual(orgOf(voted.body).officers.yes, 1);
+      assert.strictEqual(voted.body.organizations.find((org) => org.symbol === 'G00N').choice, 'yes');
     });
 
     it('lists every alliance and org federation, current first, with their pages', async function () {
       const list = (await route(service, 'GET', '/services/alliance/federations')).body.federations;
-      assert.deepStrictEqual(list.map((row) => [row.kind, row.current]), [['alliance', true], ['organization', true], ['alliance', false]], 'the roster before INFN named officers is retired');
+      const current = list.filter((row) => row.current);
+      assert.deepStrictEqual(current.map((row) => row.kind), ['alliance'].concat(SYMBOLS.map(() => 'organization')), 'current first');
+      assert.deepStrictEqual(list.filter((row) => !row.current).map((row) => [row.kind, row.symbol]).sort(), [['alliance', null], ['organization', 'INFN']], 'the roster before INFN named three officers is retired');
       assert.strictEqual(list[0].id, overview.federation.id);
       assert.strictEqual(list[0].path, `/federations/${overview.federation.id.slice(0, 12)}`);
       assert.strictEqual(overview.federation.path, list[0].path);
-      assert.strictEqual(list[1].id, infn.federation.id);
-      assert.strictEqual(infn.federation.path, list[1].path);
-      assert.deepStrictEqual([list[1].symbol, list[1].threshold, list[1].members], ['INFN', 2, 3]);
+      const infnRow = list.find((row) => row.id === infn.federation.id);
+      assert.ok(infnRow.current);
+      assert.strictEqual(infn.federation.path, infnRow.path);
+      assert.deepStrictEqual([infnRow.symbol, infnRow.threshold, infnRow.members], ['INFN', 2, 3]);
 
       const alliance = (await route(service, 'GET', `/services/alliance/federations/${list[0].shortId}`)).body;
       assert.deepStrictEqual(alliance.descriptor, overview.federation.descriptor);
       assert.strictEqual(federation.openFrame(alliance.invite).body.type, 'FederationInvite');
-      assert.strictEqual(alliance.organizations.find((org) => org.symbol === 'INFN').federation.path, list[1].path);
+      assert.strictEqual(alliance.organizations.find((org) => org.symbol === 'INFN').federation.path, infnRow.path);
       assert.deepStrictEqual(alliance.proposals, []);
 
       const org = (await route(service, 'GET', `/services/alliance/federations/${infn.federation.id}`)).body;
       assert.strictEqual(org.kind, 'organization');
       assert.deepStrictEqual(org.descriptor, infn.federation.descriptor);
-      assert.deepStrictEqual(org.officers.map((row) => row.pubkey), infn.federation.descriptor.validators);
+      assert.strictEqual(org.officers.length, 3);
       assert.ok(org.officers.some((row) => row.name === 'Ada'));
       assert.deepStrictEqual(org.alliances.map((row) => row.id), [overview.federation.id]);
-      assert.ok(!JSON.stringify(org).includes('discord:'), 'no steward account keys');
+      assert.ok(!JSON.stringify(org).includes('discord:'), 'no account keys');
 
-      await open(officerRoster(officers.slice(0, 2)));
+      await open(officerRoster(accounts.slice(0, 2)));
       const after = (await route(service, 'GET', '/services/alliance/federations')).body.federations;
-      assert.deepStrictEqual(after.filter((row) => row.kind === 'organization').map((row) => row.current), [true, false], 'new officers, new org federation; the old one is retired');
+      const infnAfter = after.filter((row) => row.symbol === 'INFN');
+      assert.strictEqual(infnAfter.filter((row) => row.current).length, 1);
+      assert.strictEqual(infnAfter.find((row) => row.id === infn.federation.id).current, false, 'new officers, new org federation; the old one is retired');
       assert.strictEqual((await route(service, 'GET', '/services/alliance/federations/000000000000')).status, 404);
       assert.strictEqual((await route(service, 'GET', '/services/alliance/federations/xyz')).status, 404);
 
-      const meta = await service.federationPage(list[1].path);
-      assert.strictEqual(meta.title, `${list[1].name} officers`);
+      const meta = await service.federationPage(infnRow.path);
+      assert.strictEqual(meta.title, `${infnRow.name} officers`);
       assert.match(meta.description, /2 of 3 officers decide/);
       assert.strictEqual((await service.federationPage(list[0].path)).title, 'PERMAFLEET federation');
       assert.strictEqual(await service.federationPage('/federations/000000000000'), null);
@@ -567,7 +686,7 @@ describe('Alliance service', function () {
     beforeEach(async function () {
       alice.accounts = [{ key: 'discord:200000000000000001' }];
       await open(roster(), { members: people });
-      made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Joint op on Saturday' }, as: member('G00N') })).body;
+      made = (await propose('G00N', 'Joint op on Saturday')).body;
     });
 
     const selfVote = (key, choice, castAt = clock) => federation.signFrame(federation.memberVoteBody(made.federationId, {
@@ -620,16 +739,17 @@ describe('Alliance service', function () {
       assert.strictEqual(a, b, 'attested once');
     });
 
-    it('takes self-signed votes only from Fabric keys a member holds', async function () {
-      const ok = await route(service, 'POST', '/services/alliance/messages', { body: { frame: selfVote(carolKey, 'abstain') } });
+    it('takes self-signed votes only from members', async function () {
+      const ok = await post(selfVote(carolKey, 'abstain'));
       assert.strictEqual(ok.status, 200, JSON.stringify(ok.body));
       assert.deepStrictEqual(ok.body.members, { yes: 0, no: 0, abstain: 1, total: 1 });
       assert.strictEqual(ok.body.memberVotes[0].bridge, null);
-      const stranger = await route(service, 'POST', '/services/alliance/messages', { body: { frame: selfVote(new Key(), 'yes') } });
+      const stranger = await post(selfVote(new Key(), 'yes'));
       assert.strictEqual(stranger.status, 403);
-      const older = await route(service, 'POST', '/services/alliance/messages', { body: { frame: selfVote(carolKey, 'yes', clock - 1000) } });
+      assert.ok(!/key/i.test(stranger.body.error), 'no keys in the message');
+      const older = await post(selfVote(carolKey, 'yes', clock - 1000));
       assert.strictEqual(older.status, 409, 'an older vote cannot replay over a newer one');
-      const changed = await route(service, 'POST', '/services/alliance/messages', { body: { frame: selfVote(carolKey, 'yes', clock + 1000) } });
+      const changed = await post(selfVote(carolKey, 'yes', clock + 1000));
       assert.deepStrictEqual(changed.body.members, { yes: 1, no: 0, abstain: 0, total: 1 });
     });
 
@@ -640,7 +760,7 @@ describe('Alliance service', function () {
       const stolen = federation.signFrame(federation.memberVoteBody(made.federationId, {
         proposalId: made.id, choice: 'no', castAt: new Date(clock + 5).toISOString(), attestation
       }), intruder).frame;
-      const refused = await route(service, 'POST', '/services/alliance/messages', { body: { frame: stolen } });
+      const refused = await post(stolen);
       assert.strictEqual(refused.status, 403);
       assert.match(refused.body.error, /not signed by the attested account/);
       const otherXprv = new Key().xprv;
@@ -649,7 +769,7 @@ describe('Alliance service', function () {
       const foreignVote = federation.signFrame(federation.memberVoteBody(made.federationId, {
         proposalId: made.id, choice: 'no', castAt: new Date(clock).toISOString(), attestation: foreign.frame
       }), foreign.key).frame;
-      const refusedForeign = await route(service, 'POST', '/services/alliance/messages', { body: { frame: foreignVote } });
+      const refusedForeign = await post(foreignVote);
       assert.strictEqual(refusedForeign.status, 403);
       assert.match(refusedForeign.body.error, /not signed by this Bridge/);
     });
@@ -671,7 +791,7 @@ describe('Alliance service', function () {
   });
 
   it('describes proposal pages for link previews', async function () {
-    const made = (await route(service, 'POST', '/services/alliance/proposals', { body: { title: 'Adopt the charter' }, as: member('G00N') })).body;
+    const made = (await propose('G00N', 'Adopt the charter')).body;
     const meta = await service.page(`/operations/PERMAFLEET/votes/${made.shortId}`);
     assert.strictEqual(meta.title, 'Adopt the charter');
     assert.match(meta.description, /0 yes, 0 no, 0 abstain of 7 orgs \(4 yes to pass\)/);

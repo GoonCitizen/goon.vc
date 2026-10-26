@@ -45,6 +45,11 @@
         text-decoration: none;
       }
       .footer-login-button:hover, .goon-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+      .footer-login-button.footer-member { align-items: center; display: inline-flex; gap: 0.6em; letter-spacing: 0.04em; text-align: left; }
+      .footer-member img { border-radius: 50%; height: 36px; width: 36px; }
+      .site-member-footer { position: relative; z-index: 3; }
+      .footer-member strong { display: block; font-weight: 400; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .footer-member small { color: #bbb; display: block; font-family: Arial, sans-serif; font-size: 0.7em; letter-spacing: 0.08em; }
       .goon-button:disabled { cursor: default; opacity: 0.45; }
       .page-back { text-align: center; margin-bottom: 1.5em; }
 
@@ -822,10 +827,6 @@
       .pf-votes-form textarea { min-height: 7rem; resize: vertical; }
       .pf-votes-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
       .pf-votes .goon-button[aria-pressed="true"] { border-color: var(--pf-cyan); color: var(--pf-signal); }
-      .pf-votes-command { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0; }
-      .pf-votes-command code { flex: 1 1 18rem; padding: 0.45rem 0.6rem; background: rgba(5, 10, 24, 0.85); border: 1px solid var(--pf-line); color: var(--pf-text); word-break: break-all; }
-      .pf-votes-officers { margin-top: 1rem; }
-      .pf-votes-form textarea[name="frame"] { min-height: 4rem; font-family: monospace; font-size: 0.8rem; }
       .pf-votes-note { margin: 0.5rem 0 0; color: var(--pf-muted); }
       .pf-votes-note.error { color: #ff8a8a; }
       #pf-votes-status .pf-votes-note { text-align: center; }
@@ -859,6 +860,56 @@
       .login-accounts li { align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; gap: 0.5em; justify-content: space-between; padding: 0.4em 0; }
       .login-accounts small { color: #999; }
       .login-accounts .goon-button { margin-top: 0; }
+
+      .rsi-page { display: none; margin: 3em auto; max-width: 34em; padding: 0 1em; text-align: left; }
+      .rsi-page h1, .rsi-page h2 { text-align: center; }
+      .rsi-page .rsi-intro { color: #bbb; line-height: 1.45; }
+      .rsi-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; margin: 1.5em 0; padding: 1em; }
+      .rsi-page [hidden] { display: none !important; }
+      .rsi-page form { display: flex; flex-wrap: wrap; gap: 0.5em; }
+      .rsi-page input[type="text"] { background: #222; border: 1px solid #777; border-radius: 6px; color: #fff; flex: 1 1 12em; font-size: 1em; padding: 0.45em 0.6em; }
+      .rsi-page ol { line-height: 1.5; padding-left: 1.4em; }
+      .rsi-code { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin: 1em 0; }
+      .rsi-code code { background: #111; border: 1px dashed #aaa; border-radius: 6px; font-size: 1.4em; padding: 0.3em 0.7em; }
+      .rsi-status { min-height: 1.2em; overflow-wrap: anywhere; text-align: center; }
+      .rsi-claimed { list-style: none; margin: 0.5em 0 0; padding: 0; }
+      .rsi-claimed li { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.4em 0; }
+      .rsi-fleet table { border-collapse: collapse; width: 100%; }
+      .rsi-fleet td, .rsi-fleet th { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.3em 0.4em; text-align: left; }
+      .rsi-fleet td.num, .rsi-fleet th.num { text-align: right; }
+
+      .waiting-page { display: none; margin: 3em auto; max-width: 34em; padding: 0 1em; text-align: left; }
+      .waiting-page h1 { text-align: center; }
+      .waiting-page [hidden] { display: none !important; }
+      .waiting-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.5em 0; padding: 1em; }
+      .waiting-page h2 { font-size: 1.2em; margin-top: 0; }
+      .waiting-page .waiting-since { color: #999; }
+      .waiting-status { min-height: 1.2em; overflow-wrap: anywhere; text-align: center; }
+      .waiting-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
+
+      .members-page, .member-page { display: none; margin: 3em auto; max-width: 34em; padding: 0 1em; text-align: left; }
+      .members-page h1, .member-page h1 { text-align: center; }
+      .members-page [hidden], .member-page [hidden] { display: none !important; }
+      .members-page section, .member-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.5em 0; padding: 1em; }
+      .members-page h2, .member-page h2 { font-size: 1.2em; margin-top: 0; }
+      .members-status { min-height: 1.2em; overflow-wrap: anywhere; text-align: center; }
+      .members-note { color: #999; text-align: center; }
+      .members-list { display: flex; flex-direction: column; gap: 0.75em; list-style: none; margin: 0; padding: 0; }
+      .members-card { align-items: center; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; display: flex; gap: 0.75em; padding: 0.75em 1em; text-decoration: none; }
+      .members-card:hover { background: rgba(255, 255, 255, 0.06); }
+      .members-card img, .member-head img { border-radius: 50%; height: 48px; width: 48px; }
+      .members-card small, .member-head small { color: #999; display: block; }
+      .member-head { align-items: center; display: flex; flex-direction: column; gap: 0.4em; text-align: center; }
+      .member-head h1 { margin: 0; }
+      .member-head img { height: 96px; width: 96px; }
+      .member-accounts { list-style: none; margin: 0; padding: 0; }
+      .member-accounts li { align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; gap: 0.5em; justify-content: space-between; padding: 0.4em 0; }
+      .member-accounts small { color: #999; display: block; }
+      .member-accounts .goon-button { font-size: 0.8em; margin: 0; padding: 0.35em 0.8em; }
+      .member-rename-form { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; }
+      .member-rename-form select { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; color: #fff; font: inherit; max-width: 100%; padding: 0.45em 0.6em; }
+      .member-rename-form .goon-button { margin: 0; }
+      .members-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
 
       .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
       .events-add-bot { padding-top: 2em; text-align: center; }
@@ -1071,6 +1122,81 @@
       .clips-page, .clip-timeline-page, .clip-project-page { display: none; margin: 0 auto; max-width: 1280px; padding: 0 1em 3em; text-align: left; }
       .clips-page > h1, .clips-page > .operations-intro, .clip-timeline-page > h1, .clip-project-page > h1 { text-align: center; }
       .clips-page clip-library, .clip-timeline-page clip-timeline-editor, .clip-project-page clip-timeline-editor { margin-top: 1.5em; }
+
+      .market-page { display: none; margin: 0 auto; max-width: 64em; padding: 0 1em 3em; text-align: left; }
+      .market-page > h1, .market-page > .operations-intro, .market-page > .market-grey, .market-page > .market-actions { text-align: center; }
+      .market-grey { color: #bbb; font-size: 0.9em; margin: 0.5em auto 0; max-width: 40em; }
+      .market-actions { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; margin: 1.25em 0 0; }
+      .market-filters { display: flex; flex-wrap: wrap; gap: 0.6em; margin: 2em 0 0.75em; }
+      .market-filters input, .market-filters select, .market-form input, .market-form select, .market-form textarea, .market-bulk input, .market-bulk select {
+        background: #222; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: #fff; font: inherit; padding: 0.4em 0.55em;
+      }
+      .market-filters input[type="search"] { flex: 1 1 14em; }
+      .market-view-toggle { display: inline-flex; gap: 0; }
+      .market-view-toggle button { background: transparent; border: 1px solid rgba(255, 255, 255, 0.3); color: #ddd; cursor: pointer; font: inherit; padding: 0.4em 0.8em; }
+      .market-view-toggle button:first-child { border-radius: 6px 0 0 6px; }
+      .market-view-toggle button:last-child { border-left: 0; border-radius: 0 6px 6px 0; }
+      .market-view-toggle button[aria-pressed="true"] { background: #fff; color: #111; font-weight: 700; }
+      .market-chips { display: flex; flex-wrap: wrap; gap: 0.4em; list-style: none; margin: 0 0 1.25em; padding: 0; }
+      .market-chips button { background: transparent; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; color: #ddd; cursor: pointer; font: inherit; font-size: 0.85em; padding: 0.15em 0.75em; }
+      .market-chips button[aria-pressed="true"] { background: #fff; border-color: #fff; color: #111; font-weight: 700; }
+      .market-chips .count { color: inherit; opacity: 0.6; margin-left: 0.3em; }
+      .market-cards { display: grid; gap: 1em; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); }
+      .market-card { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; color: inherit; display: flex; flex-direction: column; overflow: hidden; text-decoration: none; }
+      .market-card:hover { border-color: rgba(255, 255, 255, 0.5); }
+      .market-card-image { aspect-ratio: 16 / 9; background: #1a1a1a center / cover no-repeat; }
+      .market-card-image.empty { align-items: center; color: #555; display: flex; font-family: "Bungee", sans-serif; justify-content: center; }
+      .market-card-body { display: grid; gap: 0.3em; padding: 0.7em 0.85em 0.85em; }
+      .market-card-title { color: #fff; font-weight: 700; line-height: 1.2; }
+      .market-price { color: #fff; font-family: "Bungee", sans-serif; font-size: 1.05em; letter-spacing: 0.03em; }
+      .market-price-sub { color: #aaa; font-size: 0.85em; }
+      .market-meta { color: #bbb; font-size: 0.85em; }
+      .market-status { border-radius: 4px; display: inline-block; font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em; padding: 0.05em 0.45em; text-transform: uppercase; }
+      .market-status.available { background: #1f5f2c; color: #e6ffe9; }
+      .market-status.dibs { background: #6b5a12; color: #fff6d1; }
+      .market-status.reserved, .market-status.paid, .market-status.delivered { background: #2b4a7a; color: #e3eeff; }
+      .market-status.sold { background: #555; color: #eee; }
+      .market-status.hidden { background: #333; color: #aaa; }
+      .market-table { border-collapse: collapse; font-size: 0.95em; width: 100%; }
+      .market-table th, .market-table td { border-bottom: 1px solid rgba(255, 255, 255, 0.12); padding: 0.4em 0.5em; text-align: left; vertical-align: top; }
+      .market-table th { color: #bbb; font-size: 0.8em; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+      .market-table td.num, .market-table th.num { text-align: right; white-space: nowrap; }
+      .market-listing { display: grid; gap: 1.5em; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); margin-top: 1em; }
+      @media (max-width: 760px) { .market-listing { grid-template-columns: minmax(0, 1fr); } }
+      .market-listing img { border-radius: 10px; max-width: 100%; }
+      .market-listing h1 { font-size: 1.5em; margin: 0 0 0.35em; text-align: left; }
+      .market-facts { display: grid; gap: 0.25em 1em; grid-template-columns: auto 1fr; margin: 1em 0; }
+      .market-facts dt { color: #aaa; }
+      .market-facts dd { color: #fff; margin: 0; }
+      .market-notes { white-space: pre-wrap; }
+      .market-buy { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; display: grid; gap: 0.75em; padding: 1em; }
+      .market-replies { list-style: none; margin: 0; padding: 0; }
+      .market-replies li { border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 0.6em 0; }
+      .market-replies .who { color: #fff; font-weight: 700; }
+      .market-replies .body { white-space: pre-wrap; }
+      .market-form { display: grid; gap: 0.75em; }
+      .market-form label { color: #fff; display: grid; font-weight: 600; gap: 0.3em; }
+      .market-form .market-row { display: flex; flex-wrap: wrap; gap: 0.75em; }
+      .market-form .market-row label { flex: 1 1 9em; }
+      .market-actions { display: flex; flex-wrap: wrap; gap: 0.75em; }
+      .market-form textarea { min-height: 5em; resize: vertical; }
+      .market-note { color: #bbb; font-size: 0.9em; min-height: 1.2em; }
+      .market-note.error { color: #ff9a9a; }
+      .market-note:empty { min-height: 0; margin: 0; }
+      .market-steps { counter-reset: step; display: flex; flex-wrap: wrap; gap: 0.5em; list-style: none; margin: 1em 0; padding: 0; }
+      .market-steps li { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; color: #aaa; font-size: 0.9em; padding: 0.2em 0.85em; }
+      .market-steps li.done { background: rgba(255, 255, 255, 0.12); color: #fff; }
+      .market-steps li.current { background: #fff; color: #111; font-weight: 700; }
+      .market-pay { align-items: center; display: flex; flex-wrap: wrap; gap: 1.25em; }
+      .market-qr { background: #fff; border-radius: 8px; line-height: 0; padding: 0.4em; width: 11em; }
+      .market-qr svg { height: auto; width: 100%; }
+      .market-code { background: #1a1a1a; border-radius: 6px; color: #fff; display: block; font-family: ui-monospace, Menlo, monospace; font-size: 0.85em; overflow-wrap: anywhere; padding: 0.5em 0.65em; }
+      .market-page code { font-size: 0.85em; overflow-wrap: anywhere; }
+      .market-bulk { align-items: center; display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0.75em 0; }
+      .market-section { margin-top: 2.5em; }
+      .market-section h2 { font-size: 1.1em; letter-spacing: 0.06em; margin: 0 0 0.75em; }
+      .market-muted { color: #aaa; }
+      .market-page [hidden] { display: none !important; }
     </style>
   </head>
   <body>
@@ -1141,15 +1267,147 @@
     </main>
     <main id="login-page" class="login-page">
       <h1>&gt; LOGIN &lt;</h1>
-      <p class="login-intro">Sign in with Discord, Fabric Passport, or the GoonCitizen desktop app.</p>
+      <p class="login-intro">Sign in with Discord or Fabric Passport. Passport can also ask a GoonCitizen desktop app you linked to it to sign.</p>
       <div class="login-buttons">
         <button type="button" id="login-discord" class="goon-button">Discord</button>
         <button type="button" id="login-passport" class="goon-button">Passport</button>
-        <button type="button" id="login-desktop" class="goon-button">GoonCitizen desktop</button>
       </div>
       <p id="login-status" class="login-status"></p>
       <div id="login-session" class="login-session"></div>
       <p><small>Not in the Squad yet? <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Discord &raquo;</a></small></p>
+    </main>
+    <main id="rsi-page" class="rsi-page" data-path="/rsi" data-api="/services/members/rsi" data-fleet="/services/hangar">
+      <h1>Claim your RSI profile</h1>
+      <p class="rsi-intro">Link your Star Citizen handle to your G00N SQUAD profile. You prove it’s yours by putting a short code in your public RSI bio for a minute; then you can sync your hangar with <code>/hangar</code> on Discord.</p>
+      <p id="rsi-status" class="rsi-status" role="status"></p>
+      <section id="rsi-signed-out" hidden>
+        <p>Run <code>/rsi claim</code> in the G00N SQUAD Discord (or in a DM with our bot). It replies with a private link that signs you in here.</p>
+        <p>Or <a href="/sessions">log in</a> with Discord or Passport. Not in the Squad yet? <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Discord &raquo;</a></p>
+      </section>
+      <section id="rsi-signed-in" hidden>
+        <p id="rsi-member"></p>
+        <div id="rsi-claimed-box" hidden>
+          <strong>Claimed</strong>
+          <ul id="rsi-claimed" class="rsi-claimed"></ul>
+          <p><small>You can remove the code from your RSI bio now. To claim another handle, start again below.</small></p>
+        </div>
+        <form id="rsi-claim-form" autocomplete="off">
+          <input type="text" id="rsi-handle" name="handle" aria-label="RSI handle" placeholder="Your RSI handle" maxlength="60" required>
+          <button type="submit" class="goon-button">Get a code</button>
+        </form>
+        <div id="rsi-pending" hidden>
+          <div class="rsi-code"><code id="rsi-code"></code><button type="button" id="rsi-copy" class="goon-button">Copy</button></div>
+          <ol>
+            <li>Open your <a href="https://robertsspaceindustries.com/account/profile" target="_blank" rel="noopener noreferrer">RSI profile settings</a>.</li>
+            <li>Paste the code anywhere in your <strong>Short Bio</strong> and save.</li>
+            <li>Come back and press Verify. We read your <a id="rsi-citizen" href="#" target="_blank" rel="noopener noreferrer">public citizen page</a> once.</li>
+          </ol>
+          <p style="text-align: center;"><button type="button" id="rsi-verify" class="goon-button">Verify</button></p>
+          <p><small>The code is good for 24 hours.</small></p>
+        </div>
+      </section>
+      <section id="rsi-fleet" class="rsi-fleet" hidden>
+        <h2>Member fleet</h2>
+        <p id="rsi-fleet-summary" class="rsi-intro"></p>
+        <table><thead><tr><th>Ship</th><th class="num">Owned</th><th class="num">Members</th></tr></thead><tbody id="rsi-fleet-models"></tbody></table>
+      </section>
+    </main>
+    <main id="waiting-page" class="waiting-page" data-path="/waiting">
+      <h1>Waiting area</h1>
+      <p id="waiting-status" class="waiting-status" role="status"></p>
+      <section id="waiting-signed-out" hidden>
+        <p>New members sign in with Discord, then wait here while an alliance administrator looks them over.</p>
+        <p class="waiting-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="waiting-pending" hidden>
+        <h2>You’re in line</h2>
+        <p>Thanks for signing in<span id="waiting-name"></span>. An alliance administrator reviews every new Discord sign-in and has been told you’re here. There’s nothing else to do: come back to this page to see the result.</p>
+        <p class="waiting-since" id="waiting-since"></p>
+        <p id="waiting-join" hidden>You’re not in our Discord yet; joining it helps. <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the G00N SQUAD Discord &raquo;</a></p>
+        <p class="waiting-links"><a href="/events">Events</a> <a href="/operations/PERMAFLEET/squadrons">PERMAFLEET squadrons</a></p>
+      </section>
+      <section id="waiting-approved" hidden>
+        <h2>You’re approved</h2>
+        <p>Welcome to G00N SQUAD. You can claim your Star Citizen handle next.</p>
+        <p class="waiting-links"><a class="goon-button" href="/rsi">Claim your RSI profile</a> <a href="/events">Events</a> <a href="/">Home</a></p>
+      </section>
+      <section id="waiting-denied" hidden>
+        <h2>Not approved</h2>
+        <p>An alliance administrator didn’t approve this sign-in. If you think that’s a mistake, ask in the G00N SQUAD Discord.</p>
+        <p class="waiting-links"><a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the G00N SQUAD Discord &raquo;</a></p>
+      </section>
+      <section id="waiting-none" hidden>
+        <h2>Nothing to wait for yet</h2>
+        <p>The waiting area is for Discord sign-ins. Link your Discord account on the login page to join it.</p>
+        <p class="waiting-links"><a class="goon-button" href="/sessions">Link Discord</a></p>
+      </section>
+      <section id="waiting-off" hidden>
+        <h2>No waiting area right now</h2>
+        <p>Sign-ins aren’t being reviewed, so you’re all set.</p>
+        <p class="waiting-links"><a href="/">Home</a></p>
+      </section>
+    </main>
+    <main id="members-page" class="members-page" data-path="/members">
+      <h1>Members</h1>
+      <p id="members-status" class="members-status" role="status"></p>
+      <section id="members-signed-out" hidden>
+        <p>Sign in to see your member profile.</p>
+        <p class="members-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <ul id="members-list" class="members-list" aria-label="Members" hidden></ul>
+      <p id="members-note" class="members-note" hidden><small>The member directory isn’t open yet. For now, this page shows only you.</small></p>
+    </main>
+    <main id="member-page" class="member-page" data-base="/members" data-waiting="/waiting">
+      <p id="member-status" class="members-status" role="status"></p>
+      <section id="member-signed-out" hidden>
+        <h2>Member profile</h2>
+        <p>Sign in to see your own profile.</p>
+        <p class="members-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="member-private" hidden>
+        <h2>Member profile</h2>
+        <p>Member profiles are private until the member directory opens. You can see your own.</p>
+        <p class="members-links"><a class="goon-button" id="member-own-link" href="/members">Your profile</a></p>
+      </section>
+      <div id="member-profile" hidden>
+        <div class="member-head">
+          <img id="member-avatar" alt="" hidden>
+          <h1 id="member-name"></h1>
+          <small id="member-since"></small>
+        </div>
+        <p id="member-review" class="members-note" hidden><a href="/waiting"></a></p>
+        <section id="member-rename">
+          <h2>Display name</h2>
+          <p>The name the Squad sees on goon.vc. Pick one from your RSI profile or your Discord account.</p>
+          <p id="member-rename-form" class="member-rename-form">
+            <select id="member-rename-choice" aria-label="Display name"></select>
+            <button type="button" id="member-rename-save" class="goon-button" disabled>Save</button>
+          </p>
+          <p id="member-rename-none" hidden>Link your Discord account or <a href="/rsi">claim your RSI handle</a> to choose a display name.</p>
+          <p id="member-rename-status" class="members-status" role="status"></p>
+        </section>
+        <section>
+          <h2>Linked accounts</h2>
+          <ul id="member-accounts" class="member-accounts"></ul>
+          <p id="member-rsi-none" hidden>No RSI handle yet. <a href="/rsi">Claim your RSI profile »</a></p>
+        </section>
+        <section id="member-add">
+          <h2>Add an account</h2>
+          <p>Sign in to each account you own to add it here, so the Squad sees one of you wherever you play. A profile holds one Discord account.</p>
+          <p id="member-add-status" class="members-status" role="status"></p>
+          <p class="members-links">
+            <button type="button" id="member-add-discord" class="goon-button" disabled>Link Discord</button>
+            <button type="button" id="member-add-passport" class="goon-button" disabled>Link a Passport identity</button>
+            <a class="goon-button" href="/rsi">Claim an RSI handle</a>
+          </p>
+          <p id="member-discord-held" class="members-note" hidden><small></small></p>
+        </section>
+        <p class="members-links">
+          <a class="goon-button" href="/sessions">Sign-in page</a>
+          <a class="goon-button" href="/rsi">RSI profile and hangar</a>
+        </p>
+        <p class="members-note"><small>Only you can see this page.</small></p>
+      </div>
     </main>
     <main id="events-page" class="events-page">
       <fabric-calendar
@@ -1676,6 +1934,13 @@
           <div class="operation-links"><a class="goon-button" href="/clips">Clips</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/services/market">Market</a></h2>
+          <p class="operation-tagline">Ships, paints, and packs from G00N SQUAD members, priced in bitcoin.</p>
+          <p class="operation-summary">The G00N SQUAD Market forum on the web: every thread is a listing here, and every listing here is a thread there. Prices are in BTC; buy with 2-of-3 escrow between you, the seller, and goon.vc.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/services/market">Market</a><a class="goon-button" href="/services/discord/install">Add /market to your Discord</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
           <p class="operation-tagline">The standing dogfight ladder, synced from #1v1-challenges.</p>
           <p class="operation-summary">Anyone can challenge anyone, including pilots from other orgs.</p>
@@ -1922,6 +2187,142 @@
     <main id="clip-project-page" class="clip-project-page" data-api="/services/clips" data-base="/clips" data-timeline="/clips/timeline" data-login="/sessions">
       <p class="page-back"><a href="/clips">&larr; Clip library</a></p>
       <clip-timeline-editor></clip-timeline-editor>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="market-page" class="market-page" data-base="/services/market" data-login="/sessions" data-site-title="GOON SQUAD">
+      <h1>MARKET</h1>
+      <p class="operations-intro">The G00N SQUAD Market forum on the web: every thread is a listing here, and every listing here is a thread there. Prices are in BTC; buy with 2-of-3 escrow between you, the seller, and goon.vc.</p>
+      <p class="market-grey">This is a grey market. Pledges change hands by RSI gifting, outside anything RSI supports, so trade with people you know or use escrow. goon.vc never holds your keys or your coins.</p>
+      <div class="market-actions">
+        <a class="goon-button" href="/services/market/mine#new">Sell something</a>
+        <a class="goon-button" href="/services/market/mine">Your listings &amp; orders</a>
+        <a class="goon-button" href="/services/discord/install">Add /market to Discord</a>
+        <a class="goon-button" id="market-forum-link" href="#" hidden>Market forum</a>
+      </div>
+      <form class="market-filters" id="market-filters" role="search">
+        <input type="search" name="q" placeholder="Search ships, paints, packs…" aria-label="Search listings">
+        <select name="status" aria-label="Status">
+          <option value="">For sale</option>
+          <option value="available">Available</option><option value="dibs">Dibs</option><option value="reserved">Reserved</option><option value="sold">Sold</option>
+          <option value="all">Everything</option>
+        </select>
+        <select name="source" aria-label="Source"><option value="">Any source</option><option value="Hangar">Hangar</option><option value="Buyback">Buyback</option></select>
+        <select name="sort" aria-label="Sort">
+          <option value="recent">Newest activity</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="title">Title</option>
+        </select>
+        <span class="market-view-toggle" role="group" aria-label="View">
+          <button type="button" data-view="cards" aria-pressed="true">Cards</button>
+          <button type="button" data-view="table" aria-pressed="false">Table</button>
+        </span>
+      </form>
+      <ul class="market-chips" id="market-kinds" aria-label="Kind"></ul>
+      <div id="market-results"><p class="market-muted">Loading listings…</p></div>
+      <p class="market-muted" id="market-rate"></p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="market-listing-page" class="market-page" data-base="/services/market" data-login="/sessions" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/services/market">&larr; Market</a></p>
+      <div id="market-listing"><p class="market-muted">Loading…</p></div>
+      <template id="market-listing-fields"><label>Title <input name="title" maxlength="100" required placeholder="Carrack Expedition w/ Pisces"></label>
+          <div class="market-row">
+            <label>Kind <select name="kind"><option>Ship</option><option>Paint</option><option>Vehicle</option><option>Pack</option><option>CCU</option><option>Other</option></select></label>
+            <label>Price <input name="price" placeholder="0.005 BTC, 500k sats, or $400"></label>
+            <label>Qty <input name="qty" type="number" min="1" max="999" value="1"></label>
+          </div>
+          <div class="market-row">
+            <label>Insurance <input name="insurance" placeholder="LTI or 120 mo"></label>
+            <label>MSRP (USD) <input name="msrpUsd" placeholder="$600"></label>
+            <label>Source <select name="source"><option value="">—</option><option value="Hangar">Hangar</option><option value="Buyback">Buyback</option></select></label>
+            <label>Giftable <select name="giftable"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+          </div>
+          <label>Contents <textarea name="contents" maxlength="1000" placeholder="What's in the pledge: ship, paints, game package…"></textarea></label>
+          <label>Image link <input name="imageUrl" type="url" placeholder="https://…"></label>
+          <label>Notes <textarea name="notes" maxlength="1500"></textarea></label></template>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="market-seller-page" class="market-page" data-base="/services/market" data-login="/sessions" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/services/market">&larr; Market</a></p>
+      <div id="market-seller"><p class="market-muted">Loading…</p></div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="market-order-page" class="market-page" data-base="/services/market" data-login="/sessions" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/services/market/mine">&larr; Your orders</a></p>
+      <div id="market-order"><p class="market-muted">Loading…</p></div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="market-mine-page" class="market-page" data-base="/services/market" data-login="/sessions" data-site-title="GOON SQUAD">
+      <p class="page-back"><a href="/services/market">&larr; Market</a></p>
+      <h1>Your market</h1>
+      <p class="operations-intro" id="market-mine-intro">Listings you post here go up in the Market forum under your name, and edits on either side show up on both.</p>
+      <div id="market-mine-signin" hidden><p style="text-align: center;"><a class="goon-button" href="/sessions">Sign in to sell</a></p></div>
+      <div id="market-mine-body" hidden>
+        <section class="market-section">
+          <h2>Your listings</h2>
+          <form class="market-bulk" id="market-bulk" hidden>
+            <span class="market-muted" data-selected>0 selected</span>
+            <select name="status" aria-label="Set status">
+              <option value="">Set status…</option>
+              <option value="available">Available</option>
+              <option value="reserved">Reserved</option>
+              <option value="sold">Sold</option>
+              <option value="hidden">Hidden</option>
+            </select>
+            <input name="price" placeholder="New price" aria-label="New price">
+            <button class="goon-button" type="submit">Apply</button>
+            <span class="market-note" role="status"></span>
+          </form>
+          <div id="market-mine-listings"><p class="market-muted">Loading…</p></div>
+        </section>
+        <section class="market-section">
+          <h2>Orders</h2>
+          <div id="market-mine-orders"><p class="market-muted">Loading…</p></div>
+        </section>
+        <section class="market-section" id="new">
+          <h2>New listing</h2>
+          <form class="market-form" id="market-new-form">
+            <label>Title <input name="title" maxlength="100" required placeholder="Carrack Expedition w/ Pisces"></label>
+          <div class="market-row">
+            <label>Kind <select name="kind"><option>Ship</option><option>Paint</option><option>Vehicle</option><option>Pack</option><option>CCU</option><option>Other</option></select></label>
+            <label>Price <input name="price" placeholder="0.005 BTC, 500k sats, or $400"></label>
+            <label>Qty <input name="qty" type="number" min="1" max="999" value="1"></label>
+          </div>
+          <div class="market-row">
+            <label>Insurance <input name="insurance" placeholder="LTI or 120 mo"></label>
+            <label>MSRP (USD) <input name="msrpUsd" placeholder="$600"></label>
+            <label>Source <select name="source"><option value="">—</option><option value="Hangar">Hangar</option><option value="Buyback">Buyback</option></select></label>
+            <label>Giftable <select name="giftable"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+          </div>
+          <label>Contents <textarea name="contents" maxlength="1000" placeholder="What's in the pledge: ship, paints, game package…"></textarea></label>
+          <label>Image link <input name="imageUrl" type="url" placeholder="https://…"></label>
+          <label>Notes <textarea name="notes" maxlength="1500"></textarea></label>
+            <button class="goon-button" type="submit">List it</button>
+            <p class="market-note" role="status"></p>
+          </form>
+        </section>
+      </div>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -2209,13 +2610,13 @@
           <p class="pf-links"><a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI &raquo;</a></p>
         </li>
         <li>
-          <h3>Name your stewards</h3>
-          <p>Pick the officers who speak for your org. They get the <strong>Org Steward</strong> role and a direct line to alliance leadership. Tell us when your stewards change.</p>
+          <h3>Name your officers</h3>
+          <p>Pick the officers who speak for your org and tell alliance leadership in #embassy who they are on Discord; we put their Discord accounts on record. Each officer then <a href="/sessions">signs in to goon.vc</a> with that Discord account to vote for your org on the <a href="/operations/PERMAFLEET/votes">votes page</a>, or runs <code>/vote</code> on Discord. Only officers on record vote and set up PERMAFLEET for your org, and only they see your <strong>#council</strong> and have a direct line to alliance leadership. Tell us when your officers change.</p>
         </li>
         <li>
           <h3>Set up your Discord</h3>
           <p>Open an <strong>#embassy</strong> channel and a public <strong>PERMAFLEET</strong> voice channel on your server, then add our bot so leadership can put your events on the alliance schedule.</p>
-          <p>Our bot can make them for you: run <code>/goon embassy</code> and <code>/goon voice</code> in your server. <code>/goon council</code> adds a private <strong>#council</strong> where your officers settle alliance votes, and <code>/goon permafleet</code> a <strong>#permafleet</strong> channel for alliance talk.</p>
+          <p>Our bot can set it all up for you, the same way on every member org’s Discord. That’s the way we recommend: one of your officers runs <code>/goon setup</code> in your server, picks PERMAFLEET membership, then <strong>Set it all up</strong>. That makes <strong>#embassy</strong>, the <strong>PERMAFLEET</strong> voice channel, <strong>#permafleet</strong> for alliance talk, a private <strong>#council</strong> open only to your officers on record, where they settle alliance votes, and the Prospect ranks. To do one piece at a time, or use channels and roles you already have, run <code>/goon embassy</code>, <code>/goon voice</code>, <code>/goon permafleet</code>, <code>/goon council</code>, or <code>/goon roles</code>.</p>
           <p class="pf-links"><a href="/services/discord/invite" target="_blank" rel="noopener noreferrer">Add our bot &raquo;</a> · <a href="/operations/PERMAFLEET/schedule">Weekly schedule &raquo;</a></p>
         </li>
       </ol>
@@ -2262,22 +2663,6 @@
       <h1>PERMAFLEET Votes</h1>
       <p class="pf-intro">Decisions for the Protectorate, one vote per member organization.</p>
       <div id="pf-votes-status"><p class="pf-intro">Loading…</p></div>
-      <section class="pf-votes-panel" id="pf-votes-propose" hidden>
-        <h2>New proposal</h2>
-        <form class="pf-votes-form" id="pf-votes-form">
-          <label>Title <input name="title" maxlength="120" required placeholder="Adopt the PERMAFLEET charter"></label>
-          <label>Details <textarea name="summary" maxlength="2000" placeholder="What the orgs are voting on, and where to discuss it."></textarea></label>
-          <label>Voting stays open <select name="days">
-            <option value="3">3 days</option>
-            <option value="7" selected>7 days</option>
-            <option value="14">14 days</option>
-            <option value="30">30 days</option>
-          </select></label>
-          <label data-org-picker hidden>For <select name="org"></select></label>
-          <div class="pf-votes-buttons"><button class="goon-button" type="submit">Propose</button></div>
-          <p class="pf-votes-note" role="status"></p>
-        </form>
-      </section>
       <section class="pf-votes-panel" id="pf-votes-officers" hidden></section>
       <h2>Proposals</h2>
       <div id="pf-votes-list"><p class="pf-intro">Loading…</p></div>
@@ -2285,13 +2670,13 @@
       <div id="pf-votes-orgs"></div>
       <h2>How alliance votes work</h2>
       <dl class="pf-facts">
-        <div><dt>One vote per org</dt><dd>Every member organization holds one vote. Its Org Stewards cast it; a later steward vote replaces an earlier one while voting is open.</dd></div>
-        <div><dt>Majority of the alliance</dt><dd>A proposal passes once a majority of all member orgs vote yes. It fails as soon as it no longer can, or when its voting window closes.</dd></div>
-        <div><dt>Signed and public</dt><dd>The alliance is a Fabric Federation: each org has its own signing key, and every proposal and vote is a message signed with it. Anyone can check the count.</dd></div>
-        <div><dt>Orgs of officers</dt><dd>An org can decide by its officers instead: it becomes its own federation of their keys, a majority of them (or the number the org sets) must sign the same choice with their own Fabric keys, and the org's vote carries their signatures.</dd></div>
-        <div><dt>Members have a say</dt><dd>Every member can vote too, on the proposal page or with <code>/vote</code> in any Discord server with our bot. It is advice to the orgs, one vote per member (the latest from any of your linked accounts), signed by a key goon.vc holds for your account and vouches for, without naming you.</dd></div>
+        <div><dt>One vote per org</dt><dd>Every member organization holds one vote, and only its officers cast it. Alliance leadership puts each org's officers on record by their Discord accounts. An officer signs in to goon.vc with that account and votes on the proposal page, or runs <code>/vote</code> on Discord; goon.vc signs for them. The org votes once a majority of its officers (or the number the org sets) agree, and its vote carries their signatures. A later vote from an officer replaces their earlier one while voting is open.</dd></div>
+        <div><dt>Officers see each other</dt><dd>An org's officers see how each of them voted on its behalf. Everyone else sees the org's vote and how many officers it takes. An officer's vote also counts as their member vote.</dd></div>
+        <div><dt>Majority of the alliance</dt><dd>A proposal passes once a majority of all member orgs vote yes. It fails as soon as it no longer can, or when its voting window closes. An org votes once leadership has its officers on record.</dd></div>
+        <div><dt>Signed and public</dt><dd>The alliance is a Fabric Federation: every proposal and every org's vote is a signed message, so anyone can check the count.</dd></div>
+        <div><dt>Members have a say</dt><dd>Every member can vote too, on the proposal page or with <code>/vote</code> in any Discord server with our bot. It is advice to the orgs, one vote per member (the latest from any of your linked accounts), signed by goon.vc for your account without naming you.</dd></div>
       </dl>
-      <p class="pf-links"><a href="/operations/PERMAFLEET/onboarding">Who are the Org Stewards? &raquo;</a></p>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/onboarding">How orgs name their officers &raquo;</a></p>
     </main>
     <main id="pf-vote-page" class="pf-page pf-votes" data-api="/services/alliance" data-base="/operations/PERMAFLEET/votes" data-login="/sessions" data-site-title="GOON SQUAD">
       <p class="page-back"><a href="/operations/PERMAFLEET/votes">&larr; All votes</a></p>
@@ -2307,6 +2692,9 @@
       <p class="page-back"><a href="/federations">&larr; All federations</a></p>
       <div id="federation-view"><p class="pf-intro">Loading…</p></div>
     </main>
+    <footer id="site-member-footer" class="site-member-footer" hidden>
+      <div><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+    </footer>
     <script type="text/javascript">
       (function () {
         var loginPath = "/sessions";
@@ -2322,6 +2710,10 @@
           }
         }
         var isLogin = path === loginPath;
+        var isRsiClaim = path.toLowerCase() === "/rsi";
+        var isWaiting = path.toLowerCase() === "/waiting";
+        var isMembers = path.toLowerCase() === "/members";
+        var isMember = path.toLowerCase().indexOf("/members/") === 0;
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
         var isIdleRPG = path.toLowerCase() === "/services/idlerpg";
@@ -2352,6 +2744,16 @@
         var clipProjectEl = path.toLowerCase().indexOf("/clips/projects/") === 0
           ? document.getElementById('clip-project-page')
           : null;
+        var marketBase = "/services/market";
+        var marketRest = path.toLowerCase().indexOf(marketBase + '/') === 0 ? path.toLowerCase().slice(marketBase.length + 1).split('/') : null;
+        var isMarket = path.toLowerCase() === marketBase;
+        var marketEl = isMarket ? document.getElementById('market-page')
+          : !marketRest ? null
+          : marketRest.length === 1 && marketRest[0] === 'mine' ? document.getElementById('market-mine-page')
+          : marketRest.length === 2 && marketRest[0] === 'listings' ? document.getElementById('market-listing-page')
+          : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
+          : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
+          : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -2376,9 +2778,17 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
+        var rsiClaimEl = document.getElementById('rsi-page');
+        if (rsiClaimEl) rsiClaimEl.style.display = isRsiClaim ? 'block' : 'none';
+        var waitingEl = document.getElementById('waiting-page');
+        if (waitingEl) waitingEl.style.display = isWaiting ? 'block' : 'none';
+        var membersEl = document.getElementById('members-page');
+        if (membersEl) membersEl.style.display = isMembers ? 'block' : 'none';
+        var memberEl = document.getElementById('member-page');
+        if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -2415,6 +2825,9 @@
         if (clipTimelineEl) clipTimelineEl.style.display = isClipTimeline ? 'block' : 'none';
         var clipProjectPageEl = document.getElementById('clip-project-page');
         if (clipProjectPageEl) clipProjectPageEl.style.display = clipProjectEl ? 'block' : 'none';
+        document.querySelectorAll('.market-page').forEach(function (el) {
+          el.style.display = el === marketEl ? 'block' : 'none';
+        });
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -2437,6 +2850,10 @@
         document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = "Login — GOON SQUAD";
+        else if (isRsiClaim) document.title = "Claim your RSI profile — GOON SQUAD";
+        else if (isWaiting) document.title = "Waiting area — GOON SQUAD";
+        else if (isMembers) document.title = "Members — GOON SQUAD";
+        else if (isMember) document.title = 'Member profile — ' + "GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
@@ -2451,6 +2868,7 @@
         else if (isLeagues || leagueEl) document.title = "LEAGUES — GOON SQUAD";
         else if (isClipTimeline) document.title = "CLIP TIMELINE — GOON SQUAD";
         else if (isClips || clipProjectEl) document.title = "CLIPS — GOON SQUAD";
+        else if (marketEl) document.title = "MARKET — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
@@ -2484,19 +2902,20 @@
     <script type="text/javascript">
       (function () {
         var loginPath = "/sessions";
+        var waitingPath = "/waiting";
+        var membersPath = "/members";
         var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
         var onLoginPage = path === loginPath;
 
         var btnDiscord = document.getElementById('login-discord');
         var btnPassport = document.getElementById('login-passport');
-        var btnDesktop = document.getElementById('login-desktop');
         var status = document.getElementById('login-status');
         var sessionBox = document.getElementById('login-session');
-        var hubAvailable = false;
+        var passportAvailable = false;
         var discordAvailable = false;
         var busy = false;
-        var pollTimer = null;
         var signedIn = null;
+        var waiting = null;
 
         function getJson (url, opts) {
           return window.fetch(url, Object.assign({ cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}))
@@ -2505,13 +2924,19 @@
             });
         }
 
+        function postJson (url, body) {
+          return getJson(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(body || {})
+          });
+        }
+
         function render () {
           btnDiscord.textContent = signedIn ? 'Link Discord' : 'Discord';
           btnPassport.textContent = signedIn ? 'Link a Passport identity' : 'Passport';
-          btnDesktop.textContent = signedIn ? 'Link a GoonCitizen desktop' : 'GoonCitizen desktop';
           btnDiscord.disabled = busy || !discordAvailable;
-          btnPassport.disabled = busy || !hubAvailable;
-          btnDesktop.disabled = busy || !hubAvailable;
+          btnPassport.disabled = busy || !passportAvailable;
         }
 
         function setBusy (value) {
@@ -2519,38 +2944,159 @@
           render();
         }
 
-        var hubProbe = window.fetch('/services/rpc', {
-          method: 'OPTIONS',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store'
-        }).then(function (res) {
-          if (res.status >= 502) return false;
-          return res.text().then(function (t) {
-            try {
-              var j = t ? JSON.parse(t) : null;
-              return !(j && (j.error === 'hub-unreachable' || j.error === 'Hub unreachable'));
-            } catch (e) { return true; }
+        var siteFooter = document.getElementById('site-member-footer');
+        if (siteFooter) {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
           });
-        }).catch(function () { return false; });
-        var membersProbe = getJson('/services/members')
-          .then(function (r) { return !!(r.ok && r.j && r.j.discord); })
-          .catch(function () { return false; });
+          siteFooter.hidden = onLoginPage || pages.some(function (el) { return !!el.querySelector('.footer-login-button'); });
+        }
 
-        Promise.all([hubProbe, membersProbe]).then(function (results) {
-          hubAvailable = results[0];
-          discordAvailable = results[1];
-          if (!hubAvailable && !discordAvailable) {
+        var footerLogins = Array.prototype.slice.call(document.querySelectorAll('a.footer-login-button[href="' + loginPath + '"]'));
+        footerLogins.forEach(function (el) { el.setAttribute('data-login-label', el.textContent); });
+
+        // Signed in, each footer Login button becomes a card for the member
+        // that links to their profile.
+        function markMember (member) {
+          var profilePath = member ? membersPath + '/' + member.id : null;
+          footerLogins.forEach(function (el) {
+            el.textContent = '';
+            el.classList.toggle('footer-member', !!member);
+            if (!member) {
+              el.href = loginPath;
+              el.removeAttribute('title');
+              el.removeAttribute('aria-current');
+              el.textContent = el.getAttribute('data-login-label');
+              return;
+            }
+            el.href = profilePath;
+            el.title = 'Your profile';
+            if (path.toLowerCase() === profilePath) el.setAttribute('aria-current', 'page');
+            else el.removeAttribute('aria-current');
+            if (member.avatarUrl) {
+              var img = document.createElement('img');
+              img.src = member.avatarUrl;
+              img.alt = '';
+              el.appendChild(img);
+            }
+            var text = document.createElement('span');
+            var name = document.createElement('strong');
+            name.textContent = member.displayName || 'Member';
+            var small = document.createElement('small');
+            small.textContent = 'YOUR PROFILE';
+            text.appendChild(name);
+            text.appendChild(small);
+            el.appendChild(text);
+          });
+        }
+
+        window.goonMember = markMember;
+
+        var sessionCheck = getJson('/services/members/session').then(function (r) {
+          return r.ok && r.j && r.j.member ? r.j.member : null;
+        }).catch(function () { return null; });
+        sessionCheck.then(markMember);
+
+        var PASSPORT_ERRORS = {
+          rejected: 'Sign-in was rejected in Passport.',
+          timeout: 'Timed out waiting for approval. Unlock Passport and try again.',
+          expired: 'The sign-in expired before it was approved. Try again.',
+          busy: 'Passport is busy with other sign-ins. Finish those first.',
+          replaced: 'Another sign-in on this page replaced this one.',
+          challenge_replayed: 'Passport already answered that sign-in. Try again.',
+          passport_unavailable: 'Passport is not ready. Unlock it and try again.',
+          invalid_challenge: 'Passport could not read the sign-in request.',
+          origin_mismatch: 'Passport saw a different address than this page.',
+          passport_outdated: 'Update Fabric Passport, or the desktop app it asked, to sign in here.'
+        };
+
+        // Linking adds an account to whoever is signed in here, so say who.
+        function confirmLink (what) {
+          return sessionCheck.then(function (member) {
+            var name = (signedIn && signedIn.displayName) || (member && member.displayName) || 'this profile';
+            if (!window.confirm('Link ' + what + ' to ' + name + '? Anyone signed in as ' + name + ' will be able to use it.')) {
+              throw new Error('Linking cancelled.');
+            }
+          });
+        }
+        window.goonConfirmLink = confirmLink;
+
+        // Passport answers only on the MessagePort handed over with the
+        // challenge, so nothing else on the page can read or forge it.
+        function passportPort (challenge, expiresAt) {
+          return new Promise(function (resolve) {
+            var channel = new window.MessageChannel();
+            var done = false;
+            var wait = Math.min(210000, Math.max(5000, Number(expiresAt) - Date.now() || 0));
+            var timer = setTimeout(function () { finish({ ok: false, error: 'timeout' }); }, wait);
+            function finish (result) {
+              if (done) return;
+              done = true;
+              clearTimeout(timer);
+              try { channel.port1.close(); } catch (_) {}
+              waiting = null;
+              resolve(result);
+            }
+            waiting = { cancel: function () { finish({ ok: false, error: 'cancelled' }); } };
+            channel.port1.onmessage = function (event) {
+              var d = event && event.data;
+              if (!d || typeof d !== 'object') return;
+              if (d.ok === true && d.type === 'PASSPORT_ASSERTION' && typeof d.assertion === 'string') finish({ ok: true, assertion: d.assertion });
+              else if (d.ok === false) finish({ ok: false, error: typeof d.error === 'string' && d.error ? d.error : 'rejected' });
+            };
+            window.postMessage({ source: 'fabric-site', type: 'PASSPORT_CHALLENGE', challenge: challenge }, window.location.origin, [channel.port2]);
+          });
+        }
+
+        // Signs in with Passport, or links its identity to the signed-in
+        // member. Resolves with the members service's answer.
+        function askPassport (linking, say, options) {
+          say = say || function () {};
+          var escrow = !!(options && options.escrow);
+          if (escrow) linking = true;
+          var marker = document.documentElement.getAttribute('data-fabric-passport');
+          if (marker === null) {
+            return Promise.reject(new Error('Fabric Passport extension not detected. Install or enable it, then reload this page.'));
+          }
+          if (marker !== '2') return Promise.reject(new Error('Update Fabric Passport to sign in here.'));
+          if (typeof window.MessageChannel !== 'function') return Promise.reject(new Error('This browser cannot talk to Passport.'));
+          if (waiting) return Promise.reject(new Error('Passport is already asking. Approve or reject that request first.'));
+          return (linking ? confirmLink(escrow ? 'your Market escrow key' : 'a Passport identity') : Promise.resolve()).then(function () {
+            say('Starting Passport sign-in…');
+            return postJson('/services/members/passport/challenges', escrow ? { escrow: true } : undefined);
+          }).then(function (r) {
+            if (!r.ok || !r.j || typeof r.j.challenge !== 'string') {
+              throw new Error('Could not start sign-in: ' + ((r.j && r.j.error) || r.status));
+            }
+            say(escrow ? 'Open Passport and approve sharing your escrow key…' : 'Open Passport and approve the sign-in…');
+            return passportPort(r.j.challenge, r.j.expiresAt);
+          }).then(function (d) {
+            if (!d.ok) throw new Error(PASSPORT_ERRORS[d.error] || ('Passport: ' + d.error));
+            say(linking ? 'Linking…' : 'Signing in…');
+            return postJson('/services/members/passport', { assertion: d.assertion, link: linking });
+          }).then(function (r) {
+            if (!r.ok) throw new Error((linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status));
+            if (escrow && !r.j.escrowKey) throw new Error('Passport did not share an escrow key. Try again and allow it.');
+            return r.j;
+          });
+        }
+        window.goonPassport = askPassport;
+        window.goonEscrowKey = function (say) { return askPassport(true, say, { escrow: true }); };
+
+        getJson('/services/members').then(function (r) {
+          discordAvailable = !!(r.ok && r.j && r.j.discord);
+          passportAvailable = !!(r.ok && r.j && r.j.passport);
+        }).catch(function () {}).then(function () {
+          if (!passportAvailable && !discordAvailable) {
             document.querySelectorAll('a.footer-login-button[href="' + loginPath + '"], .site-nav a[href="' + loginPath + '"]').forEach(function (el) {
               (el.closest('.site-nav-item') || el).style.display = 'none';
             });
           }
           if (!onLoginPage) return;
           btnDiscord.title = discordAvailable ? '' : 'Discord login is not configured on this server.';
-          btnPassport.title = btnDesktop.title = hubAvailable ? '' : 'The Fabric Hub is unreachable.';
-          if (!hubAvailable && !status.textContent) {
-            status.textContent = discordAvailable
-              ? 'Passport and desktop sign-in are unavailable: the Fabric Hub is unreachable.'
-              : 'Login unavailable: the Fabric Hub is unreachable and Discord login is not configured.';
+          btnPassport.title = passportAvailable ? '' : 'Passport login is not available on this server.';
+          if (!passportAvailable && !discordAvailable && !status.textContent) {
+            status.textContent = 'Login is unavailable on this server.';
           }
           render();
         });
@@ -2565,9 +3111,11 @@
           discord_failed: 'Could not complete Discord sign-in. Try again.',
           discord_unavailable: 'Discord could not be reached. Try again in a minute.',
           not_signed_in: 'Sign in first, then link another account.',
-          link_failed: 'That link was started from a different sign-in. Try again.'
+          link_failed: 'That link was started from a different sign-in. Try again.',
+          one_time_link: 'You signed in with a one-time link. Sign in with Discord or Passport first, then link another account.',
+          one_discord: 'Your profile already has a Discord account. A profile holds one: unlink it first to link a different one.'
         };
-        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric' };
+        var PLATFORMS = { discord: 'Discord', fabric: 'Fabric', rsi: 'RSI' };
 
         function linkedMessage (what, merged) {
           return (what === 'discord' ? 'Discord account' : 'Fabric identity') + ' linked.' +
@@ -2609,6 +3157,7 @@
         function showMember (member) {
           sessionBox.textContent = '';
           signedIn = member || null;
+          markMember(signedIn);
           render();
           if (!member) {
             sessionBox.style.display = 'none';
@@ -2625,8 +3174,24 @@
           strong.textContent = member.displayName || member.id;
           line.appendChild(document.createTextNode('Signed in as '));
           line.appendChild(strong);
-          line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : 'Fabric')));
+          line.appendChild(document.createTextNode(' via ' + (member.provider === 'discord' ? 'Discord' : member.provider === 'rsi-link' ? 'a Discord link' : 'Fabric')));
           sessionBox.appendChild(line);
+          var profileLine = document.createElement('p');
+          var profileLink = document.createElement('a');
+          profileLink.href = membersPath + '/' + member.id;
+          profileLink.textContent = 'View your profile »';
+          profileLine.appendChild(profileLink);
+          sessionBox.appendChild(profileLine);
+          if (member.review && member.review.status !== 'approved') {
+            var reviewLine = document.createElement('p');
+            var reviewLink = document.createElement('a');
+            reviewLink.href = waitingPath;
+            reviewLink.textContent = member.review.status === 'pending'
+              ? 'Your sign-in is waiting for review »'
+              : 'Your sign-in was not approved »';
+            reviewLine.appendChild(reviewLink);
+            sessionBox.appendChild(reviewLine);
+          }
           var accounts = document.createElement('ul');
           accounts.className = 'login-accounts';
           accounts.setAttribute('aria-label', 'Linked accounts');
@@ -2656,122 +3221,39 @@
           window.history.replaceState(null, '', loginPath);
         }
 
-        getJson('/services/members/session').then(function (r) {
-          if (r.ok && r.j && r.j.member) showMember(r.j.member);
-        }).catch(function () {});
-
-        btnDiscord.addEventListener('click', function () {
-          setBusy(true);
-          status.textContent = 'Redirecting to Discord…';
-          window.location.href = '/services/members/discord' + (signedIn ? '?link=1' : '');
+        sessionCheck.then(function (member) {
+          if (member) showMember(member);
         });
 
-        // The Hub releases a signed session exactly once, so only the members service may redeem it.
-        function pollClaim (sessionId, pollSecret) {
+        btnDiscord.addEventListener('click', function () {
           var linking = !!signedIn;
-          var tries = 0;
-          var inFlight = false;
-          if (pollTimer) clearInterval(pollTimer);
-          pollTimer = setInterval(function () {
-            if (inFlight) return;
-            tries += 1;
-            if (tries > 90) {
-              clearInterval(pollTimer);
-              status.textContent = 'Timed out waiting for approval. Unlock your wallet and try again.';
-              setBusy(false);
-              return;
-            }
-            inFlight = true;
-            getJson('/services/members/passport', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ sessionId: sessionId, pollSecret: pollSecret || null, link: linking })
-            }).then(function (r) {
-              inFlight = false;
-              if (r.status === 202) return;
-              clearInterval(pollTimer);
-              setBusy(false);
-              if (!r.ok) {
-                status.textContent = (linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status);
-                return;
-              }
-              status.textContent = r.j.linked ? linkedMessage(r.j.linked, r.j.merged) : 'Signed in.';
-              showMember(r.j.member);
-            }).catch(function () { inFlight = false; });
-          }, 1500);
-        }
-
-        function startSession (startLabel, onCreated) {
           setBusy(true);
-          status.textContent = startLabel;
-          getJson('/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ origin: window.location.origin })
-          }).then(function (r) {
-            if (!r.ok || !r.j || !r.j.ok) {
-              status.textContent = r.status >= 502
-                ? 'Sign-in is unavailable: the Fabric Hub is unreachable' + (r.j && r.j.detail ? ' (' + r.j.detail + ')' : '') + '.'
-                : 'Could not start sign-in: ' + ((r.j && r.j.error) || r.status);
-              setBusy(false);
-              return;
-            }
-            onCreated(r.j);
-            pollClaim(r.j.sessionId, r.j.pollSecret);
+          (linking ? confirmLink('a Discord account') : Promise.resolve()).then(function () {
+            status.textContent = 'Redirecting to Discord…';
+            window.location.href = '/services/members/discord' + (linking ? '?link=1' : '');
           }).catch(function (error) {
-            status.textContent = 'Could not start sign-in: ' + error.message;
             setBusy(false);
+            status.textContent = error.message;
           });
-        }
-
-        var PASSPORT_ERRORS = {
-          hub_not_allowed: 'Passport does not trust this site’s Hub.',
-          origin_mismatch: 'Passport rejected the request (origin mismatch).',
-          passport_rejected: 'Sign-in was rejected in Passport.'
-        };
-
-        window.addEventListener('message', function (event) {
-          if (event.origin !== window.location.origin) return;
-          var d = event.data;
-          if (!d || d.source !== 'fabric-passport' || d.type !== 'FABRIC_SITE_LOGIN_RESULT' || d.ok) return;
-          if (pollTimer) clearInterval(pollTimer);
-          status.textContent = PASSPORT_ERRORS[d.error] || ('Passport: ' + (d.error || 'rejected'));
-          setBusy(false);
         });
 
         btnPassport.addEventListener('click', function () {
-          if (!document.documentElement.hasAttribute('data-fabric-passport')) {
-            status.textContent = 'Fabric Passport extension not detected. Install or enable it, then reload this page.';
-            return;
-          }
-          startSession('Starting Passport sign-in…', function (session) {
-            window.postMessage({
-              source: 'fabric-site',
-              type: 'FABRIC_SITE_LOGIN_REQUEST',
-              sessionId: session.sessionId,
-              hub: window.location.origin,
-              origin: window.location.origin,
-              message: session.message
-            }, window.location.origin);
-            status.textContent = 'Open Passport and approve the sign-in…';
-          });
-        });
-
-        btnDesktop.addEventListener('click', function () {
-          startSession('Starting desktop sign-in…', function (session) {
-            var a = document.createElement('a');
-            a.href = session.protocolUrl ||
-              ('fabric://login?sessionId=' + encodeURIComponent(session.sessionId) +
-                '&hub=' + encodeURIComponent(window.location.origin));
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            status.textContent = 'Approve the request in GoonCitizen (or your Fabric desktop app)…';
+          var linking = !!signedIn;
+          setBusy(true);
+          askPassport(linking, function (text) { status.textContent = text; }).then(function (j) {
+            setBusy(false);
+            status.textContent = j.linked ? linkedMessage(j.linked, j.merged) : 'Signed in.';
+            showMember(j.member);
+          }).catch(function (error) {
+            setBusy(false);
+            status.textContent = error.message;
           });
         });
       })();
     </script>
+    <script src="/scripts/rsi-claim.js" defer></script>
+    <script src="/scripts/waiting.js" defer></script>
+    <script src="/scripts/members.js" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
@@ -3499,6 +3981,7 @@
         });
       })();
     </script>
+    <script src="/scripts/market.js" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');

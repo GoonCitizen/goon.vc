@@ -1,7 +1,7 @@
 # Deploying GOON.VC
 
 The production service is an `@fabric/http` HTML site plus a same-origin proxy
-for Hub APIs (`/sessions`, `/device-links`, `/services/rpc`, identity cluster).
+for Hub APIs (`/device-links`, `/services/rpc`, identity cluster).
 It is **not** a Fabric Hub and **not** the GoonCitizen relay. Site notes:
 [`DEVELOPERS.md`](DEVELOPERS.md). GoonCitizen operators and other orgs:
 [star-citizen-live `DEVELOPERS.md`](https://github.com/GoonCitizen/star-citizen-live/blob/feature/rsi/DEVELOPERS.md)
@@ -13,8 +13,18 @@ Browsers ──HTTPS──> Caddy (goon.vc) ──> this process :8080
                                       └── Hub API proxy ──> hub.fabric.pub
 
 GoonCitizen clients ──Fabric :7777──> relay.goon.vc (star-citizen-live)
-Passport / desktop login on goon.vc uses POST /sessions (proxied to Hub).
+Passport login (v2) is between the page, Passport, and this process: the
+page gets a PASSPORT_CHALLENGE from /services/members/passport/challenges,
+Passport signs a PASSPORT_ASSERTION, and the page posts it to
+/services/members/passport. No Hub is involved.
 ```
+
+Caddy (`deploy/Caddyfile`) or nginx (`deploy/nginx-relay.example.conf`) may
+front it. Either way the process must receive the browser's `Host` and
+`X-Forwarded-Proto`: session cookies are `Secure` only when the request came
+in over HTTPS. Passport challenges are issued only for pinned origins, so set
+`GOON_MEMBERS_ORIGINS=https://goon.vc` (otherwise `siteUrl` is used in
+production); a request on any other address gets no challenge.
 
 ## Prerequisites
 - Ubuntu/Debian VPS with the `goon.vc` DNS A/AAAA records pointed at it
@@ -50,9 +60,8 @@ sudo systemctl reload caddy
 ```bash
 systemctl status goonvc
 curl -sI https://goon.vc/ | head
-curl -s -X POST https://goon.vc/sessions \
-  -H 'Content-Type: application/json' -H 'Origin: https://goon.vc' \
-  -d '{"origin":"https://goon.vc"}'     # proxied Hub session create
+curl -s https://goon.vc/services/members -H 'Accept: application/json'
+  # {"discord":true,"passport":true,"review":true}; discord:false = no OAuth secret
 journalctl -u goonvc -f
 curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # presentNow / uniquePlayers
 ```
@@ -67,12 +76,39 @@ curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # prese
 | `FABRIC_HUB_INTERFACE` | Bind address (default `127.0.0.1`). |
 | `FABRIC_HUB_HOSTNAME` | Host header / sitemap host (default `goon.vc`). |
 | `DISCORD_BOT_TOKEN` | Bot token for `/events`, `/operations` metrics, and IdleRPG. The bot posts IdleRPG announcements to `presence.announcements` (G00N SQUAD `#idlerpg`) and needs View Channel + Send Messages there. |
+| `DISCORD_APP_SECRET` | OAuth client secret of the application that owns the bot token. Discord sign-in (and so the waiting area) is off without it. |
+| `DISCORD_REDIRECT_URI` | Optional; defaults to `<request origin>/services/members/discord/callback`. That URL must be listed under OAuth2 → Redirects. |
+| `GOON_MEMBERS_ORIGINS` | Origins Passport sign-in is issued for (`https://goon.vc`). Set it so a spoofed `Host` gets none. |
+| `GOON_MEMBERS_REVIEWERS` | Discord user ids who approve new Discord sign-ins with `/goon review` (default @remaeus). `GOON_MEMBERS_REVIEW=0` turns reviews off. |
+| `GOON_SCRIPTS_TOKEN` | Bearer for the DM script, campaign, and hangar roster APIs. Unset = those answer 404. |
+| `GOON_TOURNAMENTS_PASSWORD` | Unlocks edits to finished tournaments. Unset = finished tournaments stay final. |
+| `GOON_MARKET_NETWORK` | Pin Market escrow to one Bitcoin network (default: the Hub's). `GOON_MARKET=0` turns the Market off, `GOON_MARKET_SYNC=0` stops the forum mirror. |
+| `GOON_MARKET_ARBITERS` | Account keys (`discord:<id>`, comma separated) who decide disputed escrow orders. |
+| `GOON_CAMPAIGNS` | `1` enables DM campaigns, check-ins, and welcome DMs. Turn on the Server Members intent first, or Discord refuses the gateway. |
+| `GOON_FABRIC_XPRV` | goon.vc's Fabric key. Unset = one is generated once and kept in `stores/fabric`. |
 
-No Fabric mnemonic is required on this host. Identity stays on Hub and on
-user wallets (Passport / GoonCitizen).
+**Keys live in `stores/`.** goon.vc's Fabric key (`GOON_FABRIC_XPRV`, else
+`stores/fabric`) derives the Fabric relay key, the alliance validator and
+bridge keys, the officer and member vote keys, and every Market escrow
+arbiter key. Losing it loses goon.vc's signature on open escrow orders. Back
+up `stores/` before the first Market order. Never swap the key on a running
+site: a different key is a different alliance federation and different
+arbiters. Member identity stays in user wallets (Passport /
+GoonCitizen).
+
+**Discord application** (Developer Portal, the application that owns the bot
+token):
+- OAuth2 → Redirects: `https://goon.vc/services/members/discord/callback`.
+- Bot → Privileged Gateway Intents: Message Content (Market forum mirror,
+  Fabric relay, 1v1 leaderboard); Server Members only with `GOON_CAMPAIGNS=1`.
+- Installation → User Install on, for `/market` in DMs.
+- Re-invite the bot with `https://goon.vc/services/discord/invite?for=market`
+  so it may post and manage threads in the Market forum, and with
+  `?for=channels` for the PERMAFLEET setup scripts.
 
 **Updates** —
-`cd /opt/goon.vc && sudo -u goonvc git pull && sudo -u goonvc npm install --allow-git=all && sudo -u goonvc npm run build && sudo systemctl restart goonvc`.
+`cd /opt/goon.vc && sudo -u goonvc git pull && sudo -u goonvc npm ci --allow-git=all && sudo -u goonvc npm run build && sudo systemctl restart goonvc`.
+`npm ci` installs exactly the `@fabric/*` commits in `package-lock.json`.
 
 ## Local development
 

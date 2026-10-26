@@ -41,10 +41,6 @@ function renderStyles () {
       .pf-votes-form textarea { min-height: 7rem; resize: vertical; }
       .pf-votes-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
       .pf-votes .goon-button[aria-pressed="true"] { border-color: var(--pf-cyan); color: var(--pf-signal); }
-      .pf-votes-command { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0; }
-      .pf-votes-command code { flex: 1 1 18rem; padding: 0.45rem 0.6rem; background: rgba(5, 10, 24, 0.85); border: 1px solid var(--pf-line); color: var(--pf-text); word-break: break-all; }
-      .pf-votes-officers { margin-top: 1rem; }
-      .pf-votes-form textarea[name="frame"] { min-height: 4rem; font-family: monospace; font-size: 0.8rem; }
       .pf-votes-note { margin: 0.5rem 0 0; color: var(--pf-muted); }
       .pf-votes-note.error { color: #ff8a8a; }
       #pf-votes-status .pf-votes-note { text-align: center; }
@@ -58,18 +54,18 @@ function renderStyles () {
 function renderHow (props) {
   return `<h2>How alliance votes work</h2>
       <dl class="pf-facts">
-        <div><dt>One vote per org</dt><dd>Every member organization holds one vote. Its Org Stewards cast it; a later steward vote replaces an earlier one while voting is open.</dd></div>
-        <div><dt>Majority of the alliance</dt><dd>A proposal passes once a majority of all member orgs vote yes. It fails as soon as it no longer can, or when its voting window closes.</dd></div>
-        <div><dt>Signed and public</dt><dd>The alliance is a Fabric Federation: each org has its own signing key, and every proposal and vote is a message signed with it. Anyone can check the count.</dd></div>
-        <div><dt>Orgs of officers</dt><dd>An org can decide by its officers instead: it becomes its own federation of their keys, a majority of them (or the number the org sets) must sign the same choice with their own Fabric keys, and the org's vote carries their signatures.</dd></div>
-        <div><dt>Members have a say</dt><dd>Every member can vote too, on the proposal page or with <code>/vote</code> in any Discord server with our bot. It is advice to the orgs, one vote per member (the latest from any of your linked accounts), signed by a key goon.vc holds for your account and vouches for, without naming you.</dd></div>
+        <div><dt>One vote per org</dt><dd>Every member organization holds one vote, and only its officers cast it. Alliance leadership puts each org's officers on record by their Discord accounts. An officer signs in to goon.vc with that account and votes on the proposal page, or runs <code>/vote</code> on Discord; goon.vc signs for them. The org votes once a majority of its officers (or the number the org sets) agree, and its vote carries their signatures. A later vote from an officer replaces their earlier one while voting is open.</dd></div>
+        <div><dt>Officers see each other</dt><dd>An org's officers see how each of them voted on its behalf. Everyone else sees the org's vote and how many officers it takes. An officer's vote also counts as their member vote.</dd></div>
+        <div><dt>Majority of the alliance</dt><dd>A proposal passes once a majority of all member orgs vote yes. It fails as soon as it no longer can, or when its voting window closes. An org votes once leadership has its officers on record.</dd></div>
+        <div><dt>Signed and public</dt><dd>The alliance is a Fabric Federation: every proposal and every org's vote is a signed message, so anyone can check the count.</dd></div>
+        <div><dt>Members have a say</dt><dd>Every member can vote too, on the proposal page or with <code>/vote</code> in any Discord server with our bot. It is advice to the orgs, one vote per member (the latest from any of your linked accounts), signed by goon.vc for your account without naming you.</dd></div>
       </dl>
-      <p class="pf-links"><a href="${escapeHtml(props.onboardingPath)}">Who are the Org Stewards? &raquo;</a></p>`;
+      <p class="pf-links"><a href="${escapeHtml(props.onboardingPath)}">How orgs name their officers &raquo;</a></p>`;
 }
 
 /**
- * Alliance votes index: the member orgs, every proposal, and the proposal
- * form for stewards; the page script fills it from the alliance service.
+ * Alliance votes index: the member orgs, every proposal, and a proposal
+ * form for officers; the page script fills it from the alliance service.
  * @param {Object} props
  * @param {string} props.basePath
  * @param {string} props.loginPath
@@ -82,22 +78,6 @@ function renderIndexHtml (props) {
       <h1>PERMAFLEET Votes</h1>
       <p class="pf-intro">Decisions for the Protectorate, one vote per member organization.</p>
       <div id="pf-votes-status"><p class="pf-intro">Loading…</p></div>
-      <section class="pf-votes-panel" id="pf-votes-propose" hidden>
-        <h2>New proposal</h2>
-        <form class="pf-votes-form" id="pf-votes-form">
-          <label>Title <input name="title" maxlength="120" required placeholder="Adopt the PERMAFLEET charter"></label>
-          <label>Details <textarea name="summary" maxlength="2000" placeholder="What the orgs are voting on, and where to discuss it."></textarea></label>
-          <label>Voting stays open <select name="days">
-            <option value="3">3 days</option>
-            <option value="7" selected>7 days</option>
-            <option value="14">14 days</option>
-            <option value="30">30 days</option>
-          </select></label>
-          <label data-org-picker hidden>For <select name="org"></select></label>
-          <div class="pf-votes-buttons"><button class="goon-button" type="submit">Propose</button></div>
-          <p class="pf-votes-note" role="status"></p>
-        </form>
-      </section>
       <section class="pf-votes-panel" id="pf-votes-officers" hidden></section>
       <h2>Proposals</h2>
       <div id="pf-votes-list"><p class="pf-intro">Loading…</p></div>
