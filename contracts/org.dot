@@ -1,0 +1,80 @@
+digraph OrgChart {
+  subgraph cluster_permafleet {
+    label = "[PERMAFLEET]"
+    "PERMAFLEET"
+    "PERMAFLEET Officers"
+    "ChairmanPoW"
+    "Alliance Board"
+
+    subgraph cluster_alliance_board {
+      label = "ALLIANCE BOARD"
+      "Alliance Board"
+      "crescendo"
+      "Adszvolcano"
+      "RedneckRanger"
+    }
+
+    subgraph cluster_goon_squad {
+      label = "[G00N]"
+      "G00N"
+      "Alpha Squadron"
+    }
+
+    subgraph cluster_special_operations {
+      label = "[SPECIAL OPERATIONS]"
+      "Special Operations"
+      "Alpha Squadron"
+      "Bravo Squadron"
+      "Ghost Squadron"
+    }
+
+    subgraph cluster_permafleet_officers {
+      label = "[PERMAFLEET OFFICERS]"
+      "PERMAFLEET Officers"
+      "crescendo"
+      "Adszvolcano"
+      "RedneckRanger"
+      "VictorSeven"
+    }
+
+    subgraph cluster_infinity_industries {
+      label = "[INFN]"
+      "INFN"
+      "Adszvolcano"
+    }
+
+    subgraph cluster_rat_squadron {
+      label = "[RAT]"
+    }
+
+    subgraph cluster_transgalactic_trade {
+      label = "[TRDE]"
+      "TRDE"
+    }
+
+    subgraph cluster_legacy_corporation {
+      label = "[LEGACY]"
+      "LEGACY"
+    }
+
+    subgraph cluster_black_exodus {
+      label = "[BKEX]"
+      "BKEX"
+    }
+  }
+
+  "ChairmanPoW" -> "Alliance Board"
+  "ChairmanPoW" -> "crescendo"
+  "Alliance Board" -> "PERMAFLEET Officers"
+  "PERMAFLEET Officers" -> "PERMAFLEET"
+  "crescendo" -> {
+    "Alpha Squadron"
+    "Bravo Squadron"
+    "Gamma Squadron"
+  } -> "G00N"
+  "Adszvolcano" -> "INFN"
+
+  # Member CEOs
+  "crescendo" -> "Alliance Board"
+  "Adszvolcano" -> "Alliance Board"
+}

@@ -1,35 +1,7 @@
+// Compiled from components/ClipTimelineEditor.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * <clip-timeline-editor> — storyboard clips on a recording-time timeline and
- * cut them into a film.
- *
- * Attributes:
- *   src       API base (e.g. `/services/clips`). Nothing loads until it is set.
- *   project   project id; without it the element browses sessions
- *             (timeline, preview, and the project list)
- *   session   session to open first (ignored with `project`)
- *   clip      clip to select first; opens its session
- *   base      page path for project links (default `/clips`)
- *   login     sign-in page shown when the API answers 401
- *
- * API (relative to src): `GET /` clips + status, `GET /sessions`,
- * `PATCH /<clip>` `{ recordedAt?, syncOffsetMs? }`, `POST /refresh`,
- * `GET|POST /projects`, `GET|PATCH /projects/<id>` `{ revision, name, segments }`,
- * `POST /projects/<id>/renders`. Clips carry `proxyUrl` / `thumbsUrl` and
- * `proxy.thumbs` `{ every, count, columns, rows, width, height }` for the sprite.
- * A screenshot (`media: 'image'`) shows as an image for its `durationMs` (the
- * library's `stills.seconds`); in the program its segment is `{ in: 0, out }`,
- * `out` being how long it shows (up to `stills.maxSeconds`).
- *
- * Emits `projectopen` (cancelable; `detail: { id, path }`) before navigating
- * to a project, `projectsave` / `renderstart` after those succeed, and
- * `sessionchange` (`detail: { id }`) when the visitor picks another session.
- *
- * Keys: Space play/pause, I / O mark in / out, Enter add to program,
- * Delete remove the selected segment, ← / → step a frame, Ctrl+S save.
- */
-(function (root) {
+(function defineClipTimelineEditor (root) {
   if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return;
   if (root.customElements.get('clip-timeline-editor')) return;
 
@@ -1183,4 +1155,4 @@
   }
 
   root.customElements.define('clip-timeline-editor', ClipTimelineEditor);
-})(typeof window !== 'undefined' ? window : null);
+})(window);

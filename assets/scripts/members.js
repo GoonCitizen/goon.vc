@@ -1,8 +1,7 @@
+// Compiled from components/MembersPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-// Members (components/MembersPage.js): the directory at /members (only the
-// signed-in member until it opens) and profiles at /members/<id> (only your own).
-(function () {
+(function client () {
   var list = document.getElementById('members-page');
   var profile = document.getElementById('member-page');
   if (!list || !profile) return;
@@ -326,4 +325,4 @@
   wireAdd();
   wireRename();
   showProfile(profileMatch[0].toLowerCase());
-})();
+})(window);

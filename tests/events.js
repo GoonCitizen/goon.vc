@@ -135,6 +135,15 @@ describe('Events', function () {
     assert.strictEqual(BigInt(new URL(market.headers.Location).searchParams.get('permissions')),
       bit(10) | bit(11) | bit(16) | bit(29) | bit(34) | bit(35) | bit(38),
       'View, Send (new posts), Read History, Manage Webhooks, Manage Threads, Create Public Threads, Send in Threads');
+
+    const eventsInvite = { headers: {}, setHeader (k, v) { this.headers[k] = v; } };
+    await new Promise((resolve) => {
+      eventsInvite.end = resolve;
+      events.middleware()({ method: 'GET', url: '/services/discord/invite?for=events' }, eventsInvite, () => resolve());
+    });
+    assert.strictEqual(BigInt(new URL(eventsInvite.headers.Location).searchParams.get('permissions')),
+      bit(10) | bit(11) | bit(16) | bit(33),
+      'View, Send, Read History, and Manage Events, so /schedule can post a poll and create the event');
   });
 
   it('redirects to a user install of the application commands', async function () {

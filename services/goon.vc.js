@@ -29,6 +29,7 @@ const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
 const Market = require('./market');
 const Hangar = require('./hangar');
+const Schedule = require('./schedule');
 const GoonSite = require('../types/GoonSite');
 const pageMeta = require('../functions/pageMeta');
 const { assertStoreOpen } = require('../functions/startStore');
@@ -309,6 +310,22 @@ class GoonVC {
     };
   }
 
+  /**
+   * A compiled client script asked for at its current `?v=` (the URL the
+   * built pages use) never changes, so browsers keep it for a year. Any other
+   * request for it (no version, or an older build's) revalidates as usual.
+   * @returns {Function}
+   */
+  _clientScriptCacheMiddleware () {
+    const versions = new Map(new GoonSite(this.settings.site || {}).spa.clientScripts().map((client) => [client.src, client.version]));
+    return (req, res, next) => {
+      if ((req.method === 'GET' || req.method === 'HEAD') && versions.has(req.path) && req.query.v === versions.get(req.path)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+      return next();
+    };
+  }
+
   _restorePathMiddleware () {
     return (req, res, next) => {
       if (req.goonPageUrl) {
@@ -549,6 +566,28 @@ class GoonVC {
     }));
     for (const report of await this.tournaments.resultReports()) await postResults(report);
 
+    const scheduleSettings = this.settings.schedule || {};
+    if (scheduleSettings.enabled !== false) {
+      this.schedule = new Schedule({
+        path: scheduleSettings.path || './stores/schedule',
+        discord,
+        timeZone: scheduleSettings.timeZone,
+        gateway: () => (this.operations && this.operations.discord ? this.operations.discord.client : null),
+        inviteUrl: (purpose) => this.events.inviteUrl(purpose),
+        onScheduled: () => {
+          this.events.refresh().catch((error) => {
+            this.emit('error', 'GOON.VC', `could not refresh events after scheduling: ${error.message}`);
+          });
+        },
+        fetch: scheduleSettings.fetch,
+        resolveToken: scheduleSettings.resolveToken,
+        tick: scheduleSettings.tick
+      });
+      this.schedule.on('log', (...parts) => this.emit('log', ...parts));
+      this.schedule.on('error', (...parts) => this.emit('error', ...parts));
+      await this.schedule.start();
+    }
+
     const commandSettings = this.settings.commands || {};
     this.commands = new Commands({
       operations: commandSettings.enabled === false ? null : this.operations,
@@ -562,6 +601,7 @@ class GoonVC {
       welcome: this.welcome,
       reviews: this.reviews,
       hangar: this.hangar,
+      schedule: this.schedule,
       siteUrl: spa._site('siteUrl'),
       rsiPath: spa._site('rsiClaimPath'),
       votesPath: spa._site('permafleetVotesPath'),
@@ -690,6 +730,7 @@ class GoonVC {
 
     // HTTPServer mounts its own middleware (and express.static) in start().
     this.http.express.use(this._canonicalPathMiddleware());
+    this.http.express.use(this._clientScriptCacheMiddleware());
     this.http.on('debug', (...parts) => this.emit('debug', ...parts));
     this.http.on('error', (...parts) => this.emit('error', ...parts));
     this.http.on('log', (...parts) => this.emit('log', ...parts));
@@ -702,7 +743,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.market, this.alliance, this.fabric, this.commands, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
+    for (const service of [this.http, this.market, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

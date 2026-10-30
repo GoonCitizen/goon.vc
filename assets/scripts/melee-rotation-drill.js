@@ -1,27 +1,7 @@
+// Compiled from components/MeleeRotationDrill.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * <melee-rotation-drill> — self-contained PERMAFLEET flight-training drill.
- *
- * Three ships fly a chase chain: the evader runs, the attacker hunts, the
- * shadow tails the attacker with guns cold. Splash the evader and everyone
- * moves up one role while the next pilot on deck joins the tail.
- *
- * Attributes:
- *   heading        drill title (default "Melee Rotation Drill")
- *   eyebrow        line above the title (default "PERMAFLEET // FLIGHT TRAINING")
- *   description    replaces the intro paragraph (plain text)
- *   pilots         starting callsigns, comma separated (3–8; default examples)
- *   storage-key    localStorage key for the visitor's roster (default `mrd.roster`;
- *                  `none` disables saving)
- *   auto-every     seconds between auto-splashes (default 7)
- *   fonts          `none` skips loading Orbitron / Rajdhani / Share Tech Mono
- *
- * Keys (while the drill is on screen, outside form fields): Space splashes, P pauses.
- * Emits `splash` with `detail: { splashed, chain, deck, splashes }` and
- * `rosterchange` with `detail: { roster }`.
- */
-(function (root) {
+(function defineMeleeRotationDrill (root) {
   if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return;
   if (root.customElements.get('melee-rotation-drill')) return;
 
@@ -781,4 +761,4 @@ ol.chain,ol.deck{list-style:none;margin:0;padding:0;display:grid;gap:6px}
   }
 
   root.customElements.define('melee-rotation-drill', MeleeRotationDrill);
-})(typeof window !== 'undefined' ? window : undefined);
+})(window);

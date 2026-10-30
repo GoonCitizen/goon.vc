@@ -32,7 +32,7 @@ describe('Welcome DMs (join PERMAFLEET)', function () {
   it('skips alliance org members, Org Stewards, and anyone already in the PERMAFLEET program', function () {
     const roles = welcome.excludedRoles(contract);
     const names = Object.assign({}, ...Object.values(contract.exclude));
-    for (const name of ['[INFN] INFINITY INDUSTRIES', '[TRDE] TRANS-GALACTIC', '[LCRP] LEGACY CORP', 'DOUBLEDOG DELIVERY, INC.', '[4M] 4M Contractors', '[AIM] A.I.M.O.S.', 'G00N SQUAD', 'ORG STEWARDS', 'PERMAFLEET', '[P] Prospect I', '[E1] Enlisted 1']) {
+    for (const name of ['[INFN] INFINITY INDUSTRIES', '[TRDE] TRANS-GALACTIC', '[LCRP] LEGACY CORP', 'DOUBLEDOG DELIVERY, INC.', '[4M] 4M Contractors', '[AIM] A.I.M.O.S.', 'Risky Business', 'G00N SQUAD', 'ORG STEWARDS', 'PERMAFLEET', '[P] Prospect I', '[E1] Enlisted 1']) {
       assert.ok(roles.includes(names[name]), `${name} is excluded`);
     }
     assert.ok(!Object.keys(names).includes('PERMAFLEET GUESTS'), 'guests are who we want to bring in');

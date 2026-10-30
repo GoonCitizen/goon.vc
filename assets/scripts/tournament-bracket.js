@@ -1,45 +1,7 @@
+// Compiled from components/TournamentBracket.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * <tournament-bracket> — self-contained tournament bracket.
- *
- * Seed the players, score each game, and winners advance on their own.
- * Single elimination, or double elimination with a grand-final reset; every
- * set is best of n.
- *
- * Attributes:
- *   heading        tournament name (default "Tournament")
- *   eyebrow        line above the title (default: the format and set length,
- *                  e.g. "DOUBLE ELIMINATION // BEST OF 3")
- *   description    intro paragraph (plain text)
- *   format         `single-elimination` (default) or `double-elimination`
- *   best-of        games per set: odd, 1–9 (default 1; even values round up)
- *   players        starting seeds, comma separated, best seed first
- *   storage-key    localStorage key for the bracket (default `tournament-bracket`;
- *                  `none` disables saving)
- *   src            URL of a saved tournament record; the bracket loads and
- *                  saves there instead of localStorage (see below)
- *   fonts          `none` skips loading Orbitron / Rajdhani / Share Tech Mono
- *
- * With `src`, the record is `GET src` →
- * `{ name, format, bestOf, players, slots, record, status, locked, startsAt, results }`
- * (`locked` once it has had a champion: the padlock in the top right asks
- * for the password, `POST src/unlock { password }`, and edits then carry it
- * in an `X-Tournament-Password` header, kept in memory only), and every
- * change answers with that record:
- * `PUT src/players { players }` (seeds, before the first game),
- * `POST src/players { name }` (a player or latecomer),
- * `POST src/games { match, side, players }`,
- * `POST src/forfeits { match, side, players }` (`side` dropped out: a DQ),
- * `POST src/undo { match }` (the last game, or the DQ).
- *
- * Emits `bracketchange` with `detail: { players, format, bestOf, slots, record }`,
- * `matchcomplete` with `detail: { match, winner, loser, score, forfeit }`, and
- * `complete` with `detail: { champion }`.
- *
- * In Node the bracket engine is exported (no element is defined).
- */
-(function (root) {
+(function defineTournamentBracket (root) {
   const SINGLE = 'single-elimination';
   const DOUBLE = 'double-elimination';
   const MAX_PLAYERS = 64;
@@ -378,10 +340,9 @@
     roundName
   };
 
-  if (typeof module === 'object' && module && module.exports) module.exports = engine;
   if (root && !root.tournamentBracket) root.tournamentBracket = engine;
-  if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return;
-  if (root.customElements.get('tournament-bracket')) return;
+  if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return engine;
+  if (root.customElements.get('tournament-bracket')) return engine;
 
   /* ---------- element ---------- */
 
@@ -1059,4 +1020,5 @@ select{background:var(--ground);border:1px solid var(--edge);color:var(--bright)
   }
 
   root.customElements.define('tournament-bracket', TournamentBracket);
-})(typeof window !== 'undefined' ? window : undefined);
+  return engine;
+})(window);

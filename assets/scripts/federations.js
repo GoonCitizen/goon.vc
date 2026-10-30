@@ -1,12 +1,7 @@
+// Compiled from components/Federations.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * Fabric federations behind alliance votes: the index (the alliance
- * federation of member orgs and each org's federation of officers) and one
- * page per federation (its signers, threshold, descriptor, and the
- * proposals or alliances it decides in), all from the alliance service.
- */
-(function () {
+(function client () {
   const indexEl = document.getElementById('federations-page');
   const pageEl = document.getElementById('federation-page');
   if (!indexEl || !pageEl) return;
@@ -136,4 +131,4 @@
 
   if (onIndex) loadIndex();
   else loadFederation();
-})();
+})(window);

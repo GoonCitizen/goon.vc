@@ -1,8 +1,7 @@
+// Compiled from components/RsiClaimPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-// RSI claim page (components/RsiClaimPage.js): get a g00n: code, put it in
-// the RSI bio, verify. Also shows the member fleet totals.
-(function () {
+(function client () {
   var root = document.getElementById('rsi-page');
   if (!root) return;
   var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
@@ -134,4 +133,4 @@
     });
     fleet.hidden = false;
   }).catch(function () {});
-})();
+})(window);

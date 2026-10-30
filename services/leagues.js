@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
 const elo = require('../functions/elo');
-const { normalizeBestOf, parsePlayers } = require('../assets/scripts/tournament-bracket');
+const { normalizeBestOf, parsePlayers } = require('../components/TournamentBracket');
 const { normalizeHandle } = require('../functions/discordDirectory');
 
 const BASE = '/services/leagues';

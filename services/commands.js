@@ -5,10 +5,11 @@ const allianceChannels = require('../functions/allianceChannels');
 const allianceRoles = require('../functions/allianceRoles');
 const marketPost = require('../functions/marketPost');
 const marketEscrow = require('../functions/marketEscrow');
+const schedulePoll = require('../functions/schedulePoll');
 
 const EPHEMERAL = 64;
 const CHAT_INPUT = 1;
-const OPTION = { subcommand: 1, string: 3, integer: 4, user: 6, role: 8, attachment: 11 };
+const OPTION = { subcommand: 1, string: 3, integer: 4, user: 6, channel: 7, role: 8, attachment: 11 };
 const GUILD_CONTEXT = 0;
 const BOT_DM_CONTEXT = 1;
 const PRIVATE_CHANNEL_CONTEXT = 2;
@@ -23,6 +24,8 @@ const BUTTON = /^1v1:(confirm|decline):([0-9a-f]{12})$/;
 const CAMPAIGN_BUTTON = /^campaign:(send|schedule|cancel):([0-9a-f]{12})(?::(\d{1,12}))?(?::([0-9a-f]{8}))?$/;
 const SWITCH_BUTTON = /^(checkins|welcome):(send|stop|cancel)(?::([0-9a-f]{8}))?$/;
 const MARKET_BUTTON = new RegExp(`^${marketPost.BUY_PREFIX}([0-9a-f]{12})$`);
+const SCHED_VOTE = /^sched:vote:([0-9a-f]{12})$/;
+const SCHED_BUTTON = /^sched:(pick|skip):([0-9a-f]{12})(?::([0-9a-f]{2}))?$/;
 const MARKET_ROWS = 10;
 const REPLY_TEXT = 1900;
 const MARKET_STATUSES = ['available', 'reserved', 'sold', 'hidden'];
@@ -141,6 +144,42 @@ const DEFINITIONS = [
     ]
   },
   {
+    name: 'schedule',
+    description: 'Find a time that works, then put it on this server’s calendar.',
+    type: CHAT_INPUT,
+    contexts: [GUILD_CONTEXT],
+    integration_types: [GUILD_INSTALL],
+    options: [
+      {
+        type: OPTION.subcommand,
+        name: 'open',
+        description: 'Open a poll: named people or a role mark every time they can make.',
+        options: [
+          { type: OPTION.string, name: 'title', description: 'What the event is called', required: true, max_length: 100 },
+          { type: OPTION.string, name: 'people', description: 'Names or @handles, separated by commas', max_length: 400 },
+          { type: OPTION.role, name: 'role', description: 'Everyone with this role' },
+          { type: OPTION.role, name: 'also', description: 'And everyone with this role' },
+          { type: OPTION.integer, name: 'days', description: 'How many days ahead to offer (default 7)', min_value: 1, max_value: 14 },
+          { type: OPTION.string, name: 'times', description: 'Hours each day, like 4pm, 7pm, 10pm (default those three)', max_length: 80 },
+          { type: OPTION.integer, name: 'length', description: 'How many hours the event runs (default 2)', min_value: 1, max_value: 8 },
+          { type: OPTION.string, name: 'closes', description: 'When voting ends, like "in 2 days" or a date (default 24 hours)', max_length: 60 },
+          { type: OPTION.channel, name: 'voice', description: 'Voice or stage channel the event takes place in', channel_types: [2, 13] },
+          { type: OPTION.string, name: 'where', description: 'Location, when it isn’t in a voice channel (default: this server)', max_length: 100 },
+          { type: OPTION.string, name: 'zone', description: 'Time zone for the hours, like America/Chicago', max_length: 64 },
+          { type: OPTION.string, name: 'about', description: 'Notes that go on the Discord event', max_length: 500 }
+        ]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'close',
+        description: 'Close your poll now and pick from the best overlaps.',
+        options: [
+          { type: OPTION.string, name: 'poll', description: 'Which poll, if you have more than one open', max_length: 12 }
+        ]
+      }
+    ]
+  },
+  {
     name: 'market',
     description: 'The G00N SQUAD Market: pledges priced in BTC, with escrow.',
     type: CHAT_INPUT,
@@ -233,6 +272,7 @@ const HELP = {
   idlerpg: (commands) => `Everyone in a voice channel the bot can see earns XP; battles, gear, and finds happen on their own. Players and statistics: <${commands._url(commands.settings.idlerpgPath)}>`,
   '1v1': (commands) => `Run it as one of the two players. Your opponent gets Confirm and Decline buttons, and the duel counts once they confirm. Ratings: <${commands._url(`${commands.settings.leaguesPath}/${OPEN_LEAGUE_ID}`)}>`,
   vote: (commands) => `Any member’s vote is advisory. If you’re on record as an officer of a member org, your vote also counts toward your org’s vote, and the orgs’ votes decide. Proposals: <${commands._url(commands.settings.votesPath)}>`,
+  schedule: (commands) => `Name the people, a role, or both. They mark every time they can make on the message in that channel. When it closes you get the fullest times, and the one you pick becomes an event on that server. The week board: <${commands._url('/events')}>`,
   market: (commands) => {
     const market = commands._market();
     const browse = market && market.base ? ` Browse: <${commands._url(market.base)}>` : '';
@@ -355,6 +395,21 @@ function displayName (member, user) {
   return name ? String(name).trim() || null : null;
 }
 
+/** Role ids on a discord.js member, or the raw interaction's role id list. */
+function roleIds (member) {
+  const roles = member && member.roles;
+  if (!roles) return [];
+  if (Array.isArray(roles)) return roles.map(String);
+  const cache = roles.cache;
+  if (cache && typeof cache.keys === 'function') return [...cache.keys()].map(String);
+  return [];
+}
+
+function cannotPost (error) {
+  const code = error && (error.code != null ? Number(error.code) : Number(error.status));
+  return code === 50013 || code === 50001 || code === 403;
+}
+
 function rsiHandles (member) {
   return ((member && member.accounts) || []).filter((account) => account.platform === 'rsi').map((account) => account.id);
 }
@@ -379,7 +434,10 @@ function hasPermission (permissions, bit) {
  * reviewer gets the sign-ins waiting for review in DMs, through
  * {@link Reviews}), `/vote` (any member's advisory
  * vote on an alliance proposal, through {@link Alliance#memberVote}; an
- * officer on record also signs for their org, through {@link Alliance#vote}), and
+ * officer on record also signs for their org, through {@link Alliance#vote}),
+ * `/schedule` (a poll of named people or a role; when it closes the opener
+ * picks an overlap and goon.vc creates the Discord event on that server,
+ * through {@link Schedule}), and
  * `/market` (search, sell, edit, and buy on the Market, through {@link Market};
  * also user-installable, so it runs in DMs, plus the Buy with escrow button on
  * Market forum posts), `/rsi claim` (a private one-time link to claim an RSI
@@ -406,6 +464,7 @@ class Commands {
    * @param {Object|Function} [settings.welcome] Welcome service (`/goon welcome`), or a function returning it.
    * @param {Object|Function} [settings.reviews] Reviews service (`/goon review`), or a function returning it.
    * @param {Object} [settings.hangar] Hangar service (`/hangar`); unset leaves `/hangar` unregistered.
+   * @param {Object} [settings.schedule] Schedule service (`/schedule`); unset leaves `/schedule` unregistered.
    * @param {string} [settings.league] League `/1v1` logs to by default.
    * @param {string} [settings.siteUrl] Absolute site origin for links.
    * @param {string} [settings.idlerpgPath]
@@ -429,6 +488,7 @@ class Commands {
       welcome: null,
       reviews: null,
       hangar: null,
+      schedule: null,
       league: OPEN_LEAGUE_ID,
       siteUrl: 'https://goon.vc',
       idlerpgPath: '/services/idlerpg',
@@ -486,6 +546,7 @@ class Commands {
     running[allianceRoles.SCRIPT.subcommand] = scripts;
     const live = DEFINITIONS.map((definition) => {
       if (definition.name === 'market') return this.settings.market ? definition : null;
+      if (definition.name === 'schedule') return this._schedule() ? definition : null;
       if (definition.name === 'rsi') return this._members() ? definition : null;
       if (definition.name === 'hangar') {
         if (!this.settings.hangar || !this._members()) return null;
@@ -571,19 +632,39 @@ class Commands {
       return;
     }
     const isButton = typeof interaction.isButton === 'function' && interaction.isButton();
+    const isSelect = typeof interaction.isStringSelectMenu === 'function' && interaction.isStringSelectMenu();
     const button = isButton ? BUTTON.exec(String(interaction.customId || '')) : null;
     const campaignButton = isButton ? CAMPAIGN_BUTTON.exec(String(interaction.customId || '')) : null;
     const switchButton = isButton ? SWITCH_BUTTON.exec(String(interaction.customId || '')) : null;
     const marketButton = isButton ? MARKET_BUTTON.exec(String(interaction.customId || '')) : null;
+    const schedVote = isSelect ? SCHED_VOTE.exec(String(interaction.customId || '')) : null;
+    const schedButton = isButton ? SCHED_BUTTON.exec(String(interaction.customId || '')) : null;
     const command = typeof interaction.isChatInputCommand === 'function' && interaction.isChatInputCommand() &&
       COMMAND_NAMES.includes(interaction.commandName) ? interaction.commandName : null;
-    if (!button && !campaignButton && !switchButton && !marketButton && !command) return;
+    // A select menu this service doesn't own (a DM script) is left for Doorman.
+    if (isSelect && !schedVote) return;
+    if (!button && !campaignButton && !switchButton && !marketButton && !schedVote && !schedButton && !command) return;
     let out;
-    // Campaign, check-in, and welcome buttons read permissions from Discord and start sending, which can outlast the 3 s reply window.
+    // Campaign, check-in, welcome, and schedule buttons read from Discord or post an event, which can outlast the 3 s reply window.
     let updating = false;
     try {
+      // The offer’s buttons arrive in a DM, where there is no guild.
+      if (schedVote) out = await this.scheduleVote(interaction, schedVote[1]);
+      else if (schedButton) {
+        if (typeof interaction.deferUpdate === 'function') {
+          await interaction.deferUpdate();
+          updating = true;
+        }
+        out = await this.schedulePick(interaction, schedButton[1], schedButton[2], schedButton[3] || null);
       // `/help` runs anywhere and reads nothing about the caller.
-      if (command === 'help') out = this.help(interaction);
+      } else if (command === 'help') out = this.help(interaction);
+      else if (command === 'schedule') {
+        if (!interaction.guildId) out = this._private('Use this in a server.');
+        else {
+          if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
+          out = await this.scheduleCommand(interaction);
+        }
+      }
       // `/market` is also installed on members' own accounts, so it runs in DMs and servers without the bot.
       // `/rsi` and `/hangar` also run in the bot's DMs.
       else if (command === 'market' || marketButton || command === 'rsi' || command === 'hangar') {
@@ -620,7 +701,7 @@ class Commands {
         else out = await this.duel(interaction, member);
       }
     } catch (error) {
-      const where = command || (campaignButton ? 'goon campaign card' : switchButton ? `goon ${switchButton[1]} card` : marketButton ? 'market buy button' : '1v1 card');
+      const where = command || (schedButton || schedVote ? 'schedule' : campaignButton ? 'goon campaign card' : switchButton ? `goon ${switchButton[1]} card` : marketButton ? 'market buy button' : '1v1 card');
       if (!error || !error.status || error.status >= 500) this.emit('error', `commands /${where}`, errorMessage(error));
       out = this._private(error && error.status && error.status < 500 ? errorMessage(error) : 'Something went wrong; try again in a moment.');
     }
@@ -1392,6 +1473,106 @@ class Commands {
   _market () {
     const market = this.settings.market;
     return typeof market === 'function' ? market() : market;
+  }
+
+  _schedule () {
+    const schedule = this.settings.schedule;
+    return schedule && typeof schedule.open === 'function' ? schedule : null;
+  }
+
+  /**
+   * `/schedule open` posts a poll in this channel for the named people and
+   * roles. `/schedule close` ends it now. The overlaps, and the event, are
+   * the buttons that follow.
+   * @param {Object} interaction
+   * @returns {Promise<Object>}
+   */
+  async scheduleCommand (interaction) {
+    const schedule = this._schedule();
+    if (!schedule) return this._private('Scheduling is not running right now.');
+    if (interaction.user && interaction.user.bot) return this._private('Bots don’t schedule.');
+    const subcommand = this._subcommand(interaction);
+    if (subcommand === 'close') return this.scheduleClose(interaction, schedule);
+    if (subcommand === 'open') return this.scheduleOpen(interaction, schedule);
+    return this._private('Use `/schedule open` to start a poll.');
+  }
+
+  async scheduleOpen (interaction, schedule) {
+    const options = interaction.options;
+    const channel = interaction.channel;
+    if (!channel || typeof channel.send !== 'function') return this._private('Run this in a channel.');
+    const role = this._role(options, 'role');
+    const also = this._role(options, 'also');
+    const voice = typeof options.getChannel === 'function' ? options.getChannel('voice') : null;
+    const record = await schedule.open({
+      guildId: String(interaction.guildId),
+      guildName: (interaction.guild && interaction.guild.name) || 'this server',
+      guild: interaction.guild,
+      channelId: interaction.channelId || channel.id,
+      creatorId: String(interaction.user.id),
+      creatorName: displayName(interaction.member, interaction.user) || 'there',
+      title: options.getString('title'),
+      about: options.getString('about'),
+      people: options.getString('people'),
+      roles: [role, also].filter(Boolean).map((entry) => ({ id: String(entry.id), name: entry.name })),
+      days: typeof options.getInteger === 'function' ? options.getInteger('days') : null,
+      times: options.getString('times'),
+      length: typeof options.getInteger === 'function' ? options.getInteger('length') : null,
+      closes: options.getString('closes'),
+      zone: options.getString('zone'),
+      where: options.getString('where'),
+      voice: voice ? { id: String(voice.id), name: voice.name, type: voice.type } : null
+    });
+    let sent;
+    try {
+      sent = await channel.send(Object.assign({ allowedMentions: { parse: [] } }, schedulePoll.pollMessage(record)));
+    } catch (error) {
+      await schedule.discard(record.id).catch(() => {});
+      if (cannotPost(error)) {
+        const invite = await schedule.invite('events');
+        return this._private(invite
+          ? `I can’t post in this channel. A manager can allow it here: ${invite}`
+          : 'I can’t post in this channel.');
+      }
+      throw error;
+    }
+    try {
+      await schedule.attachMessage(record.id, sent.id);
+    } catch (error) {
+      await schedule.discard(record.id).catch(() => {});
+      if (typeof sent.delete === 'function') await sent.delete().catch(() => {});
+      throw error;
+    }
+    return this._private(schedulePoll.openedText(record));
+  }
+
+  async scheduleClose (interaction, schedule) {
+    const record = await schedule.close(interaction.options.getString('poll'), String(interaction.user.id), String(interaction.guildId));
+    const title = escapeMarkdown(record.title);
+    if (record.status === 'cancelled') return this._private(`Closed **${title}**. Nobody answered, so there’s no event.`);
+    if (!record.offered) return this._private(`Closed **${title}**. I couldn’t message you just now; I’ll try again shortly.`);
+    if (record.offerVia === 'channel') return this._private(`**${title}** is closed. I couldn’t DM you, so the best overlaps are in the channel. Only you can pick.`);
+    return this._private(`Closed **${title}**. I sent you the best overlaps.`);
+  }
+
+  async scheduleVote (interaction, id) {
+    const schedule = this._schedule();
+    if (!schedule) return this._private('Scheduling is not running right now.');
+    const record = await schedule.vote(id, {
+      userId: String(interaction.user.id),
+      name: displayName(interaction.member, interaction.user) || 'Someone',
+      roleIds: roleIds(interaction.member),
+      slots: interaction.values || []
+    });
+    return { update: schedulePoll.pollMessage(record) };
+  }
+
+  async schedulePick (interaction, action, id, slotId) {
+    const schedule = this._schedule();
+    if (!schedule) return this._private('Scheduling is not running right now.');
+    if (action === 'pick' && !slotId) return this._private('That time isn’t one of the overlaps.');
+    const record = await schedule.pick(id, String(interaction.user.id), action === 'skip' ? null : slotId);
+    return { update: schedulePoll.choiceMessage(record, this.settings.siteUrl) };
   }
 
   /** A listing as one Discord line: linked title, price, status, seller. */

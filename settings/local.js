@@ -44,14 +44,16 @@ module.exports = {
     redirectUri: process.env.DISCORD_REDIRECT_URI || null,
     schedule: {
       brand: process.env.DISCORD_SCHEDULE_BRAND || 'permafleet',
-      // Member orgs' Discord servers whose events join guildId's on the
-      // PERMAFLEET schedule. The bot must be in each to see their events.
+      // Member orgs' and squadrons' Discord servers whose events join guildId's
+      // on the PERMAFLEET schedule. The bot must be in each to see their events.
       servers: process.env.DISCORD_SCHEDULE_SERVERS
         ? process.env.DISCORD_SCHEDULE_SERVERS.split(',').map((id) => id.trim()).filter(Boolean)
         : [
             '1145511542637482114', // 4M-CONTRACTORS (discord.gg/4m-contractors)
             '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
-            '1439226629867044976' // AIMOS (discord.gg/aimos)
+            '1439226629867044976', // AIMOS (discord.gg/aimos)
+            '1200935959961817088', // Risky Business, IDBC (discord.gg/riskyb)
+            '635948860459450400' // SC Shellback, SHELLBACK squadron (no public invite)
           ],
       // Last successful fetch; reused when Discord is unreachable.
       snapshot: 'stores/discord/scheduled-events.json'
@@ -79,6 +81,14 @@ module.exports = {
   // /events: scheduled events from every guild the Discord bot is in (Fabric Store cache).
   events: {
     path: process.env.GOON_EVENTS_STORE || 'stores/events'
+  },
+
+  // /schedule: an availability poll for named people or a role, then a Discord
+  // scheduled event on that server for the time the opener picks.
+  schedule: {
+    enabled: process.env.GOON_SCHEDULE !== '0',
+    path: process.env.GOON_SCHEDULE_STORE || 'stores/schedule',
+    timeZone: process.env.GOON_SCHEDULE_TZ || 'America/Chicago'
   },
 
   // /services/operations: per-operation metrics from Discord gateway events (Fabric Store).

@@ -20,6 +20,9 @@ const CHANNEL_INVITE_PERMISSIONS = allianceChannels.invitePermissions();
 // `?for=market`: mirror the Market forum — View Channel, Send Messages (new posts), Read
 // Message History, Manage Webhooks, Manage Threads, Create Public Threads, Send Messages in Threads.
 const MARKET_INVITE_PERMISSIONS = String((1n << 10n) | (1n << 11n) | (1n << 16n) | (1n << 29n) | (1n << 34n) | (1n << 35n) | (1n << 38n));
+// `?for=events`: post a /schedule poll and create the Guild Scheduled Event it picks.
+// View Channel, Send Messages, Read Message History, Manage Events.
+const EVENTS_INVITE_PERMISSIONS = String((1n << 10n) | (1n << 11n) | (1n << 16n) | (1n << 33n));
 // Adds the application's commands (/market) to a member's own account rather than a server.
 const INSTALL_PATH = '/services/discord/install';
 const USER_INSTALL = '1';
@@ -411,13 +414,16 @@ class Events {
   /**
    * "Add to Discord" URL for the bot that feeds /events. Re-running it on a
    * server the bot is already in updates the bot's permissions there.
-   * @param {string} [purpose] `channels` adds what the PERMAFLEET channel scripts need, `market` what the Market forum mirror needs.
+   * @param {string} [purpose] `channels` adds what the PERMAFLEET channel scripts need, `market` what the Market forum mirror needs, `events` what `/schedule` needs to post a poll and create the event.
    * @returns {Promise<string|null>}
    */
   async inviteUrl (purpose = null) {
     const id = await this.applicationId();
     if (!id) return null;
-    const permissions = purpose === 'channels' ? CHANNEL_INVITE_PERMISSIONS : purpose === 'market' ? MARKET_INVITE_PERMISSIONS : INVITE_PERMISSIONS;
+    const permissions = purpose === 'channels' ? CHANNEL_INVITE_PERMISSIONS
+      : purpose === 'market' ? MARKET_INVITE_PERMISSIONS
+        : purpose === 'events' ? EVENTS_INVITE_PERMISSIONS
+          : INVITE_PERMISSIONS;
     const q = new URLSearchParams({ client_id: id, scope: 'bot applications.commands', permissions });
     return `https://discord.com/oauth2/authorize?${q}`;
   }

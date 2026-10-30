@@ -101,7 +101,7 @@ describe('PERMAFLEET schedule', function () {
     assert.ok(tall.includes('data-hook="schedule-timezone"'));
     assert.ok(tall.includes('data-hook="schedule-legend"'));
     assert.ok(!tall.includes('id="schedule-title"'));
-    const calendar = fs.readFileSync(path.join(__dirname, '../assets/scripts/fabric-calendar.js'), 'utf8');
+    const calendar = fs.readFileSync(path.join(__dirname, '../components/FabricCalendar.js'), 'utf8');
     assert.ok(calendar.includes(`const NARROW_MEDIA = '(max-width: ${graphic.VERTICAL_MAX_WIDTH}px)'`));
     assert.ok(calendar.includes('.layout-tall { display: block !important; }'));
   });

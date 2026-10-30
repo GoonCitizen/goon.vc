@@ -5,17 +5,16 @@ const https = require('https');
 const { URL } = require('url');
 
 /**
- * Same-origin Hub API paths the public site (device-link, JSON-RPC, identity
- * cluster) needs. Everything else stays HTML or 404 — not a Hub, not
+ * Same-origin Hub API paths the public site needs: the linked-signer
+ * rendezvous and mailbox (delegation frames) and JSON-RPC. Everything else stays HTML or 404 — not a Hub, not
  * LiveRelay. `/sessions` is goon.vc's own login page: a Passport challenge is
  * pinned to the origin it was issued for, so the Hub's sessions could never
  * sign anyone in here.
  */
 const HUB_API_PREFIXES = Object.freeze([
-  '/device-links',
-  '/services/rpc',
-  '/identity/cluster',
-  '/identity/cross-sign'
+  '/delegations',
+  '/services/delegation/mailbox',
+  '/services/rpc'
 ]);
 
 const HOP_BY_HOP = new Set([
@@ -55,29 +54,12 @@ function isHubApiPath (pathname) {
   return false;
 }
 
-function wantsHtmlNavigation (req) {
-  const a = req && req.headers && req.headers.accept;
-  if (typeof a !== 'string') return false;
-  const first = a.split(',')[0].trim().toLowerCase().split(';')[0];
-  return first === 'text/html';
-}
-
 /**
- * Browser GET /device-links should render GoonSPA, not Hub JSON.
- * JSON polls and all mutating methods still proxy.
  * @param {import('http').IncomingMessage} req
  * @returns {boolean}
  */
 function shouldProxyHubApi (req) {
-  const pathname = parsePathname(req);
-  if (!isHubApiPath(pathname)) return false;
-  const method = String((req && req.method) || 'GET').toUpperCase();
-  if (method === 'GET' || method === 'HEAD') {
-    if (pathname === '/device-links' && wantsHtmlNavigation(req)) {
-      return false;
-    }
-  }
-  return true;
+  return isHubApiPath(parsePathname(req));
 }
 
 function normalizeHubOrigin (raw) {
@@ -332,7 +314,6 @@ module.exports = {
   DEFAULT_TIMEOUT_MS,
   parsePathname,
   isHubApiPath,
-  wantsHtmlNavigation,
   shouldProxyHubApi,
   normalizeHubOrigin,
   createHubList,

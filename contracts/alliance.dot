@@ -6,6 +6,7 @@ digraph Alliance {
   "Trade Trans-Galactic"
   "4M Contractors"
   "A.I.M.O.S."
+  "Risky Business"
 
   "Black Exodus"
   "GrieferNet"
@@ -41,6 +42,7 @@ digraph Alliance {
     "Trade Trans-Galactic"
     "4M Contractors"
     "A.I.M.O.S."
+    "Risky Business"
   }
 
   subgraph cluster_protectorate {
@@ -53,6 +55,7 @@ digraph Alliance {
     "Trade Trans-Galactic"
     "4M Contractors"
     "A.I.M.O.S."
+    "Risky Business"
 
     subgraph cluster_inhouse {
       label = "In-House"

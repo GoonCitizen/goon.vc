@@ -1,14 +1,7 @@
+// Compiled from components/PermafleetVotes.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * PERMAFLEET alliance votes: the index (member orgs, every proposal, and a
- * proposal form for officers) and one page per proposal (each org's vote,
- * an officer ballot with the votes of fellow officers, every member's
- * advisory vote, and the signed Federation messages), all through the
- * alliance service. Officers act while signed in with the account
- * leadership has on record; goon.vc signs for them.
- */
-(function () {
+(function client () {
   const indexEl = document.getElementById('pf-votes-page');
   const pageEl = document.getElementById('pf-vote-page');
   if (!indexEl || !pageEl) return;
@@ -345,4 +338,4 @@
 
   if (onIndex) loadIndex();
   else loadProposal();
-})();
+})(window);

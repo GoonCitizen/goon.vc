@@ -32,6 +32,11 @@ const MarketPage = require('../components/MarketPage');
 const RsiClaimPage = require('../components/RsiClaimPage');
 const WaitingPage = require('../components/WaitingPage');
 const MembersPage = require('../components/MembersPage');
+const FabricCalendar = require('../components/FabricCalendar');
+const MeleeRotationDrill = require('../components/MeleeRotationDrill');
+const TournamentBracket = require('../components/TournamentBracket');
+const ClipLibrary = require('../components/ClipLibrary');
+const ClipTimelineEditor = require('../components/ClipTimelineEditor');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -105,8 +110,8 @@ const DEFAULTS = {
     name: 'Melee Rotation Drill',
     tagline: 'Evader, attacker, shadow. Splash and rotate.',
     summary: 'Three ships fly a chase chain: the evader runs, the attacker hunts, the shadow tails the attacker with guns cold. Splash the evader and everyone moves up one role while the next pilot on deck joins the tail.',
-    element: 'melee-rotation-drill',
-    script: '/scripts/melee-rotation-drill.js'
+    element: MeleeRotationDrill.tag,
+    script: MeleeRotationDrill.client.url
   }],
   // Tournaments: /tournaments index, /tournaments/<series>, /tournaments/<series>/<date>
   // (records in the tournaments Store, services/tournaments.js).
@@ -251,6 +256,29 @@ class GoonSPA extends FabricSPA {
    */
   metaSite () {
     return { origin: this._site('siteUrl'), name: this._site('title') };
+  }
+
+  /**
+   * Browser code compiled from components into `assets/scripts/` by
+   * `npm run build`; the pages load it with a deferred `<script>`.
+   * @returns {Array<{ src: string, file: string, compile: function(): string, tag: function(): string }>}
+   */
+  clientScripts () {
+    return [
+      FabricCalendar,
+      MeleeRotationDrill,
+      TournamentBracket,
+      ClipLibrary,
+      ClipTimelineEditor,
+      MembersPage,
+      WaitingPage,
+      RsiClaimPage,
+      Federations,
+      PermafleetVotes,
+      LeaguesPage,
+      MarketPage,
+      TournamentsPage
+    ].map((component) => component.client);
   }
 
   /**

@@ -15,9 +15,13 @@ describe('goon.vc', function () {
     it('allowlists Hub API prefixes only', function () {
       assert.ok(!isHubApiPath('/sessions'), 'the login page is goon.vc\'s own');
       assert.ok(!isHubApiPath('/sessions/abc'));
-      assert.ok(isHubApiPath('/device-links/xyz/signatures'));
+      assert.ok(isHubApiPath('/delegations/abc/frames'));
       assert.ok(isHubApiPath('/services/rpc'));
-      assert.ok(isHubApiPath('/identity/cluster'));
+      assert.ok(isHubApiPath('/services/delegation/mailbox'));
+      assert.ok(!isHubApiPath('/services/delegation'), 'the loopback delegate is never proxied');
+      assert.ok(!isHubApiPath('/device-links'));
+      assert.ok(!isHubApiPath('/identity/cross-sign'));
+      assert.ok(!isHubApiPath('/identity/cluster'));
       assert.ok(!isHubApiPath('/services/star-citizen'));
       assert.ok(!isHubApiPath('/services/bitcoin'));
       assert.ok(!isHubApiPath('/'));
@@ -25,19 +29,14 @@ describe('goon.vc', function () {
       assert.ok(!HUB_API_PREFIXES.includes('/sessions'));
     });
 
-    it('never proxies /sessions, and keeps HTML navigation to /device-links here', function () {
+    it('never proxies /sessions; proxies linked-signer rendezvous frames', function () {
       for (const method of ['GET', 'POST']) {
         assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions', headers: { accept: 'application/json' } }), false);
         assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions/deadbeef', headers: { accept: 'application/json' } }), false);
       }
       assert.strictEqual(shouldProxyHubApi({
         method: 'GET',
-        url: '/device-links',
-        headers: { accept: 'text/html' }
-      }), false);
-      assert.strictEqual(shouldProxyHubApi({
-        method: 'GET',
-        url: '/device-links/deadbeef',
+        url: '/delegations/deadbeef',
         headers: { accept: 'application/json' }
       }), true);
     });
@@ -300,6 +299,7 @@ describe('goon.vc HTTP', function () {
       fabric: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-fabric-test-')) },
       alliance: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-alliance-test-')) },
       market: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-market-test-')), sync: false, rateUrl: null },
+      schedule: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-schedule-test-')), tick: false },
       listen: true
     });
     await site.start();
@@ -564,7 +564,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(!calendar[0].includes('src='), 'no server picker');
     assert.ok(calendar[0].includes('storage-key="goon.events.timeZone"'), 'shares the zone picked on /events');
     assert.ok(!page.includes('<img'), 'no static poster');
-    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12}" defer><\/script>/);
   });
 
   it('serves the /operations index listing PERMAFLEET', async function () {
@@ -684,7 +684,7 @@ describe('goon.vc HTTP', function () {
     const drill = await fetchJson('/drills/melee-rotation', { headers: { Accept: 'text/html' } });
     assert.strictEqual(drill.status, 200);
     assert.ok(drill.body.includes('<melee-rotation-drill class="drill-element" heading="Melee Rotation Drill"></melee-rotation-drill>'));
-    assert.ok(drill.body.includes('<script src="/scripts/melee-rotation-drill.js" defer></script>'));
+    assert.match(drill.body, /<script src="\/scripts\/melee-rotation-drill\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(drill.body.includes('<meta property="og:title" content="Melee Rotation Drill — GOON SQUAD">'), 'per-drill Open Graph');
 
     const script = await fetchJson('/scripts/melee-rotation-drill.js');
@@ -711,8 +711,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(!index.body.includes('saturday-1v1'), 'no built-in tournament pages');
     assert.ok(index.body.includes('id="tournament-create-form"'), 'anyone can create a tournament');
     assert.ok(index.body.includes('<meta property="og:title" content="TOURNAMENTS — GOON SQUAD">'));
-    assert.ok(index.body.includes('<script src="/scripts/tournament-bracket.js" defer></script>'));
-    assert.ok(index.body.includes('<script src="/scripts/tournaments.js" defer></script>'));
+    assert.match(index.body, /<script src="\/scripts\/tournament-bracket\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.match(index.body, /<script src="\/scripts\/tournaments\.js\?v=[0-9a-f]{12}" defer><\/script>/);
 
     const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
     assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/tournaments"'), 'listed on /resources');
@@ -803,7 +803,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(index.body.includes('id="leagues-page"'));
     assert.ok(index.body.includes('id="league-create-form"'), 'anyone can create a league');
     assert.ok(index.body.includes('<meta property="og:title" content="LEAGUES — GOON SQUAD">'));
-    assert.ok(index.body.includes('<script src="/scripts/leagues.js" defer></script>'));
+    assert.match(index.body, /<script src="\/scripts\/leagues\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
     assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/leagues"'), 'listed on /resources');
 
@@ -863,15 +863,15 @@ describe('goon.vc HTTP', function () {
     const siteNav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(res.body)[1];
     assert.ok(!siteNav.includes('Organizations') && !siteNav.includes('ORGANIZATIONS'), 'not in the site header');
     assert.ok(new RegExp(`id="operation-permafleet"[\\s\\S]*?Weekly ops schedule &raquo;</a> · <a href="${base}">Member organizations &raquo;</a>`).test(res.body), 'linked from PERMAFLEET');
-    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']) {
       assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
       assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);
       assert.ok(res.body.includes(`<li><a class="op-member" href="${base}/${symbol}">`), `${symbol} charter tile`);
     }
     const charter = res.body.slice(res.body.indexOf('id="permafleet-charter"'), res.body.indexOf('</section>', res.body.indexOf('id="permafleet-charter"')));
     assert.ok(charter.includes('<img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">'), 'charter tiles carry org logos');
-    assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 19 members</span>'));
-    assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 8, 'every tile is badged as a member');
+    assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 21 members</span>'));
+    assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 9, 'every tile is badged as a member');
     const tiles = [...charter.matchAll(/<li><a class="([^"]+)" href="([^"]+)">/g)].map((m) => `${m[1]} ${m[2]}`);
     assert.strictEqual(tiles[tiles.length - 1], 'op-member op-member-add /operations/PERMAFLEET/onboarding', 'last tile invites new orgs to onboarding');
     assert.ok(charter.includes('<span class="op-member-name">Your org here</span>'));
@@ -934,7 +934,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(page.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'tag up on RSI');
     assert.ok(page.includes('href="/services/discord/invite"'), 'add the bot');
     assert.ok(page.includes('href="/operations/PERMAFLEET/squadrons"'));
-    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']) {
       assert.ok(page.includes(`<li><a href="/organizations/${symbol}">[${symbol}] `), `${symbol} listed`);
     }
     assert.ok(!/\d{17,}/.test(page.replace(/https:\/\/discord\.com\/[^"]+/g, '')), 'no Discord ids outside Discord links');
@@ -947,7 +947,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('<meta property="og:title" content="PERMAFLEET Votes — GOON SQUAD">'));
     assert.ok(res.body.includes('<main id="pf-votes-page" class="pf-page pf-votes" data-api="/services/alliance"'));
     assert.ok(res.body.includes('<main id="pf-vote-page"'));
-    assert.ok(res.body.includes('<script src="/scripts/alliance-votes.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/alliance-votes\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const proposalPage = await fetchJson('/operations/PERMAFLEET/votes/0123456789ab', { headers: { Accept: 'text/html' } });
     assert.strictEqual(proposalPage.status, 200, 'proposal pages are the SPA');
 
@@ -955,8 +955,8 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(overview.status, 200);
     assert.strictEqual(overview.json.status, 'ready');
     assert.strictEqual(overview.json.name, 'PERMAFLEET');
-    assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']);
-    assert.strictEqual(overview.json.federation.threshold, 4, 'majority of seven orgs');
+    assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']);
+    assert.strictEqual(overview.json.federation.threshold, 5, 'majority of eight orgs');
     assert.strictEqual(overview.json.federation.id.length, 64);
     assert.deepStrictEqual(overview.json.you, { signedIn: false, officers: [] });
     assert.ok(!overview.body.includes('discord:'), 'no account keys');
@@ -994,7 +994,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('<meta property="og:title" content="Federations — GOON SQUAD">'));
     assert.ok(res.body.includes('<main id="federations-page" class="pf-page pf-votes pf-federations" data-api="/services/alliance/federations"'));
     assert.ok(res.body.includes('<main id="federation-page"'));
-    assert.ok(res.body.includes('<script src="/scripts/federations.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/federations\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const header = res.body.slice(res.body.indexOf('id="permafleet-header"'), res.body.indexOf('</header>', res.body.indexOf('id="permafleet-header"')));
     assert.ok(!header.includes('/federations') && !header.includes('/votes'), 'neither federations nor votes are in the PERMAFLEET menu');
 
@@ -1009,7 +1009,7 @@ describe('goon.vc HTTP', function () {
     const page = await fetchJson(alliance.path, { headers: { Accept: 'text/html' } });
     assert.strictEqual(page.status, 200);
     assert.ok(page.body.includes('<meta property="og:title" content="PERMAFLEET federation — GOON SQUAD">'));
-    assert.ok(page.body.includes('4 of 7 member orgs decide'));
+    assert.ok(page.body.includes('5 of 8 member orgs decide'));
     const detail = await fetchJson(`/services/alliance/federations/${alliance.shortId}`);
     assert.strictEqual(detail.status, 200);
     assert.deepStrictEqual(detail.json.organizations.map((org) => org.symbol), overview.json.federation.organizations.map((org) => org.symbol));
@@ -1080,8 +1080,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(page.body.includes('<clip-library></clip-library>'));
     assert.ok(page.body.includes('<main id="clip-timeline-page"'));
     assert.ok(page.body.includes('<main id="clip-project-page"'));
-    assert.ok(page.body.includes('<script src="/scripts/clip-library.js" defer></script>'));
-    assert.ok(page.body.includes('<script src="/scripts/clip-timeline-editor.js" defer></script>'));
+    assert.match(page.body, /<script src="\/scripts\/clip-library\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.match(page.body, /<script src="\/scripts\/clip-timeline-editor\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(page.body.includes('<h2 class="operation-name"><a href="/clips">Clips</a></h2>'), 'resources card');
     const timeline = await fetchJson('/clips/timeline?session=s-1', { headers: { Accept: 'text/html' } });
     assert.strictEqual(timeline.status, 200);
@@ -1170,7 +1170,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('id="waiting-page"'));
     assert.ok(res.body.includes('data-path="/waiting"'));
-    assert.ok(res.body.includes('<script src="/scripts/waiting.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/waiting\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(res.body.includes('<title>Waiting area — GOON SQUAD</title>'), 'its own link preview');
     assert.ok(res.body.includes('var waitingPath = "/waiting";'), 'the login page points waiting members there');
     const script = await fetchJson('/scripts/waiting.js');
@@ -1182,7 +1182,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(index.status, 200);
     assert.ok(index.body.includes('id="members-page"'));
     assert.ok(index.body.includes('id="member-page"'));
-    assert.ok(index.body.includes('<script src="/scripts/members.js" defer></script>'));
+    assert.match(index.body, /<script src="\/scripts\/members\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(index.body.includes('<title>Members — GOON SQUAD</title>'));
     const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(index.body)[1];
     assert.ok(!nav.includes('/members') && !nav.includes('PROFILE'), 'no profile link in the header');
@@ -1245,16 +1245,24 @@ describe('goon.vc HTTP', function () {
     assert.ok(calendar[0].includes('description="Upcoming scheduled events from every Discord server we fly with."'));
     assert.ok(!/<h1|<select|<button|<p /.test(page.replace(calendar[0], '').replace(/<footer>[\s\S]*<\/footer>/, '')), 'nothing outside the calendar but the footer');
     assert.ok(/<footer>[\s\S]*href="\/services\/discord\/invite"[^>]*>Add our bot to your Discord<\/a>/.test(page), 'add-bot button in the footer');
-    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
-    const element = await new Promise((resolve, reject) => {
-      http.get({ host: '127.0.0.1', port: sitePort, path: '/scripts/fabric-calendar.js' }, (incoming) => {
+    assert.match(res.body, /<script src="\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const getScript = (pathname) => new Promise((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port: sitePort, path: pathname }, (incoming) => {
         const chunks = [];
         incoming.on('data', (c) => chunks.push(c));
-        incoming.on('end', () => resolve({ status: incoming.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+        incoming.on('end', () => resolve({ status: incoming.statusCode, headers: incoming.headers, body: Buffer.concat(chunks).toString('utf8') }));
       }).on('error', reject);
     });
+    const element = await getScript('/scripts/fabric-calendar.js');
     assert.strictEqual(element.status, 200);
     assert.ok(element.body.includes("customElements.define('fabric-calendar'"));
+    assert.ok(!/immutable/.test(element.headers['cache-control'] || ''), 'an unversioned script revalidates');
+    const versioned = await getScript(/<script src="(\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12})"/.exec(res.body)[1]);
+    assert.strictEqual(versioned.status, 200);
+    assert.strictEqual(versioned.body, element.body);
+    assert.strictEqual(versioned.headers['cache-control'], 'public, max-age=31536000, immutable', 'the page’s versioned URL is kept for good');
+    const outdated = await getScript('/scripts/fabric-calendar.js?v=000000000000');
+    assert.ok(!/immutable/.test(outdated.headers['cache-control'] || ''), 'an older build’s URL revalidates');
     assert.ok(res.body.includes('<a href="/events">EVENTS</a>'));
     const header = res.body.slice(res.body.indexOf('id="site-header"'), res.body.indexOf('</header>'));
     assert.ok(header.includes('<a href="/operations/PERMAFLEET">PERMAFLEET</a>'), 'links straight to PERMAFLEET');
@@ -1393,6 +1401,7 @@ describe('goon.vc page paths', function () {
       fabric: { path: path.join(root, 'fabric') },
       alliance: { path: path.join(root, 'alliance') },
       market: { path: path.join(root, 'market'), sync: false, rateUrl: null },
+      schedule: { path: path.join(root, 'schedule'), tick: false },
       listen: true
     });
     await site.start();

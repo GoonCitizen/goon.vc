@@ -6,8 +6,8 @@ Public **HTML zipper** for the Fabric suite. Not a Hub and not a GoonCitizen rel
 
 ## What this process is
 `@fabric/http` `HTTPServer` serving `assets/` and reverse-proxying
-`/device-links`, `/services/rpc`, and `/identity/cluster` + `/identity/cross-sign`
-to `FABRIC_HUB_ORIGIN` (default `https://hub.fabric.pub`) for other clients;
+the linked-signer rendezvous and mailbox (`/delegations`,
+`/services/delegation/mailbox`) and `/services/rpc` to `FABRIC_HUB_ORIGIN` (default `https://hub.fabric.pub`) for other clients;
 member login does not use them. `/sessions` is goon.vc's own login page and is
 never proxied. No Fabric Peer listen,
 no Bitcoin, no Discord bot, no `/services/star-citizen`.

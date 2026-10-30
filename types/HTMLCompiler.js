@@ -5,7 +5,9 @@ const path = require('path');
 const GoonSite = require('./GoonSite');
 
 /**
- * Compile the GoonSPA HTML document (no webpack / Hub UI bundle).
+ * Compile the GoonSPA HTML document and the browser code of its components
+ * (`GoonSPA#clientScripts`, written under `scripts/` beside it); no webpack / Hub
+ * UI bundle.
  */
 class HTMLCompiler {
   /**
@@ -26,6 +28,11 @@ class HTMLCompiler {
     const dir = path.dirname(target);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(target, html);
+    for (const client of this.site.spa.clientScripts()) {
+      const file = path.join(dir, client.src);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, client.compile());
+    }
     return true;
   }
 }

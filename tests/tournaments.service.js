@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const Tournaments = require('../services/tournaments');
 const Leagues = require('../services/leagues');
-const engine = require('../assets/scripts/tournament-bracket');
+const engine = require('../components/TournamentBracket');
 
 const SATURDAY = {
   name: 'Saturday 1v1',

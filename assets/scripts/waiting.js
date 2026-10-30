@@ -1,8 +1,7 @@
+// Compiled from components/WaitingPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-// Waiting area (components/WaitingPage.js): shows where the signed-in
-// member's review stands, and checks again every minute while they wait.
-(function () {
+(function client () {
   var root = document.getElementById('waiting-page');
   if (!root) return;
   var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
@@ -71,4 +70,4 @@
   call('/services/members').then(function (r) {
     reviewsOn = !(r.ok && r.j && r.j.review === false);
   }).catch(function () {}).then(refresh);
-})();
+})(window);

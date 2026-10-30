@@ -2,8 +2,8 @@
 
 const escapeHtml = require('../functions/escapeHtml');
 const { DEFAULT_TIME_ZONE } = require('../functions/discordScheduledEvents');
+const FabricCalendar = require('./FabricCalendar');
 
-const ELEMENT_SCRIPT = '/scripts/fabric-calendar.js';
 const BOARD_PATH = '/services/events/schedule.svg';
 const SUMMARY_PATH = '/services/events';
 
@@ -39,7 +39,7 @@ function renderCalendar (opts = {}) {
 }
 
 /**
- * The whole page is one `<fabric-calendar>` (assets/scripts/fabric-calendar.js);
+ * The whole page is one `<fabric-calendar>` (components/FabricCalendar.js);
  * its heading, description, and controls all live on the board.
  * @param {Object} props
  * @param {string} props.description Plain text.
@@ -65,7 +65,7 @@ function renderEventsHtml (props) {
 
 /** Loads the element for every calendar on the page. */
 function renderEventsScript () {
-  return `<script src="${ELEMENT_SCRIPT}" defer></script>`;
+  return FabricCalendar.client.tag();
 }
 
 module.exports = {

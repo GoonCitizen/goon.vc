@@ -39,10 +39,10 @@
   },
   "homepage": "https://github.com/GoonCitizen/goon.vc#readme",
   "dependencies": {
-    "@fabric/discord": "FabricLabs/fabric-discord#feature/channels",
-    "@fabric/doorman": "FabricLabs/doorman#feature/channels",
-    "@fabric/http": "FabricLabs/fabric-http#54cabec9c4d13a8399d9677834c33f91a5ef9818",
-    "idlerpg": "FabricLabs/idlerpg#feature/channels"
+    "@fabric/discord": "FabricLabs/fabric-discord#feature/passport",
+    "@fabric/doorman": "FabricLabs/doorman#feature/passport",
+    "@fabric/http": "FabricLabs/fabric-http#passport",
+    "idlerpg": "FabricLabs/idlerpg#feature/passport"
   },
   "devDependencies": {
     "c8": "=10.1.3",

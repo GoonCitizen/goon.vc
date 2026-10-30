@@ -230,18 +230,48 @@ function renderLoginScript (props) {
 
         // Signs in with Passport, or links its identity to the signed-in
         // member. Resolves with the members service's answer.
+        // The Passport protocol version that answered PASSPORT_HELLO; 1 when
+        // only an older Passport's data-fabric-passport marker is on the page;
+        // null when there is none.
+        function detectPassport () {
+          return new Promise(function (resolve) {
+            if (typeof window.MessageChannel !== 'function') return resolve(null);
+            var channel = new MessageChannel();
+            var done = false;
+            var timer = setTimeout(function () {
+              finish(document.documentElement.hasAttribute('data-fabric-passport') ? 1 : null);
+            }, 600);
+            function finish (version) {
+              if (done) return;
+              done = true;
+              clearTimeout(timer);
+              try { channel.port1.close(); } catch (_) {}
+              resolve(version);
+            }
+            channel.port1.onmessage = function (event) {
+              var d = event && event.data;
+              if (d && d.type === 'PASSPORT_HELLO' && typeof d.v === 'number') finish(d.v);
+            };
+            try {
+              window.postMessage({ source: 'fabric-site', type: 'PASSPORT_HELLO', v: 2 }, window.location.origin, [channel.port2]);
+            } catch (_) {
+              finish(null);
+            }
+          });
+        }
+
         function askPassport (linking, say, options) {
           say = say || function () {};
           var escrow = !!(options && options.escrow);
           if (escrow) linking = true;
-          var marker = document.documentElement.getAttribute('data-fabric-passport');
-          if (marker === null) {
-            return Promise.reject(new Error('Fabric Passport extension not detected. Install or enable it, then reload this page.'));
-          }
-          if (marker !== '2') return Promise.reject(new Error('Update Fabric Passport to sign in here.'));
-          if (typeof window.MessageChannel !== 'function') return Promise.reject(new Error('This browser cannot talk to Passport.'));
-          if (waiting) return Promise.reject(new Error('Passport is already asking. Approve or reject that request first.'));
-          return (linking ? confirmLink(escrow ? 'your Market escrow key' : 'a Passport identity') : Promise.resolve()).then(function () {
+          return detectPassport().then(function (version) {
+            if (version === null) {
+              return Promise.reject(new Error('Fabric Passport extension not detected. Install or enable it, then reload this page.'));
+            }
+            if (version !== 2) return Promise.reject(new Error('Update Fabric Passport to sign in here.'));
+            if (typeof window.MessageChannel !== 'function') return Promise.reject(new Error('This browser cannot talk to Passport.'));
+            if (waiting) return Promise.reject(new Error('Passport is already asking. Approve or reject that request first.'));
+            return (linking ? confirmLink(escrow ? 'your Market escrow key' : 'a Passport identity') : Promise.resolve()).then(function () {
             say('Starting Passport sign-in…');
             return postJson('/services/members/passport/challenges', escrow ? { escrow: true } : undefined);
           }).then(function (r) {
@@ -258,6 +288,7 @@ function renderLoginScript (props) {
             if (!r.ok) throw new Error((linking ? 'Linking failed: ' : 'Sign-in failed: ') + ((r.j && r.j.error) || r.status));
             if (escrow && !r.j.escrowKey) throw new Error('Passport did not share an escrow key. Try again and allow it.');
             return r.j;
+          });
           });
         }
         window.goonPassport = askPassport;

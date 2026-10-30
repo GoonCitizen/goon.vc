@@ -1,12 +1,7 @@
+// Compiled from components/LeaguesPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * goon.vc league pages: the index (every league and the creator) and one page
- * per league (standings for a season, logging a duel, voiding a mistake,
- * starting the next season, and the league's permanent log), all through the
- * leagues service.
- */
-(function () {
+(function client () {
   const indexEl = document.getElementById('leagues-page');
   const pageEl = document.getElementById('league-page');
   const host = indexEl || pageEl;
@@ -427,4 +422,4 @@
       ? '<h1>Not found</h1><p class="tournament-muted">There is no league here. Check the leagues index.</p>'
       : `<p class="tournament-muted">Couldn’t load this league: ${esc(error.message)}</p>`;
   });
-})();
+})(window);

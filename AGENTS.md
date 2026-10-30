@@ -10,8 +10,9 @@ or a GoonCitizen relay.
    `hub.goon.vc` is the same Hub under a second name
 
 **What this process is:** `@fabric/http` `HTTPServer` serving `assets/` and
-reverse-proxying `/device-links`, `/services/rpc`, and
-`/identity/cluster` + `/identity/cross-sign` to `FABRIC_HUB_ORIGIN`
+reverse-proxying the linked-signer rendezvous and mailbox (`/delegations`,
+`/services/delegation/mailbox`; delegation frames, `@fabric/core`
+`docs/DELEGATION.md`) and `/services/rpc` to `FABRIC_HUB_ORIGIN`
 (default `https://hub.fabric.pub`), then `hub.seeds` (`FABRIC_HUB_SEEDS`, default
 `https://hub.goon.vc`) in order when the ones before can't be reached at all
 (DNS / refused — never after a Hub answered or timed out). The proxy (and the
@@ -39,7 +40,7 @@ bot). Events are saved per guild in an on-disk Fabric Store (`stores/events`,
 LevelDB) and requests are always answered from disk; Discord is polled on start
 and every `ttlMs` in the background, a failing guild keeps its last saved events,
 and the copy is served `stale` while Discord is unreachable. The page is a
-single `<fabric-calendar>` Web Component (`assets/scripts/fabric-calendar.js`,
+single `<fabric-calendar>` Web Component (`components/FabricCalendar.js`,
 no goon.vc dependencies — the template for a Fabric-wide calendar control). It
 shows the same week board as the PERMAFLEET schedule (`functions/scheduleGraphic.js`),
 rendered live from that copy at `GET /services/events/schedule.svg?server=<id>&tz=<IANA zone>`
@@ -49,8 +50,8 @@ zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
 the element's contract. `/operations/PERMAFLEET/schedule` is the same element
 pinned to `server=permafleet`: the home server's events plus those of the member
-orgs' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
-4M-CONTRACTORS, TRDE, and AIMOS — a listed server's events show once the bot is
+orgs' and squadrons' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
+4M-CONTRACTORS, TRDE, AIMOS, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
 in it; DOUBLEDOGZ points at the G00N SQUAD server), home server first so its day themes win, PERMAFLEET brand, no server
 picker; a single server id draws just that server under its own name; every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
@@ -65,6 +66,18 @@ a directory under `assets/` named like a page — e.g. a leftover `drills/` —
 can't redirect it to `/x/`; Store-backed pages under `/tournaments/` and
 `/leagues/` are matched by prefix). Add a route there when you add a page; absolute URLs
 use the `siteUrl` site setting (default `https://goon.vc`).
+All UI lives in `components/`. Browser code too large to inline is one
+function in its component — a page's `client()`, or a Web Component's
+`define<Element>(root)` in its own module — that `npm run build` compiles
+(`functions/clientScript.js`, `GoonSPA#clientScripts`) to
+`assets/scripts/<name>.js`, loaded with a deferred `<script>` at
+`<name>.js?v=<first 12 hex of its sha256>`; that exact URL is served
+`Cache-Control: public, max-age=31536000, immutable`
+(`GoonVC#_clientScriptCacheMiddleware`), any other revalidates. Only the
+function's source reaches the browser, so it can't use anything from its module.
+`assets/scripts/` is build output, tracked like `index.html`:
+`tests/clientScripts.js` fails on a hand-written or stale file there, or an
+`index.html` not built with the current versions.
 The home page's "Subscribe on Discord" block lists the G00N guild's purchasable
 Server Subscription tiers from `GET /services/discord/subscriptions` (tier roles
 tagged `subscription_listing_id` + `available_for_purchase`, saved in the events
@@ -169,8 +182,7 @@ federations are deliberately not in the menu; they are reached by link.
 `/operations/PERMAFLEET/votes` is **alliance votes**: one vote per member org,
 composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `functions/allianceFederation.js`, Fabric Store `stores/alliance`,
-`GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js` +
-`assets/scripts/alliance-votes.js`). The roster is `contracts/alliance.json`
+`GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
@@ -264,7 +276,7 @@ from the same member is refused (409). Proposal JSON adds `members { yes, no,
 abstain, total }`, the counted `memberVotes` frames (choice, time, platform,
 account pubkey — no names, member ids, or account ids), `bridge`, and
 `you.memberVote`; summaries add `members`.
-`/federations` (`components/Federations.js` + `assets/scripts/federations.js`,
+`/federations` (`components/Federations.js`,
 `federationsPath` in `GoonSPA`) lists every alliance federation and every org
 federation of officers ever seen, current first (an org federation is indexed
 at `/org-federation/<id>` with the alliances it decided for); each has a page
@@ -308,10 +320,10 @@ Fabric network.
 `name`, `tagline`, `summary`, `element`, `script`, optional `attributes`); each
 renders at `/drills/<id>` as its standalone Web Component
 (`components/DrillsPage.js`). `<melee-rotation-drill>`
-(`assets/scripts/melee-rotation-drill.js`, shadow DOM, no goon.vc dependencies)
+(`components/MeleeRotationDrill.js`, shadow DOM, no goon.vc dependencies)
 runs only while visible, takes `heading` / `eyebrow` / `description` /
 `pilots` / `storage-key` / `auto-every` / `fonts="none"` attributes,
-and emits `splash` + `rosterchange`. Add a drill = a new element script plus a
+and emits `splash` + `rosterchange`. Add a drill = a new element component plus a
 `drills` entry. The old `/drills/melee-rotation-drill.html` redirects.
 `/tournaments` is the permanent tournament record (`services/tournaments.js`,
 Fabric Store `stores/tournaments`, `GOON_TOURNAMENTS_STORE`, routes under
@@ -354,11 +366,10 @@ and they come back with the result (duels voided by hand stay void). Start-up
 syncs every locked tournament, and a failed post never fails the game. Link previews for series and
 tournament pages come from the Store (`Tournaments#page`, wired in
 `_pageMetaMiddleware`). The bracket is `<tournament-bracket>`
-(`assets/scripts/tournament-bracket.js`, shadow DOM, no goon.vc dependencies):
+(`components/TournamentBracket.js`, shadow DOM, no goon.vc dependencies):
 with `src` it loads and saves a record through that API, without it it keeps a
-bracket in `localStorage`. `assets/scripts/tournaments.js` drives the index,
-series, and record pages (`components/TournamentsPage.js`). In Node the
-bracket script exports its pure engine, shared with the service
+bracket in `localStorage`. `components/TournamentsPage.js` drives the index,
+series, and record pages. In Node the bracket component exports its pure engine, shared with the service
 (`tests/tournament.js`, `tests/tournaments.service.js`).
 `/leagues` holds standing duel leagues (`services/leagues.js`, Fabric Store
 `stores/leagues`, `GOON_LEAGUES_STORE`, routes under `/services/leagues`).
@@ -390,12 +401,11 @@ the league `log`. Seasonal leagues roll over with `POST …/<id>/seasons`, which
 closes the current season, freezes its `standings` + `champion`, and starts
 everyone at the initial rating again; a closed season's duels are final.
 `PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
-`components/LeaguesPage.js` + `assets/scripts/leagues.js` (`?season=<n>` shows
+`components/LeaguesPage.js` (`?season=<n>` shows
 a past season); link previews come from `Leagues#page`.
 **Market** (`/services/market`; `services/market.js`, Fabric Store
 `stores/market`, `GOON_MARKET_STORE`; pure parts in `functions/marketPost.js`
-and `functions/marketEscrow.js`; page `components/MarketPage.js` +
-`assets/scripts/market.js`) is the G00N SQUAD Market forum on the web, 1:1:
+and `functions/marketEscrow.js`; page `components/MarketPage.js`) is the G00N SQUAD Market forum on the web, 1:1:
 every thread of the forum (`market.forum`, `GOON_MARKET_FORUM`: id, exact name,
 or `"/regex/"` in `discord.guildId`, default `/market/`; mirrored only while
 @everyone can view it) is a listing, and every listing made on the site or with
@@ -584,6 +594,30 @@ command and its subcommands, or one command in detail: each subcommand's
 arguments (`[optional]`), a line of `HELP` copy with its goon.vc page, where it
 runs, and Manage Server for `/goon`. It reads nothing about the caller and
 makes no member profile. Add a `HELP` entry with every new command.
+`/schedule` (registered only while scheduling runs; `GOON_SCHEDULE=0` turns it
+off) `open` posts a poll in the channel it was run. `people` (names or
+`@handles`, commas between display names) and/or `role` and `also` say who
+it’s for. The next `days` (default 7) offer `times` each day (default 4pm,
+7pm, and 10pm in `zone`, default `America/Chicago`; `GOON_SCHEDULE_TZ`) for
+`length` hours (default 2). Anyone named, and anyone holding one of the roles
+when they answer, picks every time they can on the message; the latest answer
+replaces. Names resolve on that server (the gateway’s member cache, then
+Discord’s member search — no privileged intent). A role is not listed out, so
+holding it is checked at the answer. The poll closes at `closes` (default 24
+hours; “in 2 days” or a date; 15 minutes to 14 days) or when the opener runs
+`/schedule close`. goon.vc then messages the opener — a DM, or a channel
+message only they can press when DMs are closed — with up to five fullest
+times (most people, earlier first) and Don’t schedule. The one they pick
+becomes a Guild Scheduled Event on that same server: in `voice` when they
+named a voice or stage channel, otherwise external at `where` (default the
+server’s name). The bot needs Manage Events plus View, Send, and Read History
+(`GET /services/discord/invite?for=events`); without them the choice stays up
+so a manager can allow it and they pick again. The new event joins `/events`
+on the next refresh. Polls live in a Fabric Store (`schedule.path`,
+`GOON_SCHEDULE_STORE`, default `stores/schedule`). One opener can have three
+open polls on a server. Replies, the poll, and the event description carry
+display names and role names only — never Discord user ids — and ping nobody.
+Tests: `tests/schedulePoll.js`, `tests/schedule.service.js`.
 `GOON_COMMANDS=0` turns the commands off.
 `/goon setup` (server-only, `default_member_permissions` Manage Server, registered only
 while DM scripts run; `/goon` carries only the subcommands whose feature runs, and
@@ -942,14 +976,14 @@ the hint `field`; every start re-dates stored clips under the current rules
 change is in the clip `log`. `functions/clipTimeline.js` groups clips into
 play sessions (a new one after 2 hours without a clip, `sessionGapMs`;
 multi-hour sessions stay whole, separate evenings don't merge) with one track per pilot. `/clips` is
-`<clip-library>` (`assets/scripts/clip-library.js`): each session is a card
+`<clip-library>` (`components/ClipLibrary.js`): each session is a card
 that wraps beside the others (as wide as up to four of its clips; bigger
 sessions take the row) holding clip cards (sprite thumbnail with hover scrub, pilot, recorded time, length or "Screenshot", caption),
 search + pilot / channel / sort / link / screenshot filters, a player (`?clip=<id>`) with
 details, the Discord link, and the other pilots' overlapping angles at the same
 moment, "Start a project" per session, and the project list.
 `/clips/timeline?session=<id>|clip=<id>` is `<clip-timeline-editor>`
-(`assets/scripts/clip-timeline-editor.js`) browsing one session. Both are shadow
+(`components/ClipTimelineEditor.js`) browsing one session. Both are shadow
 DOM with no goon.vc dependencies; `components/ClipsPage.js` sets `src` only on
 the active route. Projects live at `/clips/projects/<id>`: a program of segments
 `{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
@@ -1005,7 +1039,7 @@ keeps `/passport-requests/<sha256(binding secret)>` in the Store, and sets the
 `{ source: 'fabric-site', type: 'PASSPORT_CHALLENGE', challenge }` to Passport
 with a transferred `MessagePort` and reads the answer only from that port
 (`PASSPORT_ASSERTION`, or `{ ok: false, error }`); it requires
-`data-fabric-passport="2"` on `<html>`. Passport, or a Hub desktop app or
+a `PASSPORT_HELLO` handshake (protocol 2) over a `MessagePort`. Passport, or a Hub desktop app or
 GoonCitizen it asks, signs a `PASSPORT_ASSERTION` for the origin its browser
 shows, and the page posts it to `POST /services/members/passport { assertion,
 link? }`. The claim takes the secret from the cookie (never the body), clears
@@ -1061,8 +1095,7 @@ account nobody holds. `GET …/discord?link=1&next=profile` starts a link
 from the profile page and lands back on it (`?linked=discord[&merged=1]` or
 `?error=<code>`); a member who already has Discord is sent back with
 `one_discord` before Discord is asked.
-**Members** (`/members`, `components/MembersPage.js` +
-`assets/scripts/members.js`, `membersPath` in `GoonSPA`) is the future member
+**Members** (`/members`, `components/MembersPage.js`, `membersPath` in `GoonSPA`) is the future member
 directory. It isn't open yet: `GET /services/members/directory` returns
 `{ directory: false, members: [<you>] }` (401 signed out), so the page lists
 only the signed-in member. Each member's profile is `/members/<member id>`
@@ -1096,8 +1129,7 @@ page; it sits above the PERMAFLEET fixed background (`z-index: 3`). The login
 page links to the profile too. Opening
 the directory later means listing more members from `_directory` and
 widening `_profile`'s self check.
-**Waiting area** (`/waiting`, `components/WaitingPage.js` +
-`assets/scripts/waiting.js`, `waitingPath` in `GoonSPA`; `services/reviews.js`,
+**Waiting area** (`/waiting`, `components/WaitingPage.js`, `waitingPath` in `GoonSPA`; `services/reviews.js`,
 review state in `services/members.js`, script
 `contracts/scripts/member-review.json`) holds new Discord sign-ins until an
 alliance reviewer approves them. Settings `members.review.{enabled,reviewers}`
@@ -1125,8 +1157,7 @@ already decided is left as they are. Session JSON carries `review { status,
 requestedAt, reviewedAt }` (or null) while reviews are on, never the
 reviewer; `GET /services/members` adds `review: true|false`. Tests:
 `tests/memberReviews.js`, `tests/reviews.js`.
-**RSI profile claim** (`/rsi`, `components/RsiClaimPage.js` +
-`assets/scripts/rsi-claim.js`, `rsiClaimPath` in `GoonSPA`; parser
+**RSI profile claim** (`/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
 `functions/rsiCitizen.js`, codes `functions/rsiClaim.js`) links an `rsi:<Handle>`
 account (the handle as RSI writes it) to a member. `/rsi claim` (servers and
 the bot's DMs) links the caller's Discord and replies privately with a

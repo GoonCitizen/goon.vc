@@ -16,10 +16,11 @@
 Same-origin paths forwarded to <code>FABRIC_HUB_ORIGIN</code> (default
 <code>https://hub.fabric.pub</code>):
 
-- <code>/sessions</code> (HTML GET stays on GoonSPA; JSON/POST proxy)
-- <code>/device-links</code>
+- <code>/delegations</code> (linked-signer pairing rendezvous)
+- <code>/services/delegation/mailbox</code> (signing requests for linked signers)
 - <code>/services/rpc</code>
-- <code>/identity/cluster</code>, <code>/identity/cross-sign</code>
+
+<code>/sessions</code> is goon.vc's own login page and is never proxied.
 
 GoonCitizen lives at <code>https://relay.goon.vc</code>. This process does not
 mount <code>/services/star-citizen</code> and does not listen as a Fabric Peer.

@@ -1,11 +1,7 @@
+// Compiled from components/MarketPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * goon.vc Market pages: the catalog, one page per listing, seller pages, the
- * seller dashboard (/mine), and escrow orders, all through the market
- * service at the same URLs (JSON when asked for it).
- */
-(function () {
+(function client () {
   const hosts = ['market-page', 'market-listing-page', 'market-seller-page', 'market-order-page', 'market-mine-page']
     .map((id) => document.getElementById(id))
     .filter(Boolean);
@@ -731,4 +727,4 @@
   else if (rest[0] === 'listings' && rest.length === 2) showListing(rest[1]);
   else if (rest[0] === 'sellers' && rest.length === 2) showSeller(rest[1]);
   else if (rest[0] === 'orders' && rest.length === 2) showOrder(rest[1]);
-})();
+})(window);

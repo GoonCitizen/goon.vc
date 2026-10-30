@@ -1,7 +1,7 @@
 # Deploying GOON.VC
 
 The production service is an `@fabric/http` HTML site plus a same-origin proxy
-for Hub APIs (`/device-links`, `/services/rpc`, identity cluster).
+for Hub APIs (`/delegations`, `/services/delegation/mailbox`, `/services/rpc`).
 It is **not** a Fabric Hub and **not** the GoonCitizen relay. Site notes:
 [`DEVELOPERS.md`](DEVELOPERS.md). GoonCitizen operators and other orgs:
 [star-citizen-live `DEVELOPERS.md`](https://github.com/GoonCitizen/star-citizen-live/blob/feature/rsi/DEVELOPERS.md)
