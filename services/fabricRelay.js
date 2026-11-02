@@ -340,6 +340,16 @@ class FabricRelay {
     return Array.from(channels.values());
   }
 
+  // A channel can turn private (or be deleted) after its messages were queued or kept for re-sharing.
+  _publicOnly (records) {
+    const guild = this._guild();
+    const open = new Set(guild ? share.publicChannels(guild).map((channel) => String(channel.id)) : []);
+    for (const channelId of Array.from(this.recent.keys())) {
+      if (!open.has(String(channelId))) this.recent.delete(channelId);
+    }
+    return Array.from(records).filter((record) => open.has(String(record.channelId)));
+  }
+
   /**
    * Send what arrived since the last flush (and the catalog, if it changed).
    * Kept for later while no Fabric peer is connected.
@@ -349,7 +359,7 @@ class FabricRelay {
     if (!this.connected) return 0;
     let sent = this._catalogDirty ? this._sendCatalog() : 0;
     if (!this.pending.size) return sent;
-    for (const pack of share.messagePacks(this._byChannel(this.pending.values()))) sent += this._publish([pack]);
+    for (const pack of share.messagePacks(this._byChannel(this._publicOnly(this.pending.values())))) sent += this._publish([pack]);
     this.pending.clear();
     return sent;
   }
@@ -365,7 +375,7 @@ class FabricRelay {
     const records = new Map();
     for (const channel of this.recent.values()) for (const record of channel.values()) records.set(record.discordMessageId, record);
     for (const record of this.pending.values()) records.set(record.discordMessageId, record);
-    for (const pack of share.messagePacks(this._byChannel(records.values()))) sent += this._publish([pack]);
+    for (const pack of share.messagePacks(this._byChannel(this._publicOnly(records.values())))) sent += this._publish([pack]);
     this.pending.clear();
     return sent;
   }

@@ -451,6 +451,7 @@ class GoonVC {
       siteUrl: spa._site('siteUrl'),
       gateway: operationSettings.gateway,
       operations: this.operations,
+      guildId: discord.guildId,
       Doorman: communitySettings.Doorman,
       Scripts: communitySettings.Scripts,
       Campaigns: communitySettings.Campaigns,
@@ -471,6 +472,7 @@ class GoonVC {
       gateway: presenceSettings.gateway,
       operations: this.operations,
       community: this.community,
+      guildId: discord.guildId,
       Doorman: presenceSettings.Doorman,
       IdleRPG: presenceSettings.IdleRPG,
       DoormanDiscord: presenceSettings.DoormanDiscord

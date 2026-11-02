@@ -165,6 +165,7 @@ class Community {
    * @param {Object<string, Array<string>>} [settings.roles] Script `requires` entries that are Discord roles: name → role ids (any one passes). Defaults to the recruiting contract's qualifying rank and the check-in contract's G00N SQUAD membership (its @everyone role).
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
    * @param {boolean} [settings.gateway] Attach to the Discord gateway when available (default true).
+   * @param {string} [settings.guildId] Home Discord server, whose display name IdleRPG prefers.
    * @param {Function} [settings.Doorman] Injected for tests; defaults to @fabric/doorman.
    * @param {Function} [settings.Scripts] Injected for tests; defaults to @fabric/doorman/services/scripts.
    * @param {Function} [settings.Campaigns] Injected for tests; defaults to @fabric/doorman/services/campaigns.
@@ -181,7 +182,8 @@ class Community {
       features: FEATURES,
       roles: Object.assign(recruiting.requirements(recruiting.load()), checkin.requirements(checkin.load()), welcome.requirements(welcome.load())),
       operations: null,
-      gateway: true
+      gateway: true,
+      guildId: null
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.doorman = null;
     this.scripts = null;
@@ -377,7 +379,7 @@ class Community {
     if (!discord || this.adapter) return this;
     const DoormanDiscord = this.settings.DoormanDiscord || require('@fabric/doorman/services/discord');
     this.discord = discord;
-    this.adapter = new DoormanDiscord({ client: discord, replies: false, whispers: !!(this.scripts || this.campaigns) });
+    this.adapter = new DoormanDiscord({ client: discord, replies: false, whispers: !!(this.scripts || this.campaigns), guildId: this.settings.guildId || null });
     this.doorman.enable('discord', this.adapter);
     this.gateway = { status: 'attached', error: null };
     this.emit('log', 'GOON.VC', 'community: Doorman attached to the Discord gateway');

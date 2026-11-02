@@ -234,6 +234,76 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     await presence.stop();
   });
 
+  it('prefers the G00N SQUAD display name over another server and a username', async function () {
+    const OTHER = '222222222222222222';
+    const homeMembers = new Map([
+      ['111111111111111111', { nickname: '[G00N] Neorion', displayName: '[G00N] Neorion', user: { username: 'neorion', globalName: 'Neo' } }]
+    ]);
+    const otherMembers = new Map([
+      ['111111111111111111', { nickname: 'Neo @ TRDE', displayName: 'Neo @ TRDE', user: { username: 'neorion', globalName: 'Neo' } }]
+    ]);
+    const operations = new FakeOperations();
+    const presence = new Presence({ path: path.join(dir, 'home-name'), tickMs: 0, operations, guildId: GUILD });
+    await presence.start();
+    const discord = operations.connect();
+    discord.client = {
+      guilds: {
+        cache: new Map([
+          [OTHER, { id: OTHER, members: { cache: otherMembers } }],
+          [GUILD, { id: GUILD, members: { cache: homeMembers } }]
+        ])
+      },
+      users: { cache: new Map() }
+    };
+    discord.emit('voice', { guildId: OTHER, userId: '111111111111111111', oldChannelId: null, newChannelId: VOICE });
+    discord.emit('activity', {
+      type: 'DiscordMessage',
+      actor: { ref: '111111111111111111', username: 'neorion' },
+      target: { ref: '1' },
+      object: { id: 'm', content: 'o7' }
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const [row] = (await presence.players()).players;
+    assert.strictEqual(row.name, '[G00N] Neorion');
+    assert.strictEqual(presence.game.playerFor('discord/users/111111111111111111').nameRank, 40);
+    await presence.stop();
+  });
+
+  it('replaces a stored username with the G00N SQUAD display name once that server is asked', async function () {
+    const store = path.join(dir, 'upgrade');
+    const first = new Presence({ path: store, tickMs: 0, gateway: false });
+    await first.start();
+    const user = 'discord/users/111111111111111111';
+    await first.game._registerUser({ id: user, name: 'neorion', rank: 0 });
+    await first.game._handleJoin({ user, channel: `discord/channels/${VOICE}` });
+    assert.strictEqual(first.game.playerFor(user).name, 'neorion');
+    await first.stop();
+
+    const operations = new FakeOperations();
+    const presence = new Presence({ path: store, tickMs: 0, operations, guildId: GUILD });
+    await presence.start();
+    const discord = operations.connect();
+    discord.client = {
+      guilds: {
+        cache: new Map([[GUILD, {
+          id: GUILD,
+          members: {
+            cache: new Map(),
+            fetch: async () => ({ nickname: '[G00N] Neorion', displayName: '[G00N] Neorion', user: { username: 'neorion', globalName: 'Neo' } })
+          }
+        }]])
+      },
+      users: { cache: new Map() }
+    };
+    discord.botReady = true;
+    discord.emit('ready');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const player = presence.game.playerFor(user);
+    assert.strictEqual(player.name, '[G00N] Neorion');
+    assert.strictEqual(player.nameRank, 40);
+    await presence.stop();
+  });
+
   it('serves GET /services/idlerpg and rejects other methods', async function () {
     const presence = new Presence({ path: path.join(dir, 'store'), tickMs: 0, gateway: false });
     await presence.start();

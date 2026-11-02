@@ -164,7 +164,16 @@ renames, and not derived from any account id. Saves from before accounts move
 to that shape on start with everything kept. Link previews come from
 `Presence#page`. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
-one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
+`Presence#backfillNames` on gateway ready. The name shown on the G00N SQUAD
+server — its server nickname, else the global display name, else the username —
+outranks a nickname from any other server the bot is in, which outranks a
+global display name, which outranks a username. IdleRPG keeps the
+highest-ranked name it has seen (`nameRank` on the player); a later sighting
+replaces it only at the same or a higher rank, so a chat username or another
+server's nick cannot cover the G00N SQUAD name. A same-rank sighting still
+updates it, so a new G00N SQUAD nickname replaces the old one. Backfill reads
+the member cache and, until a player has a G00N SQUAD name, asks that server
+once. `/resources` lists an
 IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,

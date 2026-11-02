@@ -272,6 +272,33 @@ describe('FabricRelay service', function () {
     assert.strictEqual(discord.client.listenerCount('messageCreate'), 0);
   });
 
+  it('stops sharing a channel once it turns private', async function () {
+    const guild = fakeGuild();
+    const general = fakeChannel(guild, { id: '10', name: 'general' });
+    const lounge = fakeChannel(guild, { id: '13', name: 'lounge' });
+    const discord = new FakeDiscord([guild]);
+    discord.botReady = true;
+    const relay = new FabricRelay({ path: dir, guildId: GUILD, group: GROUP, contract: CONTRACT, operations: { discord }, Peer: FakePeer, backfill: 0, flushMs: 0, shareMs: 0, reconnectMs: 0 });
+    await relay.start();
+    const peer = FakePeer.last;
+
+    discord.client.emit('messageCreate', fakeMessage(general, 'o7 pilots'));
+    discord.client.emit('messageCreate', fakeMessage(lounge, 'said while public'));
+    assert.strictEqual(relay.pending.size, 2, 'both queued while offline');
+    lounge.permissionsFor = () => ({ has: () => false });
+    discord.client.emit('channelUpdate', lounge, lounge);
+
+    peer.open();
+    relay._flush();
+    relay._shareAll();
+    const text = JSON.stringify(peer.bodies());
+    assert.ok(text.includes('o7 pilots'));
+    assert.ok(!text.includes('said while public'), 'queued message from the now-private channel is dropped');
+    assert.ok(!text.includes('lounge'), 'the catalog no longer lists it');
+    assert.ok(!relay.recent.has('13'), 'nor kept for re-sharing');
+    await relay.stop();
+  });
+
   it('delivers a signed GroupDataShare to a real Fabric peer', async function () {
     const Peer = require('@fabric/core/types/peer');
     const port = await freePort();

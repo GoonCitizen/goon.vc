@@ -41,7 +41,7 @@
   "dependencies": {
     "@fabric/discord": "FabricLabs/fabric-discord#feature/passport",
     "@fabric/doorman": "FabricLabs/doorman#feature/passport",
-    "@fabric/http": "FabricLabs/fabric-http#passport",
+    "@fabric/http": "FabricLabs/fabric-http#feature/passport",
     "idlerpg": "FabricLabs/idlerpg#feature/passport"
   },
   "devDependencies": {
