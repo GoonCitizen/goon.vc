@@ -149,6 +149,13 @@ class FabricRelay {
     return this._xprv;
   }
 
+  /** goon.vc's Fabric identity key (the relay key), once started; Passport peer sign-ins name it. */
+  get fabricKey () {
+    if (!this._xprv) return null;
+    if (!this._fabricKey) this._fabricKey = new Identity({ xprv: this._xprv, network: NETWORK }).fabricKey;
+    return this._fabricKey;
+  }
+
   /**
    * Put an already-signed frame on the Fabric network, if a peer is connected.
    * @param {string} frame Message bytes as hex

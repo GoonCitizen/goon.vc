@@ -105,7 +105,7 @@ describe('Members', function () {
   function claim (assertion, opts = {}) {
     return request('/services/members/passport', {
       method: 'POST',
-      headers: Object.assign({}, opts.headers || {}, opts.cookie ? { Cookie: opts.cookie } : {}),
+      headers: Object.assign({ Origin: origin() }, opts.headers || {}, opts.cookie ? { Cookie: opts.cookie } : {}),
       body: Object.assign({ assertion }, opts.link ? { link: true } : {})
     });
   }
@@ -280,7 +280,7 @@ describe('Members', function () {
     assert.strictEqual(challenge.network, null, 'sign-in works on any network');
     assert.ok(/^goon\.passport=[0-9a-f]{64}$/.test(cookie));
     assert.ok(!cookie.includes(challenge.nonce), 'the cookie is not the nonce');
-    assert.ok(/; Path=\/services\/members\/passport; HttpOnly; SameSite=Lax; Max-Age=120$/.test(setCookie(res, 'goon.passport')));
+    assert.ok(/; Path=\/services\/members\/passport; HttpOnly; SameSite=Strict; Max-Age=120$/.test(setCookie(res, 'goon.passport')));
     const record = await members.store.get(challengeKey(cookie));
     assert.strictEqual(record.origin, origin());
     assert.ok(!JSON.stringify(record).includes(cookie.split('=')[1]), 'the store keeps only the binding secret hash');
@@ -349,6 +349,17 @@ describe('Members', function () {
     assert.strictEqual(spent.status, 200, 'its own browser still can');
   });
 
+  it('refuses a claim posted from another page, even with the binding cookie', async function () {
+    const signer = new Key();
+    for (const headers of [{ Origin: 'https://relay.goon.vc' }, { Origin: '' }]) {
+      const started = await startPassport();
+      const res = await claim(sign(started, signer).uri, { cookie: started.cookie, headers });
+      assert.strictEqual(res.status, 403, JSON.stringify(res.json));
+      assert.ok(!cookieFrom(res), 'no session');
+    }
+    assert.strictEqual(await members.resolve(`fabric:${xonly(signer)}`), null);
+  });
+
   it('refuses expired challenges and expired assertions', async function () {
     const signer = new Key();
     const started = await startPassport();
@@ -406,7 +417,7 @@ describe('Members', function () {
       const started = await startPassport(proxied);
       assert.strictEqual(started.challenge.origin, 'https://goon.vc');
       assert.ok(/; Secure$/.test(setCookie(started.res, 'goon.passport')));
-      const res = await claim(sign(started, new Key()).uri, { cookie: started.cookie, headers: proxied });
+      const res = await claim(sign(started, new Key()).uri, { cookie: started.cookie, headers: Object.assign({ Origin: 'https://goon.vc' }, proxied) });
       assert.strictEqual(res.status, 200, JSON.stringify(res.json));
     } finally {
       delete members.settings.origins;

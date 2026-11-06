@@ -64,7 +64,9 @@ module.exports = {
   members: {
     path: process.env.GOON_MEMBERS_STORE || 'stores/members',
     // Origins Passport may sign in to (comma list, e.g. https://goon.vc). Unset:
-    // the origin each request came in on, which trusts the Host header.
+    // `siteUrl` in production (or when it is a loopback origin), else loopback
+    // origins only. The Host header never picks one; production with nothing
+    // to pin turns Passport off.
     origins: process.env.GOON_MEMBERS_ORIGINS
       ? process.env.GOON_MEMBERS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
       : undefined,

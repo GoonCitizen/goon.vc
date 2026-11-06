@@ -12,7 +12,8 @@ or a GoonCitizen relay.
 **What this process is:** `@fabric/http` `HTTPServer` serving `assets/` and
 reverse-proxying the linked-signer rendezvous and mailbox (`/delegations`,
 `/services/delegation/mailbox`; delegation frames, `@fabric/core`
-`docs/DELEGATION.md`) and `/services/rpc` to `FABRIC_HUB_ORIGIN`
+`docs/DELEGATION.md`) and `/services/rpc` (goon.vc's cookies never go to a
+Hub, and a Hub's `Set-Cookie` never comes back) to `FABRIC_HUB_ORIGIN`
 (default `https://hub.fabric.pub`), then `hub.seeds` (`FABRIC_HUB_SEEDS`, default
 `https://hub.goon.vc`) in order when the ones before can't be reached at all
 (DNS / refused — never after a Hub answered or timed out). The proxy (and the
@@ -1043,7 +1044,7 @@ on an address that isn't pinned gets no challenge (400). `POST
 /services/members/passport/challenges` issues a core `PASSPORT_CHALLENGE`
 (origin, fresh nonce, 2-minute expiry, purpose, no network, no disclosures),
 keeps `/passport-requests/<sha256(binding secret)>` in the Store, and sets the
-**binding secret** (never the nonce) as an HttpOnly, SameSite=Lax
+**binding secret** (never the nonce) as an HttpOnly, SameSite=Strict
 `goon.passport` cookie (path `/services/members/passport`). The page posts
 `{ source: 'fabric-site', type: 'PASSPORT_CHALLENGE', challenge }` to Passport
 with a transferred `MessagePort` and reads the answer only from that port
@@ -1056,7 +1057,8 @@ the cookie, and redeems: the challenge is taken on the member queue (two
 racing claims can't both get it; each challenge works once, also across
 restarts) and `verifyAssertion` checks signature, origin, nonce, challenge
 hash, expiry, signer, and that the pubkey is the frame's author. The claim must
-come in on the pinned origin the challenge was issued for. The account is
+come in on the pinned origin the challenge was issued for, posted by a page on
+that origin (its `Origin` header; none or another is 403). The account is
 `fabric:<x-only pubkey>`; the `signer` label is only logged. Expired
 challenges are dropped when taken and swept on start. Passport is offered only
 when the installed `@fabric/http` has the relying party. **Links** (`link:
@@ -1172,7 +1174,8 @@ account (the handle as RSI writes it) to a member. `/rsi claim` (servers and
 the bot's DMs) links the caller's Discord and replies privately with a
 **one-time sign-in link** (`Members#claimLink`: `<siteUrl>/rsi/claim?t=<64 hex>`,
 kept as `/claim-links/<sha256>`, single use, 30 minutes); opening it starts a
-session (`provider: 'rsi-link'`) and lands on `/rsi`, and a used, expired, or
+session (`provider: 'rsi-link'`, at most an hour, and never allowed to unlink
+an account: 403) and lands on `/rsi`, and a used, expired, or
 forged link lands on `/rsi?error=link`. The link is a login, so it only ever
 goes out ephemerally. Signed in any way, the page asks for the handle (`POST
 /services/members/rsi/claims { handle }` → a `g00n:` + 7 hex code, kept 24 h at

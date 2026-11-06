@@ -50,7 +50,8 @@ describe('goon.vc', function () {
       const { createHubApiMiddleware } = require('../functions/hubApiProxy');
       const stub = http.createServer((req, res) => {
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ ok: true, echoed: req.url }));
+        res.setHeader('Set-Cookie', 'goon.member=planted; Path=/');
+        res.end(JSON.stringify({ ok: true, echoed: req.url, cookie: req.headers.cookie || null }));
       });
       await new Promise((resolve) => stub.listen(0, '127.0.0.1', resolve));
       const stubPort = stub.address().port;
@@ -70,17 +71,19 @@ describe('goon.vc', function () {
             port: edgePort,
             path: '/services/rpc',
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', Cookie: 'goon.member=secret' }
           }, (res) => {
             const chunks = [];
             res.on('data', (c) => chunks.push(c));
-            res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+            res.on('end', () => resolve({ status: res.statusCode, setCookie: res.headers['set-cookie'], body: Buffer.concat(chunks).toString('utf8') }));
           });
           req.on('error', reject);
           req.end(JSON.stringify({ origin: 'http://127.0.0.1' }));
         });
         assert.strictEqual(body.status, 200);
         assert.strictEqual(JSON.parse(body.body).ok, true);
+        assert.strictEqual(JSON.parse(body.body).cookie, null, 'the member session never reaches the Hub');
+        assert.strictEqual(body.setCookie, undefined, 'a Hub cannot set a goon.vc cookie');
         const skipped = await new Promise((resolve, reject) => {
           http.get({
             hostname: '127.0.0.1',
@@ -153,23 +156,15 @@ describe('goon.vc', function () {
     it('lists hub.goon.vc after the Hub, but never behind a loopback Hub', function () {
       const { DEFAULT_HUB_SEEDS } = require('../services/goon.vc');
       assert.deepStrictEqual(DEFAULT_HUB_SEEDS, ['https://hub.goon.vc']);
-      // Older @fabric/http builds don't allowlist hub.goon.vc yet.
-      const saved = process.env.FABRIC_HUB_ALLOWLIST;
-      process.env.FABRIC_HUB_ALLOWLIST = 'https://hub.goon.vc';
-      try {
-        const site = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: DEFAULT_HUB_SEEDS } });
-        assert.deepStrictEqual(site._hubOrigins(), ['https://hub.fabric.pub', 'https://hub.goon.vc']);
-        const local = new GoonVC({ listen: false, hub: { origin: 'http://127.0.0.1:8080', seeds: DEFAULT_HUB_SEEDS } });
-        assert.deepStrictEqual(local._hubOrigins(), ['http://127.0.0.1:8080']);
-        const errors = [];
-        const odd = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: ['https://evil.example'] } });
-        odd.on('error', (...parts) => errors.push(parts.join(' ')));
-        assert.deepStrictEqual(odd._hubOrigins(), ['https://hub.fabric.pub']);
-        assert.ok(/evil\.example/.test(errors[0]), 'reports the skipped seed');
-      } finally {
-        if (saved === undefined) delete process.env.FABRIC_HUB_ALLOWLIST;
-        else process.env.FABRIC_HUB_ALLOWLIST = saved;
-      }
+      const site = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: DEFAULT_HUB_SEEDS } });
+      assert.deepStrictEqual(site._hubOrigins(), ['https://hub.fabric.pub', 'https://hub.goon.vc']);
+      const local = new GoonVC({ listen: false, hub: { origin: 'http://127.0.0.1:8080', seeds: DEFAULT_HUB_SEEDS } });
+      assert.deepStrictEqual(local._hubOrigins(), ['http://127.0.0.1:8080']);
+      const errors = [];
+      const odd = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: ['https://evil.example'] } });
+      odd.on('error', (...parts) => errors.push(parts.join(' ')));
+      assert.deepStrictEqual(odd._hubOrigins(), ['https://hub.fabric.pub']);
+      assert.ok(/evil\.example/.test(errors[0]), 'reports the skipped seed');
     });
   });
 

@@ -108,9 +108,15 @@
     return `<div class="market-price">${esc(listing.price.btc)}</div><div class="market-price-sub">${esc(sub)}</div>`;
   }
 
+  // Percent-encode what could end a CSS url('…') string before HTML escaping
+  // (an escaped apostrophe is decoded back by the browser inside the attribute).
+  function cssUrl (value) {
+    return String(value).replace(/['"()\\\s]/g, (c) => `%${c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()}`);
+  }
+
   function card (listing) {
     const image = listing.imageUrl
-      ? `<div class="market-card-image" style="background-image: url('${esc(listing.imageUrl).replace(/'/g, '%27')}')"></div>`
+      ? `<div class="market-card-image" style="background-image: url('${esc(cssUrl(listing.imageUrl))}')"></div>`
       : `<div class="market-card-image empty">${esc(listing.kind)}</div>`;
     const meta = [listing.kind, listing.qty > 1 ? `×${listing.qty}` : null, listing.insurance].filter(Boolean).join(' · ');
     return `<a class="market-card" href="${esc(listing.path)}">
@@ -415,13 +421,15 @@
     const edit = document.getElementById('market-edit-form');
     if (edit) {
       fillFields(edit, listing);
+      // The status the form shows (a `dibs` listing has no option of its own):
+      // only a status the seller changed is sent.
+      const shown = edit.elements.status.value;
       edit.addEventListener('submit', async (event) => {
         event.preventDefault();
         busy(edit, true);
         const changes = formFields(edit);
         const status = edit.elements.status.value;
-        const current = ['paid', 'delivered'].includes(listing.status) ? 'reserved' : listing.status;
-        if (status !== current) changes.status = status;
+        if (status !== shown) changes.status = status;
         try {
           await request('PATCH', `${base}/listings/${encodeURIComponent(listing.id)}`, changes);
           showListing(id);

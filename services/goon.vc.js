@@ -376,6 +376,8 @@ class GoonVC {
       fetch: memberSettings.fetch,
       // Escrow keys are linked for the network the Market's Hub runs on.
       escrowNetwork: () => (this.market ? this.market._network() : null),
+      // Passport peer sessions sign members in by goon.vc's relay key.
+      peerKey: () => (this.fabric ? this.fabric.fabricKey : null),
       discord: {
         clientId: discord.clientId,
         clientSecret: (memberSettings.resolveClientSecret || resolveDiscordClientSecret)(discord).clientSecret,
@@ -730,6 +732,9 @@ class GoonVC {
       }
     });
 
+    // Passport peer sign-in by the relay key, the way the Hub mounts it.
+    const peer = this.members.passportPeer();
+    if (peer && typeof this.http.attachPassportPeer === 'function') this.http.attachPassportPeer(peer);
     // HTTPServer mounts its own middleware (and express.static) in start().
     this.http.express.use(this._canonicalPathMiddleware());
     this.http.express.use(this._clientScriptCacheMiddleware());

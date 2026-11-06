@@ -423,7 +423,14 @@ async function discordSend (method, apiPath, token, body, opts = {}) {
   } catch (error) {
     return { status: 0, json: null, error: error && error.message ? error.message : String(error) };
   }
-  const text = await response.text();
+  let text;
+  try {
+    // The timeout covers the body too: a read that fails still returns a result.
+    text = await response.text();
+  } catch (error) {
+    const reason = error && error.message ? error.message : String(error);
+    return { status: response.status, json: null, error: `response body unreadable (${reason}); Discord may have applied the request` };
+  }
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch (_) { json = { raw: String(text).slice(0, 200) }; }
   return { status: response.status, json };

@@ -134,6 +134,20 @@ describe('Activity', function () {
     assert.ok(activity.lastPosted('300000000000000004'));
   });
 
+  it('lists archived threads again after a pass that did not reach them', async function () {
+    const fake = fakeDiscord;
+    let broken = true;
+    fakeDiscord = (url) => (broken && url.includes('/channels/20/messages') ? textResponse(500, { message: 'down' }) : fake(url));
+    try {
+      await assert.rejects(activity.sync());
+      broken = false;
+      await activity.sync();
+      assert.ok(activity.lastPosted('300000000000000003'), 'the archived thread is read on the next pass');
+    } finally {
+      fakeDiscord = fake;
+    }
+  });
+
   it('notes new posts from the gateway in the home server only, and keeps them across restarts', async function () {
     const operations = new EventEmitter();
     await activity.stop();

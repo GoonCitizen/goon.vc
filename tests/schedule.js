@@ -140,4 +140,16 @@ describe('PERMAFLEET schedule', function () {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+  it('a body that cannot be read still returns a result, saying Discord may have applied it', async function () {
+    const fetch = async () => ({ status: 200, text: async () => { throw new Error('The operation was aborted due to timeout'); } });
+    const created = await events.createGuildScheduledEvent({
+      token: 't',
+      guildId: '1',
+      event: { name: 'Op', scheduledStartTime: '2026-11-04T00:00:00Z', scheduledEndTime: '2026-11-04T01:00:00Z', entityType: 3, location: 'Stanton' },
+      fetch
+    });
+    assert.strictEqual(created.ok, false);
+    assert.strictEqual(created.status, 200);
+    assert.match(created.error, /may have applied/);
+  });
 });

@@ -275,8 +275,12 @@ class Activity {
     const sources = listed.json.filter((channel) => MESSAGE_CHANNELS.has(channel.type)).map((channel) => ({ id: String(channel.id), name: channel.name }));
     const active = await this._get(`/guilds/${guild}/threads/active`, token);
     const threads = active.status === 200 && active.json && Array.isArray(active.json.threads) ? active.json.threads : [];
+    // Listing times are kept only once every listed thread was read (below).
+    const listings = [];
     for (const parent of listed.json.filter((channel) => THREAD_PARENTS.has(channel.type))) {
-      threads.push(...await this._archivedThreads(String(parent.id), token));
+      const listing = await this._archivedThreads(String(parent.id), token);
+      threads.push(...listing.threads);
+      if (listing.listedAt) listings.push({ parentId: String(parent.id), listedAt: listing.listedAt });
     }
     for (const thread of threads) {
       if (THREADS.has(thread.type)) sources.push({ id: String(thread.id), name: thread.name, thread: true });
@@ -296,6 +300,16 @@ class Activity {
       if (read) progress(`${source.thread ? 'thread' : '#'}${source.name}: ${read} messages${added ? `, ${added} new members` : ''}${record.complete ? '' : ' (more to read)'}`);
       await this.flush();
     }
+    // A pass that stopped early (or threw above) leaves the old listing times, so the
+    // threads it did not reach are listed again next pass.
+    if (!this._stopping && listings.length) {
+      for (const { parentId, listedAt } of listings) {
+        if (this.channels[parentId]) this.channels[parentId].threadsListedAt = listedAt;
+        else this.channels[parentId] = { newest: null, oldest: null, complete: false, unreadableAt: null, threadsListedAt: listedAt };
+      }
+      this._dirty = true;
+      await this.flush();
+    }
 
     const status = Object.assign(this.status(), { syncedAt: new Date().toISOString(), error: null });
     await this.store.set(STATUS_KEY, { syncedAt: status.syncedAt, attemptedAt: status.syncedAt, error: null });
@@ -312,7 +326,7 @@ class Activity {
       const query = `?limit=${PAGE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
       const res = await this._get(`/channels/${parentId}/threads/archived/public${query}`, token);
       // No Read Message History there: no threads to read, try again next pass.
-      if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) return threads;
+      if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) return { threads, listedAt: null };
       let older = false;
       for (const thread of res.json.threads) {
         const archivedAt = thread.thread_metadata && thread.thread_metadata.archive_timestamp;
@@ -322,10 +336,7 @@ class Activity {
       }
       if (older || !res.json.has_more || !res.json.threads.length) break;
     }
-    if (this.channels[parentId]) this.channels[parentId].threadsListedAt = startedAt;
-    else this.channels[parentId] = { newest: null, oldest: null, complete: false, unreadableAt: null, threadsListedAt: startedAt };
-    this._dirty = true;
-    return threads;
+    return { threads, listedAt: startedAt };
   }
 
   /**

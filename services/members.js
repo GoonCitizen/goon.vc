@@ -8,12 +8,17 @@ const { accountKey, parseAccountKey } = require('../functions/accountKey');
 const rsiCitizen = require('../functions/rsiCitizen');
 const rsiClaim = require('../functions/rsiClaim');
 
-let passportRp = null;
-let passportHttp = null;
+const passportRp = require('@fabric/http/functions/passportRelyingParty');
+const passportHttp = require('@fabric/http/functions/passportHttp');
+
+/** `@fabric/http` peer sessions, when the installed version has them. */
+let passportPeer = null;
 try {
-  passportRp = require('@fabric/http/functions/passportRelyingParty');
-  passportHttp = require('@fabric/http/functions/passportHttp');
-} catch (_) { /* an older @fabric/http: Passport login stays off */ }
+  passportPeer = require('@fabric/http/functions/passportPeer');
+} catch (_) {
+  passportPeer = null;
+}
+
 
 const BASE = '/services/members';
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -31,6 +36,8 @@ const MEMBER_ID_RE = /^[0-9a-f]{16}$/;
 const MAX_HOPS = 8;
 const CLAIM_LINK_PATH = '/rsi/claim';
 const CLAIM_LINK_TTL_MS = 30 * 60 * 1000;
+// A session a claim link starts is for claiming a handle, not a standing login.
+const CLAIM_LINK_SESSION_TTL_MS = 60 * 60 * 1000;
 const RSI_CLAIM_TTL_MS = 24 * 60 * 60 * 1000;
 const RSI_VERIFY_LIMIT = 5;
 const RSI_VERIFY_WINDOW_MS = 15 * 60 * 1000;
@@ -197,10 +204,6 @@ function discordConflict (member, owner, parsed) {
     : fail(409, 'That account belongs to another profile with its own Discord account, and a profile holds one Discord account. Unlink one of the two Discord accounts first.');
   error.code = 'one_discord';
   return error;
-}
-
-function passportAvailable () {
-  return !!(passportRp && typeof passportRp.createPassportRelyingParty === 'function');
 }
 
 function isLoopbackOrigin (origin) {
@@ -779,6 +782,10 @@ class Members extends EventEmitter {
     });
   }
 
+  _sessionTtl (via) {
+    return via === 'rsi-link' ? Math.min(CLAIM_LINK_SESSION_TTL_MS, this.settings.sessionTtlMs) : this.settings.sessionTtlMs;
+  }
+
   async _createSession (memberId, via) {
     const token = randomToken();
     const now = Date.now();
@@ -786,9 +793,47 @@ class Members extends EventEmitter {
       memberId,
       via: via || null,
       createdAt: new Date(now).toISOString(),
-      expiresAt: now + this.settings.sessionTtlMs
+      expiresAt: now + this._sessionTtl(via)
     });
     return token;
+  }
+
+  /**
+   * Passport peer sign-in (v3) by goon.vc's relay key (`settings.peerKey`),
+   * as the Hub does it (`@fabric/hub` `mountHubPassportPeer`): the HTTP server
+   * attaches this peer (`attachPassportPeer`), serves `/sessions/peer`, and
+   * sets `req.passportSession` on requests signed by the session key; here a
+   * sign-in becomes a member. Null until the key exists, or with an
+   * `@fabric/http` that has no `passportPeer`.
+   * @returns {object|null}
+   */
+  passportPeer () {
+    if (!passportPeer || typeof this.settings.peerKey !== 'function') return null;
+    const key = this.settings.peerKey();
+    if (!key || !key.private) return null;
+    if (this._peerSignIn && this._peerSignIn.pubkey === key.pubkey) return this._peerSignIn.peer;
+    const homes = [].concat(this.settings.origins || [], this.settings.siteUrl ? [this.settings.siteUrl] : [])
+      .map((o) => { try { return new URL(o).origin; } catch (_) { return null; } })
+      .filter(Boolean)
+      .slice(0, 16);
+    const peer = passportPeer.createPassportPeer({
+      key,
+      purpose: PASSPORT_PURPOSE,
+      homes,
+      sessionTtlMs: this.settings.sessionTtlMs,
+      onSession: async (verified) => {
+        // The same member a Passport sign-in on the site makes or finds.
+        const parsed = accountKey('fabric', verified.identity.pubkey);
+        if (!parsed) throw new Error('Signed sign-in has no identity');
+        const legacy = [verified.identity.id, verified.identity.pubkey].map((id) => `fabric:${id}`);
+        let member = await this.memberFor(parsed.key, { create: true, via: 'passport', profile: { pubkeyHex: verified.identity.pubkey }, legacy });
+        member = await this._refresh(member.id, { login: true });
+        this.emit('log', 'MEMBERS', `Passport peer sign-in for ${parsed.id.slice(0, 12)}… signed by ${verified.signer}`);
+        return { memberId: member.id };
+      }
+    });
+    this._peerSignIn = { pubkey: key.pubkey, peer };
+    return peer;
   }
 
   async _sessionFromRequest (req) {
@@ -805,6 +850,13 @@ class Members extends EventEmitter {
    * @returns {Promise<{ member: Object, via: string|null, key: string, session: Object }|null>}
    */
   async currentMember (req) {
+    // A peer session (checked by the HTTP server), else the cookie.
+    const peerSession = req && req.passportSession;
+    if (peerSession) {
+      const member = peerSession.memberId ? await this.resolve(peerSession.memberId) : null;
+      return member ? { member, via: 'passport', key: null, session: peerSession } : null;
+    }
+    if (req && req.headers && req.headers['x-fabric-request']) return null;
     const current = await this._sessionFromRequest(req);
     if (!current) return null;
     const member = await this.resolve(current.session.memberId);
@@ -812,15 +864,25 @@ class Members extends EventEmitter {
     return { member, via: current.session.via || null, key: current.key, session: current.session };
   }
 
-  _setSessionCookie (req, res, token) {
+  /**
+   * In production an https site always marks its cookies Secure, so a proxy that
+   * drops `X-Forwarded-Proto` cannot send them in the clear.
+   * @private
+   */
+  _secureCookies (req) {
+    if (requestProto(req) === 'https') return true;
+    return process.env.NODE_ENV === 'production' && /^https:\/\//i.test(String(this.settings.siteUrl || ''));
+  }
+
+  _setSessionCookie (req, res, token, via) {
     const parts = [
       `${this.settings.cookieName}=${encodeURIComponent(token)}`,
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',
-      `Max-Age=${Math.floor(this.settings.sessionTtlMs / 1000)}`
+      `Max-Age=${Math.floor(this._sessionTtl(via) / 1000)}`
     ];
-    if (requestProto(req) === 'https') parts.push('Secure');
+    if (this._secureCookies(req)) parts.push('Secure');
     addCookie(res, parts.join('; '));
   }
 
@@ -886,7 +948,7 @@ class Members extends EventEmitter {
       'SameSite=Lax',
       `Max-Age=${Math.floor(OAUTH_STATE_TTL_MS / 1000)}`
     ];
-    if (requestProto(req) === 'https') cookie.push('Secure');
+    if (this._secureCookies(req)) cookie.push('Secure');
     res.setHeader('Set-Cookie', cookie.join('; '));
     return redirect(res, url.toString());
   }
@@ -1000,7 +1062,6 @@ class Members extends EventEmitter {
   // redeemed. Taking one runs on the member queue, so two claims racing for
   // the same challenge can't both get it.
   _createPassport (network = null) {
-    if (!passportAvailable()) return null;
     const production = this.settings.production != null
       ? !!this.settings.production
       : process.env.NODE_ENV === 'production';
@@ -1050,10 +1111,10 @@ class Members extends EventEmitter {
       `${PASSPORT_COOKIE}=${value}`,
       `Path=${BASE}/passport`,
       'HttpOnly',
-      'SameSite=Lax',
+      'SameSite=Strict',
       `Max-Age=${Math.floor(maxAgeMs / 1000)}`
     ];
-    if (requestProto(req) === 'https') parts.push('Secure');
+    if (this._secureCookies(req)) parts.push('Secure');
     addCookie(res, parts.join('; '));
   }
 
@@ -1100,7 +1161,7 @@ class Members extends EventEmitter {
   async _passportClaim (req, res) {
     if (!this.passport) return sendJson(res, 503, { error: 'Passport login is not available' });
     const body = (req.body && typeof req.body === 'object') ? req.body : {};
-    if (passportHttp && passportHttp.passportOutdated(body.assertion || body.fabric, 'PASSPORT_ASSERTION')) {
+    if (passportHttp.passportOutdated(body.assertion || body.fabric, 'PASSPORT_ASSERTION')) {
       return sendJson(res, 426, passportHttp.PASSPORT_OUTDATED);
     }
     const assertion = typeof body.assertion === 'string' ? body.assertion.trim() : '';
@@ -1112,6 +1173,9 @@ class Members extends EventEmitter {
     const verified = await this.passport.redeem(secret, assertion);
     if (!verified.ok) return sendJson(res, 401, { error: `Passport sign-in rejected: ${verified.error}` });
     if (!origin || origin !== verified.origin) return sendJson(res, 401, { error: 'Sign-in was started on another address' });
+    // The page posting the claim must be that origin too, not a sibling host that planted the cookie.
+    const pageOrigin = req.headers && typeof req.headers.origin === 'string' ? this.passport.resolveOrigin(req.headers.origin) : null;
+    if (pageOrigin !== verified.origin) return sendJson(res, 403, { error: 'Sign-in must be finished on the page that started it' });
 
     const current = body.link === true ? await this.currentMember(req) : null;
     if (body.link === true && !current) return sendJson(res, 401, { error: 'Sign in first to link a Fabric identity' });
@@ -1161,6 +1225,7 @@ class Members extends EventEmitter {
   async _unlink (req, res, key) {
     const current = await this.currentMember(req);
     if (!current) return sendJson(res, 401, { error: 'Not signed in' });
+    if (current.via === 'rsi-link') return sendJson(res, 403, { error: 'You signed in with a one-time link. Sign in with Discord or Passport first, then unlink an account.' });
     try {
       const member = await this.unlink(current.member.id, key);
       return sendJson(res, 200, { ok: true, accounts: member.accounts.map(accountView) });
@@ -1287,13 +1352,17 @@ class Members extends EventEmitter {
     const token = String(this._query(req).t || '');
     if (!/^[0-9a-f]{64}$/.test(token)) return redirect(res, this._claimResult({ error: 'link' }));
     const key = `/claim-links/${sha256(token)}`;
-    const link = await this.store.get(key);
-    if (link) await this._drop(key);
+    // Read and drop in one turn, so two redemptions of one link cannot both read it.
+    const link = await this._serial(async () => {
+      const found = await this._read(key);
+      if (found) await this._drop(key);
+      return found;
+    });
     if (!link || !(link.expiresAt > Date.now())) return redirect(res, this._claimResult({ error: 'link' }));
     const member = await this.resolve(link.memberId);
     if (!member) return redirect(res, this._claimResult({ error: 'link' }));
     await this._refresh(member.id, { login: true });
-    this._setSessionCookie(req, res, await this._createSession(member.id, 'rsi-link'));
+    this._setSessionCookie(req, res, await this._createSession(member.id, 'rsi-link'), 'rsi-link');
     return redirect(res, this._claimResult());
   }
 
@@ -1410,7 +1479,7 @@ class Members extends EventEmitter {
           case 'POST /passport/challenges': handler = this._passportChallenge; break;
           case 'POST /passport': handler = this._passportClaim; break;
           case 'POST /passport/requests':
-            return sendJson(res, 426, passportHttp ? passportHttp.PASSPORT_OUTDATED : { error: 'passport_outdated' });
+            return sendJson(res, 426, passportHttp.PASSPORT_OUTDATED);
           case 'GET /session': handler = this._currentSession; break;
           case 'GET /accounts': handler = this._accounts; break;
           case 'GET /directory': handler = this._directory; break;

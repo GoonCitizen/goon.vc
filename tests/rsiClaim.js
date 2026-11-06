@@ -228,6 +228,31 @@ describe('RSI profile claims', function () {
     assert.strictEqual(forged.headers.location, '/rsi?error=link');
   });
 
+  it('signs in once when a link is redeemed twice at the same time', async function () {
+    const member = await members.linkDiscord({ id: '700000000000000011', username: 'twice' }, 'Twice');
+    const link = new URL((await members.claimLink(member.id)).url);
+    const path = `${link.pathname}${link.search}`;
+    const both = await Promise.all([request(path), request(path)]);
+    const cookies = both.filter((res) => [].concat(res.headers['set-cookie'] || []).some((raw) => raw.startsWith('goon.member=')));
+    assert.strictEqual(cookies.length, 1, 'exactly one session');
+    assert.deepStrictEqual(both.map((res) => res.headers.location).sort(), ['/rsi', '/rsi?error=link']);
+  });
+
+  it('keeps a link session short, and never lets it unlink an account', async function () {
+    const member = await members.linkDiscord({ id: '700000000000000012', username: 'brief' }, 'Brief');
+    const link = new URL((await members.claimLink(member.id)).url);
+    const res = await request(`${link.pathname}${link.search}`);
+    const raw = [].concat(res.headers['set-cookie']).find((c) => c.startsWith('goon.member='));
+    assert.match(raw, /Max-Age=3600(;|$)/);
+    const cookie = raw.split(';')[0];
+    const token = decodeURIComponent(cookie.slice('goon.member='.length));
+    const stored = await members.store.get(`/sessions/${crypto.createHash('sha256').update(token).digest('hex')}`);
+    assert.ok(stored.expiresAt <= Date.now() + 60 * 60 * 1000);
+    const unlink = await request(`/services/members/accounts/${encodeURIComponent('discord:700000000000000012')}`, { method: 'DELETE', cookie });
+    assert.strictEqual(unlink.status, 403);
+    assert.strictEqual((await members.resolve(member.id)).accounts.length, 1);
+  });
+
   it('answers 401 signed out', async function () {
     assert.strictEqual((await request('/services/members/rsi')).status, 401);
     assert.strictEqual((await request('/services/members/rsi/claims', { method: 'POST', body: { handle: 'Kersa' } })).status, 401);

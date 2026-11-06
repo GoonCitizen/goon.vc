@@ -652,6 +652,8 @@ describe('Alliance service', function () {
       assert.deepStrictEqual(org.descriptor, infn.federation.descriptor);
       assert.strictEqual(org.officers.length, 3);
       assert.ok(org.officers.some((row) => row.name === 'Ada'));
+      const names = org.officers.map((row) => row.name);
+      assert.deepStrictEqual(names, names.slice().sort((x, y) => x.localeCompare(y)), 'in name order, not validator order');
       assert.deepStrictEqual(org.alliances.map((row) => row.id), [overview.federation.id]);
       assert.ok(!JSON.stringify(org).includes('discord:'), 'no account keys');
 

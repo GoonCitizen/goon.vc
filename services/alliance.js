@@ -1203,10 +1203,13 @@ class Alliance {
       const alliance = await this.store.get(`/federation/${fid}`);
       if (alliance) alliances.push(this._allianceSummary(alliance));
     }
+    // Names only, in name order: listed in validator order, an endorsement's
+    // public signer key could be matched to an officer by its index.
     const officers = [];
     for (const pubkey of record.descriptor.validators) {
       officers.push({ name: await this._officerName(pubkey.slice(2)) });
     }
+    officers.sort((a, b) => String(a.name).localeCompare(String(b.name)));
     return Object.assign(this._orgFederationSummary(record), {
       descriptor: record.descriptor,
       officers,

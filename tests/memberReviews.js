@@ -220,7 +220,7 @@ describe('Members reviews (waiting area)', function () {
     }, new Key());
     const res = await request('/services/members/passport', {
       method: 'POST',
-      headers: { Cookie: cookieFrom(started, 'goon.passport') },
+      headers: { Cookie: cookieFrom(started, 'goon.passport'), Origin: read.challenge.origin },
       body: { assertion: signed.uri }
     });
     assert.strictEqual(res.status, 200, JSON.stringify(res.json));

@@ -29,6 +29,10 @@ const HOP_BY_HOP = new Set([
   'host'
 ]);
 
+// goon.vc's own cookies (the member session) never reach a Hub, and a Hub never sets one here.
+const REQUEST_PRIVATE = new Set(['cookie']);
+const RESPONSE_PRIVATE = new Set(['set-cookie']);
+
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_BODY_BYTES = 1024 * 1024;
 
@@ -191,7 +195,7 @@ function forwardToHub (origin, req, res, body, timeout) {
   const headers = {};
   const src = (req && req.headers) || {};
   for (const name of Object.keys(src)) {
-    if (HOP_BY_HOP.has(name.toLowerCase())) continue;
+    if (HOP_BY_HOP.has(name.toLowerCase()) || REQUEST_PRIVATE.has(name.toLowerCase())) continue;
     const value = src[name];
     if (value == null || value === '') continue;
     headers[name] = value;
@@ -228,7 +232,7 @@ function forwardToHub (origin, req, res, body, timeout) {
       res.statusCode = incoming.statusCode || 502;
       const outHeaders = incoming.headers || {};
       for (const name of Object.keys(outHeaders)) {
-        if (HOP_BY_HOP.has(name.toLowerCase())) continue;
+        if (HOP_BY_HOP.has(name.toLowerCase()) || RESPONSE_PRIVATE.has(name.toLowerCase())) continue;
         const value = outHeaders[name];
         if (value == null) continue;
         try { res.setHeader(name, value); } catch (_) { /* skip invalid */ }

@@ -9,8 +9,11 @@ Public **HTML zipper** for the Fabric suite. Not a Hub and not a GoonCitizen rel
 the linked-signer rendezvous and mailbox (`/delegations`,
 `/services/delegation/mailbox`) and `/services/rpc` to `FABRIC_HUB_ORIGIN` (default `https://hub.fabric.pub`) for other clients;
 member login does not use them. `/sessions` is goon.vc's own login page and is
-never proxied. No Fabric Peer listen,
-no Bitcoin, no Discord bot, no `/services/star-citizen`.
+never proxied. No Fabric Peer listen (it only dials out), no bitcoind, no
+`/services/star-citizen`. It does hold two secrets: the Market escrow
+**arbiter signing key** (derived from `GOON_FABRIC_XPRV` / `stores/fabric`; it
+signs withdrawal co-signatures, never a buyer's or seller's coins), and a
+**Discord bot token** with gateway access (the metrics bot and its commands).
 
 ## Passport login
 Member sign-in with a Fabric key is Passport v2 (spec: `@fabric/core`
