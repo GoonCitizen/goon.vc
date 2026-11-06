@@ -87,6 +87,7 @@ class Presence {
    *   Doorman and Discord adapter instead of running our own (`operations` then only reports
    *   gateway status).
    * @param {boolean} [settings.gateway] Attach to the Discord gateway when available (default true).
+   * @param {string} [settings.guildId] Home Discord server. Its display name outranks every other name.
    * @param {Function} [settings.Doorman] Injected for tests; defaults to @fabric/doorman.
    * @param {Function} [settings.IdleRPG] Injected for tests; defaults to idlerpg/services/idlerpg.
    * @param {Function} [settings.DoormanDiscord] Injected for tests; defaults to @fabric/doorman/services/discord.
@@ -100,7 +101,8 @@ class Presence {
       channels: [],
       announcements: [],
       operations: null,
-      gateway: true
+      gateway: true,
+      guildId: null
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.doorman = null;
     this.game = null;
@@ -207,7 +209,7 @@ class Presence {
   attach (discord) {
     if (!discord || this.adapter) return this;
     const DoormanDiscord = this.settings.DoormanDiscord || require('@fabric/doorman/services/discord');
-    const adapter = new DoormanDiscord({ client: discord, replies: false });
+    const adapter = new DoormanDiscord({ client: discord, replies: false, guildId: this.settings.guildId || null });
     this.doorman.enable('discord', adapter);
     return this._attached(discord, adapter);
   }
@@ -231,37 +233,74 @@ class Presence {
     return this;
   }
 
+  /** Home Discord server, when one is configured. */
+  _homeGuildId () {
+    const fromAdapter = this.adapter && this.adapter.settings && this.adapter.settings.guildId;
+    return fromAdapter ? String(fromAdapter) : (this.settings.guildId ? String(this.settings.guildId) : null);
+  }
+
   /**
-   * Name players stored before the adapter announced names (they would
-   * otherwise stay "Unknown pilot" until they next join voice).
+   * A name from the member cache, the home server when we don't have its
+   * display name yet, or any guild / the user record for someone still unnamed.
+   * @param {Object} discord
+   * @param {string} userId
+   * @param {Object} player
+   * @returns {Promise<{ name: string, rank: number }|null>}
+   */
+  async _playerName (discord, userId, player) {
+    const HOME = 40;
+    const stored = Number.isFinite(Number(player.nameRank)) ? Number(player.nameRank) : (player.name ? 0 : -1);
+    const adapter = this.adapter;
+    let choice = adapter && typeof adapter.bestName === 'function' ? adapter.bestName(userId) : null;
+    if (this._homeGuildId() && !(choice && choice.rank >= HOME) && stored < HOME && adapter && typeof adapter.homeName === 'function') {
+      const home = await adapter.homeName(userId);
+      if (home && (!choice || home.rank > choice.rank)) choice = home;
+    }
+    if (choice) return choice;
+    if (player.name) return null;
+    const client = discord.client;
+    const guilds = client && client.guilds && client.guilds.cache ? [...client.guilds.cache.values()] : [];
+    const homeId = this._homeGuildId();
+    guilds.sort((a, b) => (String(a.id) === homeId ? 0 : 1) - (String(b.id) === homeId ? 0 : 1));
+    for (const guild of guilds) {
+      const cached = adapter && typeof adapter.displayName === 'function' ? adapter.displayName(userId, guild.id) : null;
+      if (cached) return { name: cached, rank: String(guild.id) === homeId ? HOME : 0 };
+      if (typeof guild.members.fetch !== 'function') continue;
+      const member = await guild.members.fetch(userId).catch(() => null);
+      if (!member) continue;
+      const name = member.nickname || member.displayName || (member.user && (member.user.globalName || member.user.username));
+      if (name) return { name: String(name), rank: String(guild.id) === homeId ? HOME : (member.nickname ? 20 : 0) };
+    }
+    if (client && client.users && typeof client.users.fetch === 'function') {
+      const user = await client.users.fetch(userId).catch(() => null);
+      if (user) {
+        const name = user.globalName || user.username;
+        if (name) return { name: String(name), rank: user.globalName ? 10 : 0 };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Apply the best cached name to every player, and ask the home server for
+   * anyone who does not yet have its display name (otherwise they stay
+   * "Unknown pilot", or keep a weaker name, until they next join voice).
    * @param {Object} discord `@fabric/discord` client
-   * @returns {Promise<number>} players named
+   * @returns {Promise<number>} players whose name changed
    */
   async backfillNames (discord) {
     if (!this.game || !discord) return 0;
-    const client = discord.client;
-    const guilds = client && client.guilds && client.guilds.cache ? [...client.guilds.cache.values()] : [];
     let named = 0;
     for (const player of Object.values(this.game.content.players)) {
       const userId = discordUserId(player);
-      if (player.name || !userId) continue;
-      let name = null;
-      for (const guild of guilds) {
-        name = this.adapter ? this.adapter.displayName(userId, guild.id) : null;
-        if (name) break;
-        const member = await guild.members.fetch(userId).catch(() => null);
-        if (member) {
-          name = member.nickname || member.displayName || (member.user && (member.user.globalName || member.user.username));
-          break;
-        }
-      }
-      if (!name && client && client.users && typeof client.users.fetch === 'function') {
-        const user = await client.users.fetch(userId).catch(() => null);
-        if (user) name = user.globalName || user.username;
-      }
-      if (!name) continue;
-      await this.game._registerUser({ id: `discord/users/${userId}`, name: String(name) });
-      named += 1;
+      if (!userId) continue;
+      const choice = await this._playerName(discord, userId, player);
+      if (!choice || !choice.name) continue;
+      const before = player.name;
+      const beforeRank = player.nameRank;
+      await this.game._registerUser({ id: `discord/users/${userId}`, name: choice.name, rank: choice.rank });
+      const after = this.game.playerFor(`discord/users/${userId}`);
+      if (after && (after.name !== before || after.nameRank !== beforeRank)) named += 1;
     }
     if (named) await this.game._persist();
     return named;

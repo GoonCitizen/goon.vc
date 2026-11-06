@@ -5,10 +5,16 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const Key = require('@fabric/core/types/key');
+const Message = require('@fabric/core/types/message');
+const { encodeFabricUri } = require('@fabric/core/functions/fabricUri');
+const passportCore = require('@fabric/core/functions/passport');
+const { deriveAccount } = require('@fabric/core/functions/accountKeys');
 const Members = require('../services/members');
 
 const MEMBER_ID = /^[0-9a-f]{16}$/;
-const key = (byte) => byte.repeat(32);
+const xonly = (signer) => signer.pubkey.slice(2);
 
 function jsonResponse (status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
@@ -23,12 +29,8 @@ describe('Members', function () {
   let storePath;
   const calls = [];
   let discordUser = { id: '424242424242', username: 'goon', global_name: 'Goon', avatar: 'abc' };
-  const hubSessions = {
-    signedsession1: { status: 'signed', identity: { id: 'fabric-id-1' }, pubkeyHex: '02' + key('11') },
-    signedsession2: { status: 'signed', identity: { id: 'fabric-id-2' }, pubkeyHex: '03' + key('22') },
-    pendingsession: { status: 'pending' }
-  };
-  const clusters = {};
+  const first = new Key();
+  let legacyHolder = null;
 
   function stubFetch (url, opts = {}) {
     calls.push({ url, opts });
@@ -43,20 +45,7 @@ describe('Members', function () {
     if (url === 'https://discord.com/api/v10/users/@me/guilds') {
       return Promise.resolve(jsonResponse(200, [{ id: '1190527980120850493' }]));
     }
-    if (url.startsWith('http://down.test/')) {
-      return Promise.reject(new TypeError('fetch failed'));
-    }
-    const cluster = /^http:\/\/hub\.test\/identity\/cluster\?pubkey=([0-9a-f]+)$/.exec(url);
-    if (cluster) {
-      const list = clusters[cluster[1]];
-      return Promise.resolve(list ? jsonResponse(200, { type: 'IdentityCluster', data: { members: list } }) : jsonResponse(404, {}));
-    }
-    const session = /^http:\/\/hub\.test\/sessions\/(\w+)$/.exec(url);
-    if (session && hubSessions[session[1]]) {
-      if (session[1] === 'signedsession1' && opts.headers['X-Fabric-Poll-Secret'] !== 'poll-secret') return Promise.resolve(jsonResponse(403, {}));
-      return Promise.resolve(jsonResponse(200, hubSessions[session[1]]));
-    }
-    return Promise.resolve(jsonResponse(404, {}));
+    return Promise.reject(new TypeError(`unexpected fetch ${url}`));
   }
 
   function request (pathname, opts = {}) {
@@ -83,24 +72,58 @@ describe('Members', function () {
     });
   }
 
-  function cookieFrom (res) {
-    const raw = [].concat(res.headers['set-cookie'] || [])[0] || '';
-    return raw.split(';')[0];
+  function setCookie (res, name) {
+    return [].concat(res.headers['set-cookie'] || []).find((raw) => raw.startsWith(`${name}=`)) || '';
   }
 
-  async function passport (sessionId, pubkeyHex, opts = {}) {
-    hubSessions[sessionId] = { status: 'signed', identity: { id: opts.identityId, name: opts.name }, pubkeyHex };
+  function cookieFrom (res, name = 'goon.member') {
+    return setCookie(res, name).split(';')[0];
+  }
+
+  const origin = () => `http://127.0.0.1:${port}`;
+
+  const challengeKey = (cookie) => `/passport-requests/${crypto.createHash('sha256').update(cookie.split('=')[1]).digest('hex')}`;
+
+  async function startPassport (headers = {}) {
+    const res = await request('/services/members/passport/challenges', { method: 'POST', headers });
+    assert.strictEqual(res.status, 200, JSON.stringify(res.json));
+    const read = passportCore.readChallenge(res.json.challenge);
+    assert.ok(read.ok, read.error);
+    return { res, uri: res.json.challenge, challenge: read.challenge, cookie: cookieFrom(res, 'goon.passport') };
+  }
+
+  function sign (started, signer, opts = {}) {
+    return passportCore.signAssertion({
+      origin: started.challenge.origin,
+      challenge: started.uri,
+      signer: opts.label || 'passport',
+      network: opts.network || 'mainnet',
+      now: opts.now
+    }, signer);
+  }
+
+  function claim (assertion, opts = {}) {
     return request('/services/members/passport', {
       method: 'POST',
-      headers: opts.cookie ? { Cookie: opts.cookie } : {},
-      body: Object.assign({ sessionId }, opts.link ? { link: true } : {})
+      headers: Object.assign({ Origin: origin() }, opts.headers || {}, opts.cookie ? { Cookie: opts.cookie } : {}),
+      body: Object.assign({ assertion }, opts.link ? { link: true } : {})
     });
   }
 
-  async function discordLogin (user, cookie) {
+  // Passport's answer: start a challenge, sign it with `signer`, redeem it.
+  async function passport (signer, opts = {}) {
+    const started = await startPassport();
+    const signed = sign(started, signer, opts);
+    const cookie = [opts.cookie, started.cookie].filter(Boolean).join('; ');
+    const res = await claim(signed.uri, { cookie, link: opts.link });
+    return Object.assign(res, { started, signed, cookie });
+  }
+
+  async function discordLogin (user, cookie, opts = {}) {
     discordUser = user;
     const headers = cookie ? { Cookie: cookie } : {};
-    const start = await request(`/services/members/discord${cookie ? '?link=1' : ''}`, { headers });
+    const start = await request(`/services/members/discord${cookie ? '?link=1' : ''}${cookie && opts.next ? `&next=${opts.next}` : ''}`, { headers });
+    if (opts.beforeCallback) await opts.beforeCallback();
     const state = new URL(start.headers.location).searchParams.get('state');
     const oauth = `goon.oauth=${state}`;
     return request(`/services/members/discord/callback?code=good-code&state=${state}`, {
@@ -112,7 +135,6 @@ describe('Members', function () {
     storePath = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-members-'));
     members = new Members({
       path: storePath,
-      hubOrigin: 'http://hub.test',
       fetch: stubFetch,
       discord: {
         clientId: 'client-id',
@@ -198,7 +220,12 @@ describe('Members', function () {
     await borrowed.start();
     const mw = borrowed.middleware();
     const run = (url, cookie) => new Promise((resolve) => {
-      const res = { headers: {}, setHeader (k, v) { this.headers[k.toLowerCase()] = v; }, end () { resolve(this); } };
+      const res = {
+        headers: {},
+        getHeader (k) { return this.headers[k.toLowerCase()]; },
+        setHeader (k, v) { this.headers[k.toLowerCase()] = v; },
+        end () { resolve(this); }
+      };
       mw({ method: 'GET', url, headers: Object.assign({ host: 'goon.vc', 'x-forwarded-proto': 'https' }, cookie ? { cookie } : {}) }, res, () => resolve(null));
     });
     try {
@@ -239,30 +266,39 @@ describe('Members', function () {
     assert.strictEqual(res.headers.location, '/sessions?error=expired_state');
   });
 
-  it('signs in with a Hub-signed Passport session once', async function () {
-    const pending = await request('/services/members/passport', {
-      method: 'POST',
-      body: { sessionId: 'pendingsession', pollSecret: 'x' }
-    });
-    assert.strictEqual(pending.status, 202);
-    assert.strictEqual(pending.json.status, 'pending');
+  it('offers Passport when the installed @fabric/http can verify it', async function () {
+    const res = await request('/services/members');
+    assert.strictEqual(res.json.passport, true);
+  });
 
-    const res = await request('/services/members/passport', {
-      method: 'POST',
-      body: { sessionId: 'signedsession1', pollSecret: 'poll-secret' }
-    });
-    assert.strictEqual(res.status, 200);
+  it('issues a Passport challenge bound to this browser by a binding secret', async function () {
+    const { res, challenge, cookie } = await startPassport();
+    assert.strictEqual(challenge.origin, origin());
+    assert.ok(/^[0-9a-f]{64}$/.test(challenge.nonce));
+    assert.ok(challenge.expiresAt - challenge.issuedAt <= 2 * 60 * 1000);
+    assert.deepStrictEqual(challenge.request, [], 'sign-in asks for nothing beyond the identity');
+    assert.strictEqual(challenge.network, null, 'sign-in works on any network');
+    assert.ok(/^goon\.passport=[0-9a-f]{64}$/.test(cookie));
+    assert.ok(!cookie.includes(challenge.nonce), 'the cookie is not the nonce');
+    assert.ok(/; Path=\/services\/members\/passport; HttpOnly; SameSite=Strict; Max-Age=120$/.test(setCookie(res, 'goon.passport')));
+    const record = await members.store.get(challengeKey(cookie));
+    assert.strictEqual(record.origin, origin());
+    assert.ok(!JSON.stringify(record).includes(cookie.split('=')[1]), 'the store keeps only the binding secret hash');
+  });
+
+  it('signs in with a Passport assertion once', async function () {
+    const res = await passport(first);
+    assert.strictEqual(res.status, 200, JSON.stringify(res.json));
     assert.ok(MEMBER_ID.test(res.json.member.id));
     assert.strictEqual(res.json.member.provider, 'passport');
     assert.deepStrictEqual(res.json.member.platforms, ['fabric']);
-    assert.strictEqual((await members.resolve(`fabric:${key('11')}`)).id, res.json.member.id);
+    assert.strictEqual((await members.resolve(`fabric:${xonly(first)}`)).id, res.json.member.id);
+    assert.ok(/^goon\.passport=; .*Max-Age=0/.test(setCookie(res, 'goon.passport')), 'the binding cookie is cleared');
     const cookie = cookieFrom(res);
+    assert.ok(/^goon\.member=[0-9a-f]{64}$/.test(cookie));
 
-    const again = await request('/services/members/passport', {
-      method: 'POST',
-      body: { sessionId: 'signedsession1', pollSecret: 'poll-secret' }
-    });
-    assert.strictEqual(again.status, 409);
+    const replay = await claim(res.signed.uri, { cookie: res.started.cookie });
+    assert.strictEqual(replay.status, 401, 'a challenge is redeemed once');
 
     const logout = await request('/services/members/logout', { method: 'POST', headers: { Cookie: cookie } });
     assert.strictEqual(logout.status, 200);
@@ -270,28 +306,241 @@ describe('Members', function () {
     assert.strictEqual(after.status, 401);
   });
 
-  it('polls the next Hub when one cannot be reached', async function () {
-    const { createHubList } = require('../functions/hubApiProxy');
-    const saved = members.hubs;
-    members.hubs = createHubList(['http://down.test', 'http://hub.test']);
-    try {
-      const res = await request('/services/members/passport', {
-        method: 'POST',
-        body: { sessionId: 'signedsession2' }
-      });
-      assert.strictEqual(res.status, 200);
-      assert.strictEqual((await members.resolve(`fabric:${key('22')}`)).id, res.json.member.id);
-      assert.strictEqual(members.hubs.order()[0], 'http://hub.test');
+  it('tells a page or Passport from before v2 to update', async function () {
+    const started = await startPassport();
+    const v1Request = await request('/services/members/passport/requests', { method: 'POST' });
+    assert.strictEqual(v1Request.status, 426);
+    assert.strictEqual(v1Request.json.error, 'passport_outdated');
+    const v1Claim = await request('/services/members/passport', {
+      method: 'POST',
+      headers: { Cookie: started.cookie },
+      body: { fabric: started.uri, link: false }
+    });
+    assert.strictEqual(v1Claim.status, 426, 'a frame other than PASSPORT_ASSERTION');
+    assert.match(v1Claim.json.message, /Update Fabric Passport/);
+    const signed = sign(started, new Key());
+    const res = await claim(signed.uri, { cookie: started.cookie });
+    assert.strictEqual(res.status, 200, 'the challenge survives the v1 attempt');
+  });
 
-      members.hubs = createHubList(['http://down.test']);
-      const down = await request('/services/members/passport', {
-        method: 'POST',
-        body: { sessionId: 'pendingsession' }
-      });
-      assert.strictEqual(down.status, 502);
-    } finally {
-      members.hubs = saved;
+  it('gives a challenge to only one of two racing claims', async function () {
+    const signer = new Key();
+    const started = await startPassport();
+    const signed = sign(started, signer);
+    const both = await Promise.all([
+      claim(signed.uri, { cookie: started.cookie }),
+      claim(signed.uri, { cookie: started.cookie })
+    ]);
+    assert.deepStrictEqual(both.map((res) => res.status).sort(), [200, 401]);
+  });
+
+  it('refuses an assertion without the browser\'s binding cookie', async function () {
+    const signer = new Key();
+    const started = await startPassport();
+    const signed = sign(started, signer);
+    const elsewhere = await claim(signed.uri);
+    assert.strictEqual(elsewhere.status, 401, 'an assertion relayed to another browser is refused');
+    const other = await startPassport();
+    const mixed = await claim(signed.uri, { cookie: other.cookie });
+    assert.strictEqual(mixed.status, 401, 'another challenge does not match');
+    assert.match(mixed.json.error, /nonce mismatch/);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(signer)}`), null);
+    const spent = await claim(signed.uri, { cookie: started.cookie });
+    assert.strictEqual(spent.status, 200, 'its own browser still can');
+  });
+
+  it('refuses a claim posted from another page, even with the binding cookie', async function () {
+    const signer = new Key();
+    for (const headers of [{ Origin: 'https://relay.goon.vc' }, { Origin: '' }]) {
+      const started = await startPassport();
+      const res = await claim(sign(started, signer).uri, { cookie: started.cookie, headers });
+      assert.strictEqual(res.status, 403, JSON.stringify(res.json));
+      assert.ok(!cookieFrom(res), 'no session');
     }
+    assert.strictEqual(await members.resolve(`fabric:${xonly(signer)}`), null);
+  });
+
+  it('refuses expired challenges and expired assertions', async function () {
+    const signer = new Key();
+    const started = await startPassport();
+    const recordKey = challengeKey(started.cookie);
+    await members.store.set(recordKey, Object.assign({}, await members.store.get(recordKey), { expiresAt: Date.now() - 1 }));
+    const late = await claim(sign(started, signer).uri, { cookie: started.cookie });
+    assert.strictEqual(late.status, 401);
+    assert.match(late.json.error, /expired/);
+
+    const fresh = await startPassport();
+    const identityId = sign(fresh, signer).identity.id;
+    const stale = Message.fromFields('PASSPORT_ASSERTION', {
+      v: 2,
+      origin: fresh.challenge.origin,
+      nonce: fresh.challenge.nonce,
+      challengeHash: Buffer.from(passportCore.challengeHash(fresh.uri), 'hex'),
+      issuedAt: BigInt(Date.now() - 10 * 60 * 1000),
+      expiresAt: BigInt(Date.now() - 9 * 60 * 1000),
+      network: 'mainnet',
+      pubkey: signer.pubkey,
+      identityId,
+      signer: 'passport',
+      device: '',
+      wallet: '',
+      cosigner: ''
+    });
+    stale.signWithKey(signer);
+    const old = await claim(encodeFabricUri(stale), { cookie: fresh.cookie });
+    assert.strictEqual(old.status, 401);
+    assert.match(old.json.error, /expired/);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(signer)}`), null);
+  });
+
+  it('refuses an assertion signed for another origin', async function () {
+    const signer = new Key();
+    const started = await startPassport();
+    const evil = passportCore.createChallenge({ origin: 'https://evil.test' });
+    const signed = passportCore.signAssertion({ origin: 'https://evil.test', challenge: evil.uri, signer: 'passport', network: 'mainnet' }, signer);
+    const res = await claim(signed.uri, { cookie: started.cookie });
+    assert.strictEqual(res.status, 401);
+    assert.match(res.json.error, /origin mismatch/);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(signer)}`), null);
+  });
+
+  it('issues challenges only for pinned origins, never for the Host header', async function () {
+    const saved = members.passport;
+    members.settings.origins = ['https://goon.vc'];
+    members.passport = members._createPassport();
+    try {
+      const refused = await request('/services/members/passport/challenges', { method: 'POST' });
+      assert.strictEqual(refused.status, 400, 'a Host the site does not serve gets no challenge');
+      const spoofed = await request('/services/members/passport/challenges', { method: 'POST', headers: { Host: 'evil.test' } });
+      assert.strictEqual(spoofed.status, 400);
+      const proxied = { Host: 'goon.vc', 'X-Forwarded-Proto': 'https' };
+      const started = await startPassport(proxied);
+      assert.strictEqual(started.challenge.origin, 'https://goon.vc');
+      assert.ok(/; Secure$/.test(setCookie(started.res, 'goon.passport')));
+      const res = await claim(sign(started, new Key()).uri, { cookie: started.cookie, headers: Object.assign({ Origin: 'https://goon.vc' }, proxied) });
+      assert.strictEqual(res.status, 200, JSON.stringify(res.json));
+    } finally {
+      delete members.settings.origins;
+      members.passport = saved;
+    }
+  });
+
+  it('links an escrow key: a challenge asking for the cosigner key on the escrow network', async function () {
+    const master = new Key().xprv;
+    const account = deriveAccount(master, { account: 0, network: 'regtest' });
+    const startEscrow = (cookie) => request('/services/members/passport/challenges', { method: 'POST', headers: cookie ? { Cookie: cookie } : {}, body: { escrow: true } });
+
+    const signedOut = await startEscrow();
+    assert.strictEqual(signedOut.status, 401, 'escrow keys are linked to a signed-in member');
+
+    const login = await passport(account.identity.key, { network: 'regtest' });
+    assert.strictEqual(login.status, 200, JSON.stringify(login.json));
+    const session = cookieFrom(login);
+    const unavailable = await startEscrow(session);
+    assert.strictEqual(unavailable.status, 503, 'no escrow network, no challenge');
+
+    members.settings.escrowNetwork = async () => 'regtest';
+    try {
+      const res = await startEscrow(session);
+      assert.strictEqual(res.status, 200, JSON.stringify(res.json));
+      const read = passportCore.readChallenge(res.json.challenge);
+      assert.strictEqual(read.challenge.network, 'regtest');
+      assert.deepStrictEqual(read.challenge.request, ['cosigner']);
+      const binding = cookieFrom(res, 'goon.passport');
+      const signed = passportCore.signAssertion({
+        origin: read.challenge.origin,
+        challenge: res.json.challenge,
+        signer: 'passport',
+        disclose: ['cosigner'],
+        cosignerKey: account.cosigner.key
+      }, account.identity.key);
+      const linked = await claim(signed.uri, { cookie: `${session}; ${binding}`, link: true });
+      assert.strictEqual(linked.status, 200, JSON.stringify(linked.json));
+      assert.deepStrictEqual(linked.json.escrowKey, { network: 'regtest' });
+      const member = await members.getMember(`fabric:${xonly(account.identity.key)}`);
+      const held = member.accounts.find((a) => a.platform === 'fabric');
+      assert.strictEqual(held.cosigner.pubkey, account.cosigner.pubkey);
+      assert.strictEqual(held.cosigner.network, 'regtest');
+      assert.notStrictEqual(held.cosigner.pubkey.slice(2), held.id, 'never the identity key');
+      assert.ok(member.log.some((entry) => entry.type === 'escrow-key' && entry.network === 'regtest'));
+      const accounts = await request('/services/members/accounts', { headers: { Cookie: session } });
+      assert.strictEqual(accounts.json.accounts.find((a) => a.platform === 'fabric').escrow, 'regtest');
+      assert.ok(!JSON.stringify(accounts.json).includes(account.cosigner.pubkey), 'the escrow key itself is not served');
+
+      const again = await startEscrow(session);
+      const rebound = cookieFrom(again, 'goon.passport');
+      const withoutDisclosure = passportCore.signAssertion({ origin: read.challenge.origin, challenge: again.json.challenge, signer: 'passport' }, account.identity.key);
+      const plain = await claim(withoutDisclosure.uri, { cookie: `${session}; ${rebound}`, link: true });
+      assert.strictEqual(plain.status, 200, 'Passport may decline to share it');
+      assert.strictEqual(plain.json.escrowKey, undefined);
+    } finally {
+      delete members.settings.escrowNetwork;
+    }
+  });
+
+  it('pins siteUrl in production, and turns Passport off with nothing to pin', function () {
+    const pinned = new Members({ path: storePath, production: true, siteUrl: 'https://goon.vc/' });
+    assert.deepStrictEqual(pinned.passport.pinnedOrigins, ['https://goon.vc']);
+    const local = new Members({ path: storePath, production: false, siteUrl: 'https://goon.vc' });
+    assert.deepStrictEqual(local.passport.pinnedOrigins, [], 'outside production a public siteUrl is not pinned: loopback only');
+    assert.strictEqual(local.passport.resolveOrigin('http://127.0.0.1:3000'), 'http://127.0.0.1:3000');
+    assert.strictEqual(local.passport.resolveOrigin('https://goon.vc'), null);
+    const off = new Members({ path: storePath, production: true });
+    assert.strictEqual(off.passport, null, 'production with no origin to pin');
+  });
+
+  it('refuses a challenge started on another address', async function () {
+    const signer = new Key();
+    const started = await startPassport({ Host: 'localhost:' + port });
+    const res = await claim(sign(started, signer).uri, { cookie: started.cookie });
+    assert.strictEqual(res.status, 401);
+    assert.match(res.json.error, /another address/);
+  });
+
+  it('refuses a tampered frame or one naming another key', async function () {
+    const victim = new Key();
+    const attacker = new Key();
+
+    let started = await startPassport();
+    const signed = sign(started, victim);
+    const bytes = Buffer.from(signed.uri.slice('fabric:'.length), 'base64url');
+    bytes[bytes.length - 1] ^= 1;
+    let res = await claim(encodeFabricUri(bytes), { cookie: started.cookie });
+    assert.strictEqual(res.status, 401, 'changed body');
+
+    started = await startPassport();
+    const forged = Message.fromFields('PASSPORT_ASSERTION', {
+      v: 2,
+      origin: started.challenge.origin,
+      nonce: started.challenge.nonce,
+      challengeHash: Buffer.from(passportCore.challengeHash(started.uri), 'hex'),
+      issuedAt: BigInt(Date.now()),
+      expiresAt: BigInt(Date.now() + 60000),
+      network: 'mainnet',
+      pubkey: victim.pubkey,
+      identityId: signed.identity.id,
+      signer: 'passport',
+      device: '',
+      wallet: '',
+      cosigner: ''
+    });
+    forged.signWithKey(attacker);
+    res = await claim(encodeFabricUri(forged), { cookie: started.cookie });
+    assert.strictEqual(res.status, 401, 'signed by another key');
+    assert.match(res.json.error, /pubkey does not match/);
+
+    res = await claim('not a frame', { cookie: (await startPassport()).cookie });
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(victim)}`), null);
+  });
+
+  it('signs in a key a desktop app signed for, as the same account', async function () {
+    const signer = new Key();
+    const viaPassport = await passport(signer);
+    const viaDesktop = await passport(signer, { label: 'gooncitizen' });
+    assert.strictEqual(viaDesktop.status, 200, JSON.stringify(viaDesktop.json));
+    assert.strictEqual(viaDesktop.json.member.id, viaPassport.json.member.id, 'the signer label grants nothing of its own');
+    assert.strictEqual(viaDesktop.json.member.provider, 'passport');
   });
 
   it('adopts members saved before accounts, keeping old sessions', async function () {
@@ -303,13 +552,17 @@ describe('Members', function () {
       displayName: 'Old Timer',
       inGuild: true
     });
-    await members.store.set('/members/fabric:fabric-id-9', {
-      id: 'fabric:fabric-id-9',
+    const holder = new Key();
+    const holderChallenge = passportCore.createChallenge({ origin: origin() });
+    const holderId = passportCore.signAssertion({ origin: origin(), challenge: holderChallenge.uri, signer: 'passport', network: 'mainnet' }, holder).identity.id;
+    await members.store.set(`/members/fabric:${holderId}`, {
+      id: `fabric:${holderId}`,
       createdAt: '2026-01-02T00:00:00.000Z',
       provider: 'passport',
-      fabric: { id: 'fabric-id-9', pubkeyHex: '02' + key('99') },
+      fabric: { id: holderId, pubkeyHex: holder.pubkey },
       displayName: 'Keyholder'
     });
+    legacyHolder = holderId;
     const token = await members._createSession('discord:777777777');
     const session = await request('/services/members/session', { headers: { Cookie: `goon.member=${token}` } });
     assert.strictEqual(session.status, 200);
@@ -319,13 +572,15 @@ describe('Members', function () {
     assert.strictEqual((await members.resolve('discord:777777777')).id, session.json.member.id, 'adopted once');
     assert.strictEqual((await members.memberFor('discord:777777777')).id, session.json.member.id);
 
-    const keyholder = await passport('legacykey1', '02' + key('99'), { identityId: 'fabric-id-9' });
+    const keyholder = await passport(holder);
+    assert.strictEqual(keyholder.status, 200, JSON.stringify(keyholder.json));
     assert.strictEqual(keyholder.json.member.displayName, 'Keyholder');
-    assert.strictEqual((await members.resolve('fabric:fabric-id-9')).id, keyholder.json.member.id);
+    assert.strictEqual((await members.resolve(`fabric:${holderId}`)).id, keyholder.json.member.id);
+    assert.strictEqual((await members.resolve(`fabric:${xonly(holder)}`)).id, keyholder.json.member.id);
   });
 
   it('links Discord to a signed-in member', async function () {
-    const signedIn = await passport('linkdiscord1', '02' + key('31'));
+    const signedIn = await passport(new Key());
     const cookie = cookieFrom(signedIn);
     const linked = await discordLogin({ id: '500100000', username: 'fresh', global_name: 'Fresh' }, cookie);
     assert.strictEqual(linked.headers.location, '/sessions?linked=discord');
@@ -344,7 +599,8 @@ describe('Members', function () {
     const veteran = await members.linkDiscord({ id: '500200000', username: 'old' }, 'Old Name');
     const merges = [];
     members.on('merged', (event) => merges.push(event));
-    const signedIn = await passport('mergesession1', '02' + key('41'), { name: 'Newcomer' });
+    const newcomer = new Key();
+    const signedIn = await passport(newcomer);
     assert.strictEqual(signedIn.status, 200, JSON.stringify(signedIn.json));
     const cookie = cookieFrom(signedIn);
     assert.notStrictEqual(signedIn.json.member.id, veteran.id);
@@ -358,47 +614,174 @@ describe('Members', function () {
     assert.strictEqual(session.json.member.displayName, 'Old Name');
     assert.deepStrictEqual(session.json.member.platforms.sort(), ['discord', 'fabric']);
     assert.strictEqual((await members.resolve(signedIn.json.member.id)).id, veteran.id);
-    assert.strictEqual((await members.resolve(`fabric:${key('41')}`)).id, veteran.id);
+    const oldProfile = await request(`/services/members/profiles/${signedIn.json.member.id}`, { headers: { Cookie: cookie } });
+    assert.strictEqual(oldProfile.json.member.path, `/members/${veteran.id}`, 'a merged-away id opens the survivor');
+    assert.strictEqual((await members.resolve(`fabric:${xonly(newcomer)}`)).id, veteran.id);
     const survivor = await members.resolve(veteran.id);
     assert.ok(survivor.log.some((entry) => entry.type === 'merge' && entry.from === signedIn.json.member.id));
+  });
+
+  it('shows a member only their own directory entry and profile', async function () {
+    const signedOut = await request('/services/members/directory');
+    assert.strictEqual(signedOut.status, 401);
+    assert.strictEqual((await request('/services/members/profiles/0123456789abcdef')).status, 401);
+
+    const me = await members.linkDiscord({ id: '500250000', username: 'mepilot', global_name: 'Me' }, 'Me Pilot');
+    const other = await members.linkDiscord({ id: '500260000', username: 'them' }, 'Them');
+    const cookie = `goon.member=${await members._createSession(me.id, 'discord')}`;
+    const headers = { Cookie: cookie };
+
+    const directory = await request('/services/members/directory', { headers });
+    assert.strictEqual(directory.status, 200);
+    assert.strictEqual(directory.json.directory, false);
+    assert.deepStrictEqual(directory.json.members.map((member) => member.id), [me.id]);
+    assert.strictEqual(directory.json.members[0].path, `/members/${me.id}`);
+    assert.strictEqual(directory.json.members[0].displayName, 'Me Pilot');
+
+    const profile = await request(`/services/members/profiles/${me.id.toUpperCase()}`, { headers });
+    assert.strictEqual(profile.status, 200, JSON.stringify(profile.json));
+    assert.strictEqual(profile.json.member.id, me.id);
+    assert.strictEqual(profile.json.member.self, true);
+    assert.deepStrictEqual(profile.json.member.accounts.map((account) => [account.platform, account.label]), [['discord', '@mepilot']]);
+    assert.strictEqual(profile.json.member.accounts[0].key, 'discord:500250000', 'its owner gets the key to unlink with');
+    assert.ok(!JSON.stringify(directory.json).includes('500250000'), 'no account ids in the directory');
+
+    for (const id of [other.id, 'ffffffffffffffff', 'discord:500260000', 'nope']) {
+      const hidden = await request(`/services/members/profiles/${encodeURIComponent(id)}`, { headers });
+      assert.strictEqual(hidden.status, 404, id);
+      assert.ok(!JSON.stringify(hidden.json).includes('Them'));
+    }
+
+    assert.deepStrictEqual(await members.page(`/members/${other.id}`), {
+      path: `/members/${other.id}`,
+      title: 'Member profile',
+      description: 'A G00N SQUAD member profile. Sign in to see your own.'
+    });
+    assert.strictEqual(await members.page('/members/login'), null);
+  });
+
+  it('links Discord from the profile page, one Discord account per member', async function () {
+    const signedIn = await passport(new Key());
+    const cookie = cookieFrom(signedIn);
+    const id = signedIn.json.member.id;
+    const headers = { Cookie: cookie };
+
+    const linked = await discordLogin({ id: '500700000', username: 'firstcord' }, cookie, { next: 'profile' });
+    assert.strictEqual(linked.headers.location, `/members/${id}?linked=discord`);
+
+    const again = await request('/services/members/discord?link=1&next=profile', { headers });
+    assert.strictEqual(again.headers.location, `/members/${id}?error=one_discord`, 'refused before going to Discord');
+    const fromLogin = await request('/services/members/discord?link=1', { headers });
+    assert.strictEqual(fromLogin.headers.location, '/sessions?error=one_discord');
+    await assert.rejects(members.link(id, 'discord:500700001'), (error) => error.status === 409 && error.code === 'one_discord' && /@firstcord/.test(error.message));
+
+    // Another member with its own Discord account: proving its Fabric key would merge two Discords.
+    const otherKey = new Key();
+    const other = await passport(otherKey);
+    await discordLogin({ id: '500700002', username: 'othercord' }, cookieFrom(other));
+    const merge = await passport(otherKey, { cookie, link: true });
+    assert.strictEqual(merge.status, 409, JSON.stringify(merge.json));
+    assert.match(merge.json.error, /one Discord account/);
+    assert.strictEqual((await members.resolve(`fabric:${xonly(otherKey)}`)).id, other.json.member.id, 'nothing merged');
+
+    // A Discord account linked while the OAuth round trip was out still wins.
+    const unlinked = await request('/services/members/accounts/discord%3A500700000', { method: 'DELETE', headers });
+    assert.strictEqual(unlinked.status, 200);
+    const raced = await discordLogin({ id: '500700003', username: 'late' }, cookie, {
+      next: 'profile',
+      beforeCallback: () => members.link(id, 'discord:500700004', { via: 'oauth' })
+    });
+    assert.strictEqual(raced.headers.location, `/members/${id}?error=one_discord`);
+    assert.strictEqual(await members.resolve('discord:500700003'), null);
+
+    await request('/services/members/accounts/discord%3A500700004', { method: 'DELETE', headers });
+    const swapped = await discordLogin({ id: '500700005', username: 'newcord' }, cookie, { next: 'profile' });
+    assert.strictEqual(swapped.headers.location, `/members/${id}?linked=discord`);
+    const profile = await request(`/services/members/profiles/${id}`, { headers });
+    assert.deepStrictEqual(profile.json.member.accounts.filter((a) => a.platform === 'discord').map((a) => a.label), ['@newcord']);
+
+    // Discord sign-in (not a link) of another account still makes its own member.
+    const solo = await discordLogin({ id: '500700006', username: 'solocord' });
+    assert.strictEqual(solo.headers.location, '/sessions?signedIn=discord');
+  });
+
+  it('lets a member pick a display name from their RSI or Discord account', async function () {
+    const signedIn = await passport(new Key());
+    const cookie = cookieFrom(signedIn);
+    const id = signedIn.json.member.id;
+    const headers = { Cookie: cookie };
+    const rename = (displayName, opts = {}) => request(`/services/members/profiles/${opts.id || id}`, {
+      method: 'PATCH',
+      headers: opts.signedOut ? {} : headers,
+      body: { displayName }
+    });
+
+    let profile = await request(`/services/members/profiles/${id}`, { headers });
+    assert.strictEqual(profile.json.member.displayName, null);
+    assert.deepStrictEqual(profile.json.member.nameChoices, []);
+    assert.strictEqual((await rename('Anyone')).status, 400);
+
+    await discordLogin({ id: '500800000', username: 'renamecord', global_name: 'Rename Cord' }, cookie, { next: 'profile' });
+    profile = await request(`/services/members/profiles/${id}`, { headers });
+    assert.strictEqual(profile.json.member.displayName, 'Rename Cord', 'a first linked account fills an empty name');
+
+    await members.link(id, 'rsi:RenamePilot', { via: 'bio', profile: { displayName: 'Rename Pilot' } });
+    profile = await request(`/services/members/profiles/${id}`, { headers });
+    assert.strictEqual(profile.json.member.displayName, 'Rename Cord', 'a later account keeps the name');
+    assert.deepStrictEqual(profile.json.member.nameChoices.map((choice) => [choice.name, choice.platform]), [
+      ['RenamePilot', 'rsi'],
+      ['Rename Pilot', 'rsi'],
+      ['Rename Cord', 'discord'],
+      ['renamecord', 'discord']
+    ]);
+
+    const renamed = await rename(' RenamePilot ');
+    assert.strictEqual(renamed.status, 200, JSON.stringify(renamed.json));
+    assert.strictEqual(renamed.json.member.displayName, 'RenamePilot');
+    const session = await request('/services/members/session', { headers });
+    assert.strictEqual(session.json.member.displayName, 'RenamePilot');
+    const stored = await members.getMember(id);
+    assert.deepStrictEqual(stored.log.filter((entry) => entry.type === 'rename').map((entry) => [entry.from, entry.to]), [['Rename Cord', 'RenamePilot']]);
+
+    const taken = await rename('Chairman');
+    assert.strictEqual(taken.status, 400, 'only names a linked account carries');
+    assert.strictEqual((await request('/services/members/profiles/' + id, { method: 'PATCH', headers, body: {} })).status, 400);
+    assert.strictEqual((await rename('renamecord', { signedOut: true })).status, 401);
+    const other = await passport(new Key());
+    assert.strictEqual((await rename('renamecord', { id: other.json.member.id })).status, 404);
+    assert.strictEqual((await members.getMember(id)).displayName, 'RenamePilot');
   });
 
   it('links a Fabric identity to a signed-in member', async function () {
     const discord = await discordLogin({ id: '500300000', username: 'pilot', global_name: 'Pilot' });
     const cookie = cookieFrom(discord);
-    const refused = await passport('linkfabric0', '02' + key('51'), { link: true });
+    const device = new Key();
+    const refused = await passport(device, { link: true });
     assert.strictEqual(refused.status, 401);
 
-    const linked = await passport('linkfabric1', '02' + key('51'), { cookie, link: true });
-    assert.strictEqual(linked.status, 200);
+    const linked = await passport(device, { cookie, link: true });
+    assert.strictEqual(linked.status, 200, JSON.stringify(linked.json));
     assert.strictEqual(linked.json.linked, 'fabric');
     assert.strictEqual(linked.json.merged, false);
     assert.strictEqual(linked.json.member.provider, 'discord');
-    assert.ok(!linked.headers['set-cookie']);
-    assert.strictEqual((await members.resolve(`fabric:${key('51')}`)).id, (await members.resolve('discord:500300000')).id);
+    assert.strictEqual(setCookie(linked, 'goon.member'), '', 'a link keeps the session');
+    assert.strictEqual((await members.resolve(`fabric:${xonly(device)}`)).id, (await members.resolve('discord:500300000')).id);
   });
 
-  it('follows the Hub\'s device cluster for a Fabric key', async function () {
-    clusters[key('61')] = [key('61'), key('62'), key('63')];
-    const first = await passport('cluster1', '02' + key('61'));
-    const cookie = cookieFrom(first);
-    let accounts = (await request('/services/members/accounts', { headers: { Cookie: cookie } })).json.accounts;
-    assert.deepStrictEqual(accounts.map((a) => [a.key, a.via]), [
-      [`fabric:${key('61')}`, 'passport'],
-      [`fabric:${key('62')}`, 'cluster'],
-      [`fabric:${key('63')}`, 'cluster']
-    ]);
-
-    clusters[key('61')] = [key('61'), key('63')];
-    assert.strictEqual((await passport('cluster2', '03' + key('61'))).status, 200);
-    accounts = (await request('/services/members/accounts', { headers: { Cookie: cookie } })).json.accounts;
-    assert.deepStrictEqual(accounts.map((a) => a.key), [`fabric:${key('61')}`, `fabric:${key('63')}`], 'a revoked device drops off');
-    assert.strictEqual(await members.resolve(`fabric:${key('62')}`), null);
-
-    delete clusters[key('61')];
-    assert.strictEqual((await passport('cluster3', '02' + key('61'))).status, 200);
-    accounts = (await request('/services/members/accounts', { headers: { Cookie: cookie } })).json.accounts;
-    assert.strictEqual(accounts.length, 2, 'a Hub that cannot answer changes nothing');
+  it('refuses links from a session a one-time link started', async function () {
+    const discord = await discordLogin({ id: '500310000', username: 'forwarded', global_name: 'Forwarded' });
+    const memberId = (await members.resolve('discord:500310000')).id;
+    const cookie = `goon.member=${await members._createSession(memberId, 'rsi-link')}`;
+    assert.ok(cookieFrom(discord));
+    const device = new Key();
+    const refused = await passport(device, { cookie, link: true });
+    assert.strictEqual(refused.status, 403);
+    assert.match(refused.json.error, /one-time link/);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(device)}`), null);
+    const discordLink = await request('/services/members/discord?link=1', { headers: { Cookie: cookie } });
+    assert.strictEqual(discordLink.headers.location, '/sessions?error=one_time_link');
+    const fromProfile = await request('/services/members/discord?link=1&next=profile', { headers: { Cookie: cookie } });
+    assert.strictEqual(fromProfile.headers.location, `${members.profilePath(memberId)}?error=one_time_link`);
   });
 
   it('unlinks accounts but never the last one', async function () {
@@ -410,22 +793,42 @@ describe('Members', function () {
     const only = await request('/services/members/accounts/discord%3A500400000', { method: 'DELETE', headers: { Cookie: cookie } });
     assert.strictEqual(only.status, 409);
 
-    clusters[key('71')] = [key('71'), key('72')];
-    await passport('unlinksession1', '02' + key('71'), { cookie, link: true });
+    const device = new Key();
+    const linked = await passport(device, { cookie, link: true });
+    assert.strictEqual(linked.status, 200, JSON.stringify(linked.json));
+    // A device key an earlier Hub cluster import brought in with this one.
+    const sibling = new Key();
+    await members.link(linked.json.member.id, `fabric:${xonly(sibling)}`, { via: 'cluster', from: xonly(device) });
     const unknown = await request('/services/members/accounts/discord%3A999900000', { method: 'DELETE', headers: { Cookie: cookie } });
     assert.strictEqual(unknown.status, 404);
-    const dropped = await request(`/services/members/accounts/fabric%3A${key('71')}`, { method: 'DELETE', headers: { Cookie: cookie } });
+    const dropped = await request(`/services/members/accounts/fabric%3A${xonly(device)}`, { method: 'DELETE', headers: { Cookie: cookie } });
     assert.strictEqual(dropped.status, 200);
     assert.deepStrictEqual(dropped.json.accounts.map((a) => a.key), ['discord:500400000'], 'its cluster keys go with it');
-    assert.strictEqual(await members.resolve(`fabric:${key('71')}`), null);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(device)}`), null);
+    assert.strictEqual(await members.resolve(`fabric:${xonly(sibling)}`), null);
   });
 
-  it('keeps members across a Store restart', async function () {
+  it('keeps members and redeemed challenges across a Store restart, and sweeps expired ones', async function () {
+    const signer = new Key();
+    const used = await passport(signer);
+    assert.strictEqual(used.status, 200);
+    const stale = await startPassport();
+    const staleKey = challengeKey(stale.cookie);
+    await members.store.set(staleKey, Object.assign({}, await members.store.get(staleKey), { expiresAt: Date.now() - 1 }));
+    const live = await startPassport();
+    const liveKey = challengeKey(live.cookie);
+
     await members.stop();
     members.store = null;
     await members.start();
-    const stored = await members.getMember(`fabric:${key('11')}`);
-    assert.strictEqual(stored.accounts[0].profile.pubkeyHex, '02' + key('11'));
-    assert.strictEqual((await members.getMember('fabric:fabric-id-9')).displayName, 'Keyholder');
+    const stored = await members.getMember(`fabric:${xonly(first)}`);
+    assert.strictEqual(stored.accounts[0].profile.pubkeyHex, first.pubkey);
+    assert.strictEqual((await members.getMember(`fabric:${legacyHolder}`)).displayName, 'Keyholder');
+
+    const replay = await claim(used.signed.uri, { cookie: used.started.cookie });
+    assert.strictEqual(replay.status, 401, 'still redeemed after a restart');
+    assert.strictEqual(await members.store.db.get(staleKey).catch(() => undefined), undefined, 'an expired request is swept on start');
+    assert.ok(await members.store.db.get(liveKey), 'an open request survives');
+    assert.strictEqual((await claim(sign(live, signer).uri, { cookie: live.cookie })).status, 200);
   });
 });

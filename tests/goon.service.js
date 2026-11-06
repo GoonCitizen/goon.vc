@@ -13,32 +13,30 @@ const GoonVC = require('../services/goon.vc');
 describe('goon.vc', function () {
   describe('Hub API zipper', function () {
     it('allowlists Hub API prefixes only', function () {
-      assert.ok(isHubApiPath('/sessions'));
-      assert.ok(isHubApiPath('/sessions/abc'));
-      assert.ok(isHubApiPath('/device-links/xyz/signatures'));
+      assert.ok(!isHubApiPath('/sessions'), 'the login page is goon.vc\'s own');
+      assert.ok(!isHubApiPath('/sessions/abc'));
+      assert.ok(isHubApiPath('/delegations/abc/frames'));
       assert.ok(isHubApiPath('/services/rpc'));
-      assert.ok(isHubApiPath('/identity/cluster'));
+      assert.ok(isHubApiPath('/services/delegation/mailbox'));
+      assert.ok(!isHubApiPath('/services/delegation'), 'the loopback delegate is never proxied');
+      assert.ok(!isHubApiPath('/device-links'));
+      assert.ok(!isHubApiPath('/identity/cross-sign'));
+      assert.ok(!isHubApiPath('/identity/cluster'));
       assert.ok(!isHubApiPath('/services/star-citizen'));
       assert.ok(!isHubApiPath('/services/bitcoin'));
       assert.ok(!isHubApiPath('/'));
       assert.ok(!isHubApiPath('/organizations'));
-      assert.ok(HUB_API_PREFIXES.includes('/sessions'));
+      assert.ok(!HUB_API_PREFIXES.includes('/sessions'));
     });
 
-    it('does not proxy HTML navigation to /sessions', function () {
+    it('never proxies /sessions; proxies linked-signer rendezvous frames', function () {
+      for (const method of ['GET', 'POST']) {
+        assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions', headers: { accept: 'application/json' } }), false);
+        assert.strictEqual(shouldProxyHubApi({ method, url: '/sessions/deadbeef', headers: { accept: 'application/json' } }), false);
+      }
       assert.strictEqual(shouldProxyHubApi({
         method: 'GET',
-        url: '/sessions',
-        headers: { accept: 'text/html' }
-      }), false);
-      assert.strictEqual(shouldProxyHubApi({
-        method: 'POST',
-        url: '/sessions',
-        headers: { accept: 'application/json' }
-      }), true);
-      assert.strictEqual(shouldProxyHubApi({
-        method: 'GET',
-        url: '/sessions/deadbeef',
+        url: '/delegations/deadbeef',
         headers: { accept: 'application/json' }
       }), true);
     });
@@ -52,7 +50,8 @@ describe('goon.vc', function () {
       const { createHubApiMiddleware } = require('../functions/hubApiProxy');
       const stub = http.createServer((req, res) => {
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ ok: true, echoed: req.url }));
+        res.setHeader('Set-Cookie', 'goon.member=planted; Path=/');
+        res.end(JSON.stringify({ ok: true, echoed: req.url, cookie: req.headers.cookie || null }));
       });
       await new Promise((resolve) => stub.listen(0, '127.0.0.1', resolve));
       const stubPort = stub.address().port;
@@ -70,19 +69,21 @@ describe('goon.vc', function () {
           const req = http.request({
             hostname: '127.0.0.1',
             port: edgePort,
-            path: '/sessions',
+            path: '/services/rpc',
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', Cookie: 'goon.member=secret' }
           }, (res) => {
             const chunks = [];
             res.on('data', (c) => chunks.push(c));
-            res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+            res.on('end', () => resolve({ status: res.statusCode, setCookie: res.headers['set-cookie'], body: Buffer.concat(chunks).toString('utf8') }));
           });
           req.on('error', reject);
           req.end(JSON.stringify({ origin: 'http://127.0.0.1' }));
         });
         assert.strictEqual(body.status, 200);
         assert.strictEqual(JSON.parse(body.body).ok, true);
+        assert.strictEqual(JSON.parse(body.body).cookie, null, 'the member session never reaches the Hub');
+        assert.strictEqual(body.setCookie, undefined, 'a Hub cannot set a goon.vc cookie');
         const skipped = await new Promise((resolve, reject) => {
           http.get({
             hostname: '127.0.0.1',
@@ -129,7 +130,7 @@ describe('goon.vc', function () {
         const req = http.request({
           hostname: '127.0.0.1',
           port: edge.address().port,
-          path: '/sessions',
+          path: '/services/rpc',
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
         }, (res) => {
@@ -155,23 +156,15 @@ describe('goon.vc', function () {
     it('lists hub.goon.vc after the Hub, but never behind a loopback Hub', function () {
       const { DEFAULT_HUB_SEEDS } = require('../services/goon.vc');
       assert.deepStrictEqual(DEFAULT_HUB_SEEDS, ['https://hub.goon.vc']);
-      // Older @fabric/http builds don't allowlist hub.goon.vc yet.
-      const saved = process.env.FABRIC_HUB_ALLOWLIST;
-      process.env.FABRIC_HUB_ALLOWLIST = 'https://hub.goon.vc';
-      try {
-        const site = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: DEFAULT_HUB_SEEDS } });
-        assert.deepStrictEqual(site._hubOrigins(), ['https://hub.fabric.pub', 'https://hub.goon.vc']);
-        const local = new GoonVC({ listen: false, hub: { origin: 'http://127.0.0.1:8080', seeds: DEFAULT_HUB_SEEDS } });
-        assert.deepStrictEqual(local._hubOrigins(), ['http://127.0.0.1:8080']);
-        const errors = [];
-        const odd = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: ['https://evil.example'] } });
-        odd.on('error', (...parts) => errors.push(parts.join(' ')));
-        assert.deepStrictEqual(odd._hubOrigins(), ['https://hub.fabric.pub']);
-        assert.ok(/evil\.example/.test(errors[0]), 'reports the skipped seed');
-      } finally {
-        if (saved === undefined) delete process.env.FABRIC_HUB_ALLOWLIST;
-        else process.env.FABRIC_HUB_ALLOWLIST = saved;
-      }
+      const site = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: DEFAULT_HUB_SEEDS } });
+      assert.deepStrictEqual(site._hubOrigins(), ['https://hub.fabric.pub', 'https://hub.goon.vc']);
+      const local = new GoonVC({ listen: false, hub: { origin: 'http://127.0.0.1:8080', seeds: DEFAULT_HUB_SEEDS } });
+      assert.deepStrictEqual(local._hubOrigins(), ['http://127.0.0.1:8080']);
+      const errors = [];
+      const odd = new GoonVC({ listen: false, hub: { origin: 'https://hub.fabric.pub', seeds: ['https://evil.example'] } });
+      odd.on('error', (...parts) => errors.push(parts.join(' ')));
+      assert.deepStrictEqual(odd._hubOrigins(), ['https://hub.fabric.pub']);
+      assert.ok(/evil\.example/.test(errors[0]), 'reports the skipped seed');
     });
   });
 
@@ -197,6 +190,7 @@ describe('goon.vc', function () {
         listen: false,
         storePath: path.join(root, 'site'),
         members: { path: path.join(root, 'members') },
+        hangar: { path: path.join(root, 'hangar') },
         events: { path: path.join(root, 'events'), resolveToken: () => ({ token: null, source: null }) },
         operations: { path: path.join(root, 'operations'), gateway: false }
       });
@@ -292,9 +286,15 @@ describe('goon.vc HTTP', function () {
           return { status: /\/pins$|\/members\/111$/.test(url) ? 200 : 404, headers: { get: () => null }, text: async () => JSON.stringify(body) };
         }
       },
+      activity: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-activity-test-')), sync: false },
+      checkins: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-checkins-test-')) },
+      welcome: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-welcome-test-')) },
+      hangar: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-hangar-test-')) },
       clips: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-test-')), poll: false },
       fabric: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-fabric-test-')) },
       alliance: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-alliance-test-')) },
+      market: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-market-test-')), sync: false, rateUrl: null },
+      schedule: { path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-schedule-test-')), tick: false },
       listen: true
     });
     await site.start();
@@ -321,7 +321,7 @@ describe('goon.vc HTTP', function () {
           const body = Buffer.concat(chunks).toString('utf8');
           let json = null;
           try { json = JSON.parse(body); } catch (_) { json = body; }
-          resolve({ status: res.statusCode, json, body });
+          resolve({ status: res.statusCode, headers: res.headers, json, body });
         });
       });
       req.on('error', reject);
@@ -367,7 +367,7 @@ describe('goon.vc HTTP', function () {
     const login = await fetchJson('/sessions', { headers: { Accept: 'text/html' } });
     assert.strictEqual(meta(login.body, 'og:title'), 'Login — GOON SQUAD');
     const api = await fetchJson('/sessions', { headers: { Accept: 'application/json' } });
-    assert.ok(!String(api.body).includes('og:title'), 'JSON /sessions still goes to the Hub');
+    assert.ok(!String(api.body).includes('sessionId'), 'JSON /sessions never reaches the Hub');
   });
 
   it('escapes page metadata', function () {
@@ -559,7 +559,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(!calendar[0].includes('src='), 'no server picker');
     assert.ok(calendar[0].includes('storage-key="goon.events.timeZone"'), 'shares the zone picked on /events');
     assert.ok(!page.includes('<img'), 'no static poster');
-    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12}" defer><\/script>/);
   });
 
   it('serves the /operations index listing PERMAFLEET', async function () {
@@ -679,7 +679,7 @@ describe('goon.vc HTTP', function () {
     const drill = await fetchJson('/drills/melee-rotation', { headers: { Accept: 'text/html' } });
     assert.strictEqual(drill.status, 200);
     assert.ok(drill.body.includes('<melee-rotation-drill class="drill-element" heading="Melee Rotation Drill"></melee-rotation-drill>'));
-    assert.ok(drill.body.includes('<script src="/scripts/melee-rotation-drill.js" defer></script>'));
+    assert.match(drill.body, /<script src="\/scripts\/melee-rotation-drill\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(drill.body.includes('<meta property="og:title" content="Melee Rotation Drill — GOON SQUAD">'), 'per-drill Open Graph');
 
     const script = await fetchJson('/scripts/melee-rotation-drill.js');
@@ -706,8 +706,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(!index.body.includes('saturday-1v1'), 'no built-in tournament pages');
     assert.ok(index.body.includes('id="tournament-create-form"'), 'anyone can create a tournament');
     assert.ok(index.body.includes('<meta property="og:title" content="TOURNAMENTS — GOON SQUAD">'));
-    assert.ok(index.body.includes('<script src="/scripts/tournament-bracket.js" defer></script>'));
-    assert.ok(index.body.includes('<script src="/scripts/tournaments.js" defer></script>'));
+    assert.match(index.body, /<script src="\/scripts\/tournament-bracket\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.match(index.body, /<script src="\/scripts\/tournaments\.js\?v=[0-9a-f]{12}" defer><\/script>/);
 
     const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
     assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/tournaments"'), 'listed on /resources');
@@ -798,7 +798,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(index.body.includes('id="leagues-page"'));
     assert.ok(index.body.includes('id="league-create-form"'), 'anyone can create a league');
     assert.ok(index.body.includes('<meta property="og:title" content="LEAGUES — GOON SQUAD">'));
-    assert.ok(index.body.includes('<script src="/scripts/leagues.js" defer></script>'));
+    assert.match(index.body, /<script src="\/scripts\/leagues\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const resources = index.body.slice(index.body.indexOf('id="resources-page"'));
     assert.ok(resources.slice(0, resources.indexOf('</main>')).includes('href="/leagues"'), 'listed on /resources');
 
@@ -858,15 +858,15 @@ describe('goon.vc HTTP', function () {
     const siteNav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(res.body)[1];
     assert.ok(!siteNav.includes('Organizations') && !siteNav.includes('ORGANIZATIONS'), 'not in the site header');
     assert.ok(new RegExp(`id="operation-permafleet"[\\s\\S]*?Weekly ops schedule &raquo;</a> · <a href="${base}">Member organizations &raquo;</a>`).test(res.body), 'linked from PERMAFLEET');
-    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']) {
       assert.ok(res.body.includes(`id="org-${symbol}"`), `${symbol} page`);
       assert.ok(res.body.includes(`href="https://robertsspaceindustries.com/orgs/${symbol}"`), `${symbol} RSI link`);
       assert.ok(res.body.includes(`<li><a class="op-member" href="${base}/${symbol}">`), `${symbol} charter tile`);
     }
     const charter = res.body.slice(res.body.indexOf('id="permafleet-charter"'), res.body.indexOf('</section>', res.body.indexOf('id="permafleet-charter"')));
     assert.ok(charter.includes('<img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">'), 'charter tiles carry org logos');
-    assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 19 members</span>'));
-    assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 8, 'every tile is badged as a member');
+    assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 21 members</span>'));
+    assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 9, 'every tile is badged as a member');
     const tiles = [...charter.matchAll(/<li><a class="([^"]+)" href="([^"]+)">/g)].map((m) => `${m[1]} ${m[2]}`);
     assert.strictEqual(tiles[tiles.length - 1], 'op-member op-member-add /operations/PERMAFLEET/onboarding', 'last tile invites new orgs to onboarding');
     assert.ok(charter.includes('<span class="op-member-name">Your org here</span>'));
@@ -917,7 +917,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(start > 0, 'onboarding page');
     const page = res.body.slice(start, res.body.indexOf('</main>', start));
     const steps = [...page.matchAll(/<li>\s*<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
-    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your stewards', 'Set up your Discord']);
+    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your officers', 'Set up your Discord']);
     const expectations = page.slice(page.indexOf('id="onboarding-expectations"'), page.indexOf('id="onboarding-benefits"'));
     assert.deepStrictEqual([...expectations.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]), [
       'An #embassy channel',
@@ -929,20 +929,20 @@ describe('goon.vc HTTP', function () {
     assert.ok(page.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'tag up on RSI');
     assert.ok(page.includes('href="/services/discord/invite"'), 'add the bot');
     assert.ok(page.includes('href="/operations/PERMAFLEET/squadrons"'));
-    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']) {
+    for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']) {
       assert.ok(page.includes(`<li><a href="/organizations/${symbol}">[${symbol}] `), `${symbol} listed`);
     }
     assert.ok(!/\d{17,}/.test(page.replace(/https:\/\/discord\.com\/[^"]+/g, '')), 'no Discord ids outside Discord links');
     assert.ok(res.body.includes('var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";'));
   });
 
-  it('serves PERMAFLEET votes: the pages, the alliance federation, and steward-only writes', async function () {
+  it('serves PERMAFLEET votes: the pages, the alliance federation, and officer-only writes', async function () {
     const res = await fetchJson('/operations/PERMAFLEET/votes', { headers: { Accept: 'text/html' } });
     assert.strictEqual(res.status, 200);
     assert.ok(res.body.includes('<meta property="og:title" content="PERMAFLEET Votes — GOON SQUAD">'));
     assert.ok(res.body.includes('<main id="pf-votes-page" class="pf-page pf-votes" data-api="/services/alliance"'));
     assert.ok(res.body.includes('<main id="pf-vote-page"'));
-    assert.ok(res.body.includes('<script src="/scripts/alliance-votes.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/alliance-votes\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const proposalPage = await fetchJson('/operations/PERMAFLEET/votes/0123456789ab', { headers: { Accept: 'text/html' } });
     assert.strictEqual(proposalPage.status, 200, 'proposal pages are the SPA');
 
@@ -950,10 +950,10 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(overview.status, 200);
     assert.strictEqual(overview.json.status, 'ready');
     assert.strictEqual(overview.json.name, 'PERMAFLEET');
-    assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS']);
-    assert.strictEqual(overview.json.federation.threshold, 4, 'majority of seven orgs');
+    assert.deepStrictEqual(overview.json.federation.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']);
+    assert.strictEqual(overview.json.federation.threshold, 5, 'majority of eight orgs');
     assert.strictEqual(overview.json.federation.id.length, 64);
-    assert.deepStrictEqual(overview.json.you, { signedIn: false, organizations: [], officers: [] });
+    assert.deepStrictEqual(overview.json.you, { signedIn: false, officers: [] });
     assert.ok(!overview.body.includes('discord:'), 'no account keys');
     assert.ok(!/\d{17,}/.test(overview.body.replace(/https?:\/\/[^"]+/g, '').replace(/[0-9a-f]{64,}/g, '')), 'no Discord ids outside URLs and signed frames');
 
@@ -962,7 +962,13 @@ describe('goon.vc HTTP', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'Adopt the charter' })
     });
-    assert.strictEqual(refused.status, 401, 'only signed-in stewards propose');
+    assert.strictEqual(refused.status, 401, 'officers sign in to propose');
+    const voteRefused = await fetchJson('/services/alliance/proposals/0123456789ab/votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choice: 'yes' })
+    });
+    assert.strictEqual(voteRefused.status, 401, 'officers sign in to vote for their org');
 
     assert.strictEqual(overview.json.bridge.descriptor.type, 'FabricBridge');
     assert.deepStrictEqual(overview.json.bridge.descriptor.platforms, ['discord', 'fabric']);
@@ -983,7 +989,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(res.body.includes('<meta property="og:title" content="Federations — GOON SQUAD">'));
     assert.ok(res.body.includes('<main id="federations-page" class="pf-page pf-votes pf-federations" data-api="/services/alliance/federations"'));
     assert.ok(res.body.includes('<main id="federation-page"'));
-    assert.ok(res.body.includes('<script src="/scripts/federations.js" defer></script>'));
+    assert.match(res.body, /<script src="\/scripts\/federations\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const header = res.body.slice(res.body.indexOf('id="permafleet-header"'), res.body.indexOf('</header>', res.body.indexOf('id="permafleet-header"')));
     assert.ok(!header.includes('/federations') && !header.includes('/votes'), 'neither federations nor votes are in the PERMAFLEET menu');
 
@@ -998,7 +1004,7 @@ describe('goon.vc HTTP', function () {
     const page = await fetchJson(alliance.path, { headers: { Accept: 'text/html' } });
     assert.strictEqual(page.status, 200);
     assert.ok(page.body.includes('<meta property="og:title" content="PERMAFLEET federation — GOON SQUAD">'));
-    assert.ok(page.body.includes('4 of 7 member orgs decide'));
+    assert.ok(page.body.includes('5 of 8 member orgs decide'));
     const detail = await fetchJson(`/services/alliance/federations/${alliance.shortId}`);
     assert.strictEqual(detail.status, 200);
     assert.deepStrictEqual(detail.json.organizations.map((org) => org.symbol), overview.json.federation.organizations.map((org) => org.symbol));
@@ -1069,8 +1075,8 @@ describe('goon.vc HTTP', function () {
     assert.ok(page.body.includes('<clip-library></clip-library>'));
     assert.ok(page.body.includes('<main id="clip-timeline-page"'));
     assert.ok(page.body.includes('<main id="clip-project-page"'));
-    assert.ok(page.body.includes('<script src="/scripts/clip-library.js" defer></script>'));
-    assert.ok(page.body.includes('<script src="/scripts/clip-timeline-editor.js" defer></script>'));
+    assert.match(page.body, /<script src="\/scripts\/clip-library\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.match(page.body, /<script src="\/scripts\/clip-timeline-editor\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     assert.ok(page.body.includes('<h2 class="operation-name"><a href="/clips">Clips</a></h2>'), 'resources card');
     const timeline = await fetchJson('/clips/timeline?session=s-1', { headers: { Accept: 'text/html' } });
     assert.strictEqual(timeline.status, 200);
@@ -1109,7 +1115,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.location, '/operations/PERMAFLEET');
   });
 
-  it('serves the login page at /sessions with every sign-in method', async function () {
+  it('serves the login page at /sessions with Discord and Passport, and no one may frame it', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
         hostname: '127.0.0.1',
@@ -1121,17 +1127,76 @@ describe('goon.vc HTTP', function () {
         incoming.on('data', (c) => chunks.push(c));
         incoming.on('end', () => resolve({
           status: incoming.statusCode,
+          headers: incoming.headers,
           body: Buffer.concat(chunks).toString('utf8')
         }));
       }).on('error', reject);
     });
     assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['content-security-policy'], "frame-ancestors 'none'");
     assert.ok(res.body.includes('id="login-page"'));
     assert.ok(res.body.includes('id="login-discord"'));
     assert.ok(res.body.includes('id="login-passport"'));
-    assert.ok(res.body.includes('id="login-desktop"'));
+    assert.ok(!res.body.includes('id="login-desktop"'), 'desktop apps sign through Passport');
+    assert.ok(res.body.includes("type: 'PASSPORT_CHALLENGE'"));
+    assert.ok(res.body.includes('[channel.port2]'), 'Passport answers on a private MessagePort');
+    assert.ok(!res.body.includes("'FABRIC_MESSAGE'"), 'no v1 page messages');
+    assert.ok(res.body.includes('/services/members/passport/challenges'));
+    assert.ok(!res.body.includes('FABRIC_SITE_LOGIN_REQUEST'), 'no Hub session');
     assert.ok(res.body.includes('class="footer-login-button" href="/sessions"'));
     assert.ok(!res.body.includes('member-login'));
+
+    const home = await fetchJson('/', { headers: { Accept: 'text/html' } });
+    assert.ok(!home.headers['content-security-policy'], 'only the login page carries frame-ancestors');
+  });
+
+  it('issues Passport challenges for the site origin without a Hub', async function () {
+    const { readChallenge } = require('@fabric/core/functions/passport');
+    const res = await fetchJson('/services/members/passport/challenges', { method: 'POST', headers: { Accept: 'application/json' } });
+    assert.strictEqual(res.status, 200, JSON.stringify(res.json));
+    const read = readChallenge(res.json.challenge);
+    assert.ok(read.ok, read.error);
+    assert.strictEqual(read.challenge.origin, 'http://127.0.0.1:' + sitePort);
+    assert.ok(/^goon\.passport=[0-9a-f]{64};/.test([].concat(res.headers['set-cookie'])[0]));
+  });
+
+  it('serves the waiting area for Discord sign-ins awaiting review', async function () {
+    const res = await fetchJson('/waiting', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('id="waiting-page"'));
+    assert.ok(res.body.includes('data-path="/waiting"'));
+    assert.match(res.body, /<script src="\/scripts\/waiting\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.ok(res.body.includes('<title>Waiting area — GOON SQUAD</title>'), 'its own link preview');
+    assert.ok(res.body.includes('var waitingPath = "/waiting";'), 'the login page points waiting members there');
+    const script = await fetchJson('/scripts/waiting.js');
+    assert.strictEqual(script.status, 200);
+  });
+
+  it('serves /members and member profiles, and a profile link for signed-in members', async function () {
+    const index = await fetchJson('/members', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(index.status, 200);
+    assert.ok(index.body.includes('id="members-page"'));
+    assert.ok(index.body.includes('id="member-page"'));
+    assert.match(index.body, /<script src="\/scripts\/members\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.ok(index.body.includes('<title>Members — GOON SQUAD</title>'));
+    const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(index.body)[1];
+    assert.ok(!nav.includes('/members') && !nav.includes('PROFILE'), 'no profile link in the header');
+    assert.ok(index.body.includes('<footer id="site-member-footer" class="site-member-footer" hidden>'), 'the footer card stands in where a page has no footer of its own');
+    assert.ok(index.body.includes("el.classList.toggle('footer-member', !!member);"), 'footer Login buttons become the member card');
+    assert.ok(index.body.includes('var membersPath = "/members";'));
+    assert.ok(index.body.includes('id="member-add-discord"') && index.body.includes('id="member-add-passport"'), 'profiles add accounts');
+    assert.ok(index.body.includes('window.goonPassport = askPassport;'), 'every page can link Passport');
+    assert.ok(index.body.includes('id="member-rename-choice"'), 'profiles pick a display name');
+    assert.ok(index.body.includes('window.goonMember = markMember;'), 'a rename redraws the footer card');
+
+    const profile = await fetchJson('/members/0123456789abcdef', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(profile.status, 200);
+    assert.ok(profile.body.includes('<title>Member profile — GOON SQUAD</title>'), 'a preview that names no one');
+    const slash = await fetchJson('/members/0123456789abcdef/', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(slash.status, 301);
+
+    assert.strictEqual((await fetchJson('/services/members/directory')).status, 401);
+    assert.strictEqual((await fetchJson('/scripts/members.js')).status, 200);
   });
 
   it('redirects the retired /members/login page to /sessions', async function () {
@@ -1175,16 +1240,24 @@ describe('goon.vc HTTP', function () {
     assert.ok(calendar[0].includes('description="Upcoming scheduled events from every Discord server we fly with."'));
     assert.ok(!/<h1|<select|<button|<p /.test(page.replace(calendar[0], '').replace(/<footer>[\s\S]*<\/footer>/, '')), 'nothing outside the calendar but the footer');
     assert.ok(/<footer>[\s\S]*href="\/services\/discord\/invite"[^>]*>Add our bot to your Discord<\/a>/.test(page), 'add-bot button in the footer');
-    assert.ok(res.body.includes('<script src="/scripts/fabric-calendar.js" defer></script>'));
-    const element = await new Promise((resolve, reject) => {
-      http.get({ host: '127.0.0.1', port: sitePort, path: '/scripts/fabric-calendar.js' }, (incoming) => {
+    assert.match(res.body, /<script src="\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const getScript = (pathname) => new Promise((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port: sitePort, path: pathname }, (incoming) => {
         const chunks = [];
         incoming.on('data', (c) => chunks.push(c));
-        incoming.on('end', () => resolve({ status: incoming.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+        incoming.on('end', () => resolve({ status: incoming.statusCode, headers: incoming.headers, body: Buffer.concat(chunks).toString('utf8') }));
       }).on('error', reject);
     });
+    const element = await getScript('/scripts/fabric-calendar.js');
     assert.strictEqual(element.status, 200);
     assert.ok(element.body.includes("customElements.define('fabric-calendar'"));
+    assert.ok(!/immutable/.test(element.headers['cache-control'] || ''), 'an unversioned script revalidates');
+    const versioned = await getScript(/<script src="(\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12})"/.exec(res.body)[1]);
+    assert.strictEqual(versioned.status, 200);
+    assert.strictEqual(versioned.body, element.body);
+    assert.strictEqual(versioned.headers['cache-control'], 'public, max-age=31536000, immutable', 'the page’s versioned URL is kept for good');
+    const outdated = await getScript('/scripts/fabric-calendar.js?v=000000000000');
+    assert.ok(!/immutable/.test(outdated.headers['cache-control'] || ''), 'an older build’s URL revalidates');
     assert.ok(res.body.includes('<a href="/events">EVENTS</a>'));
     const header = res.body.slice(res.body.indexOf('id="site-header"'), res.body.indexOf('</header>'));
     assert.ok(header.includes('<a href="/operations/PERMAFLEET">PERMAFLEET</a>'), 'links straight to PERMAFLEET');
@@ -1205,6 +1278,22 @@ describe('goon.vc HTTP', function () {
   it('reports the bot invite as unavailable without a Discord bot token', async function () {
     const res = await fetchJson('/services/discord/invite');
     assert.strictEqual(res.status, 503);
+  });
+
+  it('serves the Market page to browsers and its catalog to JSON clients', async function () {
+    const json = await fetchJson('/services/market');
+    assert.strictEqual(json.status, 200);
+    assert.ok(Array.isArray(json.json.listings));
+    assert.strictEqual(json.json.rate.source, 'mempool.space');
+    const html = await fetchJson('/services/market', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(html.status, 200);
+    assert.ok(html.body.includes('id="market-page"'));
+    const nav = /<p class="site-nav">([\s\S]*?)<\/p>/.exec(html.body)[1];
+    assert.ok(!nav.includes('/services/market'), 'not in the site header');
+    const resources = html.body.slice(html.body.indexOf('id="resources-page"'), html.body.indexOf('</main>', html.body.indexOf('id="resources-page"')));
+    assert.ok(resources.includes('<a href="/services/market">Market</a>'), 'listed in resources');
+    const mine = await fetchJson('/services/market/mine');
+    assert.strictEqual(mine.status, 401);
   });
 
   it('hides subscription tiers without a Discord bot token', async function () {
@@ -1229,13 +1318,13 @@ describe('goon.vc HTTP', function () {
   it('reports member login capabilities', async function () {
     const res = await fetchJson('/services/members');
     assert.strictEqual(res.status, 200);
-    assert.deepStrictEqual(res.json, { discord: false, passport: true });
+    assert.deepStrictEqual(res.json, { discord: false, passport: true, review: false });
     const session = await fetchJson('/services/members/session');
     assert.strictEqual(session.status, 401);
     assert.ok(Number.isFinite(site.members.settings.sessionTtlMs) && site.members.settings.sessionTtlMs > 0);
   });
 
-  it('proxies POST /sessions to the Hub', async function () {
+  it('never sends POST /sessions to the Hub', async function () {
     const res = await fetchJson('/sessions', {
       method: 'POST',
       headers: {
@@ -1245,9 +1334,8 @@ describe('goon.vc HTTP', function () {
       },
       body: JSON.stringify({ origin: 'http://127.0.0.1:' + sitePort })
     });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual(res.json.ok, true);
-    assert.strictEqual(res.json.sessionId, 'stub');
+    assert.notStrictEqual(res.status, 200);
+    assert.ok(!String(res.body).includes('sessionId'), 'a Hub session could never sign anyone in here');
   });
 
   it('does not mount /services/star-citizen', async function () {
@@ -1300,9 +1388,15 @@ describe('goon.vc page paths', function () {
       tournaments: { path: path.join(root, 'tournaments') },
       leagues: { path: path.join(root, 'leagues') },
       leaderboard: Object.assign({ path: path.join(root, 'leaderboard'), refreshOnStart: false }, tokenless),
+      activity: { path: path.join(root, 'activity'), sync: false },
+      checkins: { path: path.join(root, 'checkins') },
+      welcome: { path: path.join(root, 'welcome') },
+      hangar: { path: path.join(root, 'hangar') },
       clips: { path: path.join(root, 'clips'), poll: false },
       fabric: { path: path.join(root, 'fabric') },
       alliance: { path: path.join(root, 'alliance') },
+      market: { path: path.join(root, 'market'), sync: false, rateUrl: null },
+      schedule: { path: path.join(root, 'schedule'), tick: false },
       listen: true
     });
     await site.start();

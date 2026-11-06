@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
-const bracketEngine = require('../assets/scripts/tournament-bracket');
+const bracketEngine = require('../components/TournamentBracket');
 
 const {
   MAX_PLAYERS,

@@ -114,7 +114,7 @@ describe('Operations metrics service', function () {
   it('asks for the privileged Server Members intent only when campaigns ask for it', async function () {
     const { GatewayIntentBits } = require('discord.js');
     const Community = require('../services/community');
-    const Campaigns = function Campaigns () {};
+    const Campaigns = Object.assign(function Campaigns () {}, { PREVIEW_APPROVALS: true });
     const Scripts = function Scripts () {};
     const intentsFor = async (community) => {
       const ops = new Operations({

@@ -15,8 +15,17 @@ const SUBSCRIPTIONS_PATH = '/services/discord/subscriptions';
 const ALLIANCE_SERVER = 'permafleet';
 // View Channels: enough to read scheduled events and voice presence; the bot never posts.
 const INVITE_PERMISSIONS = '1024';
-// `?for=channels`: also what the PERMAFLEET channel scripts need to create their channels.
+// `?for=channels`: also what PERMAFLEET setup needs to create its channels and roles.
 const CHANNEL_INVITE_PERMISSIONS = allianceChannels.invitePermissions();
+// `?for=market`: mirror the Market forum — View Channel, Send Messages (new posts), Read
+// Message History, Manage Webhooks, Manage Threads, Create Public Threads, Send Messages in Threads.
+const MARKET_INVITE_PERMISSIONS = String((1n << 10n) | (1n << 11n) | (1n << 16n) | (1n << 29n) | (1n << 34n) | (1n << 35n) | (1n << 38n));
+// `?for=events`: post a /schedule poll and create the Guild Scheduled Event it picks.
+// View Channel, Send Messages, Read Message History, Manage Events.
+const EVENTS_INVITE_PERMISSIONS = String((1n << 10n) | (1n << 11n) | (1n << 16n) | (1n << 33n));
+// Adds the application's commands (/market) to a member's own account rather than a server.
+const INSTALL_PATH = '/services/discord/install';
+const USER_INSTALL = '1';
 const LATEST_KEY = '/events/latest';
 // Store keys are JSON Pointer paths: the index must not sit above /events/guilds/<id>.
 const GUILD_INDEX_KEY = '/events/guildIndex';
@@ -405,14 +414,31 @@ class Events {
   /**
    * "Add to Discord" URL for the bot that feeds /events. Re-running it on a
    * server the bot is already in updates the bot's permissions there.
-   * @param {string} [purpose] `channels` adds what the PERMAFLEET channel scripts need.
+   * @param {string} [purpose] `channels` adds what the PERMAFLEET channel scripts need, `market` what the Market forum mirror needs, `events` what `/schedule` needs to post a poll and create the event.
    * @returns {Promise<string|null>}
    */
   async inviteUrl (purpose = null) {
     const id = await this.applicationId();
     if (!id) return null;
-    const permissions = purpose === 'channels' ? CHANNEL_INVITE_PERMISSIONS : INVITE_PERMISSIONS;
+    const permissions = purpose === 'channels' ? CHANNEL_INVITE_PERMISSIONS
+      : purpose === 'market' ? MARKET_INVITE_PERMISSIONS
+        : purpose === 'events' ? EVENTS_INVITE_PERMISSIONS
+          : INVITE_PERMISSIONS;
     const q = new URLSearchParams({ client_id: id, scope: 'bot applications.commands', permissions });
+    return `https://discord.com/oauth2/authorize?${q}`;
+  }
+
+  /**
+   * "Add to my apps" URL: installs the application's commands on the
+   * member's own Discord account (user install), so `/market` works in
+   * any server, DM, or group DM. Needs User Install turned on for the
+   * application in the Discord Developer Portal.
+   * @returns {Promise<string|null>}
+   */
+  async installUrl () {
+    const id = await this.applicationId();
+    if (!id) return null;
+    const q = new URLSearchParams({ client_id: id, integration_type: USER_INSTALL, scope: 'applications.commands' });
     return `https://discord.com/oauth2/authorize?${q}`;
   }
 
@@ -468,7 +494,8 @@ class Events {
 
   /**
    * Express middleware for `GET /services/events`, `GET /services/events/schedule.svg`,
-   * `GET /services/discord/invite` (redirects to the bot's Discord invite), and
+   * `GET /services/discord/invite` (redirects to the bot's Discord invite),
+   * `GET /services/discord/install` (redirects to the user install), and
    * `GET /services/discord/subscriptions` (home guild subscription tiers).
    * @returns {Function}
    */
@@ -476,7 +503,7 @@ class Events {
     return (req, res, next) => {
       const url = new URL(req.originalUrl || req.url, 'http://localhost');
       const pathname = (req.path || url.pathname).replace(/\/+$/, '');
-      if (![BASE, BOARD_PATH, INVITE_PATH, SUBSCRIPTIONS_PATH].includes(pathname)) return next();
+      if (![BASE, BOARD_PATH, INVITE_PATH, INSTALL_PATH, SUBSCRIPTIONS_PATH].includes(pathname)) return next();
       if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
       if (pathname === SUBSCRIPTIONS_PATH) {
         this.subscriptions().then((body) => sendJson(res, 200, body)).catch((error) => {
@@ -484,8 +511,9 @@ class Events {
         });
         return;
       }
-      if (pathname === INVITE_PATH) {
-        this.inviteUrl(url.searchParams.get('for')).then((location) => {
+      if (pathname === INVITE_PATH || pathname === INSTALL_PATH) {
+        const target = pathname === INSTALL_PATH ? this.installUrl() : this.inviteUrl(url.searchParams.get('for'));
+        target.then((location) => {
           if (!location) return sendJson(res, 503, { error: 'Discord bot is not configured' });
           res.statusCode = 302;
           res.setHeader('Location', location);

@@ -2,7 +2,9 @@
 
 Public GOON SQUAD site. The Node process is an `@fabric/http` server:
 
-- **HTML** — `types/GoonSPA.js` compiled to `assets/index.html` (`npm run build`)
+- **HTML** — `types/GoonSPA.js` and `components/` compiled to
+  `assets/index.html` and `assets/scripts/` (`npm run build`); edit the
+  components, never the build output
 - **Hub APIs** — `functions/hubApiProxy.js` forwards allowlisted paths to
   `FABRIC_HUB_ORIGIN` (default `https://hub.fabric.pub`)
 

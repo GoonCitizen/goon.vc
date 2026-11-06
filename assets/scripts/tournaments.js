@@ -1,12 +1,7 @@
+// Compiled from components/TournamentsPage.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * goon.vc tournaments pages: the index (every tournament on record and the
- * creator), one page per series (tournaments sharing a name), and one per
- * tournament (a <tournament-bracket> saved to the tournaments service, plus
- * its permanent log). Needs /scripts/tournament-bracket.js first.
- */
-(function () {
+(function client () {
   const indexEl = document.getElementById('tournaments-page');
   const pageEl = document.getElementById('tournament-page');
   const host = indexEl || pageEl;
@@ -202,4 +197,4 @@
       ? '<h1>Not found</h1><p class="tournament-muted">There is no tournament here. It may have moved; check the tournaments index.</p>'
       : `<p class="tournament-muted">Couldn’t load this page: ${esc(error.message)}</p>`;
   });
-})();
+})(window);

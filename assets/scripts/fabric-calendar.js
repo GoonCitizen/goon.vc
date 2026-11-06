@@ -1,37 +1,7 @@
+// Compiled from components/FabricCalendar.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * <fabric-calendar> — self-contained week calendar for Fabric sites.
- *
- * Renders a server-drawn SVG board and puts every control on it:
- *   - the board title picks the server (when `src` lists more than one),
- *   - the zone label picks the time zone (defaults to the visitor's own),
- *   - the subtitle shows `description`, the "as of" line the event counts,
- *   - the footer downloads the current view as SVG.
- *
- * Attributes:
- *   board                    SVG endpoint; receives `?server=<id>&tz=<IANA zone>`
- *   src                      optional JSON summary `{ events, guilds: [{ id, name, count }], fetchedAt, stale }`
- *   description              replaces the board subtitle
- *   server                   selected server id (default `all`)
- *   time-zone                selected IANA zone (default: visitor's local zone)
- *   default-time-zone        fallback and pinned zone (default `UTC`)
- *   default-time-zone-label  picker label for the pinned zone
- *   storage-key              remember the picked zone in localStorage under this key
- *   sync-url                 mirror `server` / `tz` in the page query string
- *
- * Board SVG contract (all optional; a missing hook just drops that control):
- *   #schedule-title, #schedule-subtitle, #schedule-timezone, #schedule-asof, #schedule-legend
- * A stacked copy of the same labels may use `data-hook` instead of an id.
- * A backdrop `rect.schedule-bg` is drawn transparent so the page shows through,
- * and a poster trim `.schedule-accent` is hidden.
- * `@media (max-width: 760px)` shows that copy (`.layout-tall`) and gives the
- * board its taller box. Keep the width in sync with `VERTICAL_MAX_WIDTH` in
- * `functions/scheduleGraphic.js`.
- *
- * Emits `change` with `detail: { server, timeZone }` when the visitor picks either.
- */
-(function (root) {
+(function defineFabricCalendar (root) {
   if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return;
   if (root.customElements.get('fabric-calendar')) return;
 
@@ -475,4 +445,4 @@
   }
 
   root.customElements.define('fabric-calendar', FabricCalendar);
-})(typeof window !== 'undefined' ? window : undefined);
+})(window);

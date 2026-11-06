@@ -1,10 +1,10 @@
 'use strict';
 
 const escapeHtml = require('../functions/escapeHtml');
+const ClipLibrary = require('./ClipLibrary');
+const ClipTimelineEditor = require('./ClipTimelineEditor');
 
 const API = '/services/clips';
-const LIBRARY_SCRIPT = '/scripts/clip-library.js';
-const EDITOR_SCRIPT = '/scripts/clip-timeline-editor.js';
 
 function trimBase (basePath) {
   return String(basePath).replace(/\/+$/, '');
@@ -94,8 +94,8 @@ function renderProjectHtml (props) {
  * @returns {string}
  */
 function renderClipsScript (props) {
-  return `<script src="${LIBRARY_SCRIPT}" defer></script>
-    <script src="${EDITOR_SCRIPT}" defer></script>
+  return `${ClipLibrary.client.tag()}
+    ${ClipTimelineEditor.client.tag()}
     <script type="text/javascript">
       (function () {
         var base = ${JSON.stringify(trimBase(props.basePath))};

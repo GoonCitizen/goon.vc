@@ -28,7 +28,7 @@ const HEIGHT = 1080;
 const VERTICAL_WIDTH = 440;
 /**
  * Viewport width where the stacked board replaces the 7-column poster.
- * The calendar element uses the same query (`assets/scripts/fabric-calendar.js`).
+ * The calendar element uses the same query (`components/FabricCalendar.js`).
  */
 const VERTICAL_MAX_WIDTH = 760;
 

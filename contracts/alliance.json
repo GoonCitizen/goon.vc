@@ -3,12 +3,13 @@
   "network": "mainnet",
   "publisher": "G00N",
   "organizations": [
-    { "symbol": "G00N", "stewards": [] },
-    { "symbol": "INFN", "stewards": [] },
-    { "symbol": "TRDE", "stewards": [] },
-    { "symbol": "LCRP", "stewards": [] },
-    { "symbol": "DOUBLEDOGZ", "stewards": [] },
-    { "symbol": "4MCONTRACT", "stewards": [] },
-    { "symbol": "AIMOS", "stewards": [] }
+    { "symbol": "G00N", "officers": [] },
+    { "symbol": "INFN", "officers": [] },
+    { "symbol": "TRDE", "officers": [] },
+    { "symbol": "LCRP", "officers": [] },
+    { "symbol": "DOUBLEDOGZ", "officers": [] },
+    { "symbol": "4MCONTRACT", "officers": [] },
+    { "symbol": "AIMOS", "officers": [] },
+    { "symbol": "IDBC", "officers": [] }
   ]
 }

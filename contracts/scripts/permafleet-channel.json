@@ -3,15 +3,20 @@
   "title": "Set up #permafleet for PERMAFLEET",
   "description": "Gives a member org's pilots a #permafleet channel for alliance talk. goon.vc's bot creates it, or the server's own channel is used.",
   "start": "welcome",
-  "requires": ["ManageGuild"],
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
   "steps": {
     "welcome": {
       "say": "Hi {{user.name}}! A **#permafleet** channel gives your pilots a place for alliance talk: ops, plans, and news from across the Protectorate. Let's set one up on **{{context.guildName}}**.",
       "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
       "next": "channel"
     },
     "channel": {
-      "say": "Should goon.vc's bot create #permafleet, or is there a channel on **{{context.guildName}}** for it already?",
+      "say": "Should goon.vc's bot create #permafleet? That's the recommended way: it's set up the same on every member org's Discord. Or pick a channel **{{context.guildName}}** already has.",
       "input": { "type": "choice", "optionsFrom": "permafleet.channels.permafleet" },
       "next": [
         { "when": { "answers.channel": "new" }, "goto": "category" },

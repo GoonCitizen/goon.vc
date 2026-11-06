@@ -10,21 +10,29 @@ or a GoonCitizen relay.
    `hub.goon.vc` is the same Hub under a second name
 
 **What this process is:** `@fabric/http` `HTTPServer` serving `assets/` and
-reverse-proxying `/sessions`, `/device-links`, `/services/rpc`, and
-`/identity/cluster` + `/identity/cross-sign` to `FABRIC_HUB_ORIGIN`
+reverse-proxying the linked-signer rendezvous and mailbox (`/delegations`,
+`/services/delegation/mailbox`; delegation frames, `@fabric/core`
+`docs/DELEGATION.md`) and `/services/rpc` (goon.vc's cookies never go to a
+Hub, and a Hub's `Set-Cookie` never comes back) to `FABRIC_HUB_ORIGIN`
 (default `https://hub.fabric.pub`), then `hub.seeds` (`FABRIC_HUB_SEEDS`, default
 `https://hub.goon.vc`) in order when the ones before can't be reached at all
-(DNS / refused — never after a Hub answered or timed out). The proxy and the
-Passport claim share one list (`createHubList` in `functions/hubApiProxy.js`)
+(DNS / refused — never after a Hub answered or timed out). The proxy (and the
+Hub mailboxes below) share one list (`createHubList` in `functions/hubApiProxy.js`)
 that sticks to the Hub that answered last; seeds outside the `@fabric/http`
 Hub allowlist are skipped, and none are used behind a loopback Hub. No Fabric Peer listen (the
-Fabric relay below only dials out), no Bitcoin, no
-`/services/star-citizen`. The one Discord gateway client is the metrics bot
-below (non-privileged intents unless the Fabric relay or campaigns are configured, `autoCommands: false`); it never answers chat,
-only the `/idlerpg`, `/1v1`, `/vote`, and `/goon` application commands, and DMs only inside a setup
+Fabric relay below only dials out), no bitcoind, no
+`/services/star-citizen`. The one Bitcoin signing it does is the Market's
+(below): goon.vc signs Fabric frames and, as escrow arbiter only, withdrawal
+signatures through the core federation helpers; it never holds a buyer's or
+seller's key, and the coins sit in a vault the Hub watches. The one Discord gateway client is the metrics bot
+below (non-privileged intents unless the Fabric relay, the Market forum mirror, or campaigns are configured, `autoCommands: false`); it never answers chat,
+only the `/idlerpg`, `/1v1`, `/vote`, `/market`, `/rsi`, `/hangar`, `/goon`, and `/help` application commands, and DMs only when a command starts it: inside a setup
 script a server admin started with `/goon setup` (or `/goon council`, `embassy`,
-`permafleet`, `voice`, which also create those channels on the admin's server
-when the bot may) or a campaign one sent with `/goon campaign`. Favicons are the G00N SQUAD
+`permafleet`, `voice`, `roles`, which also create those channels and Prospect ranks on the admin's server
+when the bot may and the admin is one of the org's officers on record), the hangar walkthrough a member started with `/hangar guide`,
+the review list a reviewer asked for with `/goon review`, or a broadcast someone
+sent with `/goon campaign`, `checkins`, or `welcome` after a preview naming
+every recipient. Favicons are the G00N SQUAD
 skull, the org's RSI logo (`logoUrl` in `contracts/organizations.json`), not the
 Fabric suite lettermark.
 `/events` lists upcoming Discord Guild Scheduled Events from every server the
@@ -33,7 +41,7 @@ bot). Events are saved per guild in an on-disk Fabric Store (`stores/events`,
 LevelDB) and requests are always answered from disk; Discord is polled on start
 and every `ttlMs` in the background, a failing guild keeps its last saved events,
 and the copy is served `stale` while Discord is unreachable. The page is a
-single `<fabric-calendar>` Web Component (`assets/scripts/fabric-calendar.js`,
+single `<fabric-calendar>` Web Component (`components/FabricCalendar.js`,
 no goon.vc dependencies — the template for a Fabric-wide calendar control). It
 shows the same week board as the PERMAFLEET schedule (`functions/scheduleGraphic.js`),
 rendered live from that copy at `GET /services/events/schedule.svg?server=<id>&tz=<IANA zone>`
@@ -43,8 +51,8 @@ zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
 the element's contract. `/operations/PERMAFLEET/schedule` is the same element
 pinned to `server=permafleet`: the home server's events plus those of the member
-orgs' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
-4M-CONTRACTORS, TRDE, and AIMOS — a listed server's events show once the bot is
+orgs' and squadrons' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
+4M-CONTRACTORS, TRDE, AIMOS, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
 in it; DOUBLEDOGZ points at the G00N SQUAD server), home server first so its day themes win, PERMAFLEET brand, no server
 picker; a single server id draws just that server under its own name; every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
@@ -59,6 +67,18 @@ a directory under `assets/` named like a page — e.g. a leftover `drills/` —
 can't redirect it to `/x/`; Store-backed pages under `/tournaments/` and
 `/leagues/` are matched by prefix). Add a route there when you add a page; absolute URLs
 use the `siteUrl` site setting (default `https://goon.vc`).
+All UI lives in `components/`. Browser code too large to inline is one
+function in its component — a page's `client()`, or a Web Component's
+`define<Element>(root)` in its own module — that `npm run build` compiles
+(`functions/clientScript.js`, `GoonSPA#clientScripts`) to
+`assets/scripts/<name>.js`, loaded with a deferred `<script>` at
+`<name>.js?v=<first 12 hex of its sha256>`; that exact URL is served
+`Cache-Control: public, max-age=31536000, immutable`
+(`GoonVC#_clientScriptCacheMiddleware`), any other revalidates. Only the
+function's source reaches the browser, so it can't use anything from its module.
+`assets/scripts/` is build output, tracked like `index.html`:
+`tests/clientScripts.js` fails on a hand-written or stale file there, or an
+`index.html` not built with the current versions.
 The home page's "Subscribe on Discord" block lists the G00N guild's purchasable
 Server Subscription tiers from `GET /services/discord/subscriptions` (tier roles
 tagged `subscription_listing_id` + `available_for_purchase`, saved in the events
@@ -105,7 +125,7 @@ into the one in-process `@fabric/doorman` host that `services/community.js` owns
 community). Doorman's Discord adapter is **attached** to the same `@fabric/discord` client
 `services/operations.js` already runs (`Operations` emits `gateway`; the adapter
 has `replies: false`, never logs in, and never answers `!` commands). There is still
-exactly one gateway client and one Doorman. Apart from application command replies, the only thing it posts is IdleRPG game
+exactly one gateway client and one Doorman. Apart from application command replies and the Market forum mirror (below), the only thing it posts is IdleRPG game
 announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
 channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
 View Channel + Send Messages there. Chatting is penalized only in those
@@ -145,7 +165,16 @@ renames, and not derived from any account id. Saves from before accounts move
 to that shape on start with everything kept. Link previews come from
 `Presence#page`. Names come
 from the Doorman adapter's `user` events (member cache on voice join) plus a
-one-time `Presence#backfillNames` on gateway ready. `/resources` lists an
+`Presence#backfillNames` on gateway ready. The name shown on the G00N SQUAD
+server — its server nickname, else the global display name, else the username —
+outranks a nickname from any other server the bot is in, which outranks a
+global display name, which outranks a username. IdleRPG keeps the
+highest-ranked name it has seen (`nameRank` on the player); a later sighting
+replaces it only at the same or a higher rank, so a chat username or another
+server's nick cannot cover the G00N SQUAD name. A same-rank sighting still
+updates it, so a new G00N SQUAD nickname replaces the old one. Backfill reads
+the member cache and, until a player has a G00N SQUAD name, asks that server
+once. `/resources` lists an
 IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
@@ -163,15 +192,21 @@ federations are deliberately not in the menu; they are reached by link.
 `/operations/PERMAFLEET/votes` is **alliance votes**: one vote per member org,
 composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `functions/allianceFederation.js`, Fabric Store `stores/alliance`,
-`GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js` +
-`assets/scripts/alliance-votes.js`). The roster is `contracts/alliance.json`
+`GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
-`symbol` and its Org Stewards' account keys (`discord:<id>`, `fabric:<pubkey>`).
-Each org's validator key is derived from goon.vc's Fabric key (the relay's
-`GOON_FABRIC_XPRV` / `stores/fabric`) at `m/7777'/1'/<index from the symbol>'`,
-and goon.vc signs with it when one of that org's stewards votes; an org that
-sets its own compressed `pubkey` holds its key and posts its own signed frames
-to `POST /services/alliance/messages { frame }` (the buttons refuse it). The
+`symbol` and its `officers` (below). **Only officers vote for an org**;
+leadership puts them on record by account, and there is no other role in the
+vote. **User-facing copy never mentions keys**: officers and members sign in
+and press a button (or run `/vote`), and goon.vc signs for them. An org with
+an empty `officers` list has none on record (`custody` `none`): goon.vc
+derives its validator key at `m/7777'/1'/<index from the symbol>'` of
+goon.vc's Fabric key (the relay's `GOON_FABRIC_XPRV` / `stores/fabric`) but
+never signs with it, frames from it are refused (403), and the org doesn't
+vote until leadership lists its officers — with fewer than `threshold` such
+orgs nothing can pass (the overview's `federation.voting` counts the orgs that
+can vote, and the page says so). An org that sets its own compressed `pubkey`
+instead (`custody` `own`) casts its own one vote by posting signed frames to
+`POST /services/alliance/messages { frame }`. The
 descriptor is core's `FabricFederationDescriptor` (sorted validators,
 threshold floor(n/2)+1, built by `@fabric/core` `Federation.buildDescriptor`
 when the installed core has it, else identically here); its id is the sha256
@@ -184,31 +219,46 @@ the publisher org), `FederationProposal` (`title`, `summary`, `createdAt`,
 yes, fails once it no longer can, expires at `closesAt`, and is closed after.
 Frames go to the mesh through the Fabric relay when a peer is connected.
 Changing the orgs or their keys makes a new federation; older proposals keep
-theirs. **Orgs of officers** (a nested multisig): an org that lists `officers`
-(`fabric:<x-only>` or compressed keys, at most 16) and optionally `threshold`
-(default a majority of them) is its own `FabricFederationDescriptor` of those
-keys (publisher the first listed). Its alliance validator is goon.vc's key at
-the index of sha256(`PERMAFLEET:<symbol>:<org federation id>`), so changing
-its officers or threshold makes a new alliance federation; `custody` is
-`officers`, and stewards can't propose or vote for it (409). Officers sign
-with their own keys (`npm run alliance:sign -- pubkey | vote <proposal>
-<choice> | propose "<title>"`, `scripts/alliance-sign.js`; `FABRIC_XPRV` or
-`--key-file`, `--org`, `--origin`, `--print` for offline signing) frames under
+theirs. **Orgs of officers** (a nested multisig): an org's `officers` are
+account keys (`discord:<id>`, any `platform:id`; at most 16), with an optional
+`threshold` (default a majority of them). goon.vc holds one officer key per
+account at `m/7777'/5'/<a>'/<b>'` (two 31-bit slices of
+sha256(`alliance-officer:<account>`); apart from the member-vote keys below,
+so an officer's signature can't be matched to their member vote), and the org
+is its own `FabricFederationDescriptor` of those keys (publisher the first
+officer's). Its alliance validator is goon.vc's key at the index of
+sha256(`PERMAFLEET:<symbol>:<org federation id>`), so changing its officers or
+threshold makes a new alliance federation; `custody` is `officers`. A
+signed-in officer (any account linked to their goon.vc member that is on the
+roster; `Alliance#actor` / `actorFor`) proposes with `POST
+/services/alliance/proposals { title, summary?, days?, org? }` (1–30 days,
+default 7; `org` only when they are an officer of several) and votes with
+`POST …/proposals/<id>/votes { choice, org? }` (signed out 401, not on
+record 403); the proposal page has the form and Yes / No / Abstain buttons,
+and `/vote` on Discord does the same. goon.vc signs the officer frame under
 the org federation id (`FederationProposal` / `FederationVote` with
-`allianceFederationId` and `org`), posted to `POST …/messages` or pasted on
-the proposal page. One officer's proposal has goon.vc sign the org's alliance
-proposal; once `threshold` officers' latest votes agree, goon.vc signs the
-org's alliance vote. Both carry `orgFederationId` and the officer frames as
-`endorsements`, checked against the org descriptor by everyone who reads them.
-An officer's latest vote counts (an older `castAt` is refused). If the agreed
-choice loses its quorum and nothing else reaches it, the org's last alliance
-vote stands. Routes: `GET /services/alliance` (federation, orgs, steward count,
-each org federation, who you vote for and are an officer of, proposals),
-`GET|POST /services/alliance/proposals`,
-`GET /services/alliance/proposals/<id or 12-char prefix>` (each org's vote and
-officer counts, every signed frame, org descriptors, officer votes),
-`POST …/proposals/<id>/votes { choice, org? }` (401 signed out, 403 not a
-steward), `GET /services/alliance/federations[/<id or 12-char prefix>]`.
+`allianceFederationId` and `org`) with that officer's key. One officer's
+proposal has goon.vc sign the org's alliance proposal; once `threshold`
+officers' latest votes agree, goon.vc signs the org's alliance vote. Both
+carry `orgFederationId` and the officer frames as `endorsements`, checked
+against the org descriptor by everyone who reads them; officer frames reach
+the mesh only inside them. A vote signs for every org of the proposal the
+officer sits for, and their latest vote counts. An officer's vote is also
+their advisory member vote (cast first, so it lands even when the officer
+vote closes the proposal). If the agreed choice loses its quorum and nothing
+else reaches it, the org's last alliance vote stands. **Officers see each
+other**: each officer's latest vote (`officerVotes`, with display name and
+`officer` index), the org's yes / no / abstain / waiting counts, and the
+names behind the org's vote are served only to that org's officers; everyone
+else sees the org's vote, its `officers { threshold, total }`, and the signed
+frames. Routes: `GET /services/alliance` (federation, orgs and their custody,
+`voting`, each org federation, the orgs you are an officer of
+(`you.officers`), proposals), `GET /services/alliance/proposals`,
+`GET /services/alliance/proposals/<id or 12-char prefix>` (each org's vote,
+every signed frame, org descriptors, and for officers `you.officers` with
+their own latest choice), the two writes above,
+`POST /services/alliance/messages { frame }` (own-key orgs and signed frames
+from the mesh), `GET /services/alliance/federations[/<id or 12-char prefix>]`.
 **Member votes** (advisory; orgs still decide pass / fail): any goon.vc member
 votes once per proposal, from Discord with `/vote` in any server the bot is in,
 or on the proposal page (`POST …/proposals/<id>/member-votes { choice }`, 401
@@ -226,30 +276,30 @@ by a `BridgeAttestation` frame signed by the bridge key (`{ bridge, platform,
 account: <account pubkey>, attestedAt }`, no id or name; kept at
 `/attested/<platform:id>` and `/attested-key/<pubkey>`). The account key signs
 a `FederationMemberVote` (`proposalId`, `choice`, `castAt`, `attestation`)
-under the alliance federation id. A Fabric key linked to a member may sign its
-own (no `attestation`; `npm run alliance:sign -- member-vote <proposal>
-<choice>`, posted to `…/messages`); an unlinked key gets 403, as does an
-attestation from another Bridge or a vote not signed by the attested key.
+under the alliance federation id. `…/messages` also takes a member vote
+signed by a Fabric account linked to a member (no `attestation`; not offered
+in the UI); a key no member holds gets 403, as does an attestation from
+another Bridge or a vote not signed by the attested key.
 The latest vote per member counts, across their linked accounts and merges;
 votes are taken only while the proposal is open (409), and an older `castAt`
 from the same member is refused (409). Proposal JSON adds `members { yes, no,
 abstain, total }`, the counted `memberVotes` frames (choice, time, platform,
 account pubkey — no names, member ids, or account ids), `bridge`, and
 `you.memberVote`; summaries add `members`.
-`/federations` (`components/Federations.js` + `assets/scripts/federations.js`,
+`/federations` (`components/Federations.js`,
 `federationsPath` in `GoonSPA`) lists every alliance federation and every org
 federation of officers ever seen, current first (an org federation is indexed
 at `/org-federation/<id>` with the alliances it decided for); each has a page
 at `/federations/<12-char id>` with its signers, threshold, descriptor, and the
 alliance's invite and proposals or the org's officers and alliances (link
 previews from `Alliance#federationPage`). Vote JSON carries those `path`s and
-the vote pages link to them. Public JSON carries steward and officer display names and counts —
-never Discord ids or member ids. Officer pubkeys are public, because the org
-descriptor must list them for anyone to check a vote. A broken roster leaves
+the vote pages link to them. Public JSON carries officer display names and counts —
+never Discord ids, account keys, or member ids; federation pages list officers by
+name only (the descriptor still lists their keys so anyone can check a vote). A broken roster leaves
 votes off (503) without failing the site. Tests: `tests/alliance.js`.
 `/operations/PERMAFLEET/onboarding` (`components/PermafleetOnboarding.js`) is
 for leaders of orgs joining the Protectorate: open an embassy in #embassy, tag
-pilots `[PERMAFLEET]` on RSI, name Org Stewards, set up their Discord; then
+pilots `[PERMAFLEET]` on RSI, name their officers, set up their Discord; then
 what we expect of every member org (its own #embassy channel, a public
 PERMAFLEET voice channel, and the Prospect system for onboarding new members),
 what member orgs get, and the ground rules. Its copy follows the pinned #getting-started,
@@ -280,10 +330,10 @@ Fabric network.
 `name`, `tagline`, `summary`, `element`, `script`, optional `attributes`); each
 renders at `/drills/<id>` as its standalone Web Component
 (`components/DrillsPage.js`). `<melee-rotation-drill>`
-(`assets/scripts/melee-rotation-drill.js`, shadow DOM, no goon.vc dependencies)
+(`components/MeleeRotationDrill.js`, shadow DOM, no goon.vc dependencies)
 runs only while visible, takes `heading` / `eyebrow` / `description` /
 `pilots` / `storage-key` / `auto-every` / `fonts="none"` attributes,
-and emits `splash` + `rosterchange`. Add a drill = a new element script plus a
+and emits `splash` + `rosterchange`. Add a drill = a new element component plus a
 `drills` entry. The old `/drills/melee-rotation-drill.html` redirects.
 `/tournaments` is the permanent tournament record (`services/tournaments.js`,
 Fabric Store `stores/tournaments`, `GOON_TOURNAMENTS_STORE`, routes under
@@ -326,11 +376,10 @@ and they come back with the result (duels voided by hand stay void). Start-up
 syncs every locked tournament, and a failed post never fails the game. Link previews for series and
 tournament pages come from the Store (`Tournaments#page`, wired in
 `_pageMetaMiddleware`). The bracket is `<tournament-bracket>`
-(`assets/scripts/tournament-bracket.js`, shadow DOM, no goon.vc dependencies):
+(`components/TournamentBracket.js`, shadow DOM, no goon.vc dependencies):
 with `src` it loads and saves a record through that API, without it it keeps a
-bracket in `localStorage`. `assets/scripts/tournaments.js` drives the index,
-series, and record pages (`components/TournamentsPage.js`). In Node the
-bracket script exports its pure engine, shared with the service
+bracket in `localStorage`. `components/TournamentsPage.js` drives the index,
+series, and record pages. In Node the bracket component exports its pure engine, shared with the service
 (`tests/tournament.js`, `tests/tournaments.service.js`).
 `/leagues` holds standing duel leagues (`services/leagues.js`, Fabric Store
 `stores/leagues`, `GOON_LEAGUES_STORE`, routes under `/services/leagues`).
@@ -362,8 +411,111 @@ the league `log`. Seasonal leagues roll over with `POST …/<id>/seasons`, which
 closes the current season, freezes its `standings` + `champion`, and starts
 everyone at the initial rating again; a closed season's duels are final.
 `PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
-`components/LeaguesPage.js` + `assets/scripts/leagues.js` (`?season=<n>` shows
+`components/LeaguesPage.js` (`?season=<n>` shows
 a past season); link previews come from `Leagues#page`.
+**Market** (`/services/market`; `services/market.js`, Fabric Store
+`stores/market`, `GOON_MARKET_STORE`; pure parts in `functions/marketPost.js`
+and `functions/marketEscrow.js`; page `components/MarketPage.js`) is the G00N SQUAD Market forum on the web, 1:1:
+every thread of the forum (`market.forum`, `GOON_MARKET_FORUM`: id, exact name,
+or `"/regex/"` in `discord.guildId`, default `/market/`; mirrored only while
+@everyone can view it) is a listing, and every listing made on the site or with
+`/market sell` is a thread. Fields follow the Turtle Brigade spreadsheet (a
+reference only; nothing reads or syncs it): title, kind (Ship, Paint, Vehicle,
+Pack, CCU, Other), contents, qty, insurance (LTI or months), MSRP, price,
+source (Hangar / Buyback), giftable, notes, image, status (available, dibs,
+reserved, paid, delivered, sold, hidden; the forum's tags read Available, Dibs,
+Reserved, Sold). Prices are BTC, stored as sats; `$` input converts at the
+mempool.space BTC/USD rate (`rateUrl`, hourly, kept in the Store, served `stale`
+when the fetch fails), which is otherwise only a USD hint. **Forum mirror**
+(`GOON_MARKET_SYNC=0` serves stored listings only): REST passes every `ttlMs`
+(15 min; archived threads daily) with a cursor per thread plus gateway thread
+and message events (Message Content intent). Hand-written posts are parsed
+best-effort (`Price:`, `0.005 BTC`, `500k sats`, `$40`, LTI, `x2`), sellers
+are members found by Discord account (`via: directory`), and a field edited on
+goon.vc keeps its value when the post later changes (`fieldSources`). Site
+listings post as the seller through a bot-owned webhook (name and avatar;
+`webhook: false` posts as the bot; the token stays in the Store, never served),
+with an embed of the fields and buttons View on goon.vc and Buy with escrow;
+site edits rewrite that post, or for hand-written posts move the tags and add
+an "Updated on goon.vc" reply. Replies go both ways (site replies through the
+webhook). Sold listings lock and archive their thread; a deleted thread hides
+the listing. The bot needs View Channel, Send Messages (new posts), Read
+Message History, Manage Webhooks, Manage Threads, Create Public Threads, and
+Send Messages in Threads there (`/services/discord/invite?for=market`).
+`npm run collect:market` (`scripts/market.js`; stop the server first) reads the
+whole forum, archived threads included. **Dibs**: a member holds a listing for
+`dibsHours` (24). **Escrow** (2-of-3): an order is a core named federation
+(`FabricFederationDescriptor`, validators buyer + seller + goon.vc's arbiter
+key at `m/7777'/4'/<a>'/<b>'` of goon.vc's Fabric key, two 31-bit slices of
+sha256(`market-order:<id>`), threshold 2, publisher the arbiter, network the
+Hub's — `market.network` / `GOON_MARKET_NETWORK` refuses any other, mainnet
+only with `allowMainnet`). The buyer and seller validators are each member's
+**escrow key**: the BIP87 cosigner key (`m/87'/B'/n'/0/0`, B = 0 on mainnet,
+1 elsewhere) of their Passport account, never their `fabric:` identity key.
+"Link your escrow key" (on the listing's `#buy` box and `/mine`;
+`window.goonEscrowKey`) runs a Passport challenge (`POST
+/services/members/passport/challenges { escrow: true }`, signed in only)
+asking for the `cosigner` disclosure on the Hub's network (Members
+`escrowNetwork` → `Market#_network`); core checks the proof that ties it to
+the signing identity, and the claim keeps `cosigner { pubkey, network,
+linkedAt }` on that `fabric:` account (logged `escrow-key`; account views show
+only `escrow: <network>`, never the key). Without one for the Hub's network,
+orders get 409 pointing at that step. The buyer gives a refund address and pays
+the vault address (BIP21 + server-side QR) within `payHours` (24, else the
+order expires); goon.vc posts the `FederationInvite` and every request to the
+Hub mailbox (`POST /services/federations/messages`, through `createHubList`;
+the invite is re-posted daily) and polls `GET
+/services/federations/<id>/vault` for funding. The payment is a Hub invoice
+(`escrow.invoice`: Hub `invoiceStore` shape `{ id, address, amountSats, memo,
+label, createdAt, network, txids }` plus `amountBtc`, `expiresAt`,
+`bitcoinUri`; `GET …/orders/<id>/invoice`), and the order page links the
+Hub's Payments page (`<hub>/payments?bitcoinUri=…`) beside the wallet link.
+The vault lists confirmed coins only, so the buyer may report a txid (`POST
+…/orders/<id>/payments { txid }`, at most 5): goon.vc checks it with the
+Hub's L1 invoice check (`GET /services/bitcoin/transactions/<txid>?address=&amountSats=`,
+which sees the mempool; 409 when it doesn't pay the full price in one
+payment) and re-checks unconfirmed ones on every vault pass. A payment seen
+before `payBy` holds the order open `payGraceHours` (24) longer while it
+confirms. Paid → the seller gifts the
+pledge on RSI and marks it delivered with a payout address within
+`deliveryDays` (7), which opens a `FederationWithdrawalRequest` (the release;
+every payout leaves `feeSats`, 1000, to the network); the buyer releases (or
+disputes) within `confirmDays` (3).
+Parties sign `FederationWithdrawalSignature` frames with their own keys —
+Passport / GoonCitizen from the mailbox, `npm run market:sign -- pubkey | show
+<order> | sign <order> [release|refund]` (`scripts/market-sign.js`; derives
+the escrow key from the master `FABRIC_XPRV` with `--account` (default 0) and
+`--network` (default the Market's), and `pubkey` prints it; rebuilds the PSBT
+from the request and checks its id before signing; `--print` for offline), or a frame pasted on the order page — posted to `POST
+/services/market/messages { frame }` (a signer outside the descriptor gets 403).
+goon.vc signs as arbiter only alongside one party: a release when the buyer
+confirms or lets `confirmDays` pass, a refund when the seller refunds or never
+delivers, in a dispute whatever a Market arbiter (`market.arbiters`,
+`GOON_MARKET_ARBITERS` account keys) presses, and a refund of a payment that
+arrives after the order expired or was cancelled (watched 30 days). Two signatures finalize the
+transaction, broadcast through the Hub; milestones (reserved, paid, delivered,
+sold) post in the thread without amounts or addresses and move its tag.
+Routes: `GET /services/market` (HTML, or the JSON catalog: `kind`, `source`,
+`status`, `tag`, `q`, `seller`, `sort`), `…/listings/<id>` (+ replies),
+`…/listings/<id>/image` (re-signed Discord CDN redirect), `…/sellers/<slug>`,
+`…/mine` (401 signed out), `…/orders/<id>` (parties and arbiters only),
+`…/orders/<id>/request?pubkey=` (what that party's key signs; 404 for any
+other key); writes need sign-in: `POST|PATCH …/listings[/<id>]` (PATCH on the
+collection is a bulk `{ ids, changes }`), `POST …/listings/<id>/replies|dibs|orders`,
+`POST …/orders/<id>/payments|delivered|dispute|release|refund|cancel`. Public JSON carries
+display names only — never Discord ids, member ids, or the webhook. Pages:
+the catalog (forum-style cards or the spreadsheet's table, kind chips,
+filters), a listing page (fields, replies with a reply box, Open in Discord,
+dibs and Buy in `#buy`, the seller's edit form), seller pages, `/mine` (your
+listings with bulk status and price changes, your orders, a new listing form),
+and an order page (step tracker, QR, vault address, actions, payouts to sign,
+history). The copy notes pledges trade by RSI gifting, a grey market under
+RSI's terms. `GET /services/discord/install` redirects to the user install
+(`integration_type=1`, `applications.commands`) for `/market`; User Install
+must be on for the shared application in the Developer Portal. Settings:
+`market.{enabled,path,forum,tags,ttlMs,sync,webhook,network,allowMainnet,dibsHours,payHours,payGraceHours,deliveryDays,confirmDays,feeSats,arbiters,rateUrl}`;
+`GOON_MARKET=0` turns it off. Tests: `tests/marketPost.js`,
+`tests/marketEscrow.js`, `tests/market.service.js`.
 The **Fabric relay** (`services/fabricRelay.js`, packs in
 `functions/discordFabricShare.js`) puts messages from the G00N SQUAD **public
 channels** (`discord.guildId` only; text and announcement channels @everyone
@@ -392,13 +544,15 @@ peers that joined later. A deletion only stops re-sharing — peers keep what th
 already have. `GOON_FABRIC_RELAY=0` turns it off.
 Discord **application commands** (`services/commands.js`) are answered on that
 same gateway client (interactions need no intents) and registered globally for
-servers only when it is ready. The application is shared (today "sensemaker"),
+servers only when it is ready (`/market` also installs on a member's own account
+and runs in DMs and group DMs). The application is shared (today "sensemaker"),
 so only these names are upserted, never `set()`, and unchanged ones are skipped.
-Everyone who runs one in a server gets a goon.vc member profile: the command
+Everyone who runs one in a server (except `/help`) gets a goon.vc member profile: the command
 links their Discord (`Members#linkDiscord`: the same member Discord login
 signs in to, found by the `discord:<id>` account; not a login, and an existing
 display name is kept),
-even when the command is then refused. A button press links only on Confirm.
+even when the command is then refused. A button press links only on Confirm
+(and on Buy with escrow under a Market post).
 `/idlerpg profile [pilot]` | `leaderboard` | `stats` reply from `Presence`
 (`discordPlayer`, `players`, `report`): public numbers and display names, with
 links to the player pages. `/1v1 winner loser score [league] [note]` is run by
@@ -424,9 +578,56 @@ Errors are ephemeral. Replies carry no Discord ids and ping no one except the
 opponent asked to confirm. `/vote proposal choice` (any member, any server; `proposal`
 autocompletes open alliance proposals by title or short id, `choice` is yes / no / abstain)
 casts the caller's advisory member vote through `Alliance#memberVote` with their
-`discord:<id>` account (Commands takes `alliance` lazily, since Alliance starts later)
-and replies privately with the member and org counts and a link; it notes when the vote
-replaced one from another of their accounts, and says when votes are not set up.
+`discord:<id>` account (Commands takes `alliance` lazily, since Alliance starts later);
+an officer on record (`Alliance#actorFor`) votes through `Alliance#vote` instead, which
+also signs for each of their orgs in the proposal. It replies privately with the member
+and org counts, for an officer how many of the org's officers agree and the org's vote,
+and a link; it notes when the vote replaced one from another of their accounts, and says
+when votes are not set up.
+`/market` (registered only while the Market runs; Commands takes `market`
+lazily) has `integration_types` server + user install and `contexts` server,
+bot DM, and group DM, so it reads no guild: `search [query]` lists up to ten
+listings with links, `sell item price [kind] [qty] [insurance] [image] [notes]`
+is `Market#create` (the listing and its forum post), `mine` lists the caller's
+listings and open orders, `edit listing [price] [status] [notes]` is
+`Market#update` (`listing` autocompletes from the caller's own listings), and
+`buy listing` (autocompleting listings for sale) answers like the Buy with
+escrow button on a forum post (`market:buy:<listing>`): the caller's open order,
+or the listing page's `#buy` box (the order needs a refund address, so it opens
+on goon.vc), with a pointer to `/sessions` while they have no Fabric key.
+Replies are private (deferred: a sale posts to the forum first) and carry
+display names and links only.
+`/help [command]` (same install and contexts as `/market`; `command` offers the
+commands running right now as choices, built from `Commands#definitions`, so it
+never lists one that isn't registered) replies privately with every running
+command and its subcommands, or one command in detail: each subcommand's
+arguments (`[optional]`), a line of `HELP` copy with its goon.vc page, where it
+runs, and Manage Server for `/goon`. It reads nothing about the caller and
+makes no member profile. Add a `HELP` entry with every new command.
+`/schedule` (registered only while scheduling runs; `GOON_SCHEDULE=0` turns it
+off) `open` posts a poll in the channel it was run. `people` (names or
+`@handles`, commas between display names) and/or `role` and `also` say who
+it’s for. The next `days` (default 7) offer `times` each day (default 4pm,
+7pm, and 10pm in `zone`, default `America/Chicago`; `GOON_SCHEDULE_TZ`) for
+`length` hours (default 2). Anyone named, and anyone holding one of the roles
+when they answer, picks every time they can on the message; the latest answer
+replaces. Names resolve on that server (the gateway’s member cache, then
+Discord’s member search — no privileged intent). A role is not listed out, so
+holding it is checked at the answer. The poll closes at `closes` (default 24
+hours; “in 2 days” or a date; 15 minutes to 14 days) or when the opener runs
+`/schedule close`. goon.vc then messages the opener — a DM, or a channel
+message only they can press when DMs are closed — with up to five fullest
+times (most people, earlier first) and Don’t schedule. The one they pick
+becomes a Guild Scheduled Event on that same server: in `voice` when they
+named a voice or stage channel, otherwise external at `where` (default the
+server’s name). The bot needs Manage Events plus View, Send, and Read History
+(`GET /services/discord/invite?for=events`); without them the choice stays up
+so a manager can allow it and they pick again. The new event joins `/events`
+on the next refresh. Polls live in a Fabric Store (`schedule.path`,
+`GOON_SCHEDULE_STORE`, default `stores/schedule`). One opener can have three
+open polls on a server. Replies, the poll, and the event description carry
+display names and role names only — never Discord user ids — and ping nobody.
+Tests: `tests/schedulePoll.js`, `tests/schedule.service.js`.
 `GOON_COMMANDS=0` turns the commands off.
 `/goon setup` (server-only, `default_member_permissions` Manage Server, registered only
 while DM scripts run; `/goon` carries only the subcommands whose feature runs, and
@@ -451,28 +652,72 @@ choice sources `discord.guild.textChannels` / `discord.guild.voiceChannels`
 (names, in server order, noting permissions the bot lacks there) and
 `goon.features`, and the `ManageGuild` requirement, read fresh from Discord
 (`members.fetch({ force: true })`; the owner always passes) when the session
-starts and again before the answers are recorded. `goon-setup` asks for the
-features wanted (schedule calendar, clips, IdleRPG announcements, PERMAFLEET
-membership), then only the matching steps (PERMAFLEET schedule or own calendar,
-clips channel, IdleRPG channel, org name / RSI symbol and Org Stewards), shows
-the guild-wide permissions the bot is missing with the `/services/discord/invite`
-link, and confirms a summary. Completion runs `record`: the latest answers per
-guild in the Store. **Nothing reads them yet**; services still take their
-config from `settings/local.js`.
-**PERMAFLEET channel scripts** set up the channels every member org keeps on
+starts and again before the answers are recorded. **Only an org's officers on
+record act for it**: the `PERMAFLEET org officer` requirement
+(`Community.OFFICER`) passes when the caller's Discord account, or another
+account linked to the same goon.vc member, is one of the org's `officers` in
+`contracts/alliance.json` (`Alliance#representing`, `officer: true`, wired by
+`services/goon.vc.js` through `Community#alliance`), the same officers who
+vote for the org. Anyone else gets a refusal saying to ask in #embassy to be
+put on record; nobody is taken for an officer because of a role name or a
+typed answer. PERMAFLEET scripts make, match, and hand out **no steward-type
+role** (G00N SQUAD's ORG STEWARDS role is for non-alliance org leaders and is
+never touched). `goon-setup` asks for the
+features wanted (schedule calendar, clips, IdleRPG announcements, and PERMAFLEET
+membership — offered only to an org's officers on record; others
+are told why), then only the matching steps (PERMAFLEET schedule or own calendar,
+clips channel, IdleRPG channel, the org from the roster — `permafleet.orgs`,
+only the orgs the caller is on record for, with every org's officers on record
+named in the step), shows the server's PERMAFLEET compliance
+checklist (below; nothing changes there), then offers **Set it all up
+(recommended)** or "I'll pick existing channels and roles". Set it all up
+(`permafleet.setup`, `Community#setupPermafleet`) makes the missing Prospect
+ranks `[P1] Prospect I`…`[P6] Prospect VI` (highest first, since new roles
+land at the bottom) and, in a PERMAFLEET category, `#embassy`, the PERMAFLEET
+voice channel, `#permafleet`, and `#council`, opened by member permission
+overwrites to the org's officers on record who are on the server (found by
+their linked Discord accounts; skipped, with a pointer to `/goon council`,
+when none is). Channels and ranks the server already has
+by those names are kept as they are; without Manage Channels, Manage Roles (for
+the ranks), and what the channels grant, nothing changes. It shows the guild-wide permissions
+the bot is missing with the `/services/discord/invite` link, and confirms a
+summary. Completion runs `permafleet.org` (checks the caller against the org
+again; refused = nothing saved), `permafleet.setup`, and `record`: the latest
+answers per guild in the Store (the org's symbol, the officer names on record,
+`setup { channels }`). **Nothing reads them yet**; services still
+take their config from `settings/local.js`.
+**PERMAFLEET channel and rank scripts** set up the channels and Prospect ranks every member org keeps on
 its own Discord, one script each, started like `goon-setup` (same checks,
-registered with it) by `/goon council` (`permafleet-council`), `/goon embassy`
-(`permafleet-embassy`), `/goon permafleet` (`permafleet-channel`), and
-`/goon voice` (`permafleet-voice`). Specs live in `functions/allianceChannels.js`:
-`#council` is private (@everyone denied View; the roles the admin picks and the
-bot's own member get View / Send / Read History) — where the org's officers
-settle alliance votes; `#embassy` and `#permafleet` are text channels and
+registered with it, plus the `PERMAFLEET org officer` requirement) by `/goon council` (`permafleet-council`), `/goon embassy`
+(`permafleet-embassy`), `/goon permafleet` (`permafleet-channel`),
+`/goon voice` (`permafleet-voice`), and `/goon roles` (`permafleet-roles`:
+the missing Prospect ranks only; `Community#createRoles`, needs Manage Roles;
+`functions/allianceRoles.js`).
+Creating is always the first, recommended choice, so every member org's
+Discord ends up the same; picking an existing channel or role comes second. Specs live in `functions/allianceChannels.js`:
+`#council` is private (@everyone denied View; View / Send / Read History for
+the org's officers on record who are on the server, by name — the recommended
+choice from `permafleet.council.access` — plus any roles the admin picks, and
+the bot's own member) — where the org's officers settle alliance votes; `#embassy` and `#permafleet` are text channels and
 `PERMAFLEET` a voice channel, all public (@everyone allowed View / Send / Read
-History, or View / Connect / Speak). Each asks
+History, or View / Connect / Speak). **Compliance**: before any question,
+each of these scripts (and `goon-setup`) DMs a checklist of where the server
+stands, computed when the session starts from the bot's cache
+(`functions/allianceCompliance.js`, `Community#compliance`): expected of every
+member org — `#embassy` and a PERMAFLEET voice channel that @everyone can use
+(read from @everyone's effective permissions), and Prospect ranks starting at
+Prospect I (role names) — then recommended: a private `#council` (@everyone
+can't view it) and a public `#permafleet`. Each line is
+✅ or ⬜ with what was found (channel and role names, never ids) and, when
+unmet, the fix (`/goon <subcommand>` for channels, `/goon roles` for the ranks). A channel script adds
+whether its own item already checks out. The checklist (`compliance`) and each
+check's `{ id, required, ok, detail }` (`complianceChecks`) stay in the session
+context, so the recorded results show leadership what the admin saw. Then each asks
 whether to create the channel (choice source `permafleet.channels.<kind>`:
-"Create …" then the server's channels of that type, likely matches first), then
-a category (`discord.guild.categories`, optional), for `#council` the roles
-(`discord.guild.roles`: highest first, no @everyone or managed roles), shows
+"Create … (recommended)" then the server's channels of that type, likely matches first), then
+a category (`discord.guild.categories`, optional), for `#council` who may see
+it (the officers on record, recommended, then `discord.guild.roles`: highest
+first, no @everyone or managed roles), shows
 what the bot lacks only when it lacks something, and confirms. Picking an
 existing channel uses it as is. On completion the `permafleet.channel` action
 (`Community#createChannel`) uses that channel, or one the server already has
@@ -480,10 +725,10 @@ by that name (case, emoji, and separators ignored), or creates it with
 `guild.channels.create` (reason names the admin and command; existing channels
 keep their permissions), and returns `{ channelId, created }` and a `<#id>`
 line for the completion DM, so `record` keeps the channel. Creating needs the
-bot to hold Manage Channels plus every permission it grants there (no Manage
-Roles); otherwise the admin gets that list and
-`/services/discord/invite?for=channels` (Manage Channels, View, Send, Read
-History, Connect, Speak; re-running an invite updates a bot already in the
+bot to hold Manage Channels plus every permission it grants there (Manage
+Roles is only for the Prospect ranks); otherwise the admin gets that list and
+`/services/discord/invite?for=channels` (Manage Channels, Manage Roles, View,
+Send, Read History, Connect, Speak; re-running an invite updates a bot already in the
 server), and nothing is created or recorded. Refusals reach the admin through
 Doorman's exposed action errors. Sessions expire after a day; starting again
 replaces an open one. The API is `GET /services/doorman/scripts[/<id>[/stats]]`
@@ -497,7 +742,28 @@ the Doorman host keeps running for IdleRPG either way. Settings:
 `community.{enabled,path,scripts,token}`. `tests/community.js` loads Doorman from
 `../doorman` (or `FABRIC_DOORMAN`) and is skipped when that checkout has no Scripts.
 **Campaigns** (opt-in: `GOON_CAMPAIGNS=1`) DM one message, or a Start button for a
-script, to a group of a server's members, on Doorman's Campaigns plugin
+script, to a group of a server's members. They are off by default: any other
+value (or none) loads no plugin, mounts no campaigns API, and registers no
+`/goon campaign`, `/goon checkins`, or `/goon welcome`. **Every outbound DM
+starts from a command, and every broadcast from a preview naming its
+recipients.** Nothing goes out on a timer, on a member joining, or on a sign-in
+waiting for review. DMs to the command's own caller (setup and channel
+scripts, `/hangar guide`, `/goon review`) and replies inside a conversation the
+recipient started (Start, Stop, a typed answer) are the only other DMs; plugins
+other than Scripts and Campaigns (IdleRPG's `!transfer`) can't DM at all
+(`Community#plug` drops their `whisper` events). A broadcast (`/goon campaign`,
+`/goon checkins`, `/goon welcome`, `npm run campaigns:*`, or the token-gated
+API) is a Doorman preview first: `POST …/campaigns/<id>/preview` returns an
+8-hex preview `id` and `recipients` (display names, "Name (@username)" when the
+handle differs; never ids), and keeps that list privately (`approvals` in the
+campaigns Store). Campaigns run with `requirePreview`, so `POST
+…/<id>/schedule { preview }` is the only way to send: it reaches exactly the
+members that preview listed who still qualify (opt-outs, role changes, new
+activity drop them; anyone who joined since is left out, counted as
+`notPreviewed`), and refuses a missing or stale preview (409; editing the draft
+or previewing again makes the older one stale). Discord previews list the names
+in the message as far as they fit and attach every name as `recipients.txt`.
+They run on Doorman's Campaigns plugin
 (`@fabric/doorman/services/campaigns`) plugged into the same Doorman host
 (Fabric Store `community.campaigns.path`, `GOON_CAMPAIGNS_STORE`, default
 `stores/campaigns`). Listing members needs the **privileged Server Members
@@ -508,16 +774,18 @@ intent it hasn't granted is asked for. Only then does the gateway ask for
 `Community.gateway(settings)` says which). Community supplies the `discord`
 audience (`Community#discordAudience`: `guild.members.fetch()` for each server
 the bot is in, or only the campaign's own server; role and exclusion filters;
-never bots) and the activity hook (`Presence#lastSeen`: last time the member was
-present in voice), and lists the scripts a campaign may offer (those without
+never bots) and the activity hook (last active: the later of `Presence#lastSeen`,
+the last time the member was present in voice, and `Activity#lastPosted`, their
+last post in the home server), and lists the scripts a campaign may offer (those without
 `requires`). `/goon campaign message [role] [exclude_role] [active_days] [script]
 [send_at]` (Manage Server; registered only while campaigns run) saves a draft
-owned by the server and shows its author a private preview: the message, how
-many members it reaches, who is skipped (excluded role, opted out, not in voice
+owned by the server and shows its author a private preview: the message, every
+member it reaches by name, who is skipped (excluded role, opted out, not active
 lately), and Send — or Schedule, when `send_at` is "in 2 hours" or a date up to
-30 days ahead — plus Cancel (`campaign:send|schedule|cancel:<id>[:<unix>]`).
-Only the author may press them, and Send re-checks Manage Server fresh from
-Discord. A server campaign reaches only that server, at most 500 members
+30 days ahead — plus Cancel
+(`campaign:send|schedule|cancel:<id>[:<unix>][:<preview>]`; Send and Schedule
+carry the preview id). Only the author may press them, Send re-checks Manage
+Server fresh from Discord, and it sends only that preview. A server campaign reaches only that server, at most 500 members
 (`maxAudience`; over it, only Cancel is offered), one per server a day
 (`guildCooldownMs`), one DM every 2 s (`intervalMs`). Each DM says "Sent by
 <server> via goon.vc" and has Stop messages from <server> / Stop all buttons
@@ -527,14 +795,16 @@ report and API return counts. The API is `/services/doorman/campaigns` (list,
 create, edit drafts, preview, schedule, pause, resume, cancel), all behind
 `Authorization: Bearer $GOON_SCRIPTS_TOKEN` (404 without it). Settings:
 `community.campaigns.{enabled,path,intervalMs,maxAudience,guildCooldownMs}`. Like
-scripts, an installed `@fabric/doorman` without the plugin leaves campaigns off.
+scripts, an installed `@fabric/doorman` without the plugin, or with one that
+doesn't lock sends to a preview (no `PREVIEW_APPROVALS` export), leaves
+campaigns off.
 **Recruiting** (`contracts/recruiting.json`, `functions/recruiting.js`) is one
 staff campaign per unit — TURTLE BRIGADE (FPS), BRAVO SQUADRON (dogfighting),
 PERMAFLEET OFFICERS — reaching G00N SQUAD members who hold the rank just beneath
 it in `contracts/roles.dot` (`qualified`: Prospect IV; Prospect roles are
 cumulative on Discord, so V and VI hold it too) and none of the unit's `roles`
 (the unit and everything above it: SHELLBACK, ALPHA SQUADRON, the officer and
-command ranks), present in voice within `activeWithinDays` (30). Its Start button
+command ranks), active (voice or posting) within `activeWithinDays` (30). Its Start button
 opens the unit's DM script (`contracts/scripts/recruit-*.json`: experience,
 unit questions, region and play times, RSI handle, the squadron application for
 squadrons, notes, a summary to confirm), recorded per member for leadership
@@ -545,10 +815,100 @@ the owner gets no pass), so `/goon campaign` never offers them. Copy says
 Prospect IV makes a member eligible and leadership selects; elite units are what
 the best go on to. `npm run campaigns:recruiting` (needs `GOON_SCRIPTS_TOKEN`
 and a server with `GOON_CAMPAIGNS=1`; `--unit`, `--origin`) saves or updates
-the drafts through the campaigns API and prints each reach; `--send` or
-`--at <date>` sends. A re-run skips members an earlier campaign for the unit
+the drafts through the campaigns API, prints every recipient's name, and ends
+with the exact command that sends those previews (`--send <campaign>:<preview>`,
+repeatable; `--at <date>` schedules); `--send` changes no draft and only
+schedules the previews named. A re-run skips members an earlier campaign for the unit
 already reached (`excludeCampaigns`) and leaves one that is scheduled, sending,
 or paused alone.
+**Check-ins** (`contracts/checkin.json`, `functions/checkin.js`) are friendly
+staff campaigns to G00N SQUAD members who have gone quiet, in three tiers by
+last active (Doorman filter `inactiveForDays`, plus `activeWithinDays` as the
+upper bound): very old (120+ days), somewhat old (60–120), getting old (30–60).
+Members active in the last 30 days are never contacted, nor members with no
+activity on record (`unseen`). Tiers are drafted and sent most inactive first,
+and within a campaign Doorman sends the most inactive first. Each message is a
+short, warmer-the-longer-away hello with a Start button for the `checkin` DM
+script (what kept them away — skippable — what would bring them back, play
+times, whether to ping them, notes, a summary to confirm), recorded per member
+for leadership. Touches are capped at three: a tier's campaign skips everyone
+an earlier campaign of that tier reached (one touch per tier, for good), and
+everyone any check-in reached in the last `spacingDays` (30); campaigns that
+reached no one aren't counted, within the 50-entry `excludeCampaigns` limit
+(same tier first). The script `requires` "G00N SQUAD member", mapped to the
+server's @everyone role (id = the server id; `Community#authorize` treats it as
+"is a member of that server"), so it runs only in the home server and
+`/goon campaign` never offers it. Check-ins go out only when someone with
+Manage Server in the home server runs `/goon checkins` (`services/checkins.js`,
+Fabric Store `stores/checkins`, `GOON_CHECKINS_STORE`; the subcommand is
+registered only while campaigns run and refused in other servers) and presses
+Send. It replies privately with what would go out right now (`Checkins#preview`):
+each tier's message and every member it reaches by name (saved as drafts with
+a Doorman preview each; skips counted), the `checkin` script's questions, and
+Send (`checkins:send:<preview>`), Cancel, and Stop while earlier check-ins are
+still going out. Buttons are pressable by anyone with Manage Server there,
+checked fresh from Discord. Send (`Checkins#send { preview }`) sends each tier
+to exactly the members that preview listed, most inactive tier first; only the
+latest preview sends, once, and not after a restart (409). Members who go quiet
+later get theirs when someone runs it again. Stop (`Checkins#halt`) cancels
+check-ins still scheduled, sending, or paused. Because repeated rounds outgrow
+`excludeCampaigns`, `Checkins` also keeps its own record
+of who each tier reached (Doorman's `delivered` event: Discord user id → tier
+→ time, never served) and drops them from check-in audiences through
+`Community#narrow`, a hook on every Discord audience. `GET /services/checkins`
+returns only when they last went out, each tier's reach then, and how many are
+still going out (`sending`) — no names or ids. `npm run campaigns:checkin`
+(needs `GOON_SCRIPTS_TOKEN` and a server with `GOON_CAMPAIGNS=1`; `--tier`,
+`--origin`) saves or updates the drafts, prints every recipient's name and why
+others were skipped (warning while the message history is still being read),
+and ends with the exact `--send <campaign>:<preview>` command; that command
+sends only those previews (`--stagger <hours>` spaces them, `--at <date>`
+schedules).
+**Welcome DMs** (`contracts/welcome.json`, `functions/welcome.js`,
+`services/welcome.js`, Fabric Store `stores/welcome`, `GOON_WELCOME_STORE`)
+invite new G00N SQUAD members to join PERMAFLEET and earn their Prospect tags:
+a staff campaign (title `Welcome: join PERMAFLEET`) whose message links the RSI
+org page and the schedule, with a Start button for the `permafleet-apply` DM
+script (applied on RSI yet, RSI handle, current org, experience, interests,
+region, play times, notes, a summary to confirm), recorded per member so
+leadership can tag Prospect I. Members holding any role in `exclude` never get
+it: the alliance orgs' roles and ORG STEWARDS (alliance members are already
+meant to be at least E1), and PERMAFLEET, Prospect I, Enlisted, E1, E2 (already
+in). PERMAFLEET GUESTS still get it. A member is due `delayHours` (24) after
+joining and stays due for `windowDays` (30): Community adds `joinedAt` (Discord
+`joinedTimestamp`) to audience people, and `Welcome#narrow` keeps only those
+who joined inside that window and were never welcomed. Who was welcomed is read
+from Doorman's deliveries for campaigns with that title (any status but
+cancelled), so it needs no ledger of its own and survives restarts. The script
+`requires` "G00N SQUAD member" (the home server's @everyone role), so it runs
+only there and `/goon campaign` never offers it. Welcome DMs go out only when
+someone with Manage Server in the home server runs `/goon welcome` (registered
+only while campaigns run, refused in other servers) and presses Send: a private
+preview of the message, every member due by name (joined in the last 30 days,
+over a day ago, not excluded; skips counted), the excluded role names, the
+script's questions, and Send (`welcome:send:<preview>`), Cancel, and Stop while
+earlier welcomes are still going out, checked fresh from Discord. Send
+(`Welcome#send { preview }`, reusing the open draft) sends to exactly those
+members, once; members who join later get theirs when someone runs it again.
+Stop (`Welcome#halt`) cancels welcomes still scheduled, sending, or paused.
+`GET /services/welcome` returns only the delay and window, when it last went
+out and to how many, how many are still going out, and how many were welcomed
+(no names or ids).
+**Activity** (`services/activity.js`, Fabric Store `stores/activity`,
+`GOON_ACTIVITY_STORE`) is when each member of the home server
+(`discord.guildId`) last posted: author ids and times only, never content or
+channels. Every text, announcement, voice-chat, and stage-chat channel and every
+public thread (active, and archived under text, announcement, forum, and media
+channels) the bot can read is walked back to its first message once, with a
+cursor per channel so a pass resumes, then polled forward hourly (`ttlMs`);
+the operations gateway client adds posts as they happen (`messageCreate`, no
+extra intent). Bots, webhooks, and system messages don't count. A channel the
+bot can't read (403/404) is retried after a day. `npm run collect:activity`
+reads everything with the server stopped. `GET /services/activity` returns
+aggregates only (`members`, `oldestPost`, `channels { tracked, complete,
+unreadable }`, `backfilled`, `syncedAt`, `error`). `GOON_ACTIVITY=0` stops
+reading history (gateway posts are still noted). The bot needs View Channel +
+Read Message History.
 `/clips` is the public clip library and editor (`services/clips.js`, `GOON_CLIPS_STORE`
 default `stores/clips`: a Fabric Store plus `media/`, `renders/`, `tmp/`; routes
 under `/services/clips`). No sign-in: anyone may browse, edit, and render; a
@@ -626,14 +986,14 @@ the hint `field`; every start re-dates stored clips under the current rules
 change is in the clip `log`. `functions/clipTimeline.js` groups clips into
 play sessions (a new one after 2 hours without a clip, `sessionGapMs`;
 multi-hour sessions stay whole, separate evenings don't merge) with one track per pilot. `/clips` is
-`<clip-library>` (`assets/scripts/clip-library.js`): each session is a card
+`<clip-library>` (`components/ClipLibrary.js`): each session is a card
 that wraps beside the others (as wide as up to four of its clips; bigger
 sessions take the row) holding clip cards (sprite thumbnail with hover scrub, pilot, recorded time, length or "Screenshot", caption),
 search + pilot / channel / sort / link / screenshot filters, a player (`?clip=<id>`) with
 details, the Discord link, and the other pilots' overlapping angles at the same
 moment, "Start a project" per session, and the project list.
 `/clips/timeline?session=<id>|clip=<id>` is `<clip-timeline-editor>`
-(`assets/scripts/clip-timeline-editor.js`) browsing one session. Both are shadow
+(`components/ClipTimelineEditor.js`) browsing one session. Both are shadow
 DOM with no goon.vc dependencies; `components/ClipsPage.js` sets `src` only on
 the active route. Projects live at `/clips/projects/<id>`: a program of segments
 `{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
@@ -669,12 +1029,43 @@ link-only, `0` turns announcements off; `collect:clips -- --stream-channel
 '/streams/'` reads only the matching announcement channels and collects their VODs.
 `list()` status carries `vods` and `streams { waiting, collected, none, missed }`.
 Responses carry display names only — never Discord user ids or CDN URLs.
-`/sessions` is the single login page (Discord, Passport, GoonCitizen desktop),
-backed by the members Store under `/services/members`; `/members/login`
-redirects there. The HTML client probes `OPTIONS /services/rpc` and
-`GET /services/members` on load: Passport/desktop are disabled when the Hub
-proxy is unreachable, and Login CTAs are hidden only when Discord login is
-also unconfigured. Discord login is OAuth2 (`identify guilds`) through
+`/sessions` is the single login page (Discord, Passport), backed by the
+members Store under `/services/members`; `/members/login` redirects there. It
+is served with `Content-Security-Policy: frame-ancestors 'none'`. The HTML
+client reads `GET /services/members` (`{ discord, passport }`) on load and
+hides Login CTAs only when both are off. **Passport login is peer-to-peer
+signed Fabric messages (Passport v2, `@fabric/core` `docs/PASSPORT.md`); no
+Hub is involved, and `/sessions` is never proxied.** `Members` runs an
+`@fabric/http` `passportRelyingParty` pinned to `members.origins`
+(`GOON_MEMBERS_ORIGINS`, comma list), else `siteUrl` in production (or when
+`siteUrl` is loopback), else loopback origins only; production with nothing
+to pin turns Passport off. The `Host` header never picks an origin: a request
+on an address that isn't pinned gets no challenge (400). `POST
+/services/members/passport/challenges` issues a core `PASSPORT_CHALLENGE`
+(origin, fresh nonce, 2-minute expiry, purpose, no network, no disclosures),
+keeps `/passport-requests/<sha256(binding secret)>` in the Store, and sets the
+**binding secret** (never the nonce) as an HttpOnly, SameSite=Strict
+`goon.passport` cookie (path `/services/members/passport`). The page posts
+`{ source: 'fabric-site', type: 'PASSPORT_CHALLENGE', challenge }` to Passport
+with a transferred `MessagePort` and reads the answer only from that port
+(`PASSPORT_ASSERTION`, or `{ ok: false, error }`); it requires
+a `PASSPORT_HELLO` handshake (protocol 2) over a `MessagePort`. Passport, or a Hub desktop app or
+GoonCitizen it asks, signs a `PASSPORT_ASSERTION` for the origin its browser
+shows, and the page posts it to `POST /services/members/passport { assertion,
+link? }`. The claim takes the secret from the cookie (never the body), clears
+the cookie, and redeems: the challenge is taken on the member queue (two
+racing claims can't both get it; each challenge works once, also across
+restarts) and `verifyAssertion` checks signature, origin, nonce, challenge
+hash, expiry, signer, and that the pubkey is the frame's author. The claim must
+come in on the pinned origin the challenge was issued for, posted by a page on
+that origin (its `Origin` header; none or another is 403). The account is
+`fabric:<x-only pubkey>`; the `signer` label is only logged. Expired
+challenges are dropped when taken and swept on start. Passport is offered only
+when the installed `@fabric/http` has the relying party. **Links** (`link:
+true`, and `GET …/discord?link=1`) are refused from a session a one-time RSI
+claim link started (`one_time_link`: sign in with Discord or Passport first),
+and every Link button asks first, naming the member the account will join
+(`window.goonConfirmLink`). Discord login is OAuth2 (`identify guilds`) through
 `DISCORD_APP_ID`, or by default the application that owns the bot token
 (looked up via `/oauth2/applications/@me`; today "sensemaker"). It is on once
 the client secret is set: `DISCORD_APP_SECRET`, or `appSecret` in the bot's
@@ -690,12 +1081,10 @@ with no model change). Store records: `/members/<id>`, `/accounts/<key>` →
 member, `/aliases/<old id>` → member. Proof is always the account's own
 sign-in inside an existing session: signed in, the login page's buttons become
 **Link** (`GET /services/members/discord?link=1` keeps the member in the
-OAuth state; `POST /services/members/passport { link: true }` for Passport or
-desktop); a login while signed out never links. After every Passport sign-in
-or link, the Hub that signed it is asked for the key's device cluster
-(`GET /identity/cluster?pubkey=`, mutual IdentityCrossSign) and those keys are
-linked `via: cluster`; keys a later answer no longer lists (a revoke) are
-dropped, and a Hub that cannot answer changes nothing. Running a Discord
+OAuth state; `POST /services/members/passport { fabric, link: true }` for
+Passport); a login while signed out never links. Each Fabric key is proven by
+its own signature; device clusters are not imported (accounts linked
+`via: cluster` by earlier versions stay until unlinked). Running a Discord
 command links `via: command`; a `@handle` typed into a duel makes a placeholder
 member `via: directory`. Linking an account another member already holds
 **merges** them: the older member survives with its name and avatar, accounts
@@ -704,10 +1093,132 @@ and logs combine, the other id becomes an alias (`mergedInto`), and `merged
 (`/members/discord:<id>`, `/members/fabric:<id>`) are adopted on first touch
 with their history, so old session cookies and roster links keep working.
 `GET /services/members/accounts` lists the signed-in member's accounts and
-`DELETE /services/members/accounts/<key>` unlinks one (with the cluster keys
-it brought); the last account cannot be unlinked (409). Session JSON carries
+`DELETE /services/members/accounts/<key>` unlinks one (with any `via: cluster`
+keys it brought); the last account cannot be unlinked (409). Session JSON carries
 the member id, display name, linked platforms, and the login used
-(`provider`), never account ids.
+(`provider`), never account ids. **A member holds one Discord account**
+(`discordConflict` in `Members#_link`): linking a second one, or any
+account whose member holds a different Discord account (a merge that would
+bring it), is refused with 409 `one_discord`, and nothing changes; unlink
+the old one first. Members that held several before the rule keep them.
+Discord login and commands still make their own member for a Discord
+account nobody holds. `GET …/discord?link=1&next=profile` starts a link
+from the profile page and lands back on it (`?linked=discord[&merged=1]` or
+`?error=<code>`); a member who already has Discord is sent back with
+`one_discord` before Discord is asked.
+**Members** (`/members`, `components/MembersPage.js`, `membersPath` in `GoonSPA`) is the future member
+directory. It isn't open yet: `GET /services/members/directory` returns
+`{ directory: false, members: [<you>] }` (401 signed out), so the page lists
+only the signed-in member. Each member's profile is `/members/<member id>`
+(`GET /services/members/profiles/<id>`: display name, avatar, member since,
+in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI
+handle with its citizen page, a short Fabric key fingerprint — and RSI handles,
+plus their own review status while reviews run). Only the member themselves
+can see it: any other id, merged-away ids aside (they resolve to the
+survivor), gets 404 like an unknown one, and link previews are a generic card
+(`Members#page`). The profile is also where its member manages accounts:
+each has Unlink (`DELETE …/accounts/<key>`; the owner's profile JSON carries
+each account's `key` and `via` for it, nobody else ever gets them), and "Add
+an account" offers Link Discord (hidden, with the linked one named, while
+the member has one), Link a Passport identity in place
+(`window.goonPassport(linking, say)`, the Passport flow `Login.js` exposes on
+every page), and Claim an RSI handle. The member also picks their **display
+name** there, only from names their linked accounts carry (`nameChoices`,
+RSI first: each RSI handle and its citizen page name, then each Discord
+display name and username; served to the owner only): `PATCH
+…/profiles/<id> { displayName }` (400 for any other name, 404 for another
+member's profile, logged `rename`); the page redraws the footer card with
+`window.goonMember(member)`. A member with no name takes the first such name
+of the first account linked to them. Login and the current member live in the
+footer, never the header (Events, Resources, PERMAFLEET; the Market is a
+Resources card only): signed in, `Login.js` turns every footer Login button
+into a card (avatar, display name, YOUR PROFILE) linking to the profile. Pages
+without a footer of their own (the PERMAFLEET section, waiting, RSI, members)
+get the site-wide `#site-member-footer` (`Login.footer`), shown only when the
+visible `<main>` has no `.footer-login-button` and the page isn't the login
+page; it sits above the PERMAFLEET fixed background (`z-index: 3`). The login
+page links to the profile too. Opening
+the directory later means listing more members from `_directory` and
+widening `_profile`'s self check.
+**Waiting area** (`/waiting`, `components/WaitingPage.js`, `waitingPath` in `GoonSPA`; `services/reviews.js`,
+review state in `services/members.js`, script
+`contracts/scripts/member-review.json`) holds new Discord sign-ins until an
+alliance reviewer approves them. Settings `members.review.{enabled,reviewers}`
+(`GOON_MEMBERS_REVIEW=0` turns it off; `GOON_MEMBERS_REVIEWERS`, comma list of
+Discord user ids, default @remaeus `420222636954615808`). It is a status only:
+nothing on the site is gated by it yet. The first start with reviews on
+records `/reviews/since`; members created before it count as approved
+(`grandfathered`), and so does anyone already approved. A member created
+after it gets `review { status: 'pending', requestedAt }` on their first
+Discord sign-in or Discord link (Passport-only members have none), is indexed
+at `/reviews/pending`, and the sign-in lands on `/waiting?signedIn=discord`
+instead of `/sessions` (a denied member lands there too). A merge keeps the
+better review (approved, then pending, then denied). Members emits `review`
+on joining and `reviewed` on a decision; `Reviews` only logs a join and DMs
+nobody. A reviewer runs `/goon review` (registered only while reviews run;
+`/goon` still defaults to Manage Server, so reviewers need it where they run
+it) to get the `member-review` script in their DMs: everyone waiting (longest
+first, with how long, whether they are in the G00N SQUAD Discord, and any RSI
+handle), a multi-select of whom to approve, then whom to turn away, then a
+summary to confirm (`review.notifiedAt` notes who was shown). The script `requires` "goon.vc reviewer", a
+Community requirement (`Community#requirement`) that checks the Discord id
+against the reviewer list at start and again before the `members.review`
+action decides, so `/goon campaign` never offers it. A member someone else
+already decided is left as they are. Session JSON carries `review { status,
+requestedAt, reviewedAt }` (or null) while reviews are on, never the
+reviewer; `GET /services/members` adds `review: true|false`. Tests:
+`tests/memberReviews.js`, `tests/reviews.js`.
+**RSI profile claim** (`/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
+`functions/rsiCitizen.js`, codes `functions/rsiClaim.js`) links an `rsi:<Handle>`
+account (the handle as RSI writes it) to a member. `/rsi claim` (servers and
+the bot's DMs) links the caller's Discord and replies privately with a
+**one-time sign-in link** (`Members#claimLink`: `<siteUrl>/rsi/claim?t=<64 hex>`,
+kept as `/claim-links/<sha256>`, single use, 30 minutes); opening it starts a
+session (`provider: 'rsi-link'`, at most an hour, and never allowed to unlink
+an account: 403) and lands on `/rsi`, and a used, expired, or
+forged link lands on `/rsi?error=link`. The link is a login, so it only ever
+goes out ephemerally. Signed in any way, the page asks for the handle (`POST
+/services/members/rsi/claims { handle }` → a `g00n:` + 7 hex code, kept 24 h at
+`/rsi-claims/<member>`, the same code while the handle is the same), the member
+puts the code anywhere in their RSI bio, and Verify (`POST
+…/rsi/claims/verify`) fetches `robertsspaceindustries.com/en/citizens/<handle>`
+— the only time an RSI page is read at serve time — and links the account
+`via: 'bio'` with the citizen's display name, record, and main org when the
+code is there (409 when it isn't, or RSI shows another handle; 404 no such
+citizen; 502 RSI unreachable; five verifies per member per 15 minutes, then
+429). A handle another member holds merges the two like any link. `GET
+/services/members/rsi` returns the member, their claimed handles, and the
+pending claim (401 signed out). The code can come out of the bio afterwards.
+**Hangar sync** (`services/hangar.js`, Fabric Store `stores/hangar`,
+`GOON_HANGAR_STORE`; parser `functions/hangarExport.js`) accumulates the ships
+members own from **Hangar Export** (hangar.link) JSON files. The add-on was
+pulled from the Chrome Web Store and now installs only in Firefox
+(addons.mozilla.org `hangar-export`); it adds Export to the RSI pledges page
+and saves a .json and a .csv. `/hangar guide` starts the `hangar-import` DM
+script (`contracts/scripts/hangar-import.json`, no `requires`, so `/goon
+campaign` may offer it): what is kept, 2FA, the browser, installing, exporting,
+and `/rsi claim` when the member holds no `rsi:` account (`context.rsiHandle`).
+`/hangar import file:<.json>` (attachment, ≤ 5 MB, downloaded from Discord's
+CDN) takes the export only for an `rsi:` handle the caller holds (otherwise the
+claim link reply), and replaces that handle's ships. The file is `{ type:
+'hangarlink', version, pledges }`; every pledge names the account in `hangar`
+(several accounts in one file = refused), which must be one of the caller's
+handles. A file naming none goes to the caller's only handle (several held =
+refused, `WHICH_HANDLE`). Ships are pledge `items` of kind Ship (model from
+`title`, not the pledge name; manufacturer from `liner`; custom name from
+`itemCustomName`; LTI from `insuranceType` / the Insurance item; `warbond`),
+skipping `pledgeType: 'upgrade'` and buyback pledges, and nothing else is kept —
+never prices, pledge ids, dates, paints, or other items. Records are
+`/hangars/<member>` with one hangar per handle (`importedAt`, `ships`, a short
+import `history`); a hangar counts only while its member still holds that
+handle, and a member merge moves hangars to the survivor. `/hangar status`
+shows the caller's last import. `GET /services/hangar` is fleet totals only
+(`members`, `ships`, `models [{ model, manufacturer, count, owners }]`,
+`updatedAt`; no names, handles, or ids), shown on `/rsi`;
+`GET /services/hangar/members` (per member: display name, handle, ships,
+import time) needs `Authorization: Bearer $GOON_SCRIPTS_TOKEN` (404 without
+it). Settings: `hangar.{enabled,path}`. Tests: `tests/rsiClaim.js`,
+`tests/hangar.js`.
 
 GoonCitizen release docs: `star-citizen-live/AGENTS.md`. Hub/core:
 `docs/PRODUCTION*.md`. Human call for GoonCitizen contributors (not this zipper):

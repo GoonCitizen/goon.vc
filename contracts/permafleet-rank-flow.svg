@@ -1,0 +1,260 @@
+<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1251pt" height="843pt" viewBox="0.00 0.00 1250.86 843.2">
+<g id="graph0" class="graph" transform="translate(-329.6498138970808,1055.8626826920356) scale(1.3513394454799166)" data-name="Roles">
+
+<polygon fill="white" stroke="none" points="-4,4 -4,-839.2 1246.86,-839.2 1246.86,4 -4,4"/>
+<!-- PERMAFLEET -->
+<g id="node2" class="node" pointer-events="visible" data-name="PERMAFLEET">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-728.4" rx="73.05" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-724.2" font-family="Times,serif" font-size="14.00">PERMAFLEET</text>
+</g><g id="node1" class="node" pointer-events="visible" data-name="GREENBACK" data-comment="PERMAFLEET">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-817.2" rx="70.11" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-813" font-family="Times,serif" font-size="14.00">GREENBACK</text>
+</g>
+<!-- PERMAFLEET -->
+
+<!-- GREENBACK&#45;&gt;PERMAFLEET -->
+<g id="edge1" class="edge" data-name="GREENBACK-&gt;PERMAFLEET">
+
+<path fill="none" stroke="black" d="M539.9,-799.05C539.9,-787.36 539.9,-771.59 539.9,-758.02"/>
+<polygon fill="black" stroke="black" points="543.4,-758.32 539.9,-748.32 536.4,-758.32 543.4,-758.32"/>
+<text text-anchor="middle" x="630.69" y="-768.6" font-family="Times,serif" font-size="14.00"> applies to join RSI organization</text>
+</g>
+
+<!-- PERMAFLEET&#45;&gt; --><g id="node9" class="node" pointer-events="visible" data-name="TURTLE BRIGADE" data-comment="PERMAFLEET-&gt;">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="221.9" cy="-284.4" rx="93.26" ry="18"/>
+<text text-anchor="middle" x="221.9" y="-280.2" font-family="Times,serif" font-size="14.00">TURTLE BRIGADE</text>
+</g><g id="node3" class="node" pointer-events="visible" data-name="Prospect I" data-comment="PERMAFLEET-&gt;">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-639.6" rx="49.85" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-635.4" font-family="Times,serif" font-size="14.00">Prospect I</text>
+</g>
+<!-- PERMAFLEET&#45;&gt;T -->
+<g id="edge2" class="edge" data-name="PERMAFLEET-&gt;Prospect I" data-comment="PERMAFLEET-&gt;T">
+
+<path fill="none" stroke="black" d="M539.9,-710.25C539.9,-698.56 539.9,-682.79 539.9,-669.22"/>
+<polygon fill="black" stroke="black" points="543.4,-669.52 539.9,-659.52 536.4,-669.52 543.4,-669.52"/>
+<text text-anchor="middle" x="656.94" y="-679.8" font-family="Times,serif" font-size="14.00"> first rank in the PERMAFLEET program</text>
+</g>
+
+<!-- TURTLE BRIGADE&#45;&gt; --><!-- Prospect VII -->
+
+<!-- Prospect VI&#45;&gt;Prospect VII -->
+
+<!-- Prospect VIII -->
+
+<!-- Prospect VII&#45;&gt;Prospect VIII -->
+
+<!-- Prospect IX -->
+<g id="node12" class="node" pointer-events="visible" data-name="ALPHA SQUADRON" data-comment="Prospect IX">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="433.9" cy="-195.6" rx="99.1" ry="18"/>
+<text text-anchor="middle" x="433.9" y="-191.4" font-family="Times,serif" font-size="14.00">ALPHA SQUADRON</text>
+</g>
+<!-- Prospect VIII&#45;&gt;Prospect IX -->
+<g id="edge11" class="edge" data-name="BRAVO SQUADRON-&gt;ALPHA SQUADRON" data-comment="Prospect VIII-&gt;Prospect IX">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M433.9,-266.25C433.9,-254.56 433.9,-238.79 433.9,-225.22"/>
+<polygon fill="black" stroke="black" points="437.4,-225.52 433.9,-215.52 430.4,-225.52 437.4,-225.52"/>
+<text text-anchor="middle" x="521.38" y="-235.8" font-family="Times,serif" font-size="14.00"> selected as top 5% of BRAVO</text>
+</g>
+<!-- SHELLBACK -->
+<g id="node10" class="node" pointer-events="visible" data-name="SHELLBACK">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="221.9" cy="-195.6" rx="67.82" ry="18"/>
+<text text-anchor="middle" x="221.9" y="-191.4" font-family="Times,serif" font-size="14.00">SHELLBACK</text>
+</g><g id="node11" class="node" pointer-events="visible" data-name="BRAVO SQUADRON" data-comment="SHELLBACK">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="433.9" cy="-284.4" rx="100.82" ry="18"/>
+<text text-anchor="middle" x="433.9" y="-280.2" font-family="Times,serif" font-size="14.00">BRAVO SQUADRON</text>
+</g>
+<!-- TURTLE BRIGADE&#45;&gt;S -->
+
+<!-- TURTLE BRIGADE&#45;&gt;SHELLBACK --><g id="node14" class="node" pointer-events="visible" data-name="PERMAFLEET OFFICER" data-comment="TURTLE BRIGADE-&gt;SHELLBACK">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="858.9" cy="-284.4" rx="115.3" ry="18"/>
+<text text-anchor="middle" x="858.9" y="-280.2" font-family="Times,serif" font-size="14.00">PERMAFLEET OFFICER</text>
+</g>
+
+<!-- TURTLE BRIGADE&#45;&gt;SHELLBACK -->
+
+<!-- TURTLE BRIGADE&#45;&gt;SHELLBACK -->
+<g id="edge9" class="edge" data-name="TURTLE BRIGADE-&gt;SHELLBACK">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M221.9,-266.25C221.9,-254.56 221.9,-238.79 221.9,-225.22"/>
+<polygon fill="black" stroke="black" points="225.4,-225.52 221.9,-215.52 218.4,-225.52 225.4,-225.52"/>
+<text text-anchor="middle" x="306.45" y="-235.8" font-family="Times,serif" font-size="14.00"> selected for elite infantry unit</text>
+</g>
+<!-- TURTLE BRIGADE&#45;&gt;SHELLBACK -->
+
+<!-- TURTLE BRIGADE&#45;&gt;SHELLBACK -->
+
+<!-- PERM -->
+
+<g id="node15" class="node" pointer-events="visible" data-name="LIEUTENANT" data-comment="PERM">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="858.9" cy="-195.6" rx="71.78" ry="18"/>
+<text text-anchor="middle" x="858.9" y="-191.4" font-family="Times,serif" font-size="14.00">LIEUTENANT</text>
+</g><g id="node4" class="node" pointer-events="visible" data-name="Prospect II" data-comment="PERM">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-550.8" rx="53.28" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-546.6" font-family="Times,serif" font-size="14.00">Prospect II</text>
+</g>
+<!-- PERMAFLEET OFFICER&#45;&gt;SPECIAL OPERATIONS -->
+<g id="edge14" class="edge" data-name="PERMAFLEET OFFICER-&gt;LIEUTENANT" data-comment="PERMAFLEET OFFICER-&gt;SPECIAL OPERATIONS">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M858.9,-266.25C858.9,-254.56 858.9,-238.79 858.9,-225.22"/>
+<polygon fill="black" stroke="black" points="862.4,-225.52 858.9,-215.52 855.4,-225.52 862.4,-225.52"/>
+<text text-anchor="middle" x="920.32" y="-235.8" font-family="Times,serif" font-size="14.00"> selected by a Captain</text>
+</g><g id="edge3" class="edge" data-name="Prospect I-&gt;Prospect II" data-comment="PERMAFLEET OFFICER-&gt;SPECIAL OPERATIONS">
+
+<path fill="none" stroke="black" d="M539.9,-621.45C539.9,-609.76 539.9,-593.99 539.9,-580.42"/>
+<polygon fill="black" stroke="black" points="543.4,-580.72 539.9,-570.72 536.4,-580.72 543.4,-580.72"/>
+<text text-anchor="middle" x="607.74" y="-591" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g>
+<!-- CAPTAIN -->
+<g id="node16" class="node" pointer-events="visible" data-name="CAPTAIN">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="858.9" cy="-106.8" rx="52.77" ry="18"/>
+<text text-anchor="middle" x="858.9" y="-102.6" font-family="Times,serif" font-size="14.00">CAPTAIN</text>
+</g><g id="node5" class="node" pointer-events="visible" data-name="Prospect III" data-comment="CAPTAIN">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-462" rx="56.21" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-457.8" font-family="Times,serif" font-size="14.00">Prospect III</text>
+</g>
+<!-- LIEUTENANT&#45;&gt;CAPTAIN -->
+<g id="edge15" class="edge" data-name="LIEUTENANT-&gt;CAPTAIN">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M858.9,-177.45C858.9,-165.76 858.9,-149.99 858.9,-136.42"/>
+<polygon fill="black" stroke="black" points="862.4,-136.72 858.9,-126.72 855.4,-136.72 862.4,-136.72"/>
+<text text-anchor="middle" x="915.65" y="-147" font-family="Times,serif" font-size="14.00"> selected by a Major</text>
+</g><g id="edge4" class="edge" data-name="Prospect II-&gt;Prospect III" data-comment="LIEUTENANT-&gt;CAPTAIN">
+
+<path fill="none" stroke="black" d="M539.9,-532.65C539.9,-520.96 539.9,-505.19 539.9,-491.62"/>
+<polygon fill="black" stroke="black" points="543.4,-491.92 539.9,-481.92 536.4,-491.92 543.4,-491.92"/>
+<text text-anchor="middle" x="607.74" y="-502.2" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g>
+<!-- MAJOR -->
+<!-- MAJOR -->
+<g id="node17" class="node" pointer-events="visible" data-name="MAJOR">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="858.9" cy="-18" rx="43.54" ry="18"/>
+<text text-anchor="middle" x="858.9" y="-13.8" font-family="Times,serif" font-size="14.00">MAJOR</text>
+</g><g id="node6" class="node" pointer-events="visible" data-name="Prospect IV" data-comment="MAJOR">
+
+<ellipse fill="none" stroke="black" cx="539.9" cy="-373.2" rx="56.8" ry="18"/>
+<text text-anchor="middle" x="539.9" y="-369" font-family="Times,serif" font-size="14.00">Prospect IV</text>
+</g>
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+<g id="node8" class="node" pointer-events="visible" data-name="Prospect VI" data-comment="CAPTAIN-&gt;MAJOR">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="56.9" cy="-195.6" rx="56.8" ry="18"/>
+<text text-anchor="middle" x="56.9" y="-191.4" font-family="Times,serif" font-size="14.00">Prospect VI</text>
+</g><g id="node18" class="node" pointer-events="visible" data-name="Enlisted 1" data-comment="CAPTAIN-&gt;MAJOR">
+
+<ellipse fill="none" stroke="black" cx="1041.9" cy="-284.4" rx="49.86" ry="18"/>
+<text text-anchor="middle" x="1041.9" y="-280.2" font-family="Times,serif" font-size="14.00">Enlisted 1</text>
+</g>
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+<g id="edge16" class="edge" data-name="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M858.9,-88.65C858.9,-76.96 858.9,-61.19 858.9,-47.62"/>
+<polygon fill="black" stroke="black" points="862.4,-47.92 858.9,-37.92 855.4,-47.92 862.4,-47.92"/>
+<text text-anchor="middle" x="926.74" y="-58.2" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g><g id="edge5" class="edge" data-name="Prospect III-&gt;Prospect IV" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="black" d="M539.9,-443.85C539.9,-432.16 539.9,-416.39 539.9,-402.82"/>
+<polygon fill="black" stroke="black" points="543.4,-403.12 539.9,-393.12 536.4,-403.12 543.4,-403.12"/>
+<text text-anchor="middle" x="607.74" y="-413.4" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g>
+<g id="node7" class="node" pointer-events="visible" data-name="Prospect V" data-comment="CAPTAIN-&gt;MAJOR">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="56.9" cy="-284.4" rx="53.86" ry="18"/>
+<text text-anchor="middle" x="56.9" y="-280.2" font-family="Times,serif" font-size="14.00">Prospect V</text>
+</g><g id="node13" class="node" pointer-events="visible" data-name="RAT SQUADRON" data-comment="CAPTAIN-&gt;MAJOR">
+
+<ellipse fill="none" stroke="rgb(0, 0, 0)" cx="638.9" cy="-284.4" rx="86.34" ry="18"/>
+<text text-anchor="middle" x="638.9" y="-280.2" font-family="Times,serif" font-size="14.00">RAT SQUADRON</text>
+</g>
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+<g id="edge6" class="edge" data-name="Prospect IV-&gt;Prospect V" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M483.37,-370.69C369.63,-367.24 121.11,-357.47 88.21,-337.2 79.05,-331.55 72.2,-322.13 67.29,-312.86"/>
+<polygon fill="black" stroke="black" points="70.57,-311.62 63.18,-304.03 64.23,-314.58 70.57,-311.62"/>
+<text text-anchor="middle" x="156.74" y="-324.6" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g><g id="edge8" class="edge" data-name="Prospect IV-&gt;TURTLE BRIGADE" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M482.67,-372.62C406.06,-372.02 275.59,-366.54 239.36,-337.2 232.18,-331.39 227.94,-322.5 225.43,-313.73"/>
+<polygon fill="black" stroke="black" points="228.87,-313.05 223.36,-304 222.02,-314.51 228.87,-313.05"/>
+<text text-anchor="middle" x="337.67" y="-324.6" font-family="Times,serif" font-size="14.00"> selected for basic infantry training</text>
+</g><g id="edge10" class="edge" data-name="Prospect IV-&gt;BRAVO SQUADRON" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M491.63,-363.56C475.38,-358.41 458.45,-350.21 446.85,-337.2 441.15,-330.8 437.87,-322.27 436.02,-313.98"/>
+<polygon fill="black" stroke="black" points="439.49,-313.5 434.47,-304.17 432.57,-314.59 439.49,-313.5"/>
+<text text-anchor="middle" x="528.92" y="-324.6" font-family="Times,serif" font-size="14.00"> selected for fighter squadron</text>
+</g><g id="edge13" class="edge" data-name="Prospect IV-&gt;PERMAFLEET OFFICER" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M595.21,-368.75C641.1,-364.65 707.57,-355.86 762.9,-337.2 784.05,-330.07 806.07,-318.52 823.68,-308.14"/>
+<polygon fill="black" stroke="black" points="825.46,-311.15 832.21,-302.99 821.84,-305.16 825.46,-311.15"/>
+<text text-anchor="middle" x="880.03" y="-324.6" font-family="Times,serif" font-size="14.00"> selected for officer training</text>
+</g><g id="edge12" class="edge" data-name="Prospect IV-&gt;RAT SQUADRON" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M579.36,-359.89C591.9,-354.48 605.06,-347.07 614.9,-337.2 621.52,-330.56 626.52,-321.76 630.2,-313.3"/>
+<polygon fill="black" stroke="black" points="633.45,-314.59 633.75,-304 626.91,-312.09 633.45,-314.59"/>
+<text text-anchor="middle" x="692.98" y="-324.6" font-family="Times,serif" font-size="14.00"> selected for piracy unit</text>
+</g>
+<g id="edge7" class="edge" data-name="Prospect V-&gt;Prospect VI" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="rgb(0, 0, 0)" d="M56.9,-266.25C56.9,-254.56 56.9,-238.79 56.9,-225.22"/>
+<polygon fill="black" stroke="black" points="60.4,-225.52 56.9,-215.52 53.4,-225.52 60.4,-225.52"/>
+<text text-anchor="middle" x="124.74" y="-235.8" font-family="Times,serif" font-size="14.00"> promoted by leadership</text>
+</g><g id="edge17" class="edge" data-name="Prospect IV-&gt;Enlisted 1" data-comment="CAPTAIN-&gt;MAJOR">
+
+<path fill="none" stroke="black" d="M596.4,-370.92C695.36,-368.1 895.8,-359.74 961.9,-337.2 980.78,-330.76 999.63,-318.89 1014.28,-308.14"/>
+<polygon fill="black" stroke="black" points="1016.22,-311.06 1022.05,-302.22 1011.98,-305.49 1016.22,-311.06"/>
+<text text-anchor="middle" x="1077.5" y="-324.6" font-family="Times,serif" font-size="14.00"> selected into an official team</text>
+</g>
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+
+<!-- CAPTAIN&#45;&gt;MAJOR -->
+
+
+<!-- En -->
+<g id="node19" class="node" pointer-events="visible" data-name="Enlisted 2" data-comment="En">
+
+<ellipse fill="none" stroke="black" cx="1041.9" cy="-195.6" rx="49.86" ry="18"/>
+<text text-anchor="middle" x="1041.9" y="-191.4" font-family="Times,serif" font-size="14.00">Enlisted 2</text>
+</g>
+<!-- Enlisted 1&#45;&gt;Enlisted 2 -->
+<g id="edge18" class="edge" data-name="Enlisted 1-&gt;Enlisted 2">
+
+<path fill="none" stroke="black" d="M1041.9,-266.25C1041.9,-254.56 1041.9,-238.79 1041.9,-225.22"/>
+<polygon fill="black" stroke="black" points="1045.4,-225.52 1041.9,-215.52 1038.4,-225.52 1045.4,-225.52"/>
+<text text-anchor="middle" x="1142.38" y="-235.8" font-family="Times,serif" font-size="14.00"> rewarded for performance and skill</text>
+</g>
+<!-- Enlisted 3 -->
+<g id="node20" class="node" pointer-events="visible" data-name="Enlisted 3">
+
+<ellipse fill="none" stroke="black" cx="1041.9" cy="-106.8" rx="49.86" ry="18"/>
+<text text-anchor="middle" x="1041.9" y="-102.6" font-family="Times,serif" font-size="14.00">Enlisted 3</text>
+</g>
+<!-- Enlisted 2&#45;&gt;Enlisted 3 -->
+<!-- Enlisted 2&#45;&gt;Enlisted 3 -->
+<g id="edge19" class="edge" data-name="Enlisted 2-&gt;Enlisted 3">
+
+<path fill="none" stroke="black" d="M1041.9,-177.45C1041.9,-165.76 1041.9,-149.99 1041.9,-136.42"/>
+<polygon fill="black" stroke="black" points="1045.4,-136.72 1041.9,-126.72 1038.4,-136.72 1045.4,-136.72"/>
+<text text-anchor="middle" x="1142.38" y="-147" font-family="Times,serif" font-size="14.00"> rewarded for performance and skill</text>
+</g>
+<!-- Enlisted 2&#45;&gt;Enlisted 3 -->
+
+
+</g>
+</svg>

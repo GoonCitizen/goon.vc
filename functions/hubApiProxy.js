@@ -5,16 +5,16 @@ const https = require('https');
 const { URL } = require('url');
 
 /**
- * Same-origin Hub API paths the public site (Passport / GoonCitizen login,
- * device-link, JSON-RPC, identity cluster) needs. Everything else stays
- * HTML or 404 — not a Hub, not LiveRelay.
+ * Same-origin Hub API paths the public site needs: the linked-signer
+ * rendezvous and mailbox (delegation frames) and JSON-RPC. Everything else stays HTML or 404 — not a Hub, not
+ * LiveRelay. `/sessions` is goon.vc's own login page: a Passport challenge is
+ * pinned to the origin it was issued for, so the Hub's sessions could never
+ * sign anyone in here.
  */
 const HUB_API_PREFIXES = Object.freeze([
-  '/sessions',
-  '/device-links',
-  '/services/rpc',
-  '/identity/cluster',
-  '/identity/cross-sign'
+  '/delegations',
+  '/services/delegation/mailbox',
+  '/services/rpc'
 ]);
 
 const HOP_BY_HOP = new Set([
@@ -28,6 +28,10 @@ const HOP_BY_HOP = new Set([
   'upgrade',
   'host'
 ]);
+
+// goon.vc's own cookies (the member session) never reach a Hub, and a Hub never sets one here.
+const REQUEST_PRIVATE = new Set(['cookie']);
+const RESPONSE_PRIVATE = new Set(['set-cookie']);
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -54,29 +58,12 @@ function isHubApiPath (pathname) {
   return false;
 }
 
-function wantsHtmlNavigation (req) {
-  const a = req && req.headers && req.headers.accept;
-  if (typeof a !== 'string') return false;
-  const first = a.split(',')[0].trim().toLowerCase().split(';')[0];
-  return first === 'text/html';
-}
-
 /**
- * Browser GET /sessions (and /device-links) should render GoonSPA, not Hub JSON.
- * JSON polls and all mutating methods still proxy.
  * @param {import('http').IncomingMessage} req
  * @returns {boolean}
  */
 function shouldProxyHubApi (req) {
-  const pathname = parsePathname(req);
-  if (!isHubApiPath(pathname)) return false;
-  const method = String((req && req.method) || 'GET').toUpperCase();
-  if (method === 'GET' || method === 'HEAD') {
-    if ((pathname === '/sessions' || pathname === '/device-links') && wantsHtmlNavigation(req)) {
-      return false;
-    }
-  }
-  return true;
+  return isHubApiPath(parsePathname(req));
 }
 
 function normalizeHubOrigin (raw) {
@@ -91,8 +78,8 @@ function normalizeHubOrigin (raw) {
 
 /**
  * Ordered Hubs: requests go to the Hub that answered last, then the others in
- * order. One list is shared by everything that talks to the Hub, so a member's
- * Passport session is polled where it was created.
+ * order. One list is shared by everything that talks to the Hub, so a session
+ * started through the proxy is polled where it was created.
  * @param {string|string[]} origins
  * @returns {{ origins: string[], order: function(): string[], answered: function(string): void }}
  */
@@ -208,7 +195,7 @@ function forwardToHub (origin, req, res, body, timeout) {
   const headers = {};
   const src = (req && req.headers) || {};
   for (const name of Object.keys(src)) {
-    if (HOP_BY_HOP.has(name.toLowerCase())) continue;
+    if (HOP_BY_HOP.has(name.toLowerCase()) || REQUEST_PRIVATE.has(name.toLowerCase())) continue;
     const value = src[name];
     if (value == null || value === '') continue;
     headers[name] = value;
@@ -245,7 +232,7 @@ function forwardToHub (origin, req, res, body, timeout) {
       res.statusCode = incoming.statusCode || 502;
       const outHeaders = incoming.headers || {};
       for (const name of Object.keys(outHeaders)) {
-        if (HOP_BY_HOP.has(name.toLowerCase())) continue;
+        if (HOP_BY_HOP.has(name.toLowerCase()) || RESPONSE_PRIVATE.has(name.toLowerCase())) continue;
         const value = outHeaders[name];
         if (value == null) continue;
         try { res.setHeader(name, value); } catch (_) { /* skip invalid */ }
@@ -331,7 +318,6 @@ module.exports = {
   DEFAULT_TIMEOUT_MS,
   parsePathname,
   isHubApiPath,
-  wantsHtmlNavigation,
   shouldProxyHubApi,
   normalizeHubOrigin,
   createHubList,

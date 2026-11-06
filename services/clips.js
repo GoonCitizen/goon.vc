@@ -11,6 +11,7 @@ const Store = require('@fabric/core/types/store');
 const { matchesAnyChannel } = require('@fabric/discord/functions/channelMatcher');
 const startStore = require('../functions/startStore');
 const discordEvents = require('../functions/discordScheduledEvents');
+const discordThreads = require('../functions/discordThreads');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 const { displayName } = require('../functions/duelLeaderboard');
 const { estimateRecordingTime } = require('../functions/clipRecordingTime');
@@ -490,34 +491,13 @@ class Clips {
   }
 
   /** Active threads in the guild, by parent channel id. */
-  async _activeThreads (token, guild) {
-    const byParent = new Map();
-    const res = await discordEvents.discordGet(`/guilds/${guild.id}/threads/active`, token, this._discordOpts());
-    if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) return byParent;
-    for (const thread of res.json.threads) {
-      const parent = String(thread.parent_id || '');
-      if (!byParent.has(parent)) byParent.set(parent, []);
-      byParent.get(parent).push(thread);
-    }
-    return byParent;
+  _activeThreads (token, guild) {
+    return discordThreads.activeThreads(token, guild.id, this._discordOpts());
   }
 
   /** Every archived public thread (forum / media posts included) under a channel. */
-  async _archivedThreads (token, channel) {
-    const threads = [];
-    let before = null;
-    for (let page = 0; page < 1000; page++) {
-      const query = `limit=${PAGE_SIZE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
-      const res = await discordEvents.discordGet(`/channels/${channel.id}/threads/archived/public?${query}`, token, this._discordOpts());
-      // No Read Message History on the parent: no archived threads to read.
-      if (res.status === 403) break;
-      if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) throw new Error(errorMessage(res));
-      threads.push(...res.json.threads);
-      const last = res.json.threads[res.json.threads.length - 1];
-      if (!res.json.has_more || !last || !last.thread_metadata) break;
-      before = last.thread_metadata.archive_timestamp;
-    }
-    return threads;
+  _archivedThreads (token, channel) {
+    return discordThreads.archivedThreads(token, channel.id, this._discordOpts());
   }
 
   _backfillCursor () {
