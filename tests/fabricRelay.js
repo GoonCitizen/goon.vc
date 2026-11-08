@@ -8,6 +8,7 @@ const path = require('path');
 const EventEmitter = require('events');
 const Identity = require('@fabric/core/types/identity');
 const Key = require('@fabric/core/types/key');
+const Message = require('@fabric/core/types/message');
 const FabricRelay = require('../services/fabricRelay');
 const share = require('../functions/discordFabricShare');
 
@@ -87,7 +88,11 @@ class FakePeer extends EventEmitter {
   }
 
   bodies () {
-    return this.sent.map((message) => JSON.parse(message.body));
+    return this.sent.map((message) => {
+      const parsed = Message.tryParseLegacyBody(message);
+      assert.strictEqual(parsed.encoding, 'fields', 'core peers drop JSON CONTRACT_MESSAGE bodies');
+      return parsed.value;
+    });
   }
 }
 

@@ -21,10 +21,18 @@ want a LiveRelay + Fabric Peer) is in the sibling repo:
 Site deploy: [`DEPLOY.md`](DEPLOY.md). Topology: [`PLAN.md`](PLAN.md).
 
 ```bash
-nvm use           # 26.12.1
+nvm use           # 26.13.0
 npm i --allow-git=all
 npm run link:http # sibling ~/fabric-http (same pin as Hub: 7536341)
 npm run build
 npm test
 npm start         # loopback :8080 behind Caddy
 ```
+
+CI (`.github/workflows/test.yml`) runs `npm test` twice: on the commits
+`package-lock.json` records (required, and checks `npm run build` leaves
+`assets/` unchanged), and on the current tip of every Fabric branch pin
+(advisory, and weekly), so upstream drift shows up before the next
+`npm run report:install`. Suites that load a sibling `../doorman` or
+`../fabric-clean` run there against the installed copies
+(`FABRIC_DOORMAN`, `FABRIC_CORE`).

@@ -555,6 +555,7 @@ class GoonVC {
     this.leagues = new Leagues({
       path: leagueSettings.path || './stores/leagues',
       basePath: spa._site('leaguesPath'),
+      password: leagueSettings.password || null,
       identify,
       directory: leagueSettings.directory || createDiscordDirectory({
         discord,

@@ -289,8 +289,8 @@ const RULES = {
   deliver: { from: ['paid'], by: ['seller'], to: 'delivered' },
   confirm: { from: ['delivered'], by: ['buyer'], to: 'releasing' },
   dispute: { from: ['paid', 'delivered'], by: ['buyer', 'seller'], to: 'disputed' },
-  release: { from: ['delivered', 'disputed'], by: ['arbiter', 'system'], to: 'releasing' },
-  refund: { from: ['paid', 'delivered', 'disputed'], by: ['seller', 'arbiter', 'system'], to: 'refunding' },
+  release: { from: ['delivered', 'disputed'], fromBy: { arbiter: ['disputed'] }, by: ['arbiter', 'system'], to: 'releasing' },
+  refund: { from: ['paid', 'delivered', 'disputed'], fromBy: { arbiter: ['disputed'] }, by: ['seller', 'arbiter', 'system'], to: 'refunding' },
   settle: { from: ['releasing', 'refunding'], by: ['system'] }
 };
 
@@ -311,7 +311,8 @@ function transition (order, action, ctx = {}) {
   const rule = RULES[action];
   if (!rule) throw fail(400, `Unknown order action: ${action}`);
   if (!rule.by.includes(ctx.by)) throw fail(403, `Only the ${rule.by.filter((r) => r !== 'system').join(' or ') || 'Market'} can ${action} this order.`);
-  if (!rule.from.includes(order.state)) throw fail(409, `This order is ${order.state.replace('-', ' ')}, so you can't ${action} it now.`);
+  const from = (rule.fromBy && rule.fromBy[ctx.by]) || rule.from;
+  if (!from.includes(order.state)) throw fail(409, `This order is ${order.state.replace('-', ' ')}, so you can't ${action} it now.`);
   const now = Number.isFinite(ctx.now) ? ctx.now : Date.now();
   const s = settingsOf(ctx.settings);
   const input = ctx.input || {};

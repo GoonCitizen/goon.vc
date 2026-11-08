@@ -407,7 +407,17 @@ time for duels logged by hand; ties keep logged order), and each duel moves
 K × √(best of) × (1 − expected) from loser to winner (the set score is kept but
 doesn't change the rating). Nothing is deleted: a wrong duel is voided (and can be
 restored) with `POST …/duels/<duelId>/void|restore`, and every change is in
-the league `log`. Seasonal leagues roll over with `POST …/<id>/seasons`, which
+the league `log`. A logged duel is a past result: editing it (`PATCH
+…/<id>/duels/<duelId>`: `winner`, `loser`, `bestOf`, `score`, `playedAt`,
+`note`; roster names, new ones join) needs the password (`leagues.password`,
+env `GOON_LEAGUES_PASSWORD`, else `GOON_TOURNAMENTS_PASSWORD`; unset = duels
+stay as logged, 409), sent as `X-League-Password` (401 without it). The league
+page's padlock (top right, current season only) checks it with `POST
+…/<id>/unlock { password }`, keeps it in memory only, and adds Edit to each
+duel; five wrong passwords from one address in 15 minutes get 429, as for
+tournaments. An edit marks the duel `edited { at, by }` and logs `edit` with
+each changed field's `before` and `after`. Tournament sets are edited in their
+tournament (409) and closed seasons stay final. Seasonal leagues roll over with `POST …/<id>/seasons`, which
 closes the current season, freezes its `standings` + `champion`, and starts
 everyone at the initial rating again; a closed season's duels are final.
 `PATCH …/<id>` edits name / tagline / summary / usual set. The pages are
@@ -464,7 +474,8 @@ orders get 409 pointing at that step. The buyer gives a refund address and pays
 the vault address (BIP21 + server-side QR) within `payHours` (24, else the
 order expires); goon.vc posts the `FederationInvite` and every request to the
 Hub mailbox (`POST /services/federations/messages`, through `createHubList`;
-the invite is re-posted daily) and polls `GET
+the invite is re-posted daily; reads carry an arbiter-signed proof for the
+origin of the Hub asked, purpose `federation-mailbox`) and polls `GET
 /services/federations/<id>/vault` for funding. The payment is a Hub invoice
 (`escrow.invoice`: Hub `invoiceStore` shape `{ id, address, amountSats, memo,
 label, createdAt, network, txids }` plus `amountBtc`, `expiresAt`,
@@ -1060,7 +1071,9 @@ hash, expiry, signer, and that the pubkey is the frame's author. The claim must
 come in on the pinned origin the challenge was issued for, posted by a page on
 that origin (its `Origin` header; none or another is 403). The account is
 `fabric:<x-only pubkey>`; the `signer` label is only logged. Expired
-challenges are dropped when taken and swept on start. Passport is offered only
+challenges and Discord OAuth states are dropped when taken and swept on start
+and every 10 minutes; one address (the proxy's last `X-Forwarded-For` hop) may
+start 60 sign-ins a minute (`loginStarts`), then 429. Passport is offered only
 when the installed `@fabric/http` has the relying party. **Links** (`link:
 true`, and `GET …/discord?link=1`) are refused from a session a one-time RSI
 claim link started (`one_time_link`: sign in with Discord or Passport first),

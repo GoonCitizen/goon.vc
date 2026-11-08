@@ -28,7 +28,7 @@ production); a request on any other address gets no challenge.
 
 ## Prerequisites
 - Ubuntu/Debian VPS with the `goon.vc` DNS A/AAAA records pointed at it
-- Node.js **26.12.1** (see `.nvmrc`)
+- Node.js **26.13.0** (see `.nvmrc`)
 - Caddy 2 — automatic Let's Encrypt
 - A reachable Hub at `FABRIC_HUB_ORIGIN` (production: `https://hub.fabric.pub`)
 

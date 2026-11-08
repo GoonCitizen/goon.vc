@@ -147,7 +147,7 @@ function seededKey (xprv, base, seed) {
  * @returns {{ frame: string, id: string }}
  */
 function signFrame (body, key) {
-  const message = Message.fromVector(['CONTRACT_MESSAGE', JSON.stringify(body)]);
+  const message = Message.fromLegacyBody('CONTRACT_MESSAGE', body);
   message.signWithKey(key);
   return { frame: message.toBuffer().toString('hex'), id: message.id };
 }
@@ -179,12 +179,11 @@ function openFrame (frame) {
     if (verified) break;
   }
   if (!verified) throw new Error('bad signature');
-  let body;
-  try {
-    body = JSON.parse(message.body);
-  } catch (_) {
-    throw new Error('message body is not JSON');
-  }
+  // Field-encoded bodies (what core peers, Hubs, and Passport send) and JSON
+  // bodies (frames stored before core moved to fields) both open.
+  const parsed = Message.tryParseLegacyBody(message);
+  if (!parsed.ok) throw new Error('message body is not readable');
+  const body = parsed.value;
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('message body is not an object');
   return { id: message.id, signer, body };
 }

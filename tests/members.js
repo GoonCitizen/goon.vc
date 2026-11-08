@@ -136,6 +136,7 @@ describe('Members', function () {
     members = new Members({
       path: storePath,
       fetch: stubFetch,
+      loginStarts: { limit: 1000, windowMs: 60 * 1000 },
       discord: {
         clientId: 'client-id',
         clientSecret: 'client-secret',
@@ -244,6 +245,51 @@ describe('Members', function () {
       assert.strictEqual(new Members({ discord: { applicationId: async () => 'x' } }).discordEnabled, false, 'needs the client secret');
     } finally {
       await borrowed.stop();
+    }
+  });
+
+  it('limits sign-ins started from one address and forgets used and expired states', async function () {
+    const limited = new Members({
+      path: fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-members-limit-')),
+      fetch: stubFetch,
+      loginStarts: { limit: 2, windowMs: 60 * 1000 },
+      discord: { clientId: 'client-id', clientSecret: 'client-secret', redirectUri: 'https://goon.vc/services/members/discord/callback' }
+    });
+    await limited.start();
+    const mw = limited.middleware();
+    const run = (url, opts = {}) => new Promise((resolve) => {
+      const res = {
+        headers: {},
+        statusCode: 200,
+        getHeader (k) { return this.headers[k.toLowerCase()]; },
+        setHeader (k, v) { this.headers[k.toLowerCase()] = v; },
+        end (body) { this.body = body; resolve(this); }
+      };
+      const headers = Object.assign({ host: 'goon.vc', 'x-forwarded-proto': 'https', 'x-forwarded-for': opts.from || '203.0.113.1' }, opts.cookie ? { cookie: opts.cookie } : {});
+      mw({ method: 'GET', url, headers, socket: { remoteAddress: '127.0.0.1' } }, res, () => resolve(null));
+    });
+    const stateOf = (res) => new URL(res.headers.location).searchParams.get('state');
+    try {
+      const first = await run('/services/members/discord');
+      const second = await run('/services/members/discord', { from: 'evil, 203.0.113.1' });
+      assert.strictEqual((await run('/services/members/discord', { from: '198.51.100.7, 203.0.113.1' })).statusCode, 429, 'the proxy\'s hop counts, not the client\'s');
+      assert.ok(stateOf(await run('/services/members/discord', { from: '203.0.113.2' })), 'another address may still start');
+
+      const used = stateOf(first);
+      const callback = await run(`/services/members/discord/callback?code=good-code&state=${used}`, { cookie: `goon.oauth=${used}` });
+      assert.strictEqual(callback.headers.location, '/sessions?signedIn=discord');
+      const dropped = await limited.store.get(`/oauth/${used}`);
+      assert.ok(!dropped || !dropped.expiresAt, 'a used state is dropped');
+
+      const stale = stateOf(second);
+      const record = await limited.store.get(`/oauth/${stale}`);
+      await limited.store.set(`/oauth/${stale}`, Object.assign({}, record, { expiresAt: Date.now() - 1 }));
+      await limited._sweepExpired();
+      const left = [];
+      for await (const key of limited.store.db.keys({ gte: '/oauth/', lt: '/oauth0' })) left.push(key);
+      assert.ok(!left.includes(`/oauth/${stale}`) && !left.includes(`/oauth/${used}`), 'expired states are swept');
+    } finally {
+      await limited.stop();
     }
   });
 

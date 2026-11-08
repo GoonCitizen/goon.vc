@@ -10,6 +10,7 @@
   const api = host.getAttribute('data-api') || '/services/leagues';
   const siteTitle = (pageEl && pageEl.getAttribute('data-site-title')) || 'GOON SQUAD';
   const path = (window.location.pathname || '/').replace(/\/+$/, '');
+  let password = null;
 
   function esc (value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -18,7 +19,11 @@
   async function request (method, url, body) {
     const res = await fetch(url, {
       method,
-      headers: Object.assign({ Accept: 'application/json' }, body ? { 'Content-Type': 'application/json' } : {}),
+      headers: Object.assign(
+        { Accept: 'application/json' },
+        body ? { 'Content-Type': 'application/json' } : {},
+        password && method !== 'GET' ? { 'X-League-Password': password } : {}
+      ),
       body: body ? JSON.stringify(body) : undefined
     });
     let data = null;
@@ -146,19 +151,21 @@
     </table>${waiting}`;
   }
 
-  function duelList (duels, open) {
+  function duelList (duels, open, editing) {
     if (!duels.length) return '<p class="tournament-muted">No duels yet.</p>';
     const items = duels.slice().reverse().map((duel) => {
       const change = duel.change;
       const delta = change && !duel.voided
         ? `<span class="league-delta">${esc(duel.winner)} ${esc(change.winner[1])} (+${esc(Math.round(change.points))}) · ${esc(duel.loser)} ${esc(change.loser[1])} (−${esc(Math.round(change.points))})</span>`
         : duel.voided ? `<span class="league-delta">Void${duel.voided.reason ? `: ${esc(duel.voided.reason)}` : ''}</span>` : '';
-      const action = open
+      const action = (open
         ? `<button type="button" data-duel="${esc(duel.id)}" data-action="${duel.voided ? 'restore' : 'void'}">${duel.voided ? 'Restore' : 'Void'}</button>`
-        : '';
+        : '') + (editing && !duel.source
+        ? ` <button type="button" data-duel="${esc(duel.id)}" data-action="edit">Edit</button>`
+        : '');
       return `<li class="${duel.voided ? 'void' : ''}">
           <time class="tournament-muted" datetime="${esc(duel.playedAt || duel.loggedAt)}">${esc(when(duel.playedAt || duel.loggedAt, { year: undefined }))}</time>
-          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.source ? ` <span class="tournament-muted">— <a href="${esc(duel.source.path)}">${esc(duel.source.name)}</a></span>` : ''}${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}${duel.confirmedBy ? ` <span class="tournament-muted">— confirmed by ${esc(duel.confirmedBy)} on Discord</span>` : ''}</span>
+          <span class="league-duel-text"><strong>${esc(duel.winner)}</strong> beat ${esc(duel.loser)} ${esc(duel.score.join('–'))} <span class="tournament-muted">(best of ${esc(duel.bestOf)})</span>${duel.source ? ` <span class="tournament-muted">— <a href="${esc(duel.source.path)}">${esc(duel.source.name)}</a></span>` : ''}${duel.note ? ` <span class="tournament-muted">— ${esc(duel.note)}</span>` : ''}${duel.confirmedBy ? ` <span class="tournament-muted">— confirmed by ${esc(duel.confirmedBy)} on Discord</span>` : ''}${duel.edited ? ` <span class="tournament-muted">— edited ${esc(when(duel.edited.at, { year: undefined }))}</span>` : ''}</span>
           ${delta}
           ${action}
         </li>`;
@@ -175,11 +182,52 @@
       .join('');
   }
 
-  function scoreOptions (bestOf) {
+  function scoreOptions (bestOf, selected) {
     const need = (bestOf + 1) / 2;
     const out = [];
-    for (let lost = 0; lost < need; lost++) out.push(`<option value="${lost}">${need}–${lost}</option>`);
+    for (let lost = 0; lost < need; lost++) out.push(`<option value="${lost}"${lost === selected ? ' selected' : ''}>${need}–${lost}</option>`);
     return out.join('');
+  }
+
+  /** `iso` as a `datetime-local` value in the visitor's zone. */
+  function localInput (iso) {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return '';
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+
+  function padlock (open) {
+    return `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="${open ? 'M8 11V7a4 4 0 0 1 7.6-1.7' : 'M8 11V7a4 4 0 0 1 8 0v4'}"/></svg>`;
+  }
+
+  function editForm (duel, roster) {
+    const played = localInput(duel.playedAt || duel.loggedAt);
+    return `<form class="tournament-form league-edit" data-duel="${esc(duel.id)}">
+        <datalist id="league-edit-roster">${pilotOptions(roster, '', [])}</datalist>
+        <div class="tournament-row">
+          <label>Winner <input name="winner" list="league-edit-roster" maxlength="24" required autocomplete="off" value="${esc(duel.winner)}"></label>
+          <label>Loser <input name="loser" list="league-edit-roster" maxlength="24" required autocomplete="off" value="${esc(duel.loser)}"></label>
+        </div>
+        <div class="tournament-row">
+          <label>Set <select name="bestOf">${bestOfOptions(duel.bestOf)}</select></label>
+          <label>Score <select name="lost">${scoreOptions(duel.bestOf, duel.score[1])}</select></label>
+          <label>Played <input name="played" type="datetime-local" value="${esc(played)}" data-was="${esc(played)}"></label>
+        </div>
+        <label>Note (optional) <input name="note" maxlength="140" value="${esc(duel.note || '')}"></label>
+        <button class="goon-button" type="submit">Save</button>
+        <button class="goon-button" type="button" data-cancel>Cancel</button>
+        <p class="tournament-form-note" role="status"></p>
+      </form>`;
+  }
+
+  const FIELD_LABELS = { winner: 'winner', loser: 'loser', bestOf: 'set', score: 'score', playedAt: 'played', note: 'note' };
+
+  function fieldValue (key, value) {
+    if (key === 'score') return (value || []).join('–');
+    if (key === 'bestOf') return `best of ${value}`;
+    if (key === 'playedAt') return when(value, { hour: 'numeric', minute: '2-digit' });
+    if (key === 'note') return value ? `“${value}”` : 'none';
+    return value;
   }
 
   function logLine (entry) {
@@ -194,6 +242,11 @@
       case 'duel': what = `<strong>${esc(entry.winner)}</strong> beat ${esc(entry.loser)} ${esc((entry.score || []).join('–'))} (best of ${esc(entry.bestOf)})${entry.confirmedBy ? `, confirmed by ${esc(entry.confirmedBy)} on Discord` : ''}.`; break;
       case 'void': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) voided${entry.reason ? `: ${esc(entry.reason)}` : ''}.`; break;
       case 'restore': what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) restored.`; break;
+      case 'edit': {
+        const changes = (entry.fields || []).map((key) => `${esc(FIELD_LABELS[key] || key)} ${esc(fieldValue(key, (entry.before || {})[key]))} → ${esc(fieldValue(key, (entry.after || {})[key]))}`);
+        what = `Duel ${esc(entry.duel)} (${esc(entry.winner)} over ${esc(entry.loser)}) edited: ${changes.join('; ')}.`;
+        break;
+      }
       case 'season-end': what = `${esc(entry.name || `Season ${entry.season}`)} closed${entry.champion ? `; <strong>${esc(entry.champion)}</strong> finished first` : ''}.`; break;
       case 'season-start': what = `${esc(entry.name)} began.`; break;
       case 'tournament': {
@@ -213,8 +266,23 @@
     const latest = league.seasons[league.seasons.length - 1];
     const season = league.seasons.find((entry) => entry.number === seasonNumber) || latest;
     const open = season.status === 'active';
+    const editing = open && !!password;
     const seasonal = league.kind === 'seasonal';
     document.title = `${league.name} — ${siteTitle}`;
+    view.classList.toggle('has-lock', open);
+    const lock = open
+      ? `<button class="league-lock${editing ? ' open' : ''}" id="league-lock" type="button" aria-label="${editing ? 'Lock editing again' : 'Unlock to edit past results'}" title="${editing ? 'Unlocked: click to lock' : 'Locked: enter the password to edit past results'}">${padlock(editing)}</button>
+        <form class="tournament-form league-unlock" id="league-unlock" hidden>
+          <p class="tournament-muted">Logged duels are on record. Enter the password to edit them.</p>
+          <label>Password <input type="password" name="password" autocomplete="current-password"></label>
+          <button class="goon-button" type="submit">Unlock</button>
+          <button class="goon-button" type="button" data-cancel>Cancel</button>
+          <p class="tournament-form-note" role="status"></p>
+        </form>`
+      : '';
+    const editingNote = editing
+      ? '<p class="tournament-muted">Unlocked for editing: correct any duel this season with Edit. Sets from a tournament are edited in the tournament.</p>'
+      : '';
     const seasonTabs = seasonal && league.seasons.length > 1
       ? `<ul class="league-seasons">${league.seasons.slice().reverse().map((entry) => `<li><a href="${esc(leaguePath(league.id))}${entry === latest ? '' : `?season=${entry.number}`}"${entry === season ? ' aria-current="page"' : ''}>${esc(entry.name)}</a></li>`).join('')}</ul>`
       : '';
@@ -257,7 +325,7 @@
             </form>
           </details>`
       : '';
-    view.innerHTML = `<h1>${esc(league.name)}</h1>
+    view.innerHTML = `${lock}<h1>${esc(league.name)}</h1>
       ${league.tagline ? `<p class="league-tagline">${esc(league.tagline)}</p>` : ''}
       <p class="league-meta">${seasonal ? 'Seasonal' : 'Perpetual'} league · usually best of ${esc(league.bestOf)} · ${esc(plural(league.players.length, 'pilot'))}</p>
       ${seasonTabs}
@@ -270,7 +338,8 @@
       ${duelForm}
       <section class="tournament-section">
         <h2>Duels</h2>
-        ${duelList(league.duels.filter((duel) => duel.season === season.number), open)}
+        ${editingNote}
+        ${duelList(league.duels.filter((duel) => duel.season === season.number), open, editing)}
       </section>
       <section class="tournament-section">
         <h2>Manage</h2>
@@ -384,9 +453,54 @@
         summary: form.summary.value,
         bestOf: Number(form.bestOf.value)
       }));
+      const lockButton = document.getElementById('league-lock');
+      const unlockForm = document.getElementById('league-unlock');
+      if (lockButton) {
+        lockButton.addEventListener('click', () => {
+          if (password) {
+            password = null;
+            draw(league);
+            return;
+          }
+          unlockForm.hidden = !unlockForm.hidden;
+          if (!unlockForm.hidden) unlockForm.password.focus();
+        });
+        unlockForm.querySelector('[data-cancel]').addEventListener('click', () => {
+          unlockForm.hidden = true;
+          unlockForm.password.value = '';
+          lockButton.focus();
+        });
+        unlockForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const typed = unlockForm.password.value;
+          if (!typed) return note(unlockForm, 'Enter the password.', true);
+          busy(unlockForm, true);
+          try {
+            const fresh = await request('POST', `${src}/unlock`, { password: typed });
+            password = typed;
+            draw(fresh);
+          } catch (error) {
+            note(unlockForm, error.message, true);
+            busy(unlockForm, false);
+          }
+        });
+      }
       view.querySelectorAll('.league-duels button[data-duel]').forEach((button) => {
         button.addEventListener('click', async () => {
           const action = button.getAttribute('data-action');
+          if (action === 'edit') {
+            const item = button.closest('li');
+            const next = item.nextElementSibling;
+            if (next && next.classList.contains('league-edit-row')) return next.remove();
+            const duel = league.duels.find((entry) => entry.id === button.getAttribute('data-duel'));
+            if (!duel) return;
+            const row = document.createElement('li');
+            row.className = 'league-edit-row';
+            row.innerHTML = editForm(duel, league.players);
+            item.after(row);
+            bindEdit(row.querySelector('form'), duel, league);
+            return;
+          }
           let body = {};
           if (action === 'void') {
             const reason = window.prompt('Void this duel? It stays on record but stops counting. Reason (optional):', '');
@@ -397,10 +511,48 @@
           try {
             draw(await request('POST', `${src}/duels/${encodeURIComponent(button.getAttribute('data-duel'))}/${action}`, body));
           } catch (error) {
+            if (error.status === 401 && password) return relock(league, error.message);
             button.disabled = false;
             window.alert(error.message);
           }
         });
+      });
+    };
+
+    const relock = (league, message) => {
+      password = null;
+      draw(league);
+      const form = document.getElementById('league-unlock');
+      if (!form) return;
+      form.hidden = false;
+      note(form, message, true);
+      form.password.focus();
+    };
+
+    const bindEdit = (form, duel, league) => {
+      form.bestOf.addEventListener('change', () => {
+        form.lost.innerHTML = scoreOptions(Number(form.bestOf.value));
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', () => form.parentNode.remove());
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const bestOf = Number(form.bestOf.value);
+        const body = {
+          winner: form.winner.value,
+          loser: form.loser.value,
+          bestOf,
+          score: [(bestOf + 1) / 2, Number(form.lost.value)],
+          note: form.note.value
+        };
+        if (form.played.value && form.played.value !== form.played.getAttribute('data-was')) body.playedAt = new Date(form.played.value).toISOString();
+        busy(form, true);
+        try {
+          draw(await request('PATCH', `${src}/duels/${encodeURIComponent(duel.id)}`, body));
+        } catch (error) {
+          if (error.status === 401) return relock(league, error.message);
+          note(form, error.message, true);
+          busy(form, false);
+        }
       });
     };
 

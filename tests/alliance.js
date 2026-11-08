@@ -88,6 +88,22 @@ describe('alliance federation', function () {
     assert.strictEqual(federation.descriptorId(descriptor), id);
   });
 
+  it('signs field-encoded frames, as core peers take them, and still opens stored JSON frames', function () {
+    const Message = require('@fabric/core/types/message');
+    const key = new Key();
+    const body = { contract: 'ab'.repeat(32), type: 'FederationVote', federationId: 'ab'.repeat(32), proposalId: 'p1', choice: 'yes', castAt: '2026-11-06T00:00:00.000Z' };
+    const signed = federation.signFrame(body, key);
+    const wire = Message.fromBuffer(Buffer.from(signed.frame, 'hex'));
+    assert.strictEqual(Message.tryParseLegacyBody(wire).encoding, 'fields');
+    const opened = federation.openFrame(signed.frame);
+    assert.strictEqual(opened.signer, key.pubkey.slice(2));
+    assert.deepStrictEqual(opened.body, body);
+
+    const legacy = Message.fromVector(['CONTRACT_MESSAGE', JSON.stringify(body)]);
+    legacy.signWithKey(key);
+    assert.deepStrictEqual(federation.openFrame(legacy.toBuffer().toString('hex')).body, body);
+  });
+
   it('matches @fabric/core Federation.buildDescriptor where core has it', function () {
     const core = process.env.FABRIC_CORE || path.resolve(__dirname, '../../fabric-clean');
     let Federation;

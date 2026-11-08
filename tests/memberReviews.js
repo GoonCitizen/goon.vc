@@ -80,6 +80,7 @@ describe('Members reviews (waiting area)', function () {
       path: storePath,
       fetch: stubFetch,
       review,
+      loginStarts: { limit: 1000, windowMs: 60 * 1000 },
       discord: {
         clientId: 'client-id',
         clientSecret: 'client-secret',

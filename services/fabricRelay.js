@@ -405,7 +405,7 @@ class FabricRelay {
       packs,
       sourceAppId: (client && client.application && client.application.id) || (client && client.user && client.user.id) || null
     });
-    const message = Message.fromVector(['CONTRACT_MESSAGE', JSON.stringify(body)]);
+    const message = Message.fromLegacyBody('CONTRACT_MESSAGE', body);
     Message.setMessageParent(message, this._tip || Message.ZERO_PARENT);
     message.signWithKey(this.peer.key);
     this._tip = message.id;

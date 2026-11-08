@@ -9,7 +9,10 @@ const path = require('path');
 const bitcoin = require('bitcoinjs-lib');
 const Key = require('@fabric/core/types/key');
 const Federation = require('@fabric/core/types/federation');
+const Message = require('@fabric/core/types/message');
 const { decodeFabricUri } = require('@fabric/core/functions/fabricUri');
+const { readMailboxFetch } = require('@fabric/core/types/delegation');
+const { fabricPubkey } = require('../functions/accountKey');
 const { deriveAccount } = require('@fabric/core/functions/accountKeys');
 const Market = require('../services/market');
 const { createHubList } = require('../functions/hubApiProxy');
@@ -60,6 +63,7 @@ function world (opts = {}) {
     messages: new Map(),
     webhooks: [],
     hubFrames: [],
+    mailboxReads: [],
     vault: [],
     broadcasts: [],
     // txid → { address, sats, confirmations }: what the Hub's bitcoind sees
@@ -77,7 +81,7 @@ function world (opts = {}) {
     const u = new URL(url);
     state.calls.push({ method, url: u.pathname + u.search, body });
     if (u.hostname === 'mempool.space') return json({ USD: 80000 });
-    if (url.startsWith(HUB)) return hub(method, u, body);
+    if (url.startsWith(HUB)) return hub(method, u, body, init.headers || {});
     const p = u.pathname.replace('/api/v10', '');
     if (p === '/users/@me') return json({ id: BOT, username: 'goon.vc' });
     if (p === `/guilds/${GUILD}`) return json({ id: GUILD, roles: [{ id: GUILD, permissions: state.forumPublic ? VIEW : '0' }] });
@@ -138,15 +142,20 @@ function world (opts = {}) {
     }
     return json({ message: `unexpected ${method} ${p}` }, 500);
   };
-  function hub (method, u, body) {
+  function hub (method, u, body, headers = {}) {
     if (u.pathname === '/services/federations') return json({ type: 'FederationsStatus', network: state.network, pubkey: '02'.padEnd(66, 'a') });
     if (u.pathname === '/services/federations/messages') {
       if (method === 'POST') {
         const decoded = decodeFabricUri(body.fabric);
         assert.ok(decoded.ok, decoded.error);
-        state.hubFrames.push(JSON.parse(decoded.message.data));
+        const parsed = Message.tryParseLegacyBody(decoded.message);
+        assert.strictEqual(parsed.encoding, 'fields', 'a Hub drops JSON CONTRACT_MESSAGE bodies');
+        state.hubFrames.push(parsed.value);
         return json({ type: 'FederationMessageAccepted' });
       }
+      const read = readMailboxFetch(headers['X-Fabric-Mailbox'] || '', { origin: u.origin, purpose: 'federation-mailbox' });
+      if (!read.ok || u.searchParams.has('pubkey')) return json({ message: 'signed mailbox read required' }, 401);
+      state.mailboxReads.push(read);
       return json({ type: 'FederationMessages', messages: [], next: 0, more: false });
     }
     let m = /^\/services\/federations\/([0-9a-f]+)\/vault$/.exec(u.pathname);
@@ -489,6 +498,8 @@ describe('Market service', function () {
       await market.tick();
       let current = market.orders.get(order.id);
       assert.strictEqual(current.state, 'refunding');
+      await market.tick();
+      assert.ok(w.mailboxReads.some((r) => fabricPubkey(r.pubkey) === fabricPubkey(current.arbiterPubkey) && r.origin === HUB && r.purpose === 'federation-mailbox'), 'reads its mailbox with a proof signed for this Hub');
       assert.strictEqual(current.withdrawals.refund.signers.length, 1);
       const buyer = await members.resolve('b'.repeat(16));
       const view = market.getOrder(order.id, buyer);

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const EventEmitter = require('events');
 const Store = require('@fabric/core/types/store');
 const Federation = require('@fabric/core/types/federation');
+const { createMailboxFetch } = require('@fabric/core/types/delegation');
 const { matchesAnyChannel } = require('@fabric/discord/functions/channelMatcher');
 const startStore = require('../functions/startStore');
 const discordEvents = require('../functions/discordScheduledEvents');
@@ -1595,16 +1596,23 @@ class Market extends EventEmitter {
 
   /* ---------- Hub ---------- */
 
-  async _hub (method, apiPath, body) {
+  /**
+   * @param {string} method
+   * @param {string} apiPath
+   * @param {*} [body]
+   * @param {Object|function(string): Object} [extraHeaders] Headers, or a function of the Hub origin tried.
+   */
+  async _hub (method, apiPath, body, extraHeaders = {}) {
     const hubs = this.settings.hubs;
     if (!hubs || typeof hubs.order !== 'function' || !hubs.order().length) throw fail(503, 'No Hub is configured for escrow.');
     let lastError = null;
     for (const origin of hubs.order()) {
       let res;
       try {
+        const extra = typeof extraHeaders === 'function' ? extraHeaders(origin) : extraHeaders;
         res = await this._fetch(origin + apiPath, {
           method,
-          headers: Object.assign({ Accept: 'application/json' }, body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          headers: Object.assign({ Accept: 'application/json' }, body !== undefined ? { 'Content-Type': 'application/json' } : {}, extra),
           body: body !== undefined ? JSON.stringify(body) : undefined,
           signal: AbortSignal.timeout(20000)
         });
@@ -1764,8 +1772,9 @@ class Market extends EventEmitter {
     can('cancel', ['buyer', 'seller', 'arbiter'], ['awaiting-payment']);
     can('delivered', ['seller'], ['paid']);
     can('release', ['buyer'], ['delivered']);
-    can('release', ['arbiter'], ['delivered', 'disputed']);
-    can('refund', ['seller', 'arbiter'], ['paid', 'delivered', 'disputed']);
+    can('release', ['arbiter'], ['disputed']);
+    can('refund', ['seller'], ['paid', 'delivered', 'disputed']);
+    can('refund', ['arbiter'], ['disputed']);
     can('dispute', ['buyer', 'seller'], ['paid', 'delivered']);
     return [...new Set(out)];
   }
@@ -2225,7 +2234,11 @@ class Market extends EventEmitter {
   async _readMailbox (id) {
     const order = this.orders.get(id);
     const since = Number(order.mailboxSeq) || 0;
-    const res = await this._hub('GET', `/services/federations/messages?pubkey=${order.arbiterPubkey}&since=${since}&limit=200`);
+    const key = this._arbiter(order).key;
+    const res = await this._hub('GET', '/services/federations/messages?limit=200', undefined, (origin) => ({
+      'X-Fabric-Mailbox': createMailboxFetch({ origin, purpose: 'federation-mailbox', since }, key).uri
+    }));
+    if (res.status !== 200) this._warn(`order ${id}: the Hub mailbox answered ${res.status}`);
     if (res.status !== 200 || !res.json || !Array.isArray(res.json.messages)) return;
     for (const message of res.json.messages) {
       if (message.federationId !== order.escrow.federationId || message.type !== Federation.MESSAGE_TYPES.signature) continue;

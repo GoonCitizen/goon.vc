@@ -159,6 +159,14 @@ describe('market escrow', function () {
     assert.strictEqual(escrow.transition(disputed.order, 'refund', { by: 'arbiter', now: NOW }).order.state, 'refunding');
   });
 
+  it('lets a Market arbiter release or refund only in a dispute', function () {
+    const o = order();
+    const paid = escrow.transition(o, 'fund', { by: 'system', now: NOW, input: { funding: fundingTx(o.escrow.address, 120000) } }).order;
+    assert.throws(() => escrow.transition(paid, 'refund', { by: 'arbiter', now: NOW }), (e) => e.status === 409);
+    assert.throws(() => escrow.transition(Object.assign({}, paid, { state: 'delivered' }), 'release', { by: 'arbiter', now: NOW }), (e) => e.status === 409);
+    assert.strictEqual(escrow.transition(paid, 'refund', { by: 'seller', now: NOW }).order.state, 'refunding');
+  });
+
   it('finds passed deadlines', function () {
     const o = order();
     assert.strictEqual(escrow.due(o, NOW), null);

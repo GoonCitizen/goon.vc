@@ -24,10 +24,14 @@ async function assertStoreOpen (store) {
 
 /**
  * Start a `@fabric/core` Store and refuse to continue if its database did not open.
+ * Every Store is strict: a failed LevelDB read or write rejects instead of
+ * reading as a missing key or resolving as saved, so a member record, a vote,
+ * or an escrow order is never silently rebuilt from empty or lost.
  * @param {Object} store
  * @returns {Promise<Object>} the store
  */
 async function startStore (store) {
+  if (store && store.settings) store.settings.strict = true;
   await store.start();
   return assertStoreOpen(store);
 }

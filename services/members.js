@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const EventEmitter = require('events');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
+const clientKey = require('../functions/clientKey');
 const { accountKey, parseAccountKey } = require('../functions/accountKey');
 const rsiCitizen = require('../functions/rsiCitizen');
 const rsiClaim = require('../functions/rsiClaim');
@@ -32,6 +33,11 @@ const PASSPORT_REQUEST_TTL_MS = 2 * 60 * 1000;
 const PASSPORT_PURPOSE = 'Sign in to G00N SQUAD';
 const PASSPORT_ESCROW_PURPOSE = 'Link your G00N SQUAD Market escrow key';
 const PASSPORT_PREFIX = '/passport-requests/';
+const OAUTH_PREFIX = '/oauth/';
+const SWEEP_EVERY_MS = 10 * 60 * 1000;
+// Starting a login writes a record before anyone has signed in.
+const LOGIN_STARTS = { limit: 60, windowMs: 60 * 1000 };
+const LOGIN_STARTS_TRACKED = 10000;
 const MEMBER_ID_RE = /^[0-9a-f]{16}$/;
 const MAX_HOPS = 8;
 const CLAIM_LINK_PATH = '/rsi/claim';
@@ -263,7 +269,8 @@ class Members extends EventEmitter {
       review: false,
       discord: {},
       sessionTtlMs: DEFAULT_SESSION_TTL_MS,
-      cookieName: DEFAULT_COOKIE
+      cookieName: DEFAULT_COOKIE,
+      loginStarts: LOGIN_STARTS
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.discord = Object.assign({}, this.settings.discord);
     this.passport = this._createPassport();
@@ -300,7 +307,9 @@ class Members extends EventEmitter {
       verbosity: 1
     });
     await startStore(this.store);
-    await this._sweepPassportRequests();
+    await this._sweepExpired();
+    this._sweeper = setInterval(() => { this._sweepExpired(); }, SWEEP_EVERY_MS);
+    if (this._sweeper.unref) this._sweeper.unref();
     if (this.reviewsEnabled) await this._startReviews();
     return this;
   }
@@ -318,6 +327,8 @@ class Members extends EventEmitter {
   }
 
   async stop () {
+    if (this._sweeper) clearInterval(this._sweeper);
+    this._sweeper = null;
     if (this.store) await this.store.stop();
     return this;
   }
@@ -929,6 +940,7 @@ class Members extends EventEmitter {
     }
     const clientId = await this._discordClientId();
     if (!clientId) return redirect(res, this._discordResult({ returnTo }, linkTo, { error: 'discord_unavailable' }));
+    if (!this._loginStartAllowed(req)) return sendJson(res, 429, { error: 'Too many sign-ins started. Wait a minute, then try again.' });
     const state = randomToken();
     const redirectUri = this._discordRedirectUri(req);
     await this.store.set(`/oauth/${state}`, Object.assign({
@@ -964,7 +976,7 @@ class Members extends EventEmitter {
     if (query.error) return done({ error: String(query.error) });
     if (!/^[0-9a-f]{64}$/.test(state) || !code) return done({ error: 'invalid_request' });
     if (!ours || !pending || pending.usedAt || !(pending.expiresAt > Date.now())) return done({ error: 'expired_state' });
-    await this.store.set(`/oauth/${state}`, Object.assign({}, pending, { usedAt: Date.now() }));
+    await this._drop(`${OAUTH_PREFIX}${state}`);
 
     let user;
     let inGuild = false;
@@ -1046,16 +1058,41 @@ class Members extends EventEmitter {
     await this.store.del(key);
   }
 
-  async _sweepPassportRequests () {
+  async _sweepExpired () {
     const now = Date.now();
-    try {
-      for await (const key of this.store.db.keys({ gte: PASSPORT_PREFIX, lt: PASSPORT_PREFIX.slice(0, -1) + '0' })) {
-        const record = await this.store.get(key);
-        if (!record || !(record.expiresAt > now)) await this._drop(key);
+    for (const prefix of [PASSPORT_PREFIX, OAUTH_PREFIX]) {
+      try {
+        for await (const key of this.store.db.keys({ gte: prefix, lt: prefix.slice(0, -1) + '0' })) {
+          const record = await this.store.get(key);
+          if (!record || !(record.expiresAt > now)) await this._drop(key);
+        }
+      } catch (error) {
+        this.emit('log', 'MEMBERS', `could not sweep ${prefix}: ${error.message}`);
       }
-    } catch (error) {
-      this.emit('log', 'MEMBERS', `could not sweep Passport requests: ${error.message}`);
     }
+    if (this._loginStarts) {
+      const windowMs = this.settings.loginStarts.windowMs;
+      for (const [address, times] of this._loginStarts) {
+        if (!times.length || now - times[times.length - 1] >= windowMs) this._loginStarts.delete(address);
+      }
+    }
+  }
+
+  _loginStartAllowed (req) {
+    const { limit, windowMs } = this.settings.loginStarts;
+    if (!this._loginStarts) this._loginStarts = new Map();
+    const now = Date.now();
+    const address = clientKey(req);
+    const times = (this._loginStarts.get(address) || []).filter((at) => now - at < windowMs);
+    if (times.length >= limit) {
+      this._loginStarts.set(address, times);
+      return false;
+    }
+    times.push(now);
+    this._loginStarts.delete(address);
+    this._loginStarts.set(address, times);
+    if (this._loginStarts.size > LOGIN_STARTS_TRACKED) this._loginStarts.delete(this._loginStarts.keys().next().value);
+    return true;
   }
 
   // Challenges are issued only for pinned origins and kept in the Store until
@@ -1135,6 +1172,7 @@ class Members extends EventEmitter {
     if (!this.passport) return sendJson(res, 503, { error: 'Passport login is not available' });
     const origin = this._siteOrigin(req);
     if (!origin) return sendJson(res, 400, { error: 'Passport sign-in is not offered on this address' });
+    if (!this._loginStartAllowed(req)) return sendJson(res, 429, { error: 'Too many sign-ins started. Wait a minute, then try again.' });
     const body = (req.body && typeof req.body === 'object') ? req.body : {};
     let rp = this.passport;
     let request = [];

@@ -1090,8 +1090,15 @@
       .league-duels li { align-items: baseline; display: flex; flex-wrap: wrap; gap: 0.25em 0.75em; margin: 0.35em 0; }
       .league-duels li.void .league-duel-text { color: #888; text-decoration: line-through; }
       .league-delta { color: #bbb; font-size: 0.9em; white-space: nowrap; }
-      .league-duels button { background: none; border: 0; color: #aaa; cursor: pointer; font: inherit; font-size: 0.85em; padding: 0; text-decoration: underline; }
-      .league-duels button:hover { color: #fff; }
+      .league-duels button[data-duel] { background: none; border: 0; color: #aaa; cursor: pointer; font: inherit; font-size: 0.85em; padding: 0; text-decoration: underline; }
+      .league-duels button[data-duel]:hover { color: #fff; }
+      .league-duels li.league-edit-row { display: block; }
+      .league-view { position: relative; }
+      .league-view.has-lock > h1 { padding: 0 52px; }
+      .league-lock { align-items: center; background: none; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; color: #bbb; cursor: pointer; display: inline-flex; height: 44px; justify-content: center; padding: 0; position: absolute; right: 0; top: 0; width: 44px; }
+      .league-lock:hover { border-color: #fff; color: #fff; }
+      .league-lock.open { border-color: #ffb02e; color: #ffb02e; }
+      .league-unlock { margin: 1em 0; }
       .league-page details > summary { cursor: pointer; font-weight: 600; }
       .league-page details[open] > summary { margin-bottom: 0.85em; }
       .league-page [hidden] { display: none !important; }
@@ -4002,7 +4009,7 @@
     <script src="/scripts/melee-rotation-drill.js?v=f8b2f3f656dc" defer></script>
     <script src="/scripts/tournament-bracket.js?v=479a824db60a" defer></script>
     <script src="/scripts/tournaments.js?v=aa472dec7d92" defer></script>
-    <script src="/scripts/leagues.js?v=09b5594d7ee2" defer></script>
+    <script src="/scripts/leagues.js?v=01d42380da36" defer></script>
     <script src="/scripts/clip-library.js?v=b2fa7fc99070" defer></script>
     <script src="/scripts/clip-timeline-editor.js?v=3ac154ff6a0a" defer></script>
     <script type="text/javascript">
