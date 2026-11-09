@@ -276,6 +276,7 @@ describe('clips', function () {
         run: fakeRun,
         externalLinks: false,
         keepMasters: false,
+        minFreeBytes: 0,
         ffmpegPath: 'ffmpeg',
         ffprobePath: 'ffprobe',
         resolveToken: () => ({ token: 'test-token', source: 'test' }),
@@ -642,6 +643,7 @@ describe('clips', function () {
         path: root,
         discord: {},
         poll: false,
+        minFreeBytes: 0,
         now: () => clock,
         fetch: () => Promise.resolve(response(404, {})),
         run: async (command, args) => {
@@ -671,6 +673,7 @@ describe('clips', function () {
         path: dir,
         discord: {},
         poll: false,
+        minFreeBytes: 0,
         fetch: () => Promise.resolve(response(404, {})),
         run: async (command) => {
           if (command === 'yt-dlp') throw Object.assign(new Error('spawn yt-dlp ENOENT'), { code: 'ENOENT' });

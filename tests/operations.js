@@ -72,7 +72,7 @@ describe('Operations metrics service', function () {
     assert.ok(discord.settings.intents.includes(GatewayIntentBits.GuildVoiceStates));
 
     discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: null, newChannelId: ALPHA_VOICE, channelName: 'ALPHA SQUADRON' });
-    discord.emit('activity', { type: 'DiscordMessage', actor: { ref: '111111111111111111' }, object: { content: 'hello there' }, target: { ref: ALPHA_TEXT } });
+    discord.emit('activity', { type: 'DiscordMessage', actor: { ref: '111111111111111111' }, object: { content: 'hello there' }, target: { ref: ALPHA_TEXT, guildId: GUILD } });
     await new Promise((resolve) => setImmediate(resolve));
 
     const report = await ops.report();

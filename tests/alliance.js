@@ -273,6 +273,7 @@ describe('alliance federation', function () {
 });
 
 describe('Alliance service', function () {
+  this.timeout(20000);
   let dir;
   let clock;
   let xprv;

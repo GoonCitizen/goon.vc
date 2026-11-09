@@ -38,6 +38,10 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # package.json requires npm 12; the Node.js release in .nvmrc bundles npm 11.
+      - name: Install npm 12
+        run: npm install -g npm@12.2.1
+
       - name: Check npm version
         run: |
           npm --version

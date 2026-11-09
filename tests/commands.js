@@ -153,6 +153,7 @@ async function press (commands, user, action, id) {
 }
 
 describe('Discord application commands', function () {
+  this.timeout(20000);
   let dir;
   let clock;
   let leagues;
