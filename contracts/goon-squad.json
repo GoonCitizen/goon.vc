@@ -1,0 +1,23 @@
+{
+  "about": "The G00N SQUAD Discord goon.vc is wired to. Channel and role ids are snowflakes; names are how they read today. Alliance officers live in alliance.json. Campaign DMs send only when campaignSenders (remaeus) initiate them.",
+  "guildId": "1190527980120850493",
+  "campaignSenders": ["420222636954615808"],
+  "channels": {
+    "clips": { "id": "1502724643084304424", "name": "clips" },
+    "videos": { "id": "1229874610539987094", "name": "videos" },
+    "screenshots": { "id": "1190773851236335616", "name": "screenshots" },
+    "embassy": { "id": "1205022843402977310", "name": "embassy" },
+    "voice": { "id": "1236721094153732276", "name": "PERMAFLEET" },
+    "idlerpg": { "id": "1560112808283086929", "name": "idlerpg" },
+    "streams": { "id": "1190774394604236870", "name": "streams-🎥" }
+  },
+  "roles": {
+    "PERMAFLEET": "1298457632431931413",
+    "[P] Prospect I": "1234735430587514970",
+    "[P2] Prospect II": "1234735136785043537",
+    "[P3] Prospect III": "1234526030186938409",
+    "[P4] Prospect IV": "1234739335312703548",
+    "[P5] Prospect V": "1234739862205366312",
+    "[P6] Prospect VI": "1234738549450997831"
+  }
+}

@@ -3,20 +3,18 @@
 /**
  * Save the PERMAFLEET recruiting campaigns (contracts/recruiting.json) as
  * drafts on the running goon.vc server, through the campaigns API, and list
- * every member each would reach, by name. Nothing is sent: the run ends
- * with the exact command that sends those previews, and only that command
- * sends them (to the members listed who still qualify; a draft edited since
- * is refused).
+ * every member each would reach, by name. Nothing is sent: campaign DMs only
+ * go out when remaeus sends them from Discord.
  * Each campaign DMs members who hold the qualifying rank (Prospect IV) and
  * none of the unit's roles, with a Start button for the unit's DM script.
  * Running it again updates open drafts and skips members an earlier campaign
  * for the same unit already reached. Needs GOON_SCRIPTS_TOKEN and a server
- * running with GOON_CAMPAIGNS=1.
+ * with campaigns on.
  *
  *   npm run campaigns:recruiting                          (save drafts, list recipients)
  *   npm run campaigns:recruiting -- --unit bravo-squadron (only this unit)
- *   npm run campaigns:recruiting -- --send <campaign>:<preview> [--send …]
- *                                                         (send what a preview listed)
+ *   npm run campaigns:recruiting -- --send <campaign>:<preview>
+ *                                                         (refused: only remaeus sends DMs from Discord)
  *   … --send … --at 2026-11-01T18:00:00-05:00             (schedule)
  *   npm run campaigns:recruiting -- --origin https://goon.vc
  */
@@ -81,11 +79,7 @@ async function main () {
   };
 
   if (args.send.length) {
-    for (const { campaign, preview } of args.send) {
-      const sent = await api('POST', `/${campaign}/schedule`, { preview, sendAt: args.at || undefined, by: BY });
-      log(`${sent.title}: ${sent.status}${sent.status === 'scheduled' ? ` for ${sent.sendAt}` : ''}, to ${sent.preview ? sent.preview.reach : 0} of the members previewed.`);
-    }
-    return;
+    throw new Error('Campaign DMs only go out when remaeus sends them from Discord (`/goon campaign`).');
   }
 
   const contract = recruiting.load(args.file);
@@ -115,9 +109,7 @@ async function main () {
     if (preview.reach > 0) approvals.push(`--send ${saved.id}:${preview.id}`);
   }
   if (!approvals.length) return log('Nobody to reach; nothing to send.');
-  log('Nothing was sent. To send exactly these previews, run:');
-  console.log(`  npm run campaigns:recruiting -- ${approvals.join(' ')}${args.origin === parseArgs(['', '']).origin ? '' : ` --origin ${args.origin}`}`);
-  log('Add --at <date> to schedule. A preview goes stale when its draft changes or this runs again.');
+  log(`Nothing was sent. Campaign DMs only go out when remaeus sends them from Discord (\`/goon campaign\`). Drafts: ${approvals.map((flag) => flag.replace('--send ', '')).join(', ')}.`);
 }
 
 main().catch((error) => {

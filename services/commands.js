@@ -1,6 +1,7 @@
 'use strict';
 
 const { OPEN_LEAGUE_ID } = require('./leagues');
+const Community = require('./community');
 const allianceChannels = require('../functions/allianceChannels');
 const allianceRoles = require('../functions/allianceRoles');
 const marketPost = require('../functions/marketPost');
@@ -827,6 +828,8 @@ class Commands {
       lines.push(`That is more than the **${number(preview.limit)}** a server campaign may reach. Narrow it with a role.`);
     } else if (!preview.reach) {
       lines.push('Nobody to send to.');
+    } else if (!this._maySendCampaign(community, interaction.user.id)) {
+      lines.push(Community.CAMPAIGN_SEND_REFUSAL);
     } else if (sendAt) {
       const at = Math.floor(sendAt / 1000);
       lines.push(`Goes out <t:${at}:f> (<t:${at}:R>) to the members listed below (anyone who joins or opts out before then is left out), one DM every few seconds, once you press Schedule. Every DM says it came from this server and has Stop buttons.`);
@@ -882,9 +885,12 @@ class Commands {
     if (!(await community.can(String(interaction.user.id), String(interaction.guildId)))) {
       return this._private('You need the Manage Server permission to send a campaign here.');
     }
+    if (!this._maySendCampaign(community, interaction.user.id)) {
+      return this._private(Community.CAMPAIGN_SEND_REFUSAL);
+    }
     let result;
     try {
-      result = await campaigns.schedule(id, { sendAt: action === 'schedule' ? sendAt : null, preview: previewId, by });
+      result = await campaigns.schedule(id, { sendAt: action === 'schedule' ? sendAt : null, preview: previewId, by, discord: String(interaction.user.id) });
     } catch (error) {
       if (error && error.status === 429 && error.retryAt) return this._private(this._cooldownMessage(Date.parse(error.retryAt)));
       throw error;
@@ -943,7 +949,11 @@ class Commands {
     });
     if (preview.script) embeds.push(scriptEmbed(preview.script));
     const buttons = [];
-    if (total) buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.success, label: `Send to ${plural(total, 'member')}`, custom_id: `checkins:send:${preview.id}` });
+    if (total && this._maySendCampaign(this.settings.community, interaction.user.id)) {
+      buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.success, label: `Send to ${plural(total, 'member')}`, custom_id: `checkins:send:${preview.id}` });
+    } else if (total) {
+      lines.push(Community.CAMPAIGN_SEND_REFUSAL);
+    }
     if (status.sending) buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.danger, label: 'Stop', custom_id: 'checkins:stop' });
     buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.secondary, label: 'Cancel', custom_id: 'checkins:cancel' });
     return {
@@ -981,7 +991,10 @@ class Commands {
         ? `Stopped. ${plural(cancelled, 'check-in')} that hadn’t gone out yet won’t be sent.`
         : 'Nothing was still going out.');
     }
-    const run = await checkins.send({ preview: previewId, by });
+    if (!this._maySendCampaign(community, interaction.user.id)) {
+      return this._private(Community.CAMPAIGN_SEND_REFUSAL);
+    }
+    const run = await checkins.send({ preview: previewId, by, discord: String(interaction.user.id) });
     const names = Object.fromEntries((checkins.contract.tiers || []).map((tier) => [tier.id, tier.name]));
     const sent = run.map((entry) => {
       const name = escapeMarkdown(names[entry.tier] || entry.tier);
@@ -1061,7 +1074,11 @@ class Commands {
     const embeds = [{ title: 'The welcome DM', text: preview.reach ? [reach, `**To:** ${nameList(preview.recipients, 2000)}`, quote] : [reach, quote] }];
     if (preview.script) embeds.push(scriptEmbed(preview.script));
     const buttons = [];
-    if (preview.reach) buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.success, label: `Send to ${plural(preview.reach, 'member')}`, custom_id: `welcome:send:${preview.id}` });
+    if (preview.reach && this._maySendCampaign(this.settings.community, interaction.user.id)) {
+      buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.success, label: `Send to ${plural(preview.reach, 'member')}`, custom_id: `welcome:send:${preview.id}` });
+    } else if (preview.reach) {
+      lines.push(Community.CAMPAIGN_SEND_REFUSAL);
+    }
     if (status.sending) buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.danger, label: 'Stop', custom_id: 'welcome:stop' });
     buttons.push({ type: BUTTON_COMPONENT, style: BUTTON_STYLE.secondary, label: 'Cancel', custom_id: 'welcome:cancel' });
     return {
@@ -1099,7 +1116,10 @@ class Commands {
         ? `Stopped. ${plural(cancelled, 'welcome DM')} that hadn’t gone out yet won’t be sent.`
         : 'Nothing was still going out.');
     }
-    const run = await welcome.send({ preview: previewId, by });
+    if (!this._maySendCampaign(community, interaction.user.id)) {
+      return this._private(Community.CAMPAIGN_SEND_REFUSAL);
+    }
+    const run = await welcome.send({ preview: previewId, by, discord: String(interaction.user.id) });
     return done(run.reach && run.status !== 'draft'
       ? `Sending to **${number(run.reach)}** of the members you previewed now, one DM every few seconds. Nothing more goes out until someone runs \`/goon welcome\` and presses Send again.`
       : 'Nobody you previewed is still due, so nothing was sent.');
@@ -1126,6 +1146,10 @@ class Commands {
 
   _cooldownMessage (until) {
     return `This server sent a campaign recently; the next one can go out <t:${Math.ceil(until / 1000)}:R>.`;
+  }
+
+  _maySendCampaign (community, userId) {
+    return !community || typeof community.maySendCampaign !== 'function' || community.maySendCampaign(userId) === true;
   }
 
   _private (content) {

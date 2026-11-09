@@ -439,6 +439,9 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         { id: GUILD, type: 0, allow: BITS.ViewChannel | BITS.Connect | BITS.Speak, deny: 0n }
       ]);
       assert.ok(allianceChannels.matches(allianceChannels.spec('embassy'), { type: 0, name: '🏛-embassy' }));
+      assert.ok(allianceChannels.matches(allianceChannels.spec('embassy'), { type: 0, id: allianceChannels.HOME.channels.embassy.id, name: 'renamed', guildId: GUILD }), 'G00N SQUAD #embassy by id');
+      assert.ok(allianceChannels.matches(allianceChannels.spec('voice'), { type: 2, id: allianceChannels.HOME.channels.voice.id, name: 'ops', guildId: GUILD }), 'G00N SQUAD PERMAFLEET voice by id');
+      assert.ok(!allianceChannels.matches(allianceChannels.spec('embassy'), { type: 0, id: allianceChannels.HOME.channels.embassy.id, name: 'renamed', guildId: '99' }), 'another server’s same id is not G00N #embassy');
       assert.ok(!allianceChannels.matches(allianceChannels.spec('permafleet'), { type: 0, name: 'permafleet-officers-🚔' }));
       assert.ok(!allianceChannels.matches(allianceChannels.spec('voice'), { type: 0, name: 'permafleet' }), 'a text channel is not the voice channel');
     });
@@ -775,7 +778,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       assert.deepStrictEqual(Community.gateway({ enabled: false, Scripts, Campaigns, campaigns: { enabled: true } }), { intents: [], partials: [] });
     });
 
-    it('stays off unless GOON_CAMPAIGNS=1: no plugin and no API', async function () {
+    it('ships on unless GOON_CAMPAIGNS=0, and stays off in the Community constructor until enabled', async function () {
       const { execFileSync } = require('child_process');
       const shipped = (value) => {
         const env = Object.assign({}, process.env);
@@ -784,9 +787,10 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         const script = "process.stdout.write(JSON.stringify(require('./settings/local').community.campaigns.enabled))";
         return JSON.parse(execFileSync(process.execPath, ['-e', script], { cwd: path.resolve(__dirname, '..'), env }).toString());
       };
-      assert.strictEqual(shipped(undefined), false, 'off when unset');
-      for (const value of ['0', 'true', 'yes', '']) assert.strictEqual(shipped(value), false, `off for GOON_CAMPAIGNS=${JSON.stringify(value)}`);
+      assert.strictEqual(shipped(undefined), true, 'on when unset');
+      assert.strictEqual(shipped(''), true, 'on when empty (production .env left blank)');
       assert.strictEqual(shipped('1'), true);
+      assert.strictEqual(shipped('0'), false);
 
       const service = community({ gateway: false, Campaigns: doorman('services/campaigns') });
       await service.start();
@@ -877,6 +881,50 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       const report = JSON.stringify(await service.report());
       assert.ok(report.includes('"campaigns":{"campaigns"'), report);
       assert.ok(!report.includes(ADMIN) && !report.includes(MEMBER), 'the report carries no user ids');
+      await service.stop();
+    });
+
+    it('sends DMs only when remaeus initiates them', async function () {
+      const REMAEUS = '420222636954615808';
+      const { home } = guilds();
+      const operations = new FakeOperations();
+      const service = community({
+        operations,
+        campaigns: { enabled: true, intervalMs: 0, path: path.join(dir, 'campaigns'), senders: [REMAEUS] },
+        Campaigns: doorman('services/campaigns')
+      });
+      await service.start();
+      operations.connect(new FakeDiscord(home));
+      const owner = { kind: 'guild', guildId: GUILD, guildName: 'G00N SQUAD' };
+      const draft = await service.campaigns.create({ content: { text: 'Fleet night' }, filter: { roles: [PILOT] } }, { owner, by: 'Kersa' });
+      const shown = await service.campaigns.preview(draft.id);
+      await assert.rejects(service.campaigns.schedule(draft.id, { preview: shown.id, by: 'Kersa' }), (error) => {
+        assert.strictEqual(error.status, 403);
+        assert.strictEqual(error.message, Community.CAMPAIGN_SEND_REFUSAL);
+        return true;
+      });
+      await assert.rejects(service.campaigns.schedule(draft.id, { preview: shown.id, discord: ADMIN }), (error) => error.status === 403);
+      await service.campaigns.schedule(draft.id, { preview: shown.id, by: 'remaeus', discord: REMAEUS });
+      assert.strictEqual(service.campaigns.campaign(draft.id).status, 'sending');
+
+      const next = await service.campaigns.create({ content: { text: 'API' }, filter: { roles: [PILOT] } }, { owner, by: 'token' });
+      const preview = await service.campaigns.preview(next.id);
+      const refused = await new Promise((resolve) => {
+        const res = {
+          statusCode: 200,
+          setHeader () {},
+          end (body) { resolve({ status: this.statusCode, body: body ? JSON.parse(body) : null }); }
+        };
+        service.middleware()({
+          method: 'POST',
+          url: `/services/doorman/campaigns/${next.id}/schedule`,
+          headers: { authorization: 'Bearer scripts-token' },
+          body: { preview: preview.id, by: 'npm run campaigns:recruiting' }
+        }, res, () => resolve({ status: 'next' }));
+      });
+      assert.strictEqual(refused.status, 403);
+      assert.strictEqual(refused.body.error, Community.CAMPAIGN_SEND_REFUSAL);
+      assert.strictEqual(service.campaigns.campaign(next.id).status, 'draft');
       await service.stop();
     });
 

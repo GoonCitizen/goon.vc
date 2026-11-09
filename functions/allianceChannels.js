@@ -1,5 +1,7 @@
 'use strict';
 
+const HOME = require('../contracts/goon-squad.json');
+
 // Discord permission bits (https://discord.com/developers/docs/topics/permissions).
 const PERMISSIONS = {
   ManageChannels: 1n << 4n,
@@ -104,14 +106,31 @@ function normalize (name) {
 }
 
 /**
+ * The G00N SQUAD channel id for a PERMAFLEET spec, when this is that server.
+ * @param {string} kind
+ * @param {string} [guildId]
+ * @returns {string|null}
+ */
+function homeChannelId (kind, guildId) {
+  if (String(guildId || '') !== String(HOME.guildId)) return null;
+  const entry = HOME.channels && HOME.channels[kind];
+  return entry && entry.id ? String(entry.id) : null;
+}
+
+/**
  * Is this existing channel the one a spec describes (same kind of channel,
- * same name once normalized)?
+ * same name once normalized)? On the G00N SQUAD server the known id matches
+ * even if the channel was renamed.
  * @param {Object} entry Channel spec.
  * @param {Object} channel discord.js channel.
  * @returns {boolean}
  */
 function matches (entry, channel) {
-  return !!channel && types(entry).includes(channel.type) && normalize(channel.name) === normalize(entry.name);
+  if (!channel || !types(entry).includes(channel.type)) return false;
+  const guildId = channel.guildId || (channel.guild && channel.guild.id);
+  const home = homeChannelId(entry.kind, guildId);
+  if (home && String(channel.id) === home) return true;
+  return normalize(channel.name) === normalize(entry.name);
 }
 
 /**
@@ -175,6 +194,8 @@ function invitePermissions () {
 
 module.exports = {
   CHANNELS,
+  HOME,
+  homeChannelId,
   invitePermissions,
   PERMISSIONS,
   PERMISSION_NAMES,

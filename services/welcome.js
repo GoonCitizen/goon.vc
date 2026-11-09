@@ -204,16 +204,17 @@ class Welcome {
    * @param {Object} options
    * @param {string} options.preview The preview's `id`.
    * @param {string} [options.by]
+   * @param {string} [options.discord] Discord user id of who pressed Send.
    * @returns {Promise<Object>} `{ campaign, reach, status }`
    */
-  send ({ preview, by = null } = {}) {
+  send ({ preview, by = null, discord = null } = {}) {
     if (!this._sending) {
-      this._sending = this._send(preview, by).finally(() => { this._sending = null; });
+      this._sending = this._send(preview, by, discord).finally(() => { this._sending = null; });
     }
     return this._sending;
   }
 
-  async _send (preview, by) {
+  async _send (preview, by, discord) {
     this._assertAvailable();
     const shown = this._preview;
     if (!shown || !preview || shown.id !== String(preview)) {
@@ -223,7 +224,7 @@ class Welcome {
     try {
       const result = { campaign: shown.campaign, reach: shown.reach, status: 'draft' };
       if (shown.reach > 0) {
-        const sent = await this.campaigns.schedule(shown.campaign, { preview: shown.preview, by: by || BY });
+        const sent = await this.campaigns.schedule(shown.campaign, { preview: shown.preview, by: by || BY, discord });
         result.status = sent.status;
         result.reach = sent.stats ? sent.stats.targeted : shown.reach;
       }

@@ -8,6 +8,7 @@ const EventEmitter = require('events');
 const Key = require('@fabric/core/types/key');
 const Alliance = require('../services/alliance');
 const Commands = require('../services/commands');
+const Community = require('../services/community');
 const Leagues = require('../services/leagues');
 const Market = require('../services/market');
 const Members = require('../services/members');
@@ -16,6 +17,7 @@ const elo = require('../functions/elo');
 const GUILD = '1190527980120850493';
 const VOICE = '1236721094153732276';
 const KERSA = { id: '111111111111111111', username: 'kersa', globalName: 'Kersa' };
+const REMAEUS = { id: '420222636954615808', username: 'remaeus', globalName: 'remaeus' };
 const RATGROT = { id: '222222222222222222', username: 'ratgrot', globalName: 'Rat' };
 const REF = { id: '333333333333333333', username: 'ref', globalName: 'Referee' };
 const NAMESAKE = { id: '444444444444444444', username: 'rat2', globalName: 'Rat' };
@@ -506,6 +508,25 @@ describe('Discord application commands', function () {
       const choices = interaction({ name: 'goon', focused: 'wel' });
       await commands.handle(choices);
       assert.deepStrictEqual(choices.replies[0], [{ name: 'Welcome aboard', value: 'welcome' }]);
+    });
+
+    it('does not send unless remaeus initiates it', async function () {
+      community.maySendCampaign = (userId) => userId === REMAEUS.id;
+      community.managers.add(REMAEUS.id);
+      const commands = new Commands({ members, community, register: false, now: () => clock });
+      const kersa = await run(commands, { strings: { message: 'Fleet night' }, roles: { role: PILOTS } });
+      assert.ok(kersa.replies[0].content.includes(Community.CAMPAIGN_SEND_REFUSAL), kersa.replies[0].content);
+      assert.deepStrictEqual(buttons(kersa.replies[0]).map((button) => button.label), ['Cancel']);
+      const draft = campaigns.campaign(campaigns.list()[0].id);
+      const sneak = await press(commands, `campaign:send:${draft.id}:${draft.preview.id}`);
+      assert.strictEqual(sneak.followUps[0].content, Community.CAMPAIGN_SEND_REFUSAL);
+      assert.strictEqual(campaigns.campaign(draft.id).status, 'draft');
+
+      const rem = await run(commands, { user: REMAEUS, member: { displayName: 'remaeus' }, strings: { message: 'From remaeus' }, roles: { role: PILOTS } });
+      const [send] = buttons(rem.replies[0]);
+      assert.strictEqual(send.label, 'Send');
+      const sent = await press(commands, send.custom_id, REMAEUS);
+      assert.ok(sent.replies[0].content.startsWith('Sending to'), sent.replies[0].content);
     });
 
     it('refuses non-managers, unknown conversations, bad times, and audiences over the cap', async function () {

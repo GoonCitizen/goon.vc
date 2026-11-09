@@ -84,7 +84,7 @@ curl -s https://goon.vc/services/idlerpg -H 'Accept: application/json'   # prese
 | `GOON_TOURNAMENTS_PASSWORD` | Unlocks edits to finished tournaments. Unset = finished tournaments stay final. |
 | `GOON_MARKET_NETWORK` | Pin Market escrow to one Bitcoin network (default: the Hub's). `GOON_MARKET=0` turns the Market off, `GOON_MARKET_SYNC=0` stops the forum mirror. |
 | `GOON_MARKET_ARBITERS` | Account keys (`discord:<id>`, comma separated) who decide disputed escrow orders. |
-| `GOON_CAMPAIGNS` | `1` enables DM campaigns, check-ins, and welcome DMs. Turn on the Server Members intent first, or Discord refuses the gateway. |
+| `GOON_CAMPAIGNS` | On unless `0`. Enables DM campaigns, check-ins, and welcome DMs. Turn on the Server Members intent first, or Discord refuses the gateway. Only remaeus can send the DMs (`GOON_CAMPAIGN_SENDERS`, default his Discord id). |
 | `GOON_FABRIC_XPRV` | goon.vc's Fabric key. Unset = one is generated once and kept in `stores/fabric`. |
 
 **Keys live in `stores/`.** goon.vc's Fabric key (`GOON_FABRIC_XPRV`, else
@@ -100,7 +100,7 @@ GoonCitizen).
 token):
 - OAuth2 → Redirects: `https://goon.vc/services/members/discord/callback`.
 - Bot → Privileged Gateway Intents: Message Content (Market forum mirror,
-  Fabric relay, 1v1 leaderboard); Server Members only with `GOON_CAMPAIGNS=1`.
+  Fabric relay, 1v1 leaderboard); Server Members while campaigns run (off with `GOON_CAMPAIGNS=0`).
 - Installation → User Install on, for `/market` in DMs.
 - Re-invite the bot with `https://goon.vc/services/discord/invite?for=market`
   so it may post and manage threads in the Market forum, and with

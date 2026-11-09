@@ -101,7 +101,10 @@ One application covers every squadron: the squadrons page carries it
 required for G00N SQUAD membership, even for PERMAFLEET members. Elite units
 (ALPHA SQUADRON, SHELLBACK) are earned by performance — mention them as what
 the best go on to, never as something to apply to.
-`/operations` lists the operations in `contracts/operations.json` — currently
+The G00N SQUAD Discord's live channel and Prospect role ids live in
+`contracts/goon-squad.json` (`#clips`, `#embassy`, the PERMAFLEET voice channel,
+Prospect I–VI); PERMAFLEET setup matches those ids on that server even after a
+rename. `/operations` lists the operations in `contracts/operations.json` — currently
 only PERMAFLEET, whose **metrics** count the public PERMAFLEET voice channel.
 Each entry names the Discord channels its metrics count (channel id, exact
 name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
@@ -194,7 +197,8 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `functions/allianceFederation.js`, Fabric Store `stores/alliance`,
 `GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
-`symbol` and its `officers` (below). **Only officers vote for an org**;
+`symbol` and its `officers` (below). G00N SQUAD's officers on record are
+remaeus, kersa (neorion), and thejohnram. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with
@@ -752,10 +756,10 @@ scripts off (no intent, no `/goon`); `GOON_COMMUNITY=0` turns them off too, and
 the Doorman host keeps running for IdleRPG either way. Settings:
 `community.{enabled,path,scripts,token}`. `tests/community.js` loads Doorman from
 `../doorman` (or `FABRIC_DOORMAN`) and is skipped when that checkout has no Scripts.
-**Campaigns** (opt-in: `GOON_CAMPAIGNS=1`) DM one message, or a Start button for a
-script, to a group of a server's members. They are off by default: any other
-value (or none) loads no plugin, mounts no campaigns API, and registers no
-`/goon campaign`, `/goon checkins`, or `/goon welcome`. **Every outbound DM
+**Campaigns** (on unless `GOON_CAMPAIGNS=0`) DM one message, or a Start button for a
+script, to a group of a server's members. `GOON_CAMPAIGNS=0` loads no plugin, mounts
+no campaigns API, and registers no `/goon campaign`, `/goon checkins`, or
+`/goon welcome`. **Every outbound DM
 starts from a command, and every broadcast from a preview naming its
 recipients.** Nothing goes out on a timer, on a member joining, or on a sign-in
 waiting for review. DMs to the command's own caller (setup and channel
@@ -778,8 +782,8 @@ They run on Doorman's Campaigns plugin
 (`@fabric/doorman/services/campaigns`) plugged into the same Doorman host
 (Fabric Store `community.campaigns.path`, `GOON_CAMPAIGNS_STORE`, default
 `stores/campaigns`). Listing members needs the **privileged Server Members
-intent**: turn it on for the bot in the Discord Developer Portal before setting
-`GOON_CAMPAIGNS=1`, because Discord refuses the whole gateway connection when an
+intent**: turn it on for the bot in the Discord Developer Portal before leaving
+campaigns on, because Discord refuses the whole gateway connection when an
 intent it hasn't granted is asked for. Only then does the gateway ask for
 `GuildMembers` (plus `DirectMessages` / `Channel` as for scripts;
 `Community.gateway(settings)` says which). Community supplies the `discord`
@@ -795,8 +799,12 @@ member it reaches by name, who is skipped (excluded role, opted out, not active
 lately), and Send — or Schedule, when `send_at` is "in 2 hours" or a date up to
 30 days ahead — plus Cancel
 (`campaign:send|schedule|cancel:<id>[:<unix>][:<preview>]`; Send and Schedule
-carry the preview id). Only the author may press them, Send re-checks Manage
-Server fresh from Discord, and it sends only that preview. A server campaign reaches only that server, at most 500 members
+carry the preview id). **Only remaeus can send the DMs** (`campaigns.senders`,
+default his Discord account in `contracts/goon-squad.json`); other managers can
+preview. The token API's `POST …/schedule` is refused the same way, so
+`npm run campaigns:* -- --send` does not fire DMs. Only the author may press the
+buttons, Send re-checks Manage Server fresh from Discord, and it sends only that
+preview. A server campaign reaches only that server, at most 500 members
 (`maxAudience`; over it, only Cancel is offered), one per server a day
 (`guildCooldownMs`), one DM every 2 s (`intervalMs`). Each DM says "Sent by
 <server> via goon.vc" and has Stop messages from <server> / Stop all buttons
@@ -805,7 +813,7 @@ skipped by every later campaign. Recipients and opt-outs are never served; the
 report and API return counts. The API is `/services/doorman/campaigns` (list,
 create, edit drafts, preview, schedule, pause, resume, cancel), all behind
 `Authorization: Bearer $GOON_SCRIPTS_TOKEN` (404 without it). Settings:
-`community.campaigns.{enabled,path,intervalMs,maxAudience,guildCooldownMs}`. Like
+`community.campaigns.{enabled,path,intervalMs,maxAudience,guildCooldownMs,senders}`. Like
 scripts, an installed `@fabric/doorman` without the plugin, or with one that
 doesn't lock sends to a preview (no `PREVIEW_APPROVALS` export), leaves
 campaigns off.
@@ -825,11 +833,10 @@ start and before recording (`community.roles`: requirement name → role ids;
 the owner gets no pass), so `/goon campaign` never offers them. Copy says
 Prospect IV makes a member eligible and leadership selects; elite units are what
 the best go on to. `npm run campaigns:recruiting` (needs `GOON_SCRIPTS_TOKEN`
-and a server with `GOON_CAMPAIGNS=1`; `--unit`, `--origin`) saves or updates
-the drafts through the campaigns API, prints every recipient's name, and ends
-with the exact command that sends those previews (`--send <campaign>:<preview>`,
-repeatable; `--at <date>` schedules); `--send` changes no draft and only
-schedules the previews named. A re-run skips members an earlier campaign for the unit
+and a server with campaigns on; `--unit`, `--origin`) saves or updates
+the drafts through the campaigns API and prints every recipient's name.
+Nothing is sent: campaign DMs only go out when remaeus sends them from Discord.
+`--send` is refused. A re-run skips members an earlier campaign for the unit
 already reached (`excludeCampaigns`) and leaves one that is scheduled, sending,
 or paused alone.
 **Check-ins** (`contracts/checkin.json`, `functions/checkin.js`) are friendly
@@ -849,16 +856,16 @@ reached no one aren't counted, within the 50-entry `excludeCampaigns` limit
 (same tier first). The script `requires` "G00N SQUAD member", mapped to the
 server's @everyone role (id = the server id; `Community#authorize` treats it as
 "is a member of that server"), so it runs only in the home server and
-`/goon campaign` never offers it. Check-ins go out only when someone with
-Manage Server in the home server runs `/goon checkins` (`services/checkins.js`,
+`/goon campaign` never offers it. Check-ins go out only when remaeus, with
+Manage Server in the home server, runs `/goon checkins` (`services/checkins.js`,
 Fabric Store `stores/checkins`, `GOON_CHECKINS_STORE`; the subcommand is
 registered only while campaigns run and refused in other servers) and presses
-Send. It replies privately with what would go out right now (`Checkins#preview`):
+Send. Other managers can preview. It replies privately with what would go out right now (`Checkins#preview`):
 each tier's message and every member it reaches by name (saved as drafts with
 a Doorman preview each; skips counted), the `checkin` script's questions, and
 Send (`checkins:send:<preview>`), Cancel, and Stop while earlier check-ins are
-still going out. Buttons are pressable by anyone with Manage Server there,
-checked fresh from Discord. Send (`Checkins#send { preview }`) sends each tier
+still going out. Stop and Cancel are pressable by anyone with Manage Server there,
+checked fresh from Discord; Send is remaeus only. Send (`Checkins#send { preview }`) sends each tier
 to exactly the members that preview listed, most inactive tier first; only the
 latest preview sends, once, and not after a restart (409). Members who go quiet
 later get theirs when someone runs it again. Stop (`Checkins#halt`) cancels
@@ -869,12 +876,11 @@ of who each tier reached (Doorman's `delivered` event: Discord user id → tier
 `Community#narrow`, a hook on every Discord audience. `GET /services/checkins`
 returns only when they last went out, each tier's reach then, and how many are
 still going out (`sending`) — no names or ids. `npm run campaigns:checkin`
-(needs `GOON_SCRIPTS_TOKEN` and a server with `GOON_CAMPAIGNS=1`; `--tier`,
+(needs `GOON_SCRIPTS_TOKEN` and a server with campaigns on; `--tier`,
 `--origin`) saves or updates the drafts, prints every recipient's name and why
 others were skipped (warning while the message history is still being read),
-and ends with the exact `--send <campaign>:<preview>` command; that command
-sends only those previews (`--stagger <hours>` spaces them, `--at <date>`
-schedules).
+and does not send. `--send` is refused; remaeus sends from Discord with
+`/goon checkins`.
 **Welcome DMs** (`contracts/welcome.json`, `functions/welcome.js`,
 `services/welcome.js`, Fabric Store `stores/welcome`, `GOON_WELCOME_STORE`)
 invite new G00N SQUAD members to join PERMAFLEET and earn their Prospect tags:
@@ -893,12 +899,14 @@ from Doorman's deliveries for campaigns with that title (any status but
 cancelled), so it needs no ledger of its own and survives restarts. The script
 `requires` "G00N SQUAD member" (the home server's @everyone role), so it runs
 only there and `/goon campaign` never offers it. Welcome DMs go out only when
-someone with Manage Server in the home server runs `/goon welcome` (registered
-only while campaigns run, refused in other servers) and presses Send: a private
+remaeus, with Manage Server in the home server, runs `/goon welcome` (registered
+only while campaigns run, refused in other servers) and presses Send. Other
+managers can preview: a private
 preview of the message, every member due by name (joined in the last 30 days,
 over a day ago, not excluded; skips counted), the excluded role names, the
 script's questions, and Send (`welcome:send:<preview>`), Cancel, and Stop while
-earlier welcomes are still going out, checked fresh from Discord. Send
+earlier welcomes are still going out, checked fresh from Discord (Send is remaeus
+only). Send
 (`Welcome#send { preview }`, reusing the open draft) sends to exactly those
 members, once; members who join later get theirs when someone runs it again.
 Stop (`Welcome#halt`) cancels welcomes still scheduled, sending, or paused.
@@ -928,8 +936,9 @@ signed-in member's display name goes on their changes (`identify`), otherwise
 reused, and new renders are refused (429) while `maxQueuedRenders` wait.
 Discord REST only: every guild the bot is in (`clips.guilds` narrows it), text,
 announcement, forum, and media channels matching `clips.channels`
-(`GOON_CLIPS_CHANNELS`; id, exact name, or `"/regex/"`; default names with
-"clip(s)"/"video(s)"/"screenshot(s)") plus every media channel (`mediaChannels`), and the
+(`GOON_CLIPS_CHANNELS`; id, exact name, or `"/regex/"`; default the G00N SQUAD
+`#clips` / `#videos` / `#screenshots` ids in `contracts/goon-squad.json` plus
+names with "clip(s)"/"video(s)"/"screenshot(s)") plus every media channel (`mediaChannels`), and the
 active + archived public threads under them (forum / media posts are threads),
 are polled every `ttlMs` with an `after=` cursor per channel or thread (90 days
 of backfill for a new one; skipped while its `last_message_id` is behind the

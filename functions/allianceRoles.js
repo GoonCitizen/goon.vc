@@ -1,5 +1,7 @@
 'use strict';
 
+const HOME = require('../contracts/goon-squad.json');
+
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const PROSPECT = /\bprospect\s*(vi|iv|v|iii|ii|i|[1-6])\b/i;
 
@@ -29,13 +31,28 @@ function rolesOf (guild) {
   return [...cache.values()].filter((role) => String(role.id) !== String(guild.id));
 }
 
+/** The Prospect rank a G00N SQUAD role id stands for, or null. */
+function homeProspectRank (id) {
+  const roles = HOME.roles || {};
+  for (const [name, roleId] of Object.entries(roles)) {
+    if (String(roleId) === String(id)) return prospectRank(name);
+  }
+  return null;
+}
+
 /**
  * The Prospect ranks a server has no role for yet, lowest first.
+ * On the G00N SQUAD server the known role ids count even if renamed.
  * @param {Object} guild discord.js Guild.
  * @returns {Array<{ rank: number, name: string }>}
  */
 function missingProspects (guild) {
-  const held = new Set(rolesOf(guild).map((role) => prospectRank(role.name)).filter(Boolean));
+  const home = String(guild && guild.id) === String(HOME.guildId);
+  const held = new Set();
+  for (const role of rolesOf(guild)) {
+    const rank = prospectRank(role.name) || (home && homeProspectRank(role.id));
+    if (rank) held.add(rank);
+  }
   return PROSPECTS.filter((entry) => !held.has(entry.rank));
 }
 
@@ -46,10 +63,12 @@ function describeProspects (entries) {
 }
 
 module.exports = {
+  HOME,
   NUMERALS,
   PROSPECTS,
   SCRIPT,
   describeProspects,
+  homeProspectRank,
   missingProspects,
   prospectRank,
   rolesOf

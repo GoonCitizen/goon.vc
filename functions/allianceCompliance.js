@@ -73,8 +73,9 @@ function channelCheck (guild, check) {
 
 function prospectCheck (guild) {
   const ranks = new Set();
+  const home = String(guild && guild.id) === String(allianceRoles.HOME.guildId);
   for (const role of rolesOf(guild)) {
-    const rank = allianceRoles.prospectRank(role.name);
+    const rank = allianceRoles.prospectRank(role.name) || (home && allianceRoles.homeProspectRank(role.id));
     if (rank) ranks.add(rank);
   }
   const found = [...ranks].sort((a, b) => a - b).map((rank) => NUMERALS[rank - 1]);

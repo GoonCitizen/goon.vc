@@ -3,7 +3,11 @@
   "network": "mainnet",
   "publisher": "G00N",
   "organizations": [
-    { "symbol": "G00N", "officers": [] },
+    { "symbol": "G00N", "officers": [
+      "discord:420222636954615808",
+      "discord:191401936245882880",
+      "discord:355141171095404554"
+    ] },
     { "symbol": "INFN", "officers": [] },
     { "symbol": "TRDE", "officers": [] },
     { "symbol": "LCRP", "officers": [] },

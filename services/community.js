@@ -18,6 +18,8 @@ const PARTIALS = ['Channel'];
 // Listing a server's members is privileged: Discord refuses the whole gateway
 // connection when this is asked for without being enabled in the Developer Portal.
 const CAMPAIGN_INTENTS = ['GuildMembers'];
+const CAMPAIGN_SEND_REFUSAL = 'Only remaeus can send campaign DMs.';
+const CAMPAIGN_SCHEDULE = /(?:^|\/)services\/doorman\/campaigns\/[^/?]+\/schedule\/?(?:\?|$)/;
 
 // Discord permission bits (https://discord.com/developers/docs/topics/permissions).
 const PERMISSIONS = Object.assign({ ManageGuild: 1n << 5n }, allianceChannels.PERMISSIONS);
@@ -147,10 +149,10 @@ function holdsAny (member, roleIds) {
  * Fabric Store (`stores/community`) and can be edited at runtime through the
  * token-gated HTTP API under `/services/doorman/scripts`.
  *
- * With `campaigns.enabled` (opt-in: it needs the privileged Server Members
- * intent), the Campaigns plugin DMs one message to every member a filter
- * selects across the servers the bot is in, at a fixed pace, with Start /
- * Stop buttons; its API is under `/services/doorman/campaigns` (token only).
+ * With `campaigns.enabled` (on unless GOON_CAMPAIGNS=0; it needs the privileged
+ * Server Members intent), the Campaigns plugin DMs one message to every member
+ * a filter selects across the servers the bot is in, at a fixed pace, with
+ * Start / Stop buttons; its API is under `/services/doorman/campaigns` (token only).
  */
 class Community {
   /**
@@ -159,7 +161,7 @@ class Community {
    * @param {string} [settings.path] Store directory for scripts, sessions, and results.
    * @param {string|Array<Object>} [settings.scripts] Seed directory (or definitions).
    * @param {string} [settings.token] Bearer token for script edits and results, and for the campaigns API.
-   * @param {Object} [settings.campaigns] `{ enabled, path, intervalMs, maxAudience, guildCooldownMs }`.
+   * @param {Object} [settings.campaigns] `{ enabled, path, intervalMs, maxAudience, guildCooldownMs, senders }`. `senders` is Discord user ids who may send DMs (omit to leave sends unrestricted).
    * @param {string} [settings.siteUrl] Absolute site origin for links in scripts.
    * @param {Array<Object>} [settings.features] `goon.features` choices.
    * @param {Object<string, Array<string>>} [settings.roles] Script `requires` entries that are Discord roles: name → role ids (any one passes). Defaults to the recruiting contract's qualifying rank and the check-in contract's G00N SQUAD membership (its @everyone role).
@@ -219,6 +221,23 @@ class Community {
     const Campaigns = settings.Campaigns || loadCampaigns();
     return settings.enabled !== false && !!(settings.campaigns && settings.campaigns.enabled === true) &&
       !!(Campaigns && Campaigns.PREVIEW_APPROVALS === true);
+  }
+
+  /**
+   * Discord user ids who may actually send campaign DMs, or `null` when
+   * sends are unrestricted (tests that omit `campaigns.senders`). An empty
+   * list sends none.
+   * @param {Object} [settings]
+   * @returns {Array<string>|null}
+   */
+  static campaignSenders (settings = {}) {
+    const raw = settings.campaigns && settings.campaigns.senders;
+    if (raw == null) return null;
+    const list = Array.isArray(raw) ? raw : String(raw).split(',');
+    return list.map((value) => {
+      const id = String(value || '').trim();
+      return id.startsWith('discord:') ? id.slice('discord:'.length) : id;
+    }).filter(Boolean);
   }
 
   /**
@@ -313,6 +332,13 @@ class Community {
       this.campaigns.on('warning', (warning) => this.emit('log', 'GOON.VC', `community: ${errorMessage(warning)}`));
       this.campaigns.audience('discord', (filter, campaign) => this.discordAudience(filter, campaign));
       if (this._activity) this.campaigns.activity(this._activity);
+      if (Community.campaignSenders(this.settings)) {
+        const schedule = this.campaigns.schedule.bind(this.campaigns);
+        this.campaigns.schedule = async (id, options = {}) => {
+          this.assertCampaignSender(options.discord);
+          return schedule(id, options);
+        };
+      }
     } else if (campaignSettings.enabled === true && this.settings.enabled !== false) {
       this.emit('log', 'GOON.VC', 'community: this @fabric/doorman has no Campaigns plugin that locks sends to a preview; campaigns are off (`npm run link:doorman` uses ../doorman)');
     }
@@ -578,7 +604,9 @@ class Community {
    */
   channelChoices (context, channel) {
     const existing = this.channels(context, allianceChannels.types(channel));
-    const likely = (option) => allianceChannels.normalize(option.label) === allianceChannels.normalize(channel.name);
+    const home = allianceChannels.homeChannelId(channel.kind, context && context.guildId);
+    const likely = (option) => option.id === home ||
+      allianceChannels.normalize(option.label) === allianceChannels.normalize(channel.name);
     return [
       { id: NEW_CHANNEL, label: `Create ${channel.label} (recommended)`, description: 'goon.vc’s bot makes it the same way on every member org’s Discord' },
       ...existing.filter(likely),
@@ -1070,6 +1098,27 @@ class Community {
   }
 
   /**
+   * May this Discord user actually send campaign DMs? Preview stays open to
+   * server managers. Unrestricted when `campaigns.senders` is omitted.
+   * @param {string} userId
+   * @returns {boolean}
+   */
+  maySendCampaign (userId) {
+    const senders = Community.campaignSenders(this.settings);
+    if (senders == null) return true;
+    return senders.includes(String(userId || ''));
+  }
+
+  /**
+   * @param {string} userId
+   * @throws {Error} 403 when this user may not send campaign DMs.
+   */
+  assertCampaignSender (userId) {
+    if (this.maySendCampaign(userId)) return;
+    throw Object.assign(new Error(CAMPAIGN_SEND_REFUSAL), { status: 403 });
+  }
+
+  /**
    * Script `requires` check: the member's current permissions or roles in the
    * guild, read fresh from Discord at start and again before answers are
    * recorded. The owner passes every permission, but holds only their roles.
@@ -1129,6 +1178,12 @@ class Community {
     let scripts = null;
     let campaigns = null;
     return (req, res, next) => {
+      if (this.campaigns && Community.campaignSenders(this.settings) && req.method === 'POST' && CAMPAIGN_SCHEDULE.test(String(req.url || ''))) {
+        res.statusCode = 403;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: CAMPAIGN_SEND_REFUSAL }));
+        return;
+      }
       if (this.scripts && !scripts) scripts = this.scripts.middleware({ token: this.settings.token, basePath: SCRIPTS_PATH });
       if (this.campaigns && !campaigns) campaigns = this.campaigns.middleware({ token: this.settings.token, basePath: CAMPAIGNS_PATH });
       const handlers = [campaigns, scripts].filter(Boolean);
@@ -1146,6 +1201,7 @@ class Community {
 }
 
 module.exports = Community;
+module.exports.CAMPAIGN_SEND_REFUSAL = CAMPAIGN_SEND_REFUSAL;
 module.exports.INTENTS = INTENTS;
 module.exports.PARTIALS = PARTIALS;
 module.exports.CAMPAIGN_INTENTS = CAMPAIGN_INTENTS;

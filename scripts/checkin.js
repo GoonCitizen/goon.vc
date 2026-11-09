@@ -3,9 +3,8 @@
 /**
  * Save the check-in campaigns (contracts/checkin.json) as drafts on the
  * running goon.vc server, through the campaigns API, and list every member
- * each would reach, by name. Nothing is sent: the run ends with the exact
- * command that sends those previews, and only that command sends them (to
- * the members listed who still qualify; a draft edited since is refused).
+ * each would reach, by name. Nothing is sent: campaign DMs only go out when
+ * remaeus sends them from Discord (`/goon checkins`).
  * Tiers go most inactive first: very old (120+ days since last active),
  * somewhat old (60 to 120), getting old (30 to 60); members active in the
  * last 30 days, or never seen, are left alone. Each DM is a friendly hello
@@ -17,10 +16,8 @@
  *
  *   npm run campaigns:checkin                          (save drafts, list recipients)
  *   npm run campaigns:checkin -- --tier very-old       (only this tier)
- *   npm run campaigns:checkin -- --send <campaign>:<preview> [--send …]
- *                                                      (send what a preview listed, in order)
- *   … --send … --stagger 24                            (one a day)
- *   … --send … --at 2026-11-01T18:00:00-05:00          (schedule)
+ *   npm run campaigns:checkin -- --send <campaign>:<preview>
+ *                                                      (refused: only remaeus sends DMs from Discord)
  *   npm run campaigns:checkin -- --origin https://goon.vc
  */
 
@@ -92,14 +89,7 @@ async function main () {
   };
 
   if (args.send.length) {
-    const base = args.at ? Date.parse(args.at) : Date.now();
-    for (const [slot, { campaign, preview }] of args.send.entries()) {
-      const at = base + slot * args.stagger * HOUR;
-      const sendAt = args.at || slot * args.stagger > 0 ? new Date(at).toISOString() : undefined;
-      const sent = await api('POST', `/${campaign}/schedule`, { preview, sendAt, by: BY });
-      log(`${sent.title}: ${sent.status}${sent.status === 'scheduled' ? ` for ${sent.sendAt}` : ''}, to ${sent.preview ? sent.preview.reach : 0} of the members previewed.`);
-    }
-    return;
+    throw new Error('Campaign DMs only go out when remaeus sends them from Discord (`/goon checkins`).');
   }
 
   const activity = await request('GET', `${args.origin}/services/activity`, undefined, false).catch(() => null);
@@ -136,9 +126,7 @@ async function main () {
     if (preview.reach > 0) approvals.push(`--send ${saved.id}:${preview.id}`);
   }
   if (!approvals.length) return log('Nobody to reach; nothing to send.');
-  log('Nothing was sent. To send exactly these previews (most inactive tier first), run:');
-  console.log(`  npm run campaigns:checkin -- ${approvals.join(' ')}${args.origin === parseArgs(['', '']).origin ? '' : ` --origin ${args.origin}`}`);
-  log('Add --stagger <hours> to space the tiers, or --at <date> to schedule. A preview goes stale when its draft changes or this runs again.');
+  log(`Nothing was sent. Campaign DMs only go out when remaeus sends them from Discord (\`/goon checkins\`). Drafts: ${approvals.map((flag) => flag.replace('--send ', '')).join(', ')}.`);
 }
 
 main().catch((error) => {

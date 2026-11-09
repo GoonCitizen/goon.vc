@@ -1,5 +1,7 @@
 'use strict';
 
+const goonSquad = require('../contracts/goon-squad.json');
+
 /**
  * Local settings for GOON.VC (HTML site + Hub API zipper).
  * Edit site.* to change title, Discord widget, Bitcoin, footer without touching templates.
@@ -111,16 +113,22 @@ module.exports = {
     // campaigns API. Env only (this file is tracked).
     token: process.env.GOON_SCRIPTS_TOKEN || null,
     // Campaigns: one DM to every member a filter selects (`/goon campaign`, or
-    // the API). Opt-in: listing members needs the privileged Server Members
-    // intent, and Discord refuses the whole gateway connection when it is asked
-    // for without being enabled in the Developer Portal (Bot → Privileged
-    // Gateway Intents) first.
+    // the API). On unless GOON_CAMPAIGNS=0. Listing members needs the privileged
+    // Server Members intent; Discord refuses the whole gateway connection when
+    // it is asked for without being enabled in the Developer Portal (Bot →
+    // Privileged Gateway Intents) first.
     campaigns: {
-      enabled: process.env.GOON_CAMPAIGNS === '1',
+      enabled: process.env.GOON_CAMPAIGNS !== '0',
       path: process.env.GOON_CAMPAIGNS_STORE || 'stores/campaigns',
       intervalMs: 2000, // one DM every 2 seconds
       maxAudience: 500, // per server campaign
-      guildCooldownMs: 24 * 60 * 60 * 1000 // one server campaign a day
+      guildCooldownMs: 24 * 60 * 60 * 1000, // one server campaign a day
+      // Who may actually send DMs (Discord user ids). Preview stays open to
+      // server managers. Default: remaeus. GOON_CAMPAIGN_SENDERS=0 sends none.
+      senders: process.env.GOON_CAMPAIGN_SENDERS === '0'
+        ? []
+        : (process.env.GOON_CAMPAIGN_SENDERS || goonSquad.campaignSenders.join(','))
+          .split(',').map((id) => id.trim()).filter(Boolean)
     }
   },
 
@@ -133,7 +141,7 @@ module.exports = {
     // member present for 30 minutes). goon.vc pays voice only.
     sources: (process.env.GOON_PRESENCE_SOURCES || 'voice').split(','),
     channels: [], // empty = every voice channel the bot can see counts
-    announcements: ['1560112808283086929'] // G00N SQUAD #idlerpg
+    announcements: [goonSquad.channels.idlerpg.id] // G00N SQUAD #idlerpg
   },
 
   // /tournaments: templates and every tournament run from one (Fabric Store, kept forever).
@@ -144,7 +152,9 @@ module.exports = {
   },
   // /leagues: perpetual and seasonal Elo duel leagues (Fabric Store, kept forever).
   leagues: {
-    path: process.env.GOON_LEAGUES_STORE || 'stores/leagues'
+    path: process.env.GOON_LEAGUES_STORE || 'stores/leagues',
+    // Unlocks edits to logged duels; unset = they stay as logged. Env only (this file is tracked).
+    password: process.env.GOON_LEAGUES_PASSWORD || process.env.GOON_TOURNAMENTS_PASSWORD || null
   },
   // /operations/PERMAFLEET/votes: one vote per member org, as a Fabric Federation.
   // Orgs and their officers' accounts (discord:<id>) are in contracts/alliance.json;
@@ -236,7 +246,12 @@ module.exports = {
     path: process.env.GOON_CLIPS_STORE || 'stores/clips',
     channels: process.env.GOON_CLIPS_CHANNELS
       ? process.env.GOON_CLIPS_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
-      : undefined,
+      : [
+          goonSquad.channels.clips.id,
+          goonSquad.channels.videos.id,
+          goonSquad.channels.screenshots.id,
+          '/(^|[^a-z])(clips?|videos?|screenshots?)([^a-z]|$)/'
+        ],
     externalLinks: (() => {
       const links = (process.env.GOON_CLIPS_LINKS || '').trim();
       if (!links) return undefined;
@@ -253,7 +268,7 @@ module.exports = {
       download: process.env.GOON_CLIPS_STREAMS !== 'links',
       channels: process.env.GOON_CLIPS_STREAM_CHANNELS
         ? process.env.GOON_CLIPS_STREAM_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
-        : undefined
+        : [goonSquad.channels.streams.id, '/(^|[^a-z])streams?([^a-z]|$)/']
     },
     poll: process.env.GOON_CLIPS !== '0'
   },
