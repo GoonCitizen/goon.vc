@@ -15,7 +15,7 @@ Favicon is the G00N SQUAD skull, the org logo on RSI (`logoUrl` in
 ## Quick Start
 ```bash
 npm i --allow-git=all
-npm run build    # write assets/index.html from types/GoonSPA.js
+npm run build    # compile types/GoonSPA.js + components/ into assets/
 npm start        # HTTP on 127.0.0.1:8080
 ```
 

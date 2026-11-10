@@ -15,12 +15,15 @@
  * the org's validator key. Anyone holding the descriptor and the frames can
  * recount a vote.
  *
- * An org may instead be its own federation of officers (a nested multisig):
- * its descriptor lists the officers' keys and its threshold, officers sign
- * `FederationProposal` / `FederationVote` frames under the org federation id,
- * and the org's alliance frame carries those officer frames as
- * `endorsements`. The org's validator key is derived from the org federation
- * id, so changing officers or threshold makes a new alliance federation.
+ * An org may instead be its own federation of officers (a nested multisig).
+ * The roster names officers by account (`discord:<id>`); goon.vc holds one
+ * hardened key per officer account and signs that officer's
+ * `FederationProposal` / `FederationVote` frames under the org federation id
+ * when they act while signed in. The org descriptor lists those officer keys
+ * and its threshold, and the org's alliance frame carries the officer frames
+ * as `endorsements`. The org's validator key is derived from the org
+ * federation id, so changing officers or threshold makes a new alliance
+ * federation.
  *
  * Members also vote, as advice beside the orgs' decision: a
  * `FederationMemberVote` signed by the key a Bridge holds for the member's
@@ -30,16 +33,25 @@
 
 const crypto = require('crypto');
 const Key = require('@fabric/core/types/key');
-const Message = require('@fabric/core/types/message');
 const { stableStringify } = require('@fabric/core/functions/fabricCanonicalJson');
 const { fabricPubkey, parseAccountKey } = require('./accountKey');
+const {
+  DEFAULT_CSV_BLOCKS,
+  DESCRIPTOR_TYPE,
+  DESCRIPTOR_VERSION,
+  NETWORKS,
+  buildDescriptor,
+  compressedPubkey,
+  descriptorId,
+  isValidator,
+  openFrame,
+  signFrame
+} = require('./fabricFederation');
 
-const DESCRIPTOR_TYPE = 'FabricFederationDescriptor';
-const DESCRIPTOR_VERSION = 1;
-const NETWORKS = ['regtest', 'signet', 'testnet', 'mainnet'];
-const DEFAULT_CSV_BLOCKS = 144;
 // Hardened child of goon.vc's key per org: m/7777'/1'/<symbol index>'.
 const ORG_KEY_PATH = "m/7777'/1'";
+// One officer account's key: m/7777'/5'/<a>'/<b>'.
+const OFFICER_KEY_PATH = "m/7777'/5'";
 const MESSAGE_TYPES = Object.freeze({
   invite: 'FederationInvite',
   proposal: 'FederationProposal',
@@ -56,46 +68,20 @@ function sha256 (text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
-function compressedPubkey (value) {
-  const hex = String(value || '').trim().toLowerCase().replace(/^0x/, '');
-  if (!/^0[23][0-9a-f]{64}$/.test(hex)) return null;
-  try {
-    return new Key({ public: hex }).pubkey === hex ? hex : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-/**
- * An officer's key as a compressed pubkey: a `fabric:<x-only>` account key
- * (even y, as BIP340 reads it), x-only hex, or compressed hex.
- * @param {*} value
- * @returns {string|null}
- */
-function officerPubkey (value) {
-  const text = String(value || '').trim();
-  if (text.indexOf(':') !== -1) {
-    const parsed = parseAccountKey(text);
-    return parsed && parsed.platform === 'fabric' ? compressedPubkey('02' + parsed.id) : null;
-  }
-  if (/^[0-9a-fA-F]{64}$/.test(text)) return compressedPubkey('02' + text);
-  return compressedPubkey(text);
-}
-
 function parseOfficers (symbol, org) {
-  if (org.officers === undefined || org.officers === null) {
+  if (org.officers === undefined || org.officers === null || (Array.isArray(org.officers) && !org.officers.length)) {
     if (org.threshold !== undefined && org.threshold !== null) throw new Error(`${symbol}: threshold needs officers`);
     return { officers: [], threshold: null };
   }
-  if (!Array.isArray(org.officers) || !org.officers.length) throw new Error(`${symbol}: officers must list at least one key`);
+  if (!Array.isArray(org.officers)) throw new Error(`${symbol}: officers must be a list of accounts`);
   if (org.pubkey) throw new Error(`${symbol}: an org has officers or its own pubkey, not both`);
   if (org.officers.length > MAX_OFFICERS) throw new Error(`${symbol}: at most ${MAX_OFFICERS} officers`);
   const officers = [];
   for (const value of org.officers) {
-    const pubkey = officerPubkey(value);
-    if (!pubkey) throw new Error(`${symbol}: invalid officer key: ${value}`);
-    if (officers.some((pk) => pk.slice(2) === pubkey.slice(2))) throw new Error(`${symbol}: officer listed twice: ${value}`);
-    officers.push(pubkey);
+    const parsed = parseAccountKey(value);
+    if (!parsed) throw new Error(`${symbol}: invalid officer account: ${value} (use discord:<id>)`);
+    if (officers.includes(parsed.key)) throw new Error(`${symbol}: officer listed twice: ${value}`);
+    officers.push(parsed.key);
   }
   let threshold = null;
   if (org.threshold !== undefined && org.threshold !== null) {
@@ -108,9 +94,10 @@ function parseOfficers (symbol, org) {
 }
 
 /**
- * The alliance roster from `contracts/alliance.json`.
- * @param {Object} raw `{ name, network, publisher, csvBlocks?, organizations: [{ symbol, stewards, pubkey?, officers?, threshold? }] }`
- * @returns {{ name: string, network: string, publisher: string, csvBlocks: number, organizations: Array<{ symbol: string, stewards: string[], pubkey: string|null, officers: string[], threshold: number|null }> }}
+ * The alliance roster from `contracts/alliance.json`. Only an org's officers,
+ * listed by account (`discord:<id>`), vote for it.
+ * @param {Object} raw `{ name, network, publisher, csvBlocks?, organizations: [{ symbol, pubkey?, officers?, threshold?, guildId? }] }`
+ * @returns {{ name: string, network, publisher, csvBlocks: number, organizations: Array<{ symbol: string, pubkey: string|null, officers: string[], threshold: number|null, guildId?: string }> }}
  */
 function parseRoster (raw = {}) {
   const name = String(raw.name || '').trim();
@@ -122,18 +109,18 @@ function parseRoster (raw = {}) {
     const symbol = String((org && org.symbol) || '').trim().toUpperCase();
     if (!SYMBOL_RE.test(symbol)) throw new Error(`invalid org symbol: ${org && org.symbol}`);
     if (organizations.some((o) => o.symbol === symbol)) throw new Error(`org listed twice: ${symbol}`);
-    const stewards = [];
-    for (const value of Array.isArray(org.stewards) ? org.stewards : []) {
-      const parsed = parseAccountKey(value);
-      if (!parsed) throw new Error(`${symbol}: invalid steward account key: ${value}`);
-      if (!stewards.includes(parsed.key)) stewards.push(parsed.key);
-    }
     let pubkey = null;
     if (org.pubkey) {
       pubkey = compressedPubkey(org.pubkey);
       if (!pubkey) throw new Error(`${symbol}: pubkey must be a compressed secp256k1 key`);
     }
-    organizations.push(Object.assign({ symbol, stewards, pubkey }, parseOfficers(symbol, org)));
+    const parsed = Object.assign({ symbol, pubkey }, parseOfficers(symbol, org));
+    if (org.guildId !== undefined && org.guildId !== null && String(org.guildId).trim() !== '') {
+      const guildId = String(org.guildId).trim();
+      if (!/^\d{17,20}$/.test(guildId)) throw new Error(`${symbol}: guildId must be a Discord server id`);
+      parsed.guildId = guildId;
+    }
+    organizations.push(parsed);
   }
   if (!organizations.length) throw new Error('alliance roster lists no organizations');
   const publisher = String(raw.publisher || '').trim().toUpperCase();
@@ -158,6 +145,23 @@ function orgKey (xprv, symbol, orgFederationId) {
 }
 
 /**
+ * The key goon.vc signs with for one officer account: two hardened 31-bit
+ * indexes from the account's hash, apart from the keys it holds for member
+ * votes, so an officer's member vote can't be matched to their signature.
+ * @param {string} xprv goon.vc's extended private key
+ * @param {string} account `platform:id`
+ * @returns {Key}
+ */
+function officerKey (xprv, account) {
+  const parsed = parseAccountKey(account);
+  if (!parsed) throw new Error('invalid officer account');
+  const digest = sha256(`alliance-officer:${parsed.key}`);
+  const a = parseInt(digest.slice(0, 8), 16) & 0x7fffffff;
+  const b = parseInt(digest.slice(8, 16), 16) & 0x7fffffff;
+  return new Key({ xprv }).derive(`${OFFICER_KEY_PATH}/${a}'/${b}'`);
+}
+
+/**
  * Threshold for a majority of the orgs.
  * @param {number} n
  * @returns {number}
@@ -166,87 +170,23 @@ function majority (n) {
   return Math.floor(n / 2) + 1;
 }
 
-function coreBuildDescriptor () {
-  try {
-    const Federation = require('@fabric/core/types/federation');
-    return typeof Federation.buildDescriptor === 'function' ? Federation.buildDescriptor : null;
-  } catch (_) {
-    return null;
-  }
-}
-
 /**
- * `@fabric/core` `Federation.buildDescriptor`, same output.
- * @param {Object} opts `{ validators, threshold, network, publisher, csvBlocks? }`
- * @returns {Object}
- */
-function buildDescriptor (opts = {}) {
-  const core = coreBuildDescriptor();
-  if (core) return core(opts);
-  const validators = [];
-  for (const v of Array.isArray(opts.validators) ? opts.validators : []) {
-    const pk = compressedPubkey(v);
-    if (!pk) throw new Error(`invalid validator pubkey: ${String(v).slice(0, 80)}`);
-    if (validators.some((x) => x.slice(2) === pk.slice(2))) continue;
-    validators.push(pk);
-  }
-  validators.sort();
-  if (validators.length < 1) throw new Error('at least one validator is required');
-  const threshold = Number(opts.threshold);
-  if (!Number.isInteger(threshold) || threshold < 1 || threshold > validators.length) {
-    throw new Error(`threshold must be an integer from 1 to ${validators.length}`);
-  }
-  const network = String(opts.network || '').trim().toLowerCase();
-  if (!NETWORKS.includes(network)) throw new Error(`unknown network: ${opts.network}`);
-  const publisher = compressedPubkey(opts.publisher);
-  if (!publisher) throw new Error('publisher pubkey is required');
-  if (!validators.some((v) => v.slice(2) === publisher.slice(2))) throw new Error('publisher must be one of the validators');
-  const csvBlocks = opts.csvBlocks != null ? Number(opts.csvBlocks) : DEFAULT_CSV_BLOCKS;
-  if (!Number.isInteger(csvBlocks) || csvBlocks < 1 || csvBlocks > 65535) {
-    throw new Error('csvBlocks must be an integer from 1 to 65535');
-  }
-  return {
-    type: DESCRIPTOR_TYPE,
-    version: DESCRIPTOR_VERSION,
-    network,
-    validators,
-    threshold,
-    signatureScheme: 'schnorr',
-    internalKeyMode: 'nums',
-    ladder: { softMode: 'reduced', softThreshold: threshold, csvBlocks },
-    publisher
-  };
-}
-
-/**
- * Federation id: SHA-256 of the canonical descriptor.
- * @param {Object} descriptor
- * @returns {string}
- */
-function descriptorId (descriptor) {
-  return sha256(stableStringify(descriptor));
-}
-
-function isValidator (descriptor, pubkey) {
-  const x = fabricPubkey(pubkey);
-  return !!x && descriptor.validators.some((v) => v.slice(2) === x);
-}
-
-/**
- * An org's own federation of officers: officer validators, a majority of them
- * unless the roster sets `threshold`, the alliance network, and the first
- * listed officer as publisher.
+ * An org's own federation of officers: the key goon.vc holds for each
+ * officer account, a majority of them unless the roster sets `threshold`,
+ * the alliance network, and the first listed officer as publisher.
  * @param {Object} roster {@link parseRoster} result
  * @param {Object} org one of `roster.organizations`, with officers
+ * @param {string} xprv goon.vc's key
  * @returns {Object}
  */
-function orgDescriptor (roster, org) {
+function orgDescriptor (roster, org, xprv) {
   if (!org.officers || !org.officers.length) throw new Error(`${org.symbol} has no officers`);
+  const pubkeys = org.officers.map((account) => officerKey(xprv, account).pubkey);
   return buildDescriptor({
-    validators: org.officers,
-    threshold: org.threshold || majority(org.officers.length),
+    validators: pubkeys,
+    threshold: org.threshold || majority(pubkeys.length),
     network: roster.network,
-    publisher: org.officers[0],
+    publisher: pubkeys[0],
     csvBlocks: roster.csvBlocks
   });
 }
@@ -254,7 +194,9 @@ function orgDescriptor (roster, org) {
 /**
  * The alliance's validators: goon.vc's key for each org, unless the roster
  * gives the org's own pubkey. An org of officers gets goon.vc's key for its
- * org federation (`custody: 'officers'`), carried with that federation.
+ * org federation (`custody: 'officers'`), carried with that federation. An
+ * org with neither has no officers on record (`custody: 'none'`): its seat
+ * is counted, but nothing signs for it, so the org doesn't vote.
  * @param {Object} roster {@link parseRoster} result
  * @param {string|null} xprv goon.vc's key (null: only orgs with their own pubkey get one)
  * @returns {Array<{ symbol: string, pubkey: string, custody: string, key: Key|null, federation?: { id: string, descriptor: Object } }>}
@@ -264,13 +206,13 @@ function validatorsFor (roster, xprv) {
     if (org.pubkey) return { symbol: org.symbol, pubkey: org.pubkey, custody: 'own', key: null };
     if (!xprv) throw new Error(`${org.symbol} has no pubkey and goon.vc has no key to derive one`);
     if (org.officers && org.officers.length) {
-      const descriptor = orgDescriptor(roster, org);
+      const descriptor = orgDescriptor(roster, org, xprv);
       const id = descriptorId(descriptor);
       const key = orgKey(xprv, org.symbol, id);
       return { symbol: org.symbol, pubkey: key.pubkey, custody: 'officers', key, federation: { id, descriptor } };
     }
     const key = orgKey(xprv, org.symbol);
-    return { symbol: org.symbol, pubkey: key.pubkey, custody: 'goon.vc', key };
+    return { symbol: org.symbol, pubkey: key.pubkey, custody: 'none', key };
   });
 }
 
@@ -414,55 +356,6 @@ function memberVoteBody (federationId, fields) {
   };
   if (fields.attestation) body.attestation = fields.attestation;
   return body;
-}
-
-/**
- * A signed `CONTRACT_MESSAGE` frame (hex) carrying `body`.
- * @param {Object} body
- * @param {Key} key
- * @returns {{ frame: string, id: string }}
- */
-function signFrame (body, key) {
-  const message = Message.fromVector(['CONTRACT_MESSAGE', JSON.stringify(body)]);
-  message.signWithKey(key);
-  return { frame: message.toBuffer().toString('hex'), id: message.id };
-}
-
-/**
- * Read a frame and check its author's signature.
- * @param {string} frame hex
- * @returns {{ id: string, signer: string, body: Object }} `signer` is the x-only author pubkey
- */
-function openFrame (frame) {
-  const hex = String(frame || '').trim().toLowerCase();
-  if (!/^[0-9a-f]+$/.test(hex) || hex.length % 2) throw new Error('frame must be hex');
-  if (hex.length > 64 * 1024) throw new Error('frame is too large');
-  let message;
-  try {
-    message = Message.fromBuffer(Buffer.from(hex, 'hex'));
-  } catch (_) {
-    throw new Error('not a Fabric message');
-  }
-  if (message.type !== 'CONTRACT_MESSAGE') throw new Error('not a CONTRACT_MESSAGE');
-  const author = message.raw && message.raw.author ? Buffer.from(message.raw.author).toString('hex') : '';
-  const signer = fabricPubkey(author);
-  if (!signer || /^0+$/.test(signer)) throw new Error('message is not signed');
-  let verified = false;
-  for (const prefix of ['02', '03']) {
-    try {
-      if (message.verifyWithKey(new Key({ public: prefix + signer }))) verified = true;
-    } catch (_) { /* not a point with this parity */ }
-    if (verified) break;
-  }
-  if (!verified) throw new Error('bad signature');
-  let body;
-  try {
-    body = JSON.parse(message.body);
-  } catch (_) {
-    throw new Error('message body is not JSON');
-  }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('message body is not an object');
-  return { id: message.id, signer, body };
 }
 
 /**
@@ -654,6 +547,7 @@ module.exports = {
   MAX_OFFICERS,
   MESSAGE_TYPES,
   NETWORKS,
+  OFFICER_KEY_PATH,
   ORG_KEY_PATH,
   allianceDescriptor,
   buildDescriptor,
@@ -663,8 +557,8 @@ module.exports = {
   majority,
   memberTally,
   memberVoteBody,
+  officerKey,
   officerProposalBody,
-  officerPubkey,
   officerVoteBody,
   openFrame,
   orgDescriptor,

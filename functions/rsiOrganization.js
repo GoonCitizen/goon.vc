@@ -58,6 +58,15 @@ function links (html) {
     seen.add(href);
     out.push({ label: plainText(m[2]).replace(/…$/, '') || href, href });
   }
+  // Orgs often paste an invite as plain text ("our discord is https://discord.gg/…").
+  const text = plainText(String(html || '').replace(/<a\b[\s\S]*?<\/a>/gi, ' '));
+  for (const [url] of text.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+    const href = url.replace(/[.,;:!?)\]]+$/, '');
+    if (seen.has(href)) continue;
+    seen.add(href);
+    const invite = /^https?:\/\/(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\//i.test(href);
+    out.push({ label: invite ? 'Discord' : href.replace(/^https?:\/\//i, ''), href });
+  }
   return out;
 }
 

@@ -1,0 +1,56 @@
+{
+  "name": "RED ARMY",
+  "about": "Orgs and Discord servers that have added the goon.vc bot but are not yet PERMAFLEET members, plus named alliance friends. Named officers are on record here. guildId is the org's own Discord; omit it until they add the bot. servers are Discords not tied to an RSI org. ignore is personal or Fabric-suite servers that should not appear as RED ARMY. This is not a vote and not a Fabric federation.",
+  "organizations": [
+    {
+      "symbol": "RR",
+      "name": "Robert's Rejects",
+      "officers": [
+        { "account": "discord:503419731286556703", "name": "mr_meaner" }
+      ]
+    },
+    {
+      "symbol": "SHELLBACKS",
+      "name": "SHELLBACKS",
+      "rsi": "SHELLBACK",
+      "guildId": "635948860459450400",
+      "note": "The Shellback Industries org on RSI — not the SHELLBACK elite infantry squadron.",
+      "officers": [
+        { "account": "discord:171376528838361088", "name": "Brock_85" }
+      ]
+    },
+    {
+      "symbol": "MB",
+      "name": "Monkey Business",
+      "note": "Next organization joining the Protectorate."
+    },
+    {
+      "symbol": "BKEX",
+      "name": "BLACK EXODUS",
+      "note": "Alliance friend. PERMAFLEET Officers overlap."
+    },
+    {
+      "symbol": "RINTAK",
+      "name": "Rintak",
+      "rsi": "RINTAK",
+      "note": "Named on the G00N RED ARMY pin as a friend of the alliance."
+    },
+    {
+      "symbol": "SCHOMIES",
+      "name": "SC Homies",
+      "rsi": "SCHOMIES",
+      "note": "Named on the G00N RED ARMY pin as a friend of the alliance."
+    }
+  ],
+  "servers": [
+    {
+      "name": "DIA",
+      "guildId": "1230782172944924722",
+      "note": "Private Discord — not linked to an RSI org."
+    }
+  ],
+  "ignore": [
+    { "guildId": "498359331692085259", "name": "fabric" },
+    { "guildId": "814644536297914429", "name": "Neorion's server" }
+  ]
+}

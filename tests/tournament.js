@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const Tournament = require('../assets/scripts/tournament-bracket.js');
+const Tournament = require('../components/TournamentBracket');
 
 /**
  * Score every ready set until none are left; `pick(match)` returns the winning side.

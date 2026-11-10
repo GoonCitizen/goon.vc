@@ -1,0 +1,118 @@
+{
+  "id": "permafleet-apply",
+  "title": "Join PERMAFLEET",
+  "description": "Walks a new G00N SQUAD member through applying to PERMAFLEET on RSI and tells leadership who they are, so they can be tagged Prospect I (offered by the welcome DMs in contracts/welcome.json). Answers are recorded per member for PERMAFLEET leadership.",
+  "start": "welcome",
+  "requires": ["G00N SQUAD member"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Joining PERMAFLEET takes two steps: apply to the org on RSI, then tell leadership a little about yourself so they can match your application and tag you **Prospect I**. Nothing is sent until you confirm at the end, and Cancel stops at any point.",
+      "input": { "type": "confirm" },
+      "next": "rsi"
+    },
+    "rsi": {
+      "say": "First, apply on RSI: open https://robertsspaceindustries.com/orgs/PERMAFLEET and choose **Join us now!** Where are you with that?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "applied", "label": "I've applied" },
+          { "id": "member", "label": "I'm already in PERMAFLEET on RSI" },
+          { "id": "later", "label": "I'll apply right after this" }
+        ]
+      },
+      "next": "handle"
+    },
+    "handle": {
+      "say": "What's your RSI handle? It's the name in your RSI profile link (robertsspaceindustries.com/citizens/<handle>), and it's how leadership finds your application.",
+      "input": { "type": "text", "label": "RSI handle", "placeholder": "Your RSI handle", "maxLength": 60, "pattern": "^[A-Za-z0-9_-]{3,60}$" },
+      "next": "org"
+    },
+    "org": {
+      "say": "Are you in another Star Citizen org?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "none", "label": "No, PERMAFLEET will be my first" },
+          { "id": "alliance", "label": "Yes, a PERMAFLEET member org", "description": "G00N, INFN, TRDE, LCRP, Doubledog, 4M, A.I.M.O.S." },
+          { "id": "other", "label": "Yes, a different org" }
+        ]
+      },
+      "next": "experience"
+    },
+    "experience": {
+      "say": "How long have you been playing Star Citizen?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "new", "label": "I'm new", "description": "Under three months" },
+          { "id": "months", "label": "A few months to a year" },
+          { "id": "years", "label": "More than a year" }
+        ]
+      },
+      "next": "interests"
+    },
+    "interests": {
+      "say": "What do you like to do? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "dogfighting", "label": "Dogfighting", "description": "Friday Night Fights, 1v1s, BRAVO SQUADRON" },
+          { "id": "fps", "label": "FPS", "description": "Bunkers, boarding, TURTLE BRIGADE" },
+          { "id": "piracy", "label": "Piracy" },
+          { "id": "industry", "label": "Mining, salvage, or hauling" },
+          { "id": "exploration", "label": "Exploration" },
+          { "id": "racing", "label": "Racing" },
+          { "id": "crew", "label": "Crewing big ships with people" }
+        ]
+      },
+      "next": "region"
+    },
+    "region": {
+      "say": "Where do you play from?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "na", "label": "North America" },
+          { "id": "sa", "label": "South America" },
+          { "id": "eu", "label": "Europe" },
+          { "id": "oce", "label": "Oceania" },
+          { "id": "asia", "label": "Asia" }
+        ]
+      },
+      "next": "when"
+    },
+    "when": {
+      "say": "When do you usually play (your local time)? Pick everything that fits.",
+      "input": {
+        "type": "choice",
+        "multiple": true,
+        "options": [
+          { "id": "weeknights", "label": "Weekday evenings" },
+          { "id": "late", "label": "Weekday late nights" },
+          { "id": "weekend-days", "label": "Weekend days" },
+          { "id": "weekend-nights", "label": "Weekend evenings" },
+          { "id": "varies", "label": "It varies" }
+        ]
+      },
+      "next": "notes"
+    },
+    "notes": {
+      "say": "Anything else leadership should know? Who invited you, past orgs, what you're hoping to find. Skip if not.",
+      "input": { "type": "text", "label": "Notes for leadership", "maxLength": 500, "multiline": true, "optional": true },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll send to PERMAFLEET leadership:\n- RSI application: {{labels.rsi}}\n- RSI handle: {{answers.handle}}\n- Other org: {{labels.org}}\n- Playing: {{labels.experience}}\n- Likes: {{labels.interests}}\n- Region: {{labels.region}}\n- Plays: {{labels.when}}\n- Notes: {{answers.notes|none}}\n\nSend it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Sent. Once leadership finds your RSI application they'll tag you **Prospect I** on Discord, and you move up by showing up: this week's ops are at {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/schedule, and the PERMAFLEET voice channel is open any time. If you haven't applied on RSI yet, do it now: https://robertsspaceindustries.com/orgs/PERMAFLEET"
+  },
+  "cancelled": {
+    "say": "No problem, nothing was sent. Whenever you're ready, apply at https://robertsspaceindustries.com/orgs/PERMAFLEET; how the ranks work is at {{context.siteUrl|https://goon.vc}}/operations/PERMAFLEET/squadrons"
+  },
+  "onComplete": [{ "action": "record" }]
+}

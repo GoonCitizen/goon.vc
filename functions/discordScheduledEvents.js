@@ -393,6 +393,93 @@ async function fetchGuildScheduledEvents (opts = {}) {
 }
 
 /**
+ * Discord REST write with a Bot token. One attempt: a retried POST could
+ * create the scheduled event twice.
+ * @param {string} method
+ * @param {string} apiPath
+ * @param {string} token
+ * @param {object|null} body
+ * @param {object} [opts]
+ * @returns {Promise<{status:number, json:*, error?:string}>}
+ */
+async function discordSend (method, apiPath, token, body, opts = {}) {
+  const base = opts.apiBase || DISCORD_API;
+  const fetchImpl = opts.fetch || globalThis.fetch;
+  if (typeof fetchImpl !== 'function') return { status: 0, json: null, error: 'fetch unavailable' };
+  const timeoutMs = Number(opts.timeoutMs) > 0 ? Number(opts.timeoutMs) : 15000;
+  let response;
+  try {
+    response = await fetchImpl(base + apiPath, {
+      method,
+      headers: {
+        Authorization: 'Bot ' + token,
+        'User-Agent': 'GoonVCDiscordEvents/0.1',
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: body == null ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+  } catch (error) {
+    return { status: 0, json: null, error: error && error.message ? error.message : String(error) };
+  }
+  let text;
+  try {
+    // The timeout covers the body too: a read that fails still returns a result.
+    text = await response.text();
+  } catch (error) {
+    const reason = error && error.message ? error.message : String(error);
+    return { status: response.status, json: null, error: `response body unreadable (${reason}); Discord may have applied the request` };
+  }
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (_) { json = { raw: String(text).slice(0, 200) }; }
+  return { status: response.status, json };
+}
+
+/**
+ * Create one guild scheduled event. Voice and stage events take `channelId`
+ * (entity type 2 or 1); anything else is external and needs `location`.
+ * @param {object} opts
+ * @param {string} opts.token
+ * @param {string} opts.guildId
+ * @param {object} opts.event `{ name, description, scheduledStartTime, scheduledEndTime, entityType, channelId, location }`
+ * @returns {Promise<{ok:boolean, event:object|null, status:number, error?:string, code?:number}>}
+ */
+async function createGuildScheduledEvent (opts = {}) {
+  const token = String(opts.token || '').trim();
+  const guildId = String(opts.guildId || '').trim();
+  if (!token) return { ok: false, event: null, status: 0, error: 'missing bot token' };
+  if (!guildId) return { ok: false, event: null, status: 0, error: 'missing guildId' };
+  const event = opts.event || {};
+  const entityType = Number(event.entityType);
+  const body = {
+    name: String(event.name || '').slice(0, 100),
+    privacy_level: 2,
+    scheduled_start_time: event.scheduledStartTime,
+    scheduled_end_time: event.scheduledEndTime,
+    entity_type: entityType,
+    description: event.description ? String(event.description).slice(0, 1000) : undefined
+  };
+  if (entityType === 1 || entityType === 2) body.channel_id = String(event.channelId || '');
+  else body.entity_metadata = { location: String(event.location || 'Discord').slice(0, 100) };
+  const res = await discordSend('POST', `/guilds/${guildId}/scheduled-events`, token, body, opts);
+  if ((res.status !== 200 && res.status !== 201) || !res.json || !res.json.id) {
+    return {
+      ok: false,
+      event: null,
+      status: res.status,
+      error: (res.json && res.json.message) || res.error || ('HTTP ' + res.status),
+      code: res.json && res.json.code != null ? Number(res.json.code) : null
+    };
+  }
+  return {
+    ok: true,
+    event: serializeScheduledEvent(Object.assign({ guild_id: guildId }, res.json)),
+    status: res.status
+  };
+}
+
+/**
  * Format times for CT (America/Chicago) + UTC labels.
  * @param {string} iso
  * @returns {{utc:string, ct:string}|null}
@@ -430,6 +517,8 @@ module.exports = {
   buildWeekSchedule,
   describeCadence,
   discordGet,
+  discordSend,
   fetchGuildScheduledEvents,
+  createGuildScheduledEvent,
   formatEventTimes
 };

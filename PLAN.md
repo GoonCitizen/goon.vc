@@ -5,8 +5,8 @@
 4. extend `goon.vc` to include an HTTP API servicing GoonCitizen
 
 `goon.vc` is the zipper: it serves the public GoonSPA and forwards the Hub API
-paths Passport / GoonCitizen site-login need (`/sessions`, `/device-links`,
-`/services/rpc`, identity cluster) so the browser origin stays `https://goon.vc`.
+paths linked signers need (`/delegations`, `/services/delegation/mailbox`,
+`/services/rpc`) so the browser origin stays `https://goon.vc`.
 
 Do not add LiveRelay, Fabric Peer listen, Discord, or sidechain sync here.
 GoonCitizen game-state patches belong on Hub / `relay.goon.vc`. Sidechain

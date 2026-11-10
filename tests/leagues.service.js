@@ -20,6 +20,19 @@ function route (service, method, url) {
   });
 }
 
+function send (service, method, url, body, headers, remote) {
+  return new Promise((resolve) => {
+    const res = {
+      headersSent: false,
+      statusCode: 200,
+      setHeader () {},
+      end (data) { resolve({ status: this.statusCode, body: JSON.parse(data) }); }
+    };
+    const req = { method, url, path: url, body: body || {}, headers: headers || {}, socket: { remoteAddress: remote || '203.0.113.7' } };
+    service.middleware()(req, res, () => resolve({ status: 'next' }));
+  });
+}
+
 describe('elo', function () {
   it('moves rating from the loser to the winner, more for an upset', function () {
     const even = elo.exchange(1000, 1000, 1, 32);
@@ -245,6 +258,81 @@ describe('leagues service', function () {
     const restored = await service.restoreDuel('arena', 'd1');
     assert.strictEqual(restored.seasons[0].standings[0].name, 'Ace');
     await assert.rejects(service.voidDuel('arena', 'd9'), /No such duel/);
+  });
+
+  it('edits a logged duel only with the password, keeping what it was in the log', async function () {
+    await service.createLeague({ name: 'Arena', kind: 'perpetual' });
+    await service.logDuel('arena', { winner: 'Ace', loser: 'Bolt', bestOf: 9, score: [5, 0] });
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [5, 4] }, 'Ref', 'hunter2'), (error) => error.status === 409, 'no password set: duels stay as logged');
+
+    await service.stop();
+    service = new Leagues({ path: dir, defaults: [], password: 'hunter2', now: () => (clock += 1000) });
+    await service.start();
+    const before = await service.getLeague('arena');
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [5, 4] }), (error) => error.status === 401);
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [5, 4] }, null, 'wrong'), (error) => error.status === 401);
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [5, 0] }, null, 'hunter2'), /Nothing to change/);
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [5, 5] }, null, 'hunter2'), /ends 5–0 to 5–4/);
+    await assert.rejects(service.editDuel('arena', 'd1', { winner: 'bolt' }, null, 'hunter2'), /cannot duel themselves/);
+    await assert.rejects(service.editDuel('arena', 'd1', { playedAt: '2099-01-01T00:00:00Z' }, null, 'hunter2'), /future/);
+    await assert.rejects(service.editDuel('arena', 'd9', { score: [5, 4] }, null, 'hunter2'), /No such duel/);
+
+    const fixed = await service.editDuel('arena', 'd1', { score: [5, 4] }, 'Ref', 'hunter2');
+    const duel = fixed.duels[0];
+    assert.deepStrictEqual(duel.score, [5, 4]);
+    assert.strictEqual(duel.playedAt, before.duels[0].playedAt, 'keeps its place');
+    assert.strictEqual(duel.edited.by, 'Ref');
+    assert.deepStrictEqual(duel.change, before.duels[0].change, 'the set score doesn’t move ratings');
+    const entry = fixed.log[fixed.log.length - 1];
+    assert.deepStrictEqual([entry.type, entry.duel, entry.fields, entry.before, entry.after, entry.by], ['edit', 'd1', ['score'], { score: [5, 0] }, { score: [5, 4] }, 'Ref']);
+
+    const swapped = await service.editDuel('arena', 'd1', { winner: 'BOLT', loser: 'Cid', bestOf: 3, score: [2, 1], playedAt: '2026-10-15T20:00:00Z', note: 'Rematch' }, null, 'hunter2');
+    const moved = swapped.duels[0];
+    assert.deepStrictEqual([moved.winner, moved.loser, moved.bestOf, moved.score, moved.playedAt, moved.note], ['Bolt', 'Cid', 3, [2, 1], '2026-10-15T20:00:00.000Z', 'Rematch'], 'roster names, new pilots join');
+    assert.deepStrictEqual(swapped.players, ['Ace', 'Bolt', 'Cid']);
+    assert.deepStrictEqual(swapped.seasons[0].standings.map((p) => p.name), ['Bolt', 'Cid']);
+    assert.deepStrictEqual(swapped.seasons[0].waiting, ['Ace']);
+    const cleared = await service.editDuel('arena', 'd1', { note: '' }, null, 'hunter2');
+    assert.ok(!('note' in cleared.duels[0]));
+  });
+
+  it('leaves tournament sets and closed seasons alone', async function () {
+    await service.stop();
+    service = new Leagues({ path: dir, defaults: [], password: 'hunter2', now: () => (clock += 1000) });
+    await service.start();
+    await service.createLeague({ name: 'Arena', kind: 'seasonal' });
+    await service.recordTournament('arena', {
+      id: 'cup/2026-10-15',
+      name: 'Cup',
+      path: '/tournaments/cup/2026-10-15',
+      complete: true,
+      sets: [{ match: 'F1-1', winner: 'Ace', loser: 'Bolt', bestOf: 3, score: [2, 0], playedAt: '2026-10-15T20:00:00.000Z' }]
+    });
+    await assert.rejects(service.editDuel('arena', 'd1', { score: [2, 1] }, null, 'hunter2'), /edit it in the tournament/);
+    await service.logDuel('arena', { winner: 'Ace', loser: 'Bolt', bestOf: 1 });
+    await service.startSeason('arena', {});
+    await assert.rejects(service.editDuel('arena', 'd2', { winner: 'Bolt', loser: 'Ace' }, null, 'hunter2'), /Season 1 is over/);
+  });
+
+  it('unlocks and edits over HTTP, locking out guessers', async function () {
+    await service.stop();
+    service = new Leagues({ path: dir, defaults: [], password: 'hunter2', now: () => (clock += 1000) });
+    await service.start();
+    await service.createLeague({ name: 'Arena', kind: 'perpetual' });
+    await service.logDuel('arena', { winner: 'Ace', loser: 'Bolt', bestOf: 9, score: [5, 0] });
+
+    assert.strictEqual((await send(service, 'POST', '/services/leagues/arena/unlock', { password: 'hunter2' })).status, 200);
+    assert.strictEqual((await send(service, 'POST', '/services/leagues/nope/unlock', { password: 'hunter2' })).status, 404);
+    assert.strictEqual((await send(service, 'PATCH', '/services/leagues/arena/duels/d1', { score: [5, 4] })).status, 401, 'no password');
+    const ok = await send(service, 'PATCH', '/services/leagues/arena/duels/d1', { score: [5, 4] }, { 'x-league-password': 'hunter2' });
+    assert.strictEqual(ok.status, 200);
+    assert.deepStrictEqual(ok.body.duels[0].score, [5, 4]);
+
+    for (let n = 0; n < 5; n++) {
+      assert.strictEqual((await send(service, 'POST', '/services/leagues/arena/unlock', { password: 'guess' })).status, 401);
+    }
+    assert.strictEqual((await send(service, 'POST', '/services/leagues/arena/unlock', { password: 'hunter2' })).status, 429, 'even the right password waits');
+    assert.strictEqual((await send(service, 'POST', '/services/leagues/arena/unlock', { password: 'hunter2' }, {}, '198.51.100.2')).status, 200, 'other addresses are not locked out');
   });
 
   it('closes a season with frozen standings and starts everyone again', async function () {

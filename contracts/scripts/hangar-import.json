@@ -1,0 +1,73 @@
+{
+  "id": "hangar-import",
+  "title": "Sync your hangar",
+  "description": "Walks a member through exporting their RSI hangar with the Hangar Export browser add-on (hangar.link) and importing the JSON with `/hangar import`, so goon.vc can count the ships our members own. Started by `/hangar guide`; checks that the member has claimed their RSI handle (`/rsi claim`) first.",
+  "start": "intro",
+  "steps": {
+    "intro": {
+      "say": "Hi {{user.name}}! Let's add your ships to the G00N SQUAD fleet list. You'll export your hangar from the RSI website with a browser add-on, then send me the file with `/hangar import`.\n\ngoon.vc keeps only each ship's model, manufacturer, custom name, LTI, and warbond flag. It doesn't keep prices, pledge ids, coupons, or buybacks, and the public page shows fleet totals only, never who owns what.\n\nThe add-on reads your hangar while you're signed in to RSI, so turn on two-factor authentication on your RSI account first if you haven't (Account → Security) and install add-ons only from the official store.",
+      "input": { "type": "confirm" },
+      "next": "browser"
+    },
+    "browser": {
+      "say": "Which browser will you use for the export?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "firefox", "label": "Firefox" },
+          { "id": "chrome", "label": "Chrome, Edge, Brave, or another Chromium browser" },
+          { "id": "other", "label": "Something else" }
+        ]
+      },
+      "next": [
+        { "when": { "answers.browser": "firefox" }, "goto": "install" },
+        { "goto": "firefox" }
+      ]
+    },
+    "firefox": {
+      "say": "Hangar Export was removed from the Chrome Web Store, so today it only installs in Firefox. Install Firefox (free, https://www.mozilla.org/firefox/), sign in to robertsspaceindustries.com there, and use it just for the export.",
+      "input": { "type": "confirm" },
+      "next": "install"
+    },
+    "install": {
+      "say": "Add Hangar Export to Firefox from Mozilla's add-on store: https://addons.mozilla.org/en-US/firefox/addon/hangar-export/ and choose **Add to Firefox**.",
+      "input": { "type": "confirm" },
+      "next": "export"
+    },
+    "export": {
+      "say": "Now export:\n1. Sign in to RSI and open your pledges: https://robertsspaceindustries.com/account/pledges\n2. Press **Export** in the left sidebar (Hangar Export adds it there).\n3. It downloads two files, a .json and a .csv. Keep the **.json** one.\n\nGot it?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "done", "label": "I have the .json file" },
+          { "id": "stuck", "label": "I don't see Export" }
+        ]
+      },
+      "next": [
+        { "when": { "answers.export": "stuck" }, "goto": "trouble" },
+        { "when": { "context.rsiHandle": null }, "goto": "claim" },
+        { "goto": "end" }
+      ]
+    },
+    "trouble": {
+      "say": "A few things to check:\n- You're in Firefox with Hangar Export enabled (Add-ons → Extensions).\n- You're signed in to RSI and on the **My Hangar** pledges page, not the RSI launcher.\n- Reload the page once after installing the add-on.\n\nStill stuck? Ask in the G00N SQUAD Discord and someone will help. When you have the .json file, continue.",
+      "input": { "type": "confirm" },
+      "next": [
+        { "when": { "context.rsiHandle": null }, "goto": "claim" },
+        { "goto": "end" }
+      ]
+    },
+    "claim": {
+      "say": "One more thing: goon.vc only takes a hangar for an RSI handle you've claimed, so nobody can import someone else's. If you haven't claimed yours, run `/rsi claim`, open the link it gives you, and follow the steps (you'll add a short code to your RSI bio for a minute). Continue once your handle shows as claimed.",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "You're set. Run `/hangar import` (here or in the server), attach the **.json** file, and send it. Re-import whenever your hangar changes; the new file replaces the old one. `/hangar status` shows what's synced, and the fleet totals are at {{context.siteUrl|https://goon.vc}}/rsi"
+  },
+  "cancelled": {
+    "say": "No problem. Whenever you're ready, run `/hangar guide` again, or `/hangar import` if you already have the .json file."
+  },
+  "onComplete": [{ "action": "record" }]
+}

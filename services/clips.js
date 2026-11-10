@@ -11,6 +11,7 @@ const Store = require('@fabric/core/types/store');
 const { matchesAnyChannel } = require('@fabric/discord/functions/channelMatcher');
 const startStore = require('../functions/startStore');
 const discordEvents = require('../functions/discordScheduledEvents');
+const discordThreads = require('../functions/discordThreads');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 const { displayName } = require('../functions/duelLeaderboard');
 const { estimateRecordingTime } = require('../functions/clipRecordingTime');
@@ -216,7 +217,11 @@ class Clips {
    * @param {boolean} [settings.keepMasters] Keep each clip's best download (up to `maxSourceHeight`) in `masters/` for renders.
    * @param {number} [settings.maxSourceHeight] Tallest source downloaded (default the 1080p render height).
    * @param {number} [settings.minFreeBytes] Free space kept on the disk: a download waits until its largest allowed
-   *   size still leaves this much, and no master is kept below it.
+   *   size still leaves this much, and no master is kept below it. `0` turns the floor (and `minFreeRatio`) off.
+   * @param {number} [settings.minFreeRatio] Also keep this fraction of the volume free (default 0). The larger
+   *   of this and `minFreeBytes` wins. Masters that push past it are dropped (screenshots first, then clips, then VODs).
+   * @param {number} [settings.maxBytes] Cap on `media/` + `masters/` + `renders/` + `tmp/` (0 = none).
+   * @param {number} [settings.renderKeepMs] Completed renders older than this may be deleted when reclaiming space.
    * @param {number} [settings.rescanEveryMs] How often a rescan pass runs (0 = never; `rescan` still works).
    * @param {number} [settings.recheckAfterMs] How long before a link clip's source is checked for a better version again.
    * @param {number} [settings.rescanBatch] Clips checked per rescan pass.
@@ -250,6 +255,9 @@ class Clips {
       keepMasters: true,
       maxSourceHeight: 1080,
       minFreeBytes: 20 * 1024 * 1024 * 1024,
+      minFreeRatio: 0,
+      maxBytes: 0,
+      renderKeepMs: 7 * DAY_MS,
       rescanEveryMs: 60 * 60 * 1000,
       recheckAfterMs: 7 * 24 * 60 * 60 * 1000,
       rescanBatch: 10,
@@ -293,6 +301,7 @@ class Clips {
     this._timer = null;
     this._rescanTimer = null;
     this._lastBackgroundAt = 0;
+    this._usageCache = null;
     this._stopped = false;
   }
 
@@ -301,6 +310,17 @@ class Clips {
     this.store = new Store({ name: 'GOON.VC:clips', path: this.dirs.store, persistent: true, verbosity: 1 });
     await startStore(this.store);
     this._stopped = false;
+    const swept = await this._sweepTmp();
+    if (swept) this._log(`cleared ${swept} leftover file${swept === 1 ? '' : 's'} from clips tmp`);
+    const reclaimed = await this.reclaim();
+    if (reclaimed.bytes) {
+      this._log(`reclaimed ${(reclaimed.bytes / 1e9).toFixed(1)} GB (${reclaimed.dropped.length} master${reclaimed.dropped.length === 1 ? '' : 's'}${reclaimed.renders ? `, ${reclaimed.renders} render${reclaimed.renders === 1 ? '' : 's'}` : ''})`);
+    }
+    const usage = await this.usage({ refresh: true });
+    if (usage.used || usage.free != null) {
+      const gb = (n) => n == null ? '?' : (n / 1073741824).toFixed(1);
+      this._log(`clips storage ${gb(usage.used)} GB used, ${gb(usage.free)} GB free (keep ${gb(usage.target)} GB free)`);
+    }
     for (const id of await this._list('renders')) {
       const render = await this.store.get(`/renders/${id}`);
       if (render && (render.status === 'queued' || render.status === 'running')) {
@@ -490,34 +510,13 @@ class Clips {
   }
 
   /** Active threads in the guild, by parent channel id. */
-  async _activeThreads (token, guild) {
-    const byParent = new Map();
-    const res = await discordEvents.discordGet(`/guilds/${guild.id}/threads/active`, token, this._discordOpts());
-    if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) return byParent;
-    for (const thread of res.json.threads) {
-      const parent = String(thread.parent_id || '');
-      if (!byParent.has(parent)) byParent.set(parent, []);
-      byParent.get(parent).push(thread);
-    }
-    return byParent;
+  _activeThreads (token, guild) {
+    return discordThreads.activeThreads(token, guild.id, this._discordOpts());
   }
 
   /** Every archived public thread (forum / media posts included) under a channel. */
-  async _archivedThreads (token, channel) {
-    const threads = [];
-    let before = null;
-    for (let page = 0; page < 1000; page++) {
-      const query = `limit=${PAGE_SIZE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
-      const res = await discordEvents.discordGet(`/channels/${channel.id}/threads/archived/public?${query}`, token, this._discordOpts());
-      // No Read Message History on the parent: no archived threads to read.
-      if (res.status === 403) break;
-      if (res.status !== 200 || !res.json || !Array.isArray(res.json.threads)) throw new Error(errorMessage(res));
-      threads.push(...res.json.threads);
-      const last = res.json.threads[res.json.threads.length - 1];
-      if (!res.json.has_more || !last || !last.thread_metadata) break;
-      before = last.thread_metadata.archive_timestamp;
-    }
-    return threads;
+  _archivedThreads (token, channel) {
+    return discordThreads.archivedThreads(token, channel.id, this._discordOpts());
   }
 
   _backfillCursor () {
@@ -814,17 +813,223 @@ class Clips {
   }
 
   /**
-   * Whether the clip's largest allowed download still leaves `minFreeBytes`
-   * free; a clip that doesn't fit waits without spending an attempt.
+   * Whether the clip's largest allowed download still leaves the free-space
+   * target (`minFreeBytes` / `minFreeRatio`) and stays under `maxBytes`.
+   * A clip that doesn't fit waits without spending an attempt.
    * @private
    */
   async _roomToDownload (clip) {
     try {
-      const disk = await fsp.statfs(this.dirs.tmp);
-      return disk.bavail * disk.bsize >= (this.settings.minFreeBytes || 0) + this._maxDownloadBytes(clip);
+      const extra = this._maxDownloadBytes(clip);
+      const disk = await this._disk();
+      if (disk.free == null) return true;
+      if (disk.free < this._freeTarget(disk) + extra) return false;
+      if (this.settings.maxBytes) {
+        const used = (await this.usage()).used;
+        if (used + extra > this.settings.maxBytes) return false;
+      }
+      return true;
     } catch (_) {
       return true;
     }
+  }
+
+  /**
+   * Volume size and unused bytes on the clips filesystem (`statfs`).
+   * @returns {Promise<{ free: number|null, total: number|null }>}
+   * @private
+   */
+  async _disk () {
+    try {
+      const disk = typeof this.settings.statfs === 'function'
+        ? await this.settings.statfs(this.dirs.tmp)
+        : await fsp.statfs(this.dirs.tmp);
+      const bsize = Number(disk.bsize) || 0;
+      return {
+        free: Number(disk.bavail) * bsize,
+        total: Number(disk.blocks) * bsize
+      };
+    } catch (_) {
+      return { free: null, total: null };
+    }
+  }
+
+  /**
+   * Bytes that must stay free: `minFreeBytes`, or `minFreeRatio` of the
+   * volume when that is larger. `minFreeBytes` 0 turns both off (tests).
+   * @private
+   */
+  _freeTarget (disk) {
+    const floor = Number(this.settings.minFreeBytes) || 0;
+    if (!floor) return 0;
+    const ratio = Number(this.settings.minFreeRatio) || 0;
+    const fromRatio = disk && disk.total && ratio > 0 ? Math.ceil(disk.total * ratio) : 0;
+    return Math.max(floor, fromRatio);
+  }
+
+  async _dirBytes (dir) {
+    let total = 0;
+    let entries = [];
+    try {
+      entries = await fsp.readdir(dir, { recursive: true, withFileTypes: true });
+    } catch (_) {
+      return 0;
+    }
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const full = path.join(entry.parentPath || dir, entry.name);
+      try { total += (await fsp.stat(full)).size; } catch (_) {}
+    }
+    return total;
+  }
+
+  /**
+   * Bytes on disk for the clips tree plus volume free space.
+   * @param {Object} [opts]
+   * @param {boolean} [opts.refresh] Ignore the short cache.
+   * @returns {Promise<Object>}
+   */
+  async usage (opts = {}) {
+    const disk = await this._disk();
+    const now = this.settings.now();
+    if (!opts.refresh && this._usageCache && now - this._usageCache.at < 60 * 1000) {
+      return Object.assign({}, this._usageCache, { free: disk.free, total: disk.total, target: this._freeTarget(disk) });
+    }
+    const media = await this._dirBytes(this.dirs.media);
+    const masters = await this._dirBytes(this.dirs.masters);
+    const renders = await this._dirBytes(this.dirs.renders);
+    const tmp = await this._dirBytes(this.dirs.tmp);
+    const used = media + masters + renders + tmp;
+    this._usageCache = {
+      at: now,
+      used,
+      free: disk.free,
+      total: disk.total,
+      target: this._freeTarget(disk),
+      maxBytes: this.settings.maxBytes || 0,
+      media,
+      masters,
+      renders,
+      tmp
+    };
+    return Object.assign({}, this._usageCache);
+  }
+
+  _invalidateUsage () {
+    this._usageCache = null;
+  }
+
+  /**
+   * Remove leftover work directories from a crashed download or render.
+   * Skipped while a download or render is running.
+   * @returns {Promise<number>}
+   * @private
+   */
+  async _sweepTmp () {
+    if (this._processing) return 0;
+    let names = [];
+    try { names = await fsp.readdir(this.dirs.tmp); } catch (_) { return 0; }
+    let n = 0;
+    for (const name of names) {
+      await fsp.rm(path.join(this.dirs.tmp, name), { recursive: true, force: true }).catch(() => {});
+      n += 1;
+    }
+    if (n) this._invalidateUsage();
+    return n;
+  }
+
+  /**
+   * Drop a clip's stored original. Proxies stay so the library still plays.
+   * @returns {Promise<number>} Bytes removed.
+   * @private
+   */
+  async _dropMaster (clip) {
+    const file = this._masterPath(clip);
+    if (!file) return 0;
+    let size = (clip.master && clip.master.bytes) || 0;
+    try { size = (await fsp.stat(file)).size; } catch (_) {}
+    await fsp.rm(file, { force: true }).catch(() => {});
+    await this._updateClip(clip.id, (record) => {
+      record.master = Object.assign({}, record.master, {
+        file: null,
+        bytes: null,
+        storedAt: null,
+        droppedAt: this._iso()
+      });
+    });
+    return size;
+  }
+
+  async _dropOldRenders (needBytes) {
+    if (!(needBytes > 0)) return { count: 0, bytes: 0 };
+    const rows = [];
+    for (const id of await this._list('renders')) {
+      const render = await this.store.get(`/renders/${id}`);
+      if (!render || render.status !== 'complete') continue;
+      const file = path.join(this.dirs.renders, `${id}.mp4`);
+      if (!fs.existsSync(file)) continue;
+      rows.push({ id, at: render.completedAt || render.createdAt || '', file });
+    }
+    rows.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    let bytes = 0;
+    let count = 0;
+    const keepMs = this.settings.renderKeepMs || 0;
+    const now = this.settings.now();
+    for (const row of rows) {
+      if (bytes >= needBytes) break;
+      const age = now - Date.parse(row.at);
+      if (keepMs && Number.isFinite(age) && age < keepMs) continue;
+      let size = 0;
+      try { size = (await fsp.stat(row.file)).size; } catch (_) { continue; }
+      await fsp.rm(row.file, { force: true }).catch(() => {});
+      await fsp.rm(row.file.replace(/\.mp4$/, '.sources.json'), { force: true }).catch(() => {});
+      bytes += size;
+      count += 1;
+    }
+    return { count, bytes };
+  }
+
+  /**
+   * Drop stored originals (and old renders) until the volume has the free-space
+   * target and `maxBytes` is not exceeded. Screenshots go first — Discord still
+   * has them — then ordinary clips, then VODs (Twitch deletes those in weeks).
+   * @returns {Promise<{ swept: number, dropped: Array<string>, bytes: number, renders: number }>}
+   */
+  async reclaim () {
+    const swept = this._processing ? 0 : await this._sweepTmp();
+    const usage = await this.usage({ refresh: true });
+    let need = 0;
+    if (usage.free != null && usage.target && usage.free < usage.target) need = usage.target - usage.free;
+    if (this.settings.maxBytes && usage.used > this.settings.maxBytes) {
+      need = Math.max(need, usage.used - this.settings.maxBytes);
+    }
+    if (need <= 0) return { swept, dropped: [], bytes: 0, renders: 0 };
+    this._log(`reclaiming ${(need / 1e9).toFixed(1)} GB of clip masters and old renders`);
+
+    const clips = [];
+    for (const id of await this._list('clips')) {
+      const clip = await this.store.get(`/clips/${id}`);
+      if (clip && this._hasMaster(clip)) clips.push(clip);
+    }
+    const rank = (clip) => (isStill(clip) ? 0 : (clip.stream ? 2 : 1));
+    clips.sort((a, b) => rank(a) - rank(b)
+      || String((a.master && a.master.storedAt) || '').localeCompare(String((b.master && b.master.storedAt) || ''))
+      || String(a.id).localeCompare(String(b.id)));
+
+    const dropped = [];
+    let bytes = 0;
+    for (const clip of clips) {
+      if (bytes >= need) break;
+      const size = await this._dropMaster(clip);
+      if (!size) continue;
+      dropped.push(clip.id);
+      bytes += size;
+    }
+    this._invalidateUsage();
+    let renders = { count: 0, bytes: 0 };
+    if (bytes < need) renders = await this._dropOldRenders(need - bytes);
+    if (dropped.length || renders.count) this._invalidateUsage();
+    return { swept, dropped, bytes: bytes + renders.bytes, renders: renders.count };
   }
 
   // ---------------------------------------------------------------- media
@@ -1027,10 +1232,13 @@ class Clips {
   }
 
   async _roomForMasters () {
-    if (!this.settings.minFreeBytes) return true;
+    if (!this.settings.minFreeBytes && !this.settings.maxBytes) return true;
     try {
-      const disk = await fsp.statfs(this.dirs.masters);
-      return disk.bavail * disk.bsize >= this.settings.minFreeBytes;
+      const disk = await this._disk();
+      if (disk.free == null) return true;
+      if (disk.free < this._freeTarget(disk)) return false;
+      if (this.settings.maxBytes && (await this.usage()).used >= this.settings.maxBytes) return false;
+      return true;
     } catch (_) {
       return true;
     }
@@ -1050,6 +1258,7 @@ class Clips {
     const old = this._masterPath(clip);
     await fsp.rename(original, dest);
     if (old && old !== dest) await fsp.rm(old, { force: true }).catch(() => {});
+    this._invalidateUsage();
     const at = this._iso();
     return {
       file,
@@ -1436,6 +1645,10 @@ class Clips {
    * @returns {Promise<Object>} `{ retried, checked, stored, upgraded }`
    */
   async maintain () {
+    const reclaimed = await this.reclaim();
+    if (reclaimed.bytes) {
+      this._log(`reclaimed ${(reclaimed.bytes / 1e9).toFixed(1)} GB of clip masters`);
+    }
     const upgraded = await this.retryAfterToolChange();
     const stale = await this.retryFailed({ olderThanMs: this.settings.recheckAfterMs });
     if (stale) this._log(`queued ${stale} clip${stale === 1 ? '' : 's'} that failed over ${Math.round(this.settings.recheckAfterMs / 86400000)} days ago`);
@@ -1608,9 +1821,29 @@ class Clips {
       const entry = await this.store.get(`/streams/${id}`);
       if (entry && Object.prototype.hasOwnProperty.call(streams, entry.status)) streams[entry.status] += 1;
     }
+    const disk = await this.usage();
     return {
       polling: !!this.settings.poll,
-      status: Object.assign({}, status, { ready: count('ready'), pending: count('pending'), failed: count('failed'), linksOnly: count('skipped'), screenshots: clips.filter(isStill).length, vods: clips.filter((clip) => clip.stream).length, streams }),
+      status: Object.assign({}, status, {
+        ready: count('ready'),
+        pending: count('pending'),
+        failed: count('failed'),
+        linksOnly: count('skipped'),
+        screenshots: clips.filter(isStill).length,
+        vods: clips.filter((clip) => clip.stream).length,
+        streams,
+        disk: {
+          used: disk.used,
+          free: disk.free,
+          total: disk.total,
+          target: disk.target,
+          maxBytes: disk.maxBytes,
+          media: disk.media,
+          masters: disk.masters,
+          renders: disk.renders,
+          tmp: disk.tmp
+        }
+      }),
       stills: { seconds: this._stillMs() / 1000, maxSeconds: this.settings.maxStillSeconds },
       channels,
       clips: clips

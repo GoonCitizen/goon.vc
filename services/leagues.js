@@ -3,8 +3,9 @@
 const crypto = require('crypto');
 const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
+const clientKey = require('../functions/clientKey');
 const elo = require('../functions/elo');
-const { normalizeBestOf, parsePlayers } = require('../assets/scripts/tournament-bracket');
+const { normalizeBestOf, parsePlayers } = require('../components/TournamentBracket');
 const { normalizeHandle } = require('../functions/discordDirectory');
 
 const BASE = '/services/leagues';
@@ -19,6 +20,10 @@ const MAX_LOG = 60000;
 const PROPOSAL_ID = /^[0-9a-f]{12}$/;
 const PROPOSAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DISCORD_MEMBER = 'discord:';
+const PASSWORD_HEADER = 'x-league-password';
+const MAX_FAILURES = 5;
+const FAILURE_WINDOW_MS = 15 * 60 * 1000;
+const EDITABLE = ['winner', 'loser', 'bestOf', 'score', 'playedAt', 'note'];
 const OPEN_LEAGUE = {
   name: 'Open League',
   tagline: 'Any ship, any loadout.',
@@ -95,6 +100,10 @@ function counterparty (proposal) {
 
 function playedAt (duel) {
   return duel.playedAt || duel.loggedAt || '';
+}
+
+function digest (value) {
+  return crypto.createHash('sha256').update(String(value)).digest();
 }
 
 /**
@@ -178,6 +187,8 @@ function publicLeague (league) {
  * loser, best of n, set score — and Elo ratings ({@link module:functions/elo})
  * are rebuilt from the season's duels. Nothing is deleted: a mistaken duel is
  * voided (and can be restored), and every change is in the league's log.
+ * A logged duel is a past result: only someone with the password can edit
+ * it, and duels from a tournament are edited in the tournament.
  * Duels reported from Discord are proposals until the other player confirms
  * them; roster players can carry a private link to a goon.vc member, which
  * a duel logged on the site with a Discord `@handle` also uses.
@@ -189,6 +200,7 @@ class Leagues {
    * @param {string} [settings.path] Store directory.
    * @param {string} [settings.basePath] Site path of the league pages (for link previews).
    * @param {Function} [settings.identify] `async (req) => displayName|null` for the change log.
+   * @param {string} [settings.password] Unlocks edits to logged duels; without one they stay as logged (void and log again instead).
    * @param {Array<Object>} [settings.defaults] Leagues created on start when their id is free (same shape as {@link Leagues#createLeague}).
    * @param {number} [settings.proposalTtlMs] How long a proposed duel waits for confirmation (default 7 days).
    * @param {Object} [settings.directory] Discord server lookup for `@handle` players ({@link module:functions/discordDirectory}).
@@ -200,6 +212,7 @@ class Leagues {
       path: './stores/leagues',
       basePath: '/leagues',
       identify: null,
+      password: null,
       defaults: [OPEN_LEAGUE],
       proposalTtlMs: PROPOSAL_TTL_MS,
       directory: null,
@@ -208,6 +221,17 @@ class Leagues {
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.store = null;
     this._queue = Promise.resolve();
+    this._failures = new Map();
+  }
+
+  /**
+   * @param {string} [password]
+   * @returns {boolean} whether `password` unlocks edits to logged duels
+   */
+  checkPassword (password) {
+    const expected = this.settings.password;
+    if (!expected || typeof password !== 'string' || !password) return false;
+    return crypto.timingSafeEqual(digest(password), digest(expected));
   }
 
   async start () {
@@ -754,6 +778,95 @@ class Leagues {
   }
 
   /**
+   * Correct a logged duel: any of `{ winner, loser, bestOf, score, playedAt, note }`.
+   * Needs the password. Players are roster names (a new name joins the
+   * league); the duel keeps its place unless `playedAt` moves it. The log
+   * keeps what each changed field was before.
+   */
+  editDuel (id, duelId, input, by, password) {
+    if (!this.settings.password) return Promise.reject(fail(409, 'No password is set for editing past results.'));
+    if (!this.checkPassword(password)) return Promise.reject(fail(401, 'Enter the password to edit past results.'));
+    return this._change(id, (league) => {
+      input = input || {};
+      const duel = this._openDuel(league, duelId);
+      if (duel.source && duel.source.tournament) {
+        throw fail(409, `This duel is a set from ${duel.source.name || 'a tournament'}; edit it in the tournament.`);
+      }
+      const name = (value, fallback) => value === undefined ? fallback : parsePlayers([String(value).trim().replace(/^@+/, '')])[0];
+      const winner = name(input.winner, duel.winner);
+      const loser = name(input.loser, duel.loser);
+      if (!winner || !loser) throw fail(400, 'A duel needs a winner and a loser.');
+      if (winner.toLowerCase() === loser.toLowerCase()) throw fail(400, 'A pilot cannot duel themselves.');
+      const { bestOf, score } = setScore(league, {
+        bestOf: input.bestOf === undefined ? duel.bestOf : input.bestOf,
+        score: input.score === undefined ? duel.score : input.score
+      });
+      let played = playedAt(duel);
+      if (input.playedAt !== undefined && input.playedAt !== null && input.playedAt !== '') {
+        played = optionalDate(input.playedAt);
+        if (Date.parse(played) > this.settings.now()) throw fail(400, 'A duel can’t be played in the future.');
+      }
+      const next = {
+        winner: findPlayer(league, winner) ? findPlayer(league, winner).name : winner,
+        loser: findPlayer(league, loser) ? findPlayer(league, loser).name : loser,
+        bestOf,
+        score,
+        playedAt: played,
+        note: input.note === undefined ? (duel.note || '') : text(input.note, LIMITS.note)
+      };
+      const was = Object.assign({}, duel, { playedAt: playedAt(duel), note: duel.note || '' });
+      const fields = EDITABLE.filter((key) => JSON.stringify(next[key]) !== JSON.stringify(was[key]));
+      if (!fields.length) throw fail(400, 'Nothing to change.');
+      next.winner = this._join(league, next.winner, by);
+      next.loser = this._join(league, next.loser, by);
+      const before = {};
+      const after = {};
+      for (const key of fields) {
+        before[key] = was[key];
+        after[key] = next[key];
+        duel[key] = next[key];
+      }
+      if (!duel.note) delete duel.note;
+      duel.edited = Object.assign({ at: this._iso() }, by ? { by } : {});
+      league.log.push(this._entry('edit', by, { duel: duel.id, winner: duel.winner, loser: duel.loser, fields, before, after }));
+    });
+  }
+
+  /**
+   * Check the password for the duel edit controls.
+   * @returns {Promise<Object>} the league
+   */
+  async unlock (id, password) {
+    const league = await this._get(id);
+    if (!league) throw fail(404, 'No such league.');
+    if (!this.settings.password) throw fail(409, 'No password is set for editing past results.');
+    if (!this.checkPassword(password)) throw fail(401, 'Wrong password.');
+    return publicLeague(league);
+  }
+
+  /**
+   * Too many wrong passwords from one address lock it out for a while.
+   * @returns {boolean} whether `key` may try again
+   */
+  _mayTry (key) {
+    const now = this.settings.now();
+    const entry = this._failures.get(key);
+    if (!entry || now - entry.first > FAILURE_WINDOW_MS) {
+      this._failures.delete(key);
+      return true;
+    }
+    return entry.count < MAX_FAILURES;
+  }
+
+  _failed (key) {
+    const now = this.settings.now();
+    const entry = this._failures.get(key);
+    if (!entry || now - entry.first > FAILURE_WINDOW_MS) this._failures.set(key, { first: now, count: 1 });
+    else entry.count++;
+    if (this._failures.size > 10000) this._failures.delete(this._failures.keys().next().value);
+  }
+
+  /**
    * Seasonal leagues: close the current season (its standings are frozen)
    * and open the next, where everyone starts again at the starting rating.
    * `{ name?, endsAt? }` for the new season.
@@ -820,6 +933,17 @@ class Leagues {
           ? await Promise.resolve(this.settings.identify(req)).catch(() => null)
           : null;
         const [id, collection, itemId, action] = parts;
+        const unlocking = parts.length === 2 && collection === 'unlock';
+        const offered = unlocking ? body.password : req.headers && req.headers[PASSWORD_HEADER];
+        const password = method !== 'GET' && typeof offered === 'string' && offered ? offered : undefined;
+        if (password && this.settings.password) {
+          const key = clientKey(req);
+          if (!this._mayTry(key)) throw fail(429, 'Too many wrong passwords. Try again later.');
+          if (!this.checkPassword(password)) {
+            this._failed(key);
+            throw fail(401, 'Wrong password.');
+          }
+        }
         if (!parts.length) {
           if (method === 'GET') return [200, { leagues: await this.listLeagues() }];
           if (method === 'POST') return [201, await this.createLeague(body, by)];
@@ -836,9 +960,12 @@ class Leagues {
             const query = new URL(req.originalUrl || req.url, 'http://localhost').searchParams.get('query');
             return [200, { handles: await this.findHandles(query) }];
           }
+          if (unlocking && method === 'POST') return [200, await this.unlock(id, password)];
           if (collection === 'players' && method === 'POST') return [200, await this.addPlayer(id, body.name, by)];
           if (collection === 'duels' && method === 'POST') return [201, await this.logDuel(id, body, by)];
           if (collection === 'seasons' && method === 'POST') return [201, await this.startSeason(id, body, by)];
+        } else if (parts.length === 3 && collection === 'duels' && method === 'PATCH') {
+          return [200, await this.editDuel(id, itemId, body, by, password)];
         } else if (parts.length === 4 && collection === 'duels' && method === 'POST') {
           if (action === 'void') return [200, await this.voidDuel(id, itemId, body, by)];
           if (action === 'restore') return [200, await this.restoreDuel(id, itemId, by)];

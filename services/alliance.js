@@ -6,16 +6,18 @@ const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
 const federation = require('../functions/allianceFederation');
 const bridgeAttestation = require('../functions/bridgeAttestation');
+const orgDiscord = require('../functions/orgDiscord');
 const { fabricPubkey, parseAccountKey } = require('../functions/accountKey');
 
 const BASE = '/services/alliance';
 const LIMITS = { title: 120, summary: 2000 };
-const DEFAULT_DAYS = 7;
 const MAX_DAYS = 30;
 const CLOCK_SKEW_MS = 10 * 60 * 1000;
 const SHORT_ID = 12;
 const MAX_PROPOSALS = 10000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DAYS = 7;
+const NOT_AN_OFFICER = 'Only officers on record for a member org propose and vote for it. Ask in #embassy on the G00N SQUAD Discord to be put on record.';
 
 function sendJson (res, status, body) {
   res.statusCode = status;
@@ -30,10 +32,6 @@ function fail (status, message) {
   return error;
 }
 
-function text (value, max) {
-  return String(value === undefined || value === null ? '' : value).replace(/[ \t]+/g, ' ').trim().slice(0, max);
-}
-
 function readJson (file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
@@ -42,31 +40,32 @@ function readJson (file) {
  * PERMAFLEET alliance votes: one vote per member organization, as a named
  * Fabric Federation ({@link module:functions/allianceFederation}).
  *
- * The roster (`contracts/alliance.json`) lists the member orgs and the
- * account keys of each org's stewards. Each org's validator key is derived
- * from goon.vc's key unless the roster gives the org's own pubkey. A steward
- * signed in to goon.vc proposes and votes for their org; goon.vc signs the
- * `FederationProposal` / `FederationVote` frame with that org's key. An org
- * holding its own key posts frames it signed itself to `POST …/messages`.
- * Every frame is verified, stored, and served, so anyone can recount; each
- * org's latest vote counts, and a proposal passes once a majority of all
- * member orgs vote yes (then it is closed). Changing the roster's orgs or
- * keys makes a new federation; open proposals stay with the one they were
- * made under. Everything lives in one `@fabric/core` {@link Store}.
+ * The roster (`contracts/alliance.json`) lists the member orgs and each org's
+ * officers by account (`discord:<id>`). Only officers vote for an org. An org
+ * that lists `officers` is its own federation of them (a nested multisig):
+ * an officer signed in to goon.vc with that account proposes or votes
+ * ({@link Alliance#propose}, {@link Alliance#vote}, Discord `/vote`), and
+ * goon.vc signs their frame under the org federation with the key it holds
+ * for that account. One officer's proposal, or the org threshold of officers
+ * agreeing on a vote, has goon.vc sign the org's `FederationProposal` /
+ * `FederationVote` with the org's validator key, carrying those officer
+ * frames as `endorsements`. An officer's vote is also their advisory member
+ * vote. Officers see each other's votes on their org; everyone else sees
+ * the org's vote and how many officers it takes. An org that holds its own
+ * signing key posts frames it signed itself to `POST …/messages`. An org
+ * with neither has no officers on record and doesn't vote until it has some.
  *
- * An org that lists `officers` is its own federation of their keys (a nested
- * multisig). Officers sign frames under the org federation with their own
- * keys and post them to `POST …/messages`; one officer's proposal, or the org
- * threshold of officers agreeing on a vote, has goon.vc sign the org's
- * alliance frame with the org key, carrying those officer frames as
- * `endorsements`. Stewards cannot vote for such an org from the buttons.
+ * Every org frame is verified, stored, and served, so anyone can recount;
+ * each org's latest vote counts, and a proposal passes once a majority of
+ * all member orgs vote yes (then it is closed). Changing the roster's orgs
+ * or officers makes a new federation; open proposals stay with the one they
+ * were made under. Everything lives in one `@fabric/core` {@link Store}.
  *
  * Members vote too, as advice beside the orgs' decision. goon.vc is a Bridge
- * ({@link module:functions/bridgeAttestation}): it holds a key for each account
- * that votes (Discord `/vote`, or the proposal page), attests it once with
- * the bridge key, and signs the member's `FederationMemberVote` with it. A
- * Fabric key linked to a member may sign its own. Each member's latest vote
- * counts, whichever of their accounts cast it.
+ * ({@link module:functions/bridgeAttestation}): it attests each account that
+ * votes (Discord `/vote`, or the proposal page) once and signs the member's
+ * `FederationMemberVote` for it. Each member's latest vote counts, whichever
+ * of their accounts cast it.
  */
 class Alliance {
   /**
@@ -79,6 +78,7 @@ class Alliance {
    * @param {string} [settings.federationsPath] Site path of the federation pages.
    * @param {string|Function} [settings.xprv] goon.vc's key, or a function returning it.
    * @param {Object} [settings.members] goon.vc {@link Members}: who is signed in.
+   * @param {Array<{ id: string, name?: string }>|Function} [settings.discordGuilds] Servers the bot is in (`Events#list` `guilds`), or a function returning them.
    * @param {Function} [settings.publish] `(frameHex) => void`, puts accepted frames on the Fabric network.
    * @param {Object} [settings.bridge] `{ name, origin, platforms }` of this Bridge.
    * @param {Function} [settings.now] Clock, injected for tests.
@@ -108,6 +108,7 @@ class Alliance {
     this.error = null;
     this._xprv = null;
     this._orgs = new Map();
+    this._guilds = [];
     this._queue = Promise.resolve();
     this._listeners = {};
   }
@@ -151,6 +152,7 @@ class Alliance {
       const descriptor = federation.allianceDescriptor(this.roster, validators);
       this.current = await this._remember(descriptor, validators);
       await this._indexOrgFederations(this.current);
+      await this._rememberOfficers();
       this.emit('log', 'GOON.VC', `${this.roster.name} federation ${this.current.id} (${descriptor.threshold} of ${descriptor.validators.length} orgs)`);
     } catch (error) {
       this.error = error.message;
@@ -183,14 +185,41 @@ class Alliance {
     } catch (_) { /* names fall back to symbols */ }
   }
 
+  async _refreshGuilds () {
+    const src = this.settings.discordGuilds;
+    try {
+      const list = typeof src === 'function' ? await src() : src;
+      this._guilds = Array.isArray(list) ? list : [];
+    } catch (_) {
+      this._guilds = [];
+    }
+    return this._guilds;
+  }
+
+  _rosterOrg (symbol) {
+    return this.roster && this.roster.organizations.find((org) => org.symbol === symbol);
+  }
+
   _orgView (symbol) {
     const org = this._orgs.get(symbol) || {};
     return {
       symbol,
       name: org.displayName || org.name || symbol,
       logoUrl: org.logoUrl || null,
-      path: `${this.settings.organizationsPath}/${encodeURIComponent(symbol)}`
+      path: `${this.settings.organizationsPath}/${encodeURIComponent(symbol)}`,
+      discord: orgDiscord.view(this._rosterOrg(symbol), this._guilds)
     };
+  }
+
+  /**
+   * Member orgs and whether the bot is in each one's Discord. Always available
+   * while the roster loads, even when votes are off.
+   * @returns {Promise<{ organizations: Array<Object> }>}
+   */
+  async organizations () {
+    if (!this.roster) throw fail(503, this.error || 'Alliance votes are not set up right now.');
+    await this._refreshGuilds();
+    return { organizations: this.roster.organizations.map((org) => this._orgView(org.symbol)) };
   }
 
   /** Save a federation the first time it is seen, with its publisher-signed invite. */
@@ -230,6 +259,17 @@ class Alliance {
     }
   }
 
+  /** Which officer account each officer key on the roster signs for (kept private, for names). */
+  async _rememberOfficers () {
+    if (!this._xprv) return;
+    for (const org of this.roster.organizations) {
+      for (const account of org.officers) {
+        const signer = federation.officerKey(this._xprv, account).pubkey.slice(2);
+        if (!(await this.store.get(`/officer-key/${signer}`))) await this.store.set(`/officer-key/${signer}`, { account });
+      }
+    }
+  }
+
   _federationPath (id) {
     return `${this.settings.federationsPath}/${id.slice(0, SHORT_ID)}`;
   }
@@ -257,31 +297,253 @@ class Alliance {
   }
 
   /**
-   * Who is asking: the signed-in member, the orgs whose stewards list one of
-   * their accounts, and the orgs listing one of their Fabric keys as an officer.
-   * @returns {Promise<{ member: Object|null, by: string|null, orgs: string[], officers: string[] }>}
+   * Who is asking: the signed-in member, their accounts, the account they
+   * signed in with, and the orgs listing one of their accounts as an officer.
+   * @returns {Promise<{ member: Object|null, by: string|null, accounts: string[], via: string|null, officers: string[] }>}
    */
   async actor (req) {
     const members = this.settings.members;
     const current = members ? await members.currentMember(req).catch(() => null) : null;
-    if (!current || !this.roster) return { member: null, by: null, orgs: [], officers: [] };
-    const keys = new Set((current.member.accounts || []).map((account) => account.key));
-    const orgs = this.roster.organizations
-      .filter((org) => org.stewards.some((key) => keys.has(key)))
-      .map((org) => org.symbol);
-    const officers = this.roster.organizations
-      .filter((org) => org.officers.some((pubkey) => keys.has(`fabric:${pubkey.slice(2)}`)))
-      .map((org) => org.symbol);
-    return { member: current.member, by: current.member.displayName || null, orgs, officers };
+    if (!current) return { member: null, by: null, accounts: [], via: null, officers: [] };
+    return this._actorOf(current.member, current.via || null);
   }
 
-  /** An officer's goon.vc display name, or a short form of their key. */
-  async _officerName (signer) {
+  /**
+   * The same for a remote account (e.g. `discord:<id>` from a command),
+   * with the goon.vc member it is linked to, if any.
+   * @param {string} accountKey
+   * @returns {Promise<Object>}
+   */
+  async actorFor (accountKey) {
+    const parsed = parseAccountKey(accountKey);
+    if (!parsed) return { member: null, by: null, accounts: [], via: null, officers: [] };
+    const member = await this._member(parsed.key);
+    const actor = this._actorOf(member, parsed.platform);
+    if (!actor.accounts.includes(parsed.key)) actor.accounts.unshift(parsed.key);
+    actor.officers = this._representing(new Set(actor.accounts)).map((org) => org.symbol);
+    return actor;
+  }
+
+  _actorOf (member, via) {
+    const accounts = ((member && member.accounts) || []).map((account) => account.key);
+    return {
+      member: member || null,
+      by: (member && member.displayName) || null,
+      accounts,
+      via,
+      officers: this._representing(new Set(accounts)).map((org) => org.symbol)
+    };
+  }
+
+  /**
+   * The member orgs an account may act for: those whose `officers` list it,
+   * or another account linked to the same goon.vc member. Nobody else
+   * speaks for an org.
+   * @param {string} accountKey e.g. `discord:<id>`
+   * @returns {Promise<Array<{ symbol: string, name: string, officer: true }>>}
+   */
+  async representing (accountKey) {
+    if (!this.roster || !accountKey) return [];
+    return this._representing(new Set((await this.actorFor(accountKey)).accounts));
+  }
+
+  _representing (keys) {
+    if (!this.roster) return [];
+    return this.roster.organizations
+      .filter((org) => org.officers.some((account) => keys.has(account)))
+      .map((org) => ({ symbol: org.symbol, name: this._orgView(org.symbol).name, officer: true }));
+  }
+
+  /**
+   * An org's officers on record, one entry per goon.vc member: display name
+   * (null when they have no goon.vc profile yet) and the Discord accounts
+   * linked to them. The Discord ids are for opening #council to them and
+   * must never be served.
+   * @param {string} symbol
+   * @returns {Promise<Array<{ name: string|null, discord: string[], officer: true }>>}
+   */
+  async representatives (symbol) {
+    const wanted = String(symbol || '').toUpperCase();
+    const org = this.roster && this.roster.organizations.find((entry) => entry.symbol === wanted);
+    if (!org) return [];
+    const people = new Map();
+    for (const key of org.officers) {
+      const member = await this._member(key);
+      const id = member ? member.id : key;
+      const entry = people.get(id) || { name: (member && member.displayName) || null, discord: [], officer: true };
+      for (const account of [key, ...((member && member.accounts) || []).map((linked) => linked.key)]) {
+        const match = /^discord:(\d+)$/.exec(account);
+        if (match && !entry.discord.includes(match[1])) entry.discord.push(match[1]);
+      }
+      people.set(id, entry);
+    }
+    return [...people.values()];
+  }
+
+  async _member (accountKey) {
     const members = this.settings.members;
-    const member = members && typeof members.resolve === 'function'
-      ? await members.resolve(`fabric:${signer}`).catch(() => null)
-      : null;
-    return (member && member.displayName) || `officer ${signer.slice(0, 8)}`;
+    if (!members || typeof members.resolve !== 'function') return null;
+    return members.resolve(accountKey).catch(() => null);
+  }
+
+  /** An officer's goon.vc display name, from the account goon.vc signs for them with. */
+  async _officerName (signer) {
+    const held = await this.store.get(`/officer-key/${signer}`);
+    const member = held ? await this._member(held.account) : null;
+    return (member && member.displayName) || 'an officer';
+  }
+
+  /**
+   * The orgs an actor may sign for in a federation, each with the officer
+   * account goon.vc signs with: an account of theirs whose officer key is in
+   * that org's federation. Throws 401 signed out, 403 for anyone else.
+   * @param {Object} actor {@link Alliance#actor}
+   * @param {string} [symbol] only this org
+   * @param {Object} record the alliance federation record
+   * @returns {Array<{ entry: Object, account: string, key: Object }>}
+   */
+  _officerSeats (actor, symbol, record) {
+    if (!actor || !(actor.accounts || []).length) throw fail(401, 'Sign in to vote for your org.');
+    if (!this._xprv) throw fail(503, 'Alliance votes are not set up right now.');
+    const wanted = symbol ? String(symbol).toUpperCase() : null;
+    const seats = [];
+    for (const entry of record.organizations) {
+      if (!entry.federation || (wanted && entry.symbol !== wanted)) continue;
+      for (const account of actor.accounts) {
+        if (!parseAccountKey(account)) continue;
+        const key = federation.officerKey(this._xprv, account);
+        if (federation.isValidator(entry.federation.descriptor, key.pubkey.slice(2))) {
+          seats.push({ entry, account, key });
+          break;
+        }
+      }
+    }
+    if (!seats.length) throw fail(403, NOT_AN_OFFICER);
+    return seats;
+  }
+
+  /**
+   * A signed-in officer proposes for their org: goon.vc signs their officer
+   * proposal and, on it, the org's alliance proposal.
+   * @param {Object} input `{ title, summary?, days?, org? }`
+   * @param {Object} actor {@link Alliance#actor}
+   * @returns {Promise<Object>} the proposal, as served
+   */
+  propose (input = {}, actor = {}) {
+    return this._exclusive(async () => {
+      this._assertReady();
+      const title = String(input.title || '').trim();
+      const summary = String(input.summary || '').trim();
+      if (!title) throw fail(400, 'A proposal needs a title.');
+      if (title.length > LIMITS.title || summary.length > LIMITS.summary) throw fail(400, 'Proposal is too long.');
+      const days = input.days === undefined || input.days === null || input.days === '' ? DEFAULT_DAYS : Number(input.days);
+      if (!Number.isInteger(days) || days < 1 || days > MAX_DAYS) throw fail(400, `Voting stays open 1 to ${MAX_DAYS} days.`);
+      const seats = this._officerSeats(actor, input.org, this.current);
+      if (seats.length > 1) throw fail(400, `You are an officer of ${seats.map((row) => row.entry.symbol).join(' and ')}; choose which org proposes.`);
+      const seat = seats[0];
+      const now = this.settings.now();
+      const body = federation.officerProposalBody(seat.entry.federation.id, {
+        allianceFederationId: this.current.id,
+        org: seat.entry.symbol,
+        title,
+        summary,
+        proposer: seat.key.pubkey,
+        createdAt: this._iso(now),
+        closesAt: this._iso(now + days * DAY_MS)
+      });
+      const signed = federation.signFrame(body, seat.key);
+      const view = await this._ingestOfficer(signed.frame, federation.openFrame(signed.frame), now, this._viewer(actor), seat.account);
+      view.you.signed = [seat.entry.symbol];
+      return view;
+    });
+  }
+
+  /**
+   * A signed-in officer votes for their org (every org they are an officer
+   * of in the proposal, unless `org` names one): goon.vc signs their officer
+   * vote, and the org's alliance vote once the org threshold agrees.
+   * @param {string} id proposal id (or its first 12 characters)
+   * @param {Object} input `{ choice, org? }`
+   * @param {Object} actor {@link Alliance#actor}
+   * @returns {Promise<Object>} the proposal, as served, with `you.signed` (the orgs signed for)
+   */
+  officerVote (id, input = {}, actor = {}) {
+    return this._exclusive(async () => {
+      this._assertReady();
+      const proposal = await this._proposal(id);
+      if (!proposal) throw fail(404, 'No such proposal.');
+      const choice = String(input.choice || '').toLowerCase();
+      if (!federation.CHOICES.includes(choice)) throw fail(400, 'Vote yes, no, or abstain.');
+      const record = await this._federation(proposal.federationId);
+      const seats = this._officerSeats(actor, input.org, record);
+      const signedFor = [];
+      let view = null;
+      for (const seat of seats) {
+        const stored = await this.store.get(`/proposal/${proposal.id}`);
+        const signer = seat.key.pubkey.slice(2);
+        const previous = (stored.officerVotes || []).filter((vote) => vote.org === seat.entry.symbol && vote.signer === signer).pop();
+        const now = this.settings.now();
+        const castAt = Math.max(now, previous ? Date.parse(previous.castAt) + 1 : 0);
+        const body = federation.officerVoteBody(seat.entry.federation.id, {
+          allianceFederationId: record.id,
+          org: seat.entry.symbol,
+          proposalId: proposal.id,
+          choice,
+          castAt: this._iso(castAt)
+        });
+        const signed = federation.signFrame(body, seat.key);
+        view = await this._ingestOfficer(signed.frame, federation.openFrame(signed.frame), now, this._viewer(actor), seat.account);
+        signedFor.push(seat.entry.symbol);
+        if (view.status !== 'open') break;
+      }
+      view.you.signed = signedFor;
+      return view;
+    });
+  }
+
+  /**
+   * An officer's vote: their signature for the org, and the same choice as
+   * their advisory member vote from `account` (the account they act from).
+   * @param {string} id
+   * @param {Object} input `{ choice, org?, account? }`
+   * @param {Object} actor {@link Alliance#actor}
+   * @returns {Promise<Object>} the proposal, as served, with `you.signed` (the orgs) and `you.replaced`
+   */
+  async vote (id, input = {}, actor = {}) {
+    const record = await this._proposal(id).then((proposal) => proposal && this._federation(proposal.federationId));
+    if (record) this._officerSeats(actor, input.org, record);
+    let replaced = null;
+    if (this.bridge && input.account && actor.member) {
+      const member = await this.memberVote(id, { account: input.account, member: actor.member, choice: input.choice });
+      replaced = member.you.replaced;
+    }
+    const signed = await this.officerVote(id, input, actor);
+    const view = await this.getProposal(signed.id, actor);
+    view.you.signed = signed.you.signed;
+    view.you.replaced = replaced;
+    return view;
+  }
+
+  /**
+   * A signed-in officer votes from the proposal page.
+   * @param {string} id
+   * @param {Object} input `{ choice, org? }`
+   * @param {Object} req
+   */
+  async webVote (id, input, req) {
+    const members = this.settings.members;
+    const current = members ? await members.currentMember(req).catch(() => null) : null;
+    if (!current) throw fail(401, 'Sign in to vote for your org.');
+    const actor = this._actorOf(current.member, current.via || null);
+    let account = null;
+    try { account = this.bridge ? this._webAccount(current) : null; } catch (_) { /* no account that may cast a member vote */ }
+    return this.vote(id, Object.assign({}, input || {}, { account }), actor);
+  }
+
+  /** Who a proposal is shown to: the member and the orgs they are an officer of. */
+  _viewer (actor) {
+    if (!actor) return {};
+    return { memberId: actor.member ? actor.member.id : null, officers: actor.officers || [], accounts: actor.accounts || [] };
   }
 
   /** Org federations by the x-only alliance validator key of each org of officers. */
@@ -293,37 +555,10 @@ class Alliance {
     return out;
   }
 
-  /** The org a steward acts for: the one they steward, or the one they named. */
-  _orgFor (actor, requested) {
-    if (!actor.member) throw fail(401, 'Sign in as an Org Steward to propose or vote.');
-    if (!actor.orgs.length) throw fail(403, 'Only Org Stewards of a member org can propose or vote.');
-    const wanted = requested ? String(requested).trim().toUpperCase() : null;
-    if (wanted) {
-      if (!actor.orgs.includes(wanted)) throw fail(403, `You are not a steward of ${wanted}.`);
-      return wanted;
-    }
-    if (actor.orgs.length > 1) throw fail(400, `You steward ${actor.orgs.join(', ')}; say which org this is for.`);
-    return actor.orgs[0];
-  }
-
-  /** goon.vc's key for an org a steward acts for, or why it cannot sign for it. */
-  _signer (record, symbol) {
-    const entry = record.organizations.find((org) => org.symbol === symbol);
-    if (!entry) throw fail(403, `${symbol} is not a member of this federation.`);
-    if (entry.custody === 'officers') {
-      throw fail(409, `${symbol} decides by its officers' signatures; officers sign with npm run alliance:sign and post to ${BASE}/messages.`);
-    }
-    if (entry.custody !== 'goon.vc') {
-      throw fail(409, `${symbol} signs with its own key; post its signed frame to ${BASE}/messages.`);
-    }
-    return this._orgKey(entry);
-  }
-
   /** goon.vc's key for an org entry of a federation record. */
   _orgKey (entry) {
-    if (!this._xprv) throw fail(409, `goon.vc no longer holds ${entry.symbol}'s key for this federation.`);
-    const key = federation.orgKey(this._xprv, entry.symbol, entry.federation ? entry.federation.id : undefined);
-    if (key.pubkey !== entry.pubkey) throw fail(409, `goon.vc no longer holds ${entry.symbol}'s key for this federation.`);
+    const key = this._xprv ? federation.orgKey(this._xprv, entry.symbol, entry.federation ? entry.federation.id : undefined) : null;
+    if (!key || key.pubkey !== entry.pubkey) throw fail(409, `goon.vc can no longer sign for ${entry.symbol} in this federation.`);
     return key;
   }
 
@@ -340,14 +575,14 @@ class Alliance {
   /**
    * Verify and store a signed proposal or vote frame.
    * @param {string} frame hex
-   * @param {Object} [meta] `{ by, member }` of the steward it was signed for
+   * @param {Object} [meta] `{ by, member }`: who it was signed for
    * @returns {Promise<Object>} the proposal, as served
    */
   ingest (frame, meta = {}) {
     return this._exclusive(() => this._ingest(frame, meta));
   }
 
-  async _ingest (frame, meta = {}) {
+  async _ingest (frame, meta = {}, viewer = {}) {
     let opened;
     try {
       opened = federation.openFrame(frame);
@@ -357,7 +592,7 @@ class Alliance {
     const { body, signer, id } = opened;
     const now = this.settings.now();
     if (body.type === federation.MESSAGE_TYPES.memberVote) return this._ingestMember(String(frame).toLowerCase(), opened, now, meta);
-    if (body.allianceFederationId !== undefined) return this._ingestOfficer(String(frame).toLowerCase(), opened, now);
+    if (body.allianceFederationId !== undefined) return this._ingestOfficer(String(frame).toLowerCase(), opened, now, viewer);
     if (body.type === federation.MESSAGE_TYPES.proposal) {
       const record = await this._federation(body.federationId);
       if (!record) throw fail(404, 'Unknown federation.');
@@ -368,7 +603,7 @@ class Alliance {
       if (Date.parse(body.closesAt) - created > MAX_DAYS * DAY_MS) throw fail(400, `Voting can stay open ${MAX_DAYS} days at most.`);
       const pid = federation.proposalId(body);
       const existing = await this.store.get(`/proposal/${pid}`);
-      if (existing) return this._view(existing);
+      if (existing) return this._view(existing, viewer);
       const ids = await this._list('/index/proposals');
       if (ids.length >= MAX_PROPOSALS) throw fail(409, 'The proposal archive is full.');
       if (record.id !== this.current.id) throw fail(409, 'New proposals go to the current federation.');
@@ -389,7 +624,7 @@ class Alliance {
       await this.store.set(`/proposal/${pid}`, proposal);
       await this.store.set('/index/proposals', ids.concat(pid));
       this._publish(frame);
-      return this._view(proposal);
+      return this._view(proposal, viewer);
     }
     if (body.type === federation.MESSAGE_TYPES.vote) {
       const proposal = await this.store.get(`/proposal/${String(body.proposalId || '').toLowerCase()}`);
@@ -397,7 +632,7 @@ class Alliance {
       const record = await this._federation(proposal.federationId);
       const endorsements = this._verify(record, body, signer);
       if (Date.parse(body.castAt) > now + CLOCK_SKEW_MS) throw fail(400, 'Vote is dated in the future.');
-      if (proposal.votes.some((vote) => vote.frameId === id)) return this._view(proposal);
+      if (proposal.votes.some((vote) => vote.frameId === id)) return this._view(proposal, viewer);
       const counted = federation.tally(record.descriptor, proposal.body, proposal.votes, now);
       if (counted.status !== 'open') throw fail(409, `Voting on this proposal is closed (${counted.status}).`);
       // Frames are public: an org's older vote must not be replayable over its newer one.
@@ -405,7 +640,7 @@ class Alliance {
       if (previous && Date.parse(body.castAt) <= Date.parse(previous.castAt)) {
         throw fail(409, `${this._symbolFor(record, signer)} has already voted more recently.`);
       }
-      if (counted.choices[signer] === body.choice) return this._view(proposal);
+      if (counted.choices[signer] === body.choice) return this._view(proposal, viewer);
       proposal.votes.push({
         frame: String(frame).toLowerCase(),
         frameId: id,
@@ -419,7 +654,7 @@ class Alliance {
       });
       await this.store.set(`/proposal/${proposal.id}`, proposal);
       this._publish(frame);
-      return this._view(proposal);
+      return this._view(proposal, viewer);
     }
     throw fail(400, `Rejected frame: not a proposal or vote (${body.type}).`);
   }
@@ -429,7 +664,7 @@ class Alliance {
    * the org's alliance proposal at once; a vote is kept, and once the org
    * threshold of officers agree on a choice the org's alliance vote follows.
    */
-  async _ingestOfficer (frame, opened, now) {
+  async _ingestOfficer (frame, opened, now, viewer = {}, account = null) {
     const { body, signer, id } = opened;
     const record = await this._federation(body.allianceFederationId);
     if (!record) throw fail(404, 'Unknown federation.');
@@ -455,27 +690,27 @@ class Alliance {
         orgFederationId: entry.federation.id,
         endorsements: [frame]
       });
-      return this._ingest(federation.signFrame(outer, key).frame, { by });
+      return this._ingest(federation.signFrame(outer, key).frame, { by }, viewer);
     }
     const proposal = await this.store.get(`/proposal/${String(body.proposalId).toLowerCase()}`);
     if (!proposal) throw fail(404, 'No such proposal.');
     if (proposal.federationId !== record.id) throw fail(403, 'Rejected frame: officer vote is for another alliance federation.');
     if (Date.parse(body.castAt) > now + CLOCK_SKEW_MS) throw fail(400, 'Vote is dated in the future.');
     const officerVotes = proposal.officerVotes || [];
-    if (officerVotes.some((vote) => vote.frameId === id)) return this._view(proposal);
+    const served = (stored) => this._view(stored, viewer);
+    if (officerVotes.some((vote) => vote.frameId === id)) return served(proposal);
     const counted = federation.tally(record.descriptor, proposal.body, proposal.votes, now);
     if (counted.status !== 'open') throw fail(409, `Voting on this proposal is closed (${counted.status}).`);
     const mine = officerVotes.filter((vote) => vote.org === entry.symbol);
     const previous = mine.filter((vote) => vote.signer === signer).pop();
     if (previous && Date.parse(body.castAt) <= Date.parse(previous.castAt)) throw fail(409, 'This officer has already voted more recently.');
-    if (previous && previous.choice === body.choice) return this._view(proposal);
-    const vote = { org: entry.symbol, frame, frameId: id, signer, choice: body.choice, castAt: body.castAt, by, receivedAt: this._iso(now) };
+    if (previous && previous.choice === body.choice) return served(proposal);
+    const vote = { org: entry.symbol, frame, frameId: id, signer, account, choice: body.choice, castAt: body.castAt, by, receivedAt: this._iso(now) };
     proposal.officerVotes = officerVotes.concat(vote);
     await this.store.set(`/proposal/${proposal.id}`, proposal);
-    this._publish(frame);
     const decided = federation.orgTally(descriptor, mine.concat(vote)).decided;
     const orgSigner = entry.pubkey.slice(2);
-    if (!decided || decided === counted.choices[orgSigner]) return this._view(proposal);
+    if (!decided || decided === counted.choices[orgSigner]) return served(proposal);
     const latest = new Map();
     for (const row of mine.concat(vote)) latest.set(row.signer, row);
     const backers = Array.from(latest.values()).filter((row) => row.choice === decided);
@@ -488,7 +723,8 @@ class Alliance {
       orgFederationId: entry.federation.id,
       endorsements: backers.map((row) => row.frame)
     });
-    return this._ingest(federation.signFrame(outer, key).frame, { by: backers.map((row) => row.by).join(', ') });
+    await this._ingest(federation.signFrame(outer, key).frame, { by: backers.map((row) => row.by).join(', ') });
+    return served(await this.store.get(`/proposal/${proposal.id}`));
   }
 
   /**
@@ -514,17 +750,17 @@ class Alliance {
       memberId = (await this._memberId(attested.account)) || meta.member || attested.member;
     } else {
       memberId = await this._memberId(`fabric:${signer}`);
-      if (!memberId) throw fail(403, 'Rejected frame: that Fabric key is not linked to a goon.vc member.');
+      if (!memberId) throw fail(403, 'Rejected frame: the signer is not a goon.vc member.');
     }
     if (!memberId) throw fail(403, 'Rejected frame: no member for that account.');
     if (Date.parse(body.castAt) > now + CLOCK_SKEW_MS) throw fail(400, 'Vote is dated in the future.');
     const memberVotes = proposal.memberVotes || [];
-    if (memberVotes.some((vote) => vote.frameId === id)) return this._view(proposal, memberId);
+    if (memberVotes.some((vote) => vote.frameId === id)) return this._view(proposal, { memberId });
     const counted = federation.tally(record.descriptor, proposal.body, proposal.votes, now);
     if (counted.status !== 'open') throw fail(409, `Voting on this proposal is closed (${counted.status}).`);
     const previous = (await this._resolvedMemberVotes(proposal)).filter((vote) => vote.member === memberId).pop();
     if (previous && Date.parse(body.castAt) <= Date.parse(previous.castAt)) throw fail(409, 'You have already voted more recently.');
-    if (previous && previous.signer === signer && previous.choice === body.choice) return this._view(proposal, memberId);
+    if (previous && previous.signer === signer && previous.choice === body.choice) return this._view(proposal, { memberId });
     proposal.memberVotes = memberVotes.concat({
       member: memberId,
       frame,
@@ -538,7 +774,7 @@ class Alliance {
     });
     await this.store.set(`/proposal/${proposal.id}`, proposal);
     this._publish(frame);
-    return this._view(proposal, memberId);
+    return this._view(proposal, { memberId });
   }
 
   /** The goon.vc member id an account key or (older) member id resolves to now. */
@@ -647,7 +883,10 @@ class Alliance {
     if (!current) throw fail(401, 'Sign in to vote as a member.');
     this._assertReady();
     if (!this.bridge) throw fail(503, 'Member votes are not set up right now.');
-    return this.memberVote(id, { account: this._webAccount(current), member: current.member.id, choice: (input || {}).choice });
+    const voted = await this.memberVote(id, { account: this._webAccount(current), member: current.member.id, choice: (input || {}).choice });
+    const view = await this.getProposal(voted.id, this._actorOf(current.member, current.via || null));
+    view.you.replaced = voted.you.replaced;
+    return view;
   }
 
   _bridgeView () {
@@ -659,11 +898,17 @@ class Alliance {
   }
 
   _verify (record, body, signer) {
+    let endorsements;
     try {
-      return federation.verifyBody(record.descriptor, body, signer, this._officerOrgs(record));
+      endorsements = federation.verifyBody(record.descriptor, body, signer, this._officerOrgs(record));
     } catch (error) {
       throw fail(403, `Rejected frame: ${error.message}`);
     }
+    const entry = record.organizations.find((org) => org.pubkey.slice(2) === fabricPubkey(signer));
+    if (entry && entry.custody === 'none') {
+      throw fail(403, `${entry.symbol} has no officers on record, so it doesn't vote yet.`);
+    }
+    return endorsements;
   }
 
   _publish (frame) {
@@ -673,56 +918,6 @@ class Alliance {
     } catch (error) {
       this.emit('error', 'GOON.VC', `could not publish alliance frame: ${error.message}`);
     }
-  }
-
-  /**
-   * A steward proposes something for the member orgs to vote on.
-   * @param {Object} input `{ title, summary?, days?, org? }`
-   * @param {Object} actor {@link Alliance#actor}
-   * @returns {Promise<Object>}
-   */
-  async propose (input, actor) {
-    this._assertReady();
-    input = input || {};
-    const symbol = this._orgFor(actor, input.org);
-    const key = this._signer(this.current, symbol);
-    const title = text(input.title, LIMITS.title);
-    if (title.length < 3) throw fail(400, 'A proposal needs a title.');
-    const summary = String(input.summary === undefined || input.summary === null ? '' : input.summary).trim().slice(0, LIMITS.summary);
-    const days = input.days === undefined || input.days === null || input.days === '' ? DEFAULT_DAYS : Number(input.days);
-    if (!Number.isInteger(days) || days < 1 || days > MAX_DAYS) throw fail(400, `Voting stays open 1 to ${MAX_DAYS} days.`);
-    const now = this.settings.now();
-    const body = federation.proposalBody(this.current.id, {
-      title,
-      summary,
-      proposer: key.pubkey,
-      createdAt: this._iso(now),
-      closesAt: this._iso(now + days * DAY_MS)
-    });
-    return this.ingest(federation.signFrame(body, key).frame, { by: actor.by, member: actor.member.id });
-  }
-
-  /**
-   * A steward casts (or changes, while voting is open) their org's vote.
-   * @param {string} id proposal id (or its first 12 characters)
-   * @param {Object} input `{ choice, org? }`
-   * @param {Object} actor {@link Alliance#actor}
-   * @returns {Promise<Object>}
-   */
-  async vote (id, input, actor) {
-    this._assertReady();
-    input = input || {};
-    const proposal = await this._proposal(id);
-    if (!proposal) throw fail(404, 'No such proposal.');
-    const choice = String(input.choice || '').toLowerCase();
-    if (!federation.CHOICES.includes(choice)) throw fail(400, 'Vote yes, no, or abstain.');
-    const symbol = this._orgFor(actor, input.org);
-    const record = await this._federation(proposal.federationId);
-    const key = this._signer(record, symbol);
-    const previous = this._latestVote(proposal, key.pubkey.slice(2));
-    const castAt = Math.max(this.settings.now(), previous ? Date.parse(previous.castAt) + 1 : 0);
-    const body = federation.voteBody(record.id, { proposalId: proposal.id, choice, castAt: this._iso(castAt) });
-    return this.ingest(federation.signFrame(body, key).frame, { by: actor.by, member: actor.member.id });
   }
 
   /** Each member's latest vote, and the counts. */
@@ -750,18 +945,38 @@ class Alliance {
     };
   }
 
+  /** The officer keys goon.vc holds for a viewer's accounts, x-only. */
+  _officerSigners (accounts = []) {
+    if (!this._xprv) return new Set();
+    if (!this._officerKeyCache) this._officerKeyCache = new Map();
+    const out = new Set();
+    for (const account of accounts) {
+      if (!parseAccountKey(account)) continue;
+      if (!this._officerKeyCache.has(account)) this._officerKeyCache.set(account, federation.officerKey(this._xprv, account).pubkey.slice(2));
+      out.add(this._officerKeyCache.get(account));
+    }
+    return out;
+  }
+
   /**
    * A proposal as served. Member votes show only the counted frame per
-   * member, with no member id or account.
+   * member, with no member id or account. Each officer's vote, and who
+   * backed an org's vote, is shown only to that org's officers.
    * @param {Object} proposal
-   * @param {string} [memberId] the member asking, for `you.memberVote`
+   * @param {Object} [viewer] `{ memberId, accounts }`: who is asking, for `you`
    */
-  async _view (proposal, memberId = null) {
+  async _view (proposal, viewer = {}) {
+    const memberId = viewer.memberId || null;
     const record = await this._federation(proposal.federationId);
     const counted = federation.tally(record.descriptor, proposal.body, proposal.votes, this.settings.now());
     const latest = new Map();
     for (const vote of proposal.votes) latest.set(vote.signer, vote);
     const officerVotes = proposal.officerVotes || [];
+    const signers = this._officerSigners(viewer.accounts);
+    const seats = record.organizations
+      .filter((org) => org.federation && org.federation.descriptor.validators.some((pubkey) => signers.has(pubkey.slice(2))))
+      .map((org) => org.symbol);
+    const visible = officerVotes.filter((vote) => seats.includes(vote.org));
     const members = await this._memberCounts(proposal);
     const mine = memberId ? members.latest.get(memberId) : null;
     const counts = Array.from(members.latest.values());
@@ -776,31 +991,40 @@ class Alliance {
       current: !!this.current && record.id === this.current.id,
       organizations: record.organizations.map((org) => {
         const vote = latest.get(org.pubkey.slice(2));
+        const seen = !org.federation || seats.includes(org.symbol);
         const view = Object.assign(this._orgView(org.symbol), {
           custody: org.custody,
           choice: counted.choices[org.pubkey.slice(2)] || null,
           castAt: vote ? vote.castAt : null,
-          by: vote ? vote.by : null
+          by: vote && seen ? vote.by : null
         });
         if (org.federation) {
-          const officers = federation.orgTally(org.federation.descriptor, officerVotes.filter((row) => row.org === org.symbol));
           view.federationId = org.federation.id;
           view.federationPath = this._federationPath(org.federation.id);
-          view.officers = { threshold: officers.threshold, total: officers.total, yes: officers.yes, no: officers.no, abstain: officers.abstain, waiting: officers.waiting };
+          view.officers = { threshold: org.federation.descriptor.threshold, total: org.federation.descriptor.validators.length };
+          if (seen) {
+            const officers = federation.orgTally(org.federation.descriptor, officerVotes.filter((row) => row.org === org.symbol));
+            Object.assign(view.officers, { yes: officers.yes, no: officers.no, abstain: officers.abstain, waiting: officers.waiting });
+          }
         }
         return view;
       }),
-      votes: proposal.votes.map((vote) => ({
-        org: this._symbolFor(record, vote.signer),
-        choice: vote.choice,
-        castAt: vote.castAt,
-        by: vote.by,
-        id: vote.frameId,
-        frame: vote.frame,
-        endorsements: vote.endorsements || []
-      })),
-      officerVotes: officerVotes.map((vote) => ({
+      votes: proposal.votes.map((vote) => {
+        const org = this._symbolFor(record, vote.signer);
+        const entry = record.organizations.find((row) => row.symbol === org);
+        return {
+          org,
+          choice: vote.choice,
+          castAt: vote.castAt,
+          by: !entry || !entry.federation || seats.includes(org) ? vote.by : null,
+          id: vote.frameId,
+          frame: vote.frame,
+          endorsements: vote.endorsements || []
+        };
+      }),
+      officerVotes: visible.map((vote) => ({
         org: vote.org,
+        officer: record.organizations.find((org) => org.symbol === vote.org).federation.descriptor.validators.findIndex((pubkey) => pubkey.slice(2) === vote.signer),
         choice: vote.choice,
         castAt: vote.castAt,
         by: vote.by,
@@ -818,7 +1042,13 @@ class Alliance {
       })),
       bridge: this._bridgeView(),
       bridges,
-      you: { memberVote: mine ? { choice: mine.choice, castAt: mine.castAt, platform: mine.platform } : null },
+      you: {
+        memberVote: mine ? { choice: mine.choice, castAt: mine.castAt, platform: mine.platform } : null,
+        officers: seats.map((symbol) => {
+          const own = visible.filter((vote) => vote.org === symbol && signers.has(vote.signer)).pop();
+          return Object.assign(this._orgView(symbol), { choice: own ? own.choice : null, castAt: own ? own.castAt : null });
+        })
+      },
       frame: proposal.frame,
       endorsements: proposal.endorsements || [],
       descriptor: record.descriptor,
@@ -833,13 +1063,13 @@ class Alliance {
 
   /**
    * @param {string} id
-   * @param {Object} [actor] {@link Alliance#actor}, for `you.memberVote`
+   * @param {Object} [actor] {@link Alliance#actor}, for `you`
    */
   async getProposal (id, actor = null) {
     const proposal = await this._proposal(id);
     if (!proposal) return null;
     const memberId = actor && actor.member ? ((await this._memberId(actor.member.id)) || actor.member.id) : null;
-    return this._view(proposal, memberId);
+    return this._view(proposal, { memberId, accounts: (actor && actor.accounts) || [] });
   }
 
   /**
@@ -863,9 +1093,20 @@ class Alliance {
    * @param {Object} [actor]
    * @returns {Promise<Object>}
    */
-  async overview (actor = { member: null, orgs: [], officers: [] }) {
-    const you = { signedIn: !!actor.member, organizations: actor.orgs || [], officers: actor.officers || [] };
-    if (!this.current) return { name: this.roster ? this.roster.name : null, status: 'unconfigured', error: this.error, bridge: this._bridgeView(), you, proposals: [] };
+  async overview (actor = { member: null, officers: [] }) {
+    await this._refreshGuilds();
+    const you = { signedIn: !!actor.member, officers: (actor.officers || []).map((symbol) => this._orgView(symbol)) };
+    if (!this.current) {
+      return {
+        name: this.roster ? this.roster.name : null,
+        status: 'unconfigured',
+        error: this.error,
+        bridge: this._bridgeView(),
+        you,
+        proposals: [],
+        organizations: this.roster ? this.roster.organizations.map((org) => this._orgView(org.symbol)) : []
+      };
+    }
     const record = this.current;
     return {
       name: record.name,
@@ -877,12 +1118,12 @@ class Alliance {
         network: record.descriptor.network,
         threshold: record.descriptor.threshold,
         orgs: record.descriptor.validators.length,
+        voting: record.organizations.filter((org) => org.custody !== 'none').length,
         descriptor: record.descriptor,
         invite: record.invite,
         organizations: record.organizations.map((org) => Object.assign(this._orgView(org.symbol), {
           pubkey: org.pubkey,
-          custody: org.custody,
-          stewards: (this.roster.organizations.find((o) => o.symbol === org.symbol) || { stewards: [] }).stewards.length
+          custody: org.custody
         }, org.federation ? {
           federation: {
             id: org.federation.id,
@@ -1003,10 +1244,13 @@ class Alliance {
       const alliance = await this.store.get(`/federation/${fid}`);
       if (alliance) alliances.push(this._allianceSummary(alliance));
     }
+    // Names only, in name order: listed in validator order, an endorsement's
+    // public signer key could be matched to an officer by its index.
     const officers = [];
     for (const pubkey of record.descriptor.validators) {
-      officers.push({ pubkey, name: await this._officerName(pubkey.slice(2)) });
+      officers.push({ name: await this._officerName(pubkey.slice(2)) });
     }
+    officers.sort((a, b) => String(a.name).localeCompare(String(b.name)));
     return Object.assign(this._orgFederationSummary(record), {
       descriptor: record.descriptor,
       officers,
@@ -1063,23 +1307,39 @@ class Alliance {
   middleware () {
     return (req, res, next) => {
       const pathname = (req.path || new URL(req.url, 'http://localhost').pathname).replace(/\/+$/, '');
-      if (pathname !== BASE && !pathname.startsWith(BASE + '/')) return next();
       const method = String(req.method || 'GET').toUpperCase();
+      if (pathname === '/services/organizations') {
+        if (method !== 'GET') {
+          sendJson(res, 405, { error: 'Method not allowed' });
+          return;
+        }
+        Promise.resolve().then(() => this.organizations()).then(
+          (payload) => sendJson(res, 200, payload),
+          (error) => sendJson(res, error && error.status ? error.status : 500, { error: error && error.message ? error.message : 'Alliance request failed' })
+        );
+        return;
+      }
+      if (pathname !== BASE && !pathname.startsWith(BASE + '/')) return next();
       const parts = pathname.slice(BASE.length).split('/').filter(Boolean);
       const body = (req.body && typeof req.body === 'object') ? req.body : {};
       Promise.resolve().then(async () => {
+        if (method === 'GET') await this._refreshGuilds();
         const [collection, id, action] = parts;
         if (!parts.length && method === 'GET') return [200, await this.overview(await this.actor(req))];
         if (collection === 'proposals') {
           if (parts.length === 1) {
             if (method === 'GET') return [200, { proposals: await this.listProposals() }];
-            if (method === 'POST') return [201, await this.propose(body, await this.actor(req))];
+            if (method === 'POST') {
+              const actor = await this.actor(req);
+              if (!actor.member) throw fail(401, 'Sign in to propose for your org.');
+              return [200, await this.propose(body, actor)];
+            }
           } else if (parts.length === 2 && method === 'GET') {
             const proposal = await this.getProposal(id, await this.actor(req));
             if (!proposal) throw fail(404, 'No such proposal.');
             return [200, proposal];
           } else if (parts.length === 3 && action === 'votes' && method === 'POST') {
-            return [200, await this.vote(id, body, await this.actor(req))];
+            return [200, await this.webVote(id, body, req)];
           } else if (parts.length === 3 && action === 'member-votes' && method === 'POST') {
             return [200, await this.webMemberVote(id, body, req)];
           }

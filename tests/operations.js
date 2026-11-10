@@ -72,7 +72,7 @@ describe('Operations metrics service', function () {
     assert.ok(discord.settings.intents.includes(GatewayIntentBits.GuildVoiceStates));
 
     discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: null, newChannelId: ALPHA_VOICE, channelName: 'ALPHA SQUADRON' });
-    discord.emit('activity', { type: 'DiscordMessage', actor: { ref: '111111111111111111' }, object: { content: 'hello there' }, target: { ref: ALPHA_TEXT } });
+    discord.emit('activity', { type: 'DiscordMessage', actor: { ref: '111111111111111111' }, object: { content: 'hello there' }, target: { ref: ALPHA_TEXT, guildId: GUILD } });
     await new Promise((resolve) => setImmediate(resolve));
 
     const report = await ops.report();
@@ -114,7 +114,7 @@ describe('Operations metrics service', function () {
   it('asks for the privileged Server Members intent only when campaigns ask for it', async function () {
     const { GatewayIntentBits } = require('discord.js');
     const Community = require('../services/community');
-    const Campaigns = function Campaigns () {};
+    const Campaigns = Object.assign(function Campaigns () {}, { PREVIEW_APPROVALS: true });
     const Scripts = function Scripts () {};
     const intentsFor = async (community) => {
       const ops = new Operations({

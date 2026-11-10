@@ -1,27 +1,7 @@
+// Compiled from components/ClipLibrary.js by `npm run build`. Edit the component, not this file.
 'use strict';
 
-/**
- * <clip-library> — every clip and screenshot from the Discord clip channels:
- * recording sessions of thumbnail cards, search and filters, a player that jumps to the
- * other pilots' angles of the same moment, and the projects cut from them.
- *
- * Attributes:
- *   src        API base (e.g. `/services/clips`). Nothing loads until it is set.
- *   base       page path for project links (default `/clips`)
- *   timeline   page path of the session timeline (default `<base>/timeline`)
- *   clip       clip to open in the player once loaded
- *   sessions   sessions shown before "Show more" (default 24)
- *
- * API (relative to src): `GET /` clips + status, `GET /sessions`,
- * `GET|POST /projects`, `POST /refresh`. Clips carry `proxyUrl` / `thumbsUrl`
- * and `proxy.thumbs` `{ every, count, columns, rows, width, height }`; a
- * screenshot has `media: 'image'` and its `proxyUrl` is an image.
- *
- * Emits `clipopen` / `clipclose` (`detail: { id }`) as the player opens and
- * closes, and `projectopen` (cancelable; `detail: { id, path }`) before
- * navigating to a new project.
- */
-(function (root) {
+(function defineClipLibrary (root) {
   if (!root || typeof root.HTMLElement !== 'function' || !root.customElements) return;
   if (root.customElements.get('clip-library')) return;
 
@@ -738,4 +718,4 @@
   }
 
   root.customElements.define('clip-library', ClipLibrary);
-})(typeof window !== 'undefined' ? window : null);
+})(window);

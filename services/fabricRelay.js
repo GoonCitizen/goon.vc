@@ -149,6 +149,13 @@ class FabricRelay {
     return this._xprv;
   }
 
+  /** goon.vc's Fabric identity key (the relay key), once started; Passport peer sign-ins name it. */
+  get fabricKey () {
+    if (!this._xprv) return null;
+    if (!this._fabricKey) this._fabricKey = new Identity({ xprv: this._xprv, network: NETWORK }).fabricKey;
+    return this._fabricKey;
+  }
+
   /**
    * Put an already-signed frame on the Fabric network, if a peer is connected.
    * @param {string} frame Message bytes as hex
@@ -340,6 +347,16 @@ class FabricRelay {
     return Array.from(channels.values());
   }
 
+  // A channel can turn private (or be deleted) after its messages were queued or kept for re-sharing.
+  _publicOnly (records) {
+    const guild = this._guild();
+    const open = new Set(guild ? share.publicChannels(guild).map((channel) => String(channel.id)) : []);
+    for (const channelId of Array.from(this.recent.keys())) {
+      if (!open.has(String(channelId))) this.recent.delete(channelId);
+    }
+    return Array.from(records).filter((record) => open.has(String(record.channelId)));
+  }
+
   /**
    * Send what arrived since the last flush (and the catalog, if it changed).
    * Kept for later while no Fabric peer is connected.
@@ -347,9 +364,11 @@ class FabricRelay {
    */
   _flush () {
     if (!this.connected) return 0;
+    // Without the guild we cannot tell which queued channels are still public.
+    if (!this._guild()) return 0;
     let sent = this._catalogDirty ? this._sendCatalog() : 0;
     if (!this.pending.size) return sent;
-    for (const pack of share.messagePacks(this._byChannel(this.pending.values()))) sent += this._publish([pack]);
+    for (const pack of share.messagePacks(this._byChannel(this._publicOnly(this.pending.values())))) sent += this._publish([pack]);
     this.pending.clear();
     return sent;
   }
@@ -361,11 +380,12 @@ class FabricRelay {
    */
   _shareAll () {
     if (!this.connected) return 0;
+    if (!this._guild()) return 0;
     let sent = this._sendCatalog();
     const records = new Map();
     for (const channel of this.recent.values()) for (const record of channel.values()) records.set(record.discordMessageId, record);
     for (const record of this.pending.values()) records.set(record.discordMessageId, record);
-    for (const pack of share.messagePacks(this._byChannel(records.values()))) sent += this._publish([pack]);
+    for (const pack of share.messagePacks(this._byChannel(this._publicOnly(records.values())))) sent += this._publish([pack]);
     this.pending.clear();
     return sent;
   }
@@ -388,7 +408,7 @@ class FabricRelay {
       packs,
       sourceAppId: (client && client.application && client.application.id) || (client && client.user && client.user.id) || null
     });
-    const message = Message.fromVector(['CONTRACT_MESSAGE', JSON.stringify(body)]);
+    const message = Message.fromLegacyBody('CONTRACT_MESSAGE', body);
     Message.setMessageParent(message, this._tip || Message.ZERO_PARENT);
     message.signWithKey(this.peer.key);
     this._tip = message.id;

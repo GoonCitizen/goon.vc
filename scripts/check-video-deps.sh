@@ -214,7 +214,7 @@ section "Node.js and storage"
 if have node; then
   NV="$(node -v)"
   NMAJ="$(printf '%s' "$NV" | sed -E 's/^v([0-9]+).*/\1/')"
-  WANT="v26.12.1"
+  WANT="v26.13.0"
   [ -f .nvmrc ] && WANT="$(tr -d '[:space:]' < .nvmrc)"
   if [ "$NMAJ" -lt 18 ]; then fail "node $NV is too old (needs fetch; project pins $WANT)"
   elif [ "$NV" != "$WANT" ]; then warn "node $NV (project pins $WANT)"

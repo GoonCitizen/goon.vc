@@ -1,0 +1,79 @@
+name: Test
+
+on:
+  push:
+    branches: [main, master, 'feature/**']
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.dependencies }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # `locked` installs the commits package-lock.json records; `latest` installs
+    # the current tip of every Fabric branch pin, as `npm run report:install`
+    # does, and only warns: upstream drift should not block a goon.vc change.
+    continue-on-error: ${{ matrix.dependencies == 'latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [locked, latest]
+    env:
+      FABRIC_CORE: ${{ github.workspace }}/node_modules/@fabric/core
+      FABRIC_DOORMAN: ${{ github.workspace }}/node_modules/@fabric/doorman
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # package.json requires npm 12; the Node.js release in .nvmrc bundles npm 11.
+      - name: Install npm 12
+        run: npm install -g npm@12.2.1
+
+      - name: Check npm version
+        run: |
+          npm --version
+          node -e "const major = Number(require('child_process').execSync('npm --version').toString().split('.')[0]); if (major < 12) { console.error('npm >= 12 is required (package.json engines)'); process.exit(1); }"
+
+      - name: Fetch GitHub dependencies over HTTPS
+        run: |
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install (lockfile)
+        if: matrix.dependencies == 'locked'
+        run: npm ci
+
+      - name: Install (latest branch tips)
+        if: matrix.dependencies == 'latest'
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: Installed Fabric commits
+        run: |
+          for pkg in @fabric/core @fabric/http @fabric/discord @fabric/doorman @fabric/hub @fabric/rpg idlerpg; do
+            node -e "const l = require('./package-lock.json'); const p = l.packages['node_modules/$pkg']; console.log('$pkg', p ? p.resolved || p.version : 'not installed')" || true
+          done
+
+      - name: Test
+        run: npm test
+
+      - name: Built assets are current
+        if: matrix.dependencies == 'locked'
+        run: |
+          npm run build
+          git status --porcelain -- assets
+          test -z "$(git status --porcelain -- assets)"
