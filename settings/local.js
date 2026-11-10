@@ -96,6 +96,7 @@ module.exports = {
   },
 
   // /services/operations: per-operation metrics from Discord gateway events (Fabric Store).
+  // PERMAFLEET voice counts every member-org Discord in contracts/alliance.json.
   operations: {
     path: process.env.GOON_OPERATIONS_STORE || 'stores/operations',
     file: 'contracts/operations.json',

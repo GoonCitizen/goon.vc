@@ -1487,10 +1487,13 @@ describe('clips', function () {
 
     it('refuses listen without a channel, one at a time, idle-leaves, and does not rejoin on start', async function () {
       await assert.rejects(() => clips.listen({}), /Join a voice channel/);
-      assert.deepStrictEqual(await clips.listen({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET' }), {
+      assert.deepStrictEqual(await clips.listen({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET', by: '7001' }), {
         listening: true,
-        channel: 'PERMAFLEET'
+        channel: 'PERMAFLEET',
+        notice: false
       });
+      assert.deepStrictEqual(clips.consent('7002', true), { listening: true, included: true });
+      assert.deepStrictEqual(clips.consent('7002', false), { listening: true, included: false });
       await assert.rejects(
         () => clips.listen({ guildId: 'g1', channelId: 'c2', channelName: 'ops' }),
         /Already listening in #PERMAFLEET/

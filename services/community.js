@@ -20,6 +20,9 @@ const PARTIALS = ['Channel'];
 const CAMPAIGN_INTENTS = ['GuildMembers'];
 const CAMPAIGN_SEND_REFUSAL = 'Only remaeus can send campaign DMs.';
 const CAMPAIGN_SCHEDULE = /(?:^|\/)services\/doorman\/campaigns\/[^/?]+\/schedule\/?(?:\?|$)/;
+// After a successful listing (a `/goon campaign` preview), Send reuses it so
+// Discord is not asked for the whole roster twice in a few seconds.
+const MEMBER_CACHE_MS = 5 * 60 * 1000;
 
 // Discord permission bits (https://discord.com/developers/docs/topics/permissions).
 const PERMISSIONS = Object.assign({ ManageGuild: 1n << 5n }, allianceChannels.PERMISSIONS);
@@ -198,6 +201,7 @@ class Community {
     this.discord = null;
     this.gateway = { status: 'disabled', error: null };
     this._listeners = {};
+    this._memberLists = new Map();
     this._onGateway = (discord) => this.attach(discord);
   }
 
@@ -1004,8 +1008,9 @@ class Community {
    * is in, narrowed to `filter.guilds` (a server's own campaign only ever
    * reaches that server), holding any of `filter.roles` (everyone when
    * empty) and none of `filter.excludeRoles`, and not in any of
-   * `filter.excludeGuilds`. Members are listed fresh from Discord, which
-   * needs the Server Members intent.
+   * `filter.excludeGuilds`. Members are listed from Discord (Server Members
+   * intent); a successful listing is reused for a few minutes so Send after
+   * preview does not ask Discord again.
    * @param {Object} filter Campaign filter.
    * @param {Object} campaign `{ owner }`
    * @returns {Promise<Array<{ target: string, name: string|null, source: string, sourceName: string }>>}
@@ -1051,13 +1056,41 @@ class Community {
     return narrowed;
   }
 
+  _cachedMembers (guild) {
+    const cache = guild && guild.members && guild.members.cache;
+    if (!cache) return [];
+    if (typeof cache.values === 'function') return [...cache.values()];
+    return [];
+  }
+
   async _members (guild) {
+    const id = String(guild.id);
+    const now = Date.now();
+    const remembered = this._memberLists.get(id);
+    if (remembered && now - remembered.at < MEMBER_CACHE_MS) return remembered.members;
+
+    const cached = this._cachedMembers(guild);
     try {
+      if (!guild.members || typeof guild.members.fetch !== 'function') {
+        if (cached.length) {
+          this._memberLists.set(id, { at: now, members: cached });
+          return cached;
+        }
+        throw new Error('no member list');
+      }
       const members = await guild.members.fetch();
-      return [...members.values()];
+      const list = [...members.values()];
+      this._memberLists.set(id, { at: now, members: list });
+      return list;
     } catch (error) {
+      const fallback = cached.length ? cached : (remembered && remembered.members.length ? remembered.members : null);
+      if (fallback) {
+        this.emit('error', 'community campaigns', `could not refresh the members of ${guild.name}, using the list from earlier: ${errorMessage(error)}`);
+        this._memberLists.set(id, { at: now, members: fallback });
+        return fallback;
+      }
       this.emit('error', 'community campaigns', `could not list the members of ${guild.name}: ${errorMessage(error)}`);
-      throw httpError(503, `Could not list the members of ${guild.name}. Try again in a little while.`);
+      throw httpError(429, `Could not list the members of ${guild.name}. Try again in a little while.`);
     }
   }
 

@@ -4159,9 +4159,7 @@
         var page = document.getElementById('operation-permafleet');
         if (!page || page.style.display === 'none' || !page.style.display) return;
 
-        var GUILD_ID = "1190527980120850493";
-        var PERMAFLEET_ID = "1236721094153732276";
-        var PERMAFLEET_NAME = "permafleet";
+        var GUILD_IDS = ["1190527980120850493","937681528790609970","1145511542637482114","1439226629867044976","1200935959961817088"];
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');
@@ -4169,19 +4167,31 @@
         var emptyEl = document.getElementById('permafleet-empty');
         var serverEl = document.getElementById('permafleet-online');
 
-        function resolveChannelId (channels) {
-          if (!channels || !channels.length) return PERMAFLEET_ID;
-          for (var i = 0; i < channels.length; i++) {
-            if ((channels[i].name || '').toLowerCase() === PERMAFLEET_NAME) return String(channels[i].id);
-          }
-          return PERMAFLEET_ID;
-        }
+        function membersInVoiceFromWidgets (widgets) {
+  var seen = {};
+  var members = [];
+  var list = Array.isArray(widgets) ? widgets : [];
+  for (var i = 0; i < list.length; i++) {
+    var data = list[i];
+    if (!data || !Array.isArray(data.members)) continue;
+    for (var j = 0; j < data.members.length; j++) {
+      var member = data.members[j];
+      if (!member || member.channel_id == null) continue;
+      var key = member.id != null && String(member.id) !== ''
+        ? 'id:' + String(member.id)
+        : 'name:' + String(member.username || '');
+      if (seen[key]) continue;
+      seen[key] = 1;
+      members.push({
+        username: member.username || 'Member',
+        avatar_url: member.avatar_url || ''
+      });
+    }
+  }
+  return members;
+}
 
-        function renderPanel (data) {
-          var channelId = resolveChannelId(data.channels);
-          var members = (data.members || []).filter(function (m) {
-            return m.channel_id != null && String(m.channel_id) === channelId;
-          });
+        function renderPanel (members) {
           voiceN.textContent = String(members.length);
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
@@ -4203,9 +4213,7 @@
             li.appendChild(name);
             listEl.appendChild(li);
           });
-          if (typeof data.presence_count === 'number') {
-            serverEl.textContent = data.presence_count + ' online on server';
-          }
+          serverEl.textContent = '';
         }
 
         function renderFallback () {
@@ -4215,12 +4223,17 @@
           serverEl.textContent = '';
         }
 
-        window.fetch('https://discord.com/api/guilds/' + GUILD_ID + '/widget.json')
-          .then(function (res) {
-            if (!res.ok) throw new Error('widget ' + res.status);
-            return res.json();
-          })
-          .then(renderPanel)
+        function fetchWidget (guildId) {
+          return window.fetch('https://discord.com/api/guilds/' + guildId + '/widget.json')
+            .then(function (res) {
+              if (!res.ok) throw new Error('widget ' + res.status);
+              return res.json();
+            })
+            .catch(function () { return null; });
+        }
+
+        Promise.all(GUILD_IDS.map(fetchWidget))
+          .then(function (widgets) { renderPanel(membersInVoiceFromWidgets(widgets)); })
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause

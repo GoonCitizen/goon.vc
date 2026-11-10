@@ -465,6 +465,24 @@ describe('Discord application commands', function () {
       assert.strictEqual(campaigns.list().length, 1, 'no draft is saved while the server is cooling down');
     });
 
+    it('tells the author when Discord will not list members, instead of a generic error', async function () {
+      const commands = new Commands({ members, community, register: false, now: () => clock });
+      const call = await run(commands, { strings: { message: 'Hangar night' }, roles: { role: PILOTS } });
+      const [send] = buttons(call.replies[0]);
+      const original = campaigns.schedule.bind(campaigns);
+      campaigns.schedule = async () => {
+        throw Object.assign(new Error('Could not list the members of G00N SQUAD. Try again in a little while.'), { status: 429 });
+      };
+      try {
+        const sent = await press(commands, send.custom_id);
+        const text = sent.followUps[0].content;
+        assert.match(text, /Could not list the members of G00N SQUAD/);
+        assert.ok(!/Something went wrong/.test(text));
+      } finally {
+        campaigns.schedule = original;
+      }
+    });
+
     it('refuses a Send button from an older preview of the same campaign', async function () {
       const commands = new Commands({ members, community, register: false, now: () => clock });
       const call = await run(commands, { strings: { message: 'Fleet night' }, roles: { role: PILOTS } });
@@ -1346,10 +1364,13 @@ describe('Discord application commands', function () {
   });
 
   describe('/clips', function () {
+    const MUTE = 1n << 22n;
     class FakeClips {
       constructor () {
         this.voiceEnabled = true;
         this.channel = null;
+        this.by = null;
+        this.included = new Set();
       }
 
       async listen (input) {
@@ -1364,15 +1385,32 @@ describe('Discord application commands', function () {
           throw error;
         }
         this.channel = input.channelName || 'voice';
-        return { listening: true, channel: this.channel };
+        this.by = input.by || null;
+        if (this.by) this.included.add(this.by);
+        return { listening: true, channel: this.channel, notice: true };
       }
 
       async leaveVoice () {
         if (!this.channel) return { listening: false, channel: null, stopped: false };
         this.channel = null;
+        this.included = new Set();
         return { listening: false, channel: null, stopped: true };
       }
+
+      consent (userId, yes) {
+        if (!this.channel) return { listening: false, included: false };
+        if (yes) this.included.add(String(userId));
+        else this.included.delete(String(userId));
+        return { listening: true, included: yes };
+      }
     }
+
+    const voiceCall = (opts = {}) => interaction(Object.assign({
+      name: 'clips',
+      user: KERSA,
+      permissions: MUTE,
+      member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+    }, opts));
 
     it('is registered only while clips voice is on, servers only', function () {
       assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'clips'));
@@ -1380,45 +1418,63 @@ describe('Discord application commands', function () {
       const definition = commands.definitions.find((entry) => entry.name === 'clips');
       assert.ok(definition);
       assert.deepStrictEqual(definition.contexts, [0]);
+      assert.strictEqual(definition.default_member_permissions, String(MUTE));
       assert.deepStrictEqual(definition.options.map((option) => option.name), ['listen', 'leave']);
     });
 
     it('joins the caller’s voice channel, refuses when they are not in one, and leaves', async function () {
       const clips = new FakeClips();
       const commands = new Commands({ clips: () => clips, siteUrl: 'https://goon.vc', register: false });
-      const missing = interaction({ name: 'clips', subcommand: 'listen', user: KERSA });
+      const missing = voiceCall({ subcommand: 'listen', member: { displayName: 'Kersa' } });
       await commands.handle(missing);
       assert.ok(missing.deferred);
       assert.strictEqual(missing.replies[0].content, 'Join a voice channel first, then run `/clips listen`.');
 
-      const listen = interaction({
-        name: 'clips',
-        subcommand: 'listen',
-        user: KERSA,
-        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
-      });
+      const listen = voiceCall({ subcommand: 'listen' });
       await commands.handle(listen);
       assert.ok(listen.replies[0].content.includes('Listening in #PERMAFLEET'), listen.replies[0].content);
       assert.ok(listen.replies[0].content.includes('not Go Live'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('Record me'), listen.replies[0].content);
       assert.ok(listen.replies[0].content.includes('<https://goon.vc/clips>'), listen.replies[0].content);
       assert.ok(!listen.replies[0].content.includes(VOICE), 'no channel id');
       assert.strictEqual(clips.channel, 'PERMAFLEET');
+      assert.strictEqual(clips.by, KERSA.id);
 
-      const twice = interaction({
-        name: 'clips',
-        subcommand: 'listen',
-        user: KERSA,
-        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
-      });
+      const twice = voiceCall({ subcommand: 'listen' });
       await commands.handle(twice);
       assert.ok(twice.replies[0].content.includes('Already listening in #PERMAFLEET'), twice.replies[0].content);
 
-      const leave = interaction({ name: 'clips', subcommand: 'leave', user: KERSA });
+      const leave = voiceCall({ subcommand: 'leave', member: { displayName: 'Kersa' } });
       await commands.handle(leave);
       assert.ok(leave.replies[0].content.includes('Left the voice channel'), leave.replies[0].content);
-      const idle = interaction({ name: 'clips', subcommand: 'leave', user: KERSA });
+      const idle = voiceCall({ subcommand: 'leave', member: { displayName: 'Kersa' } });
       await commands.handle(idle);
       assert.strictEqual(idle.replies[0].content, 'I was not listening.');
+    });
+
+    it('refuses listen and leave without Mute Members, and records others only after they opt in', async function () {
+      const clips = new FakeClips();
+      const commands = new Commands({ clips: () => clips, siteUrl: 'https://goon.vc', register: false });
+      const refused = interaction({
+        name: 'clips',
+        subcommand: 'listen',
+        user: KERSA,
+        permissions: 0n,
+        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+      });
+      await commands.handle(refused);
+      assert.strictEqual(refused.replies[0].content, 'You need the Mute Members permission to record a voice channel.');
+      assert.strictEqual(clips.channel, null);
+
+      await commands.handle(voiceCall({ subcommand: 'listen' }));
+      const guest = interaction({ user: RATGROT, customId: 'clips:consent:1' });
+      await commands.handle(guest);
+      assert.ok(guest.replies[0].content.includes('You’re included'), guest.replies[0].content);
+      assert.ok(clips.included.has(RATGROT.id));
+      const stop = interaction({ user: RATGROT, customId: 'clips:consent:0' });
+      await commands.handle(stop);
+      assert.ok(stop.replies[0].content.includes('You won’t be recorded'), stop.replies[0].content);
+      assert.ok(!clips.included.has(RATGROT.id));
     });
 
     it('/help lists listen and leave while clips voice is on', async function () {
@@ -1428,6 +1484,7 @@ describe('Discord application commands', function () {
       const text = call.replies[0].content;
       assert.ok(text.includes('`/clips listen`'), text);
       assert.ok(text.includes('`/clips leave`'), text);
+      assert.ok(text.includes('Needs Mute Members.'), text);
       assert.ok(text.includes('not Go Live video'), text);
       assert.ok(text.includes('<https://goon.vc/clips>'), text);
       assert.ok(!text.includes(VOICE), text);

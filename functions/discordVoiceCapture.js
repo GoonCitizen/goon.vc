@@ -30,8 +30,10 @@ function fail (status, message) {
  * @param {number} offsetBytes
  */
 function mixInto (dest, src, offsetBytes) {
-  const destView = new Int16Array(dest.buffer, dest.byteOffset, dest.length / 2);
-  const srcView = new Int16Array(src.buffer, src.byteOffset, src.length / 2);
+  if (!dest || !src || !src.length) return;
+  if (src.byteOffset % 2 !== 0) src = Buffer.from(src);
+  const destView = new Int16Array(dest.buffer, dest.byteOffset, Math.floor(dest.length / 2));
+  const srcView = new Int16Array(src.buffer, src.byteOffset, Math.floor(src.length / 2));
   let start = Math.round(offsetBytes / 2);
   if (start < 0) {
     const skip = -start;
@@ -174,6 +176,7 @@ class DiscordVoiceCapture {
     this._onIdle = this.settings.onIdle || null;
     this._connection = null;
     this._subscriptions = new Map();
+    this._allowed = new Set();
     this._tick = null;
     this._idle = null;
     this.client = null;
@@ -195,6 +198,7 @@ class DiscordVoiceCapture {
    * @param {string} input.channelId
    * @param {string} [input.channelName]
    * @param {Function} [input.adapterCreator]
+   * @param {Array<string>} [input.allowed] speaker ids who already opted in (the listener)
    */
   async join (input = {}) {
     if (this.connected) {
@@ -208,6 +212,7 @@ class DiscordVoiceCapture {
     this.channelId = channelId;
     this.channelName = input.channelName || null;
     this.occupancy = 0;
+    this._allowed = new Set((input.allowed || []).map(String).filter(Boolean));
     this.mixer.reset();
     try {
       this._connection = await this._join({
@@ -221,6 +226,7 @@ class DiscordVoiceCapture {
       this.channelId = null;
       this.channelName = null;
       this._connection = null;
+      this._allowed = new Set();
       throw error.status ? error : fail(502, error && error.message ? error.message : 'Could not join that voice channel.');
     }
     this._listenSpeaking();
@@ -245,12 +251,40 @@ class DiscordVoiceCapture {
       this._leave(this._connection);
     } catch (_) { /* destroy is best-effort */ }
     this._connection = null;
+    this._allowed = new Set();
     this.client = null;
     this.guildId = null;
     this.channelId = null;
     this.channelName = null;
     this.occupancy = 0;
     return status;
+  }
+
+  /**
+   * Include or drop a speaker. Only opted-in people are mixed or subscribed.
+   * @param {string} userId
+   * @param {boolean} yes
+   * @returns {boolean} whether they are included now
+   */
+  consent (userId, yes) {
+    const id = String(userId || '');
+    if (!id || !this.connected) return false;
+    if (yes) {
+      this._allowed.add(id);
+      this._openSpeaker(id);
+      return true;
+    }
+    this._allowed.delete(id);
+    const stream = this._subscriptions.get(id);
+    this._subscriptions.delete(id);
+    try {
+      if (stream && typeof stream.destroy === 'function') stream.destroy();
+    } catch (_) { /* ignore */ }
+    return false;
+  }
+
+  allowed (userId) {
+    return this._allowed.has(String(userId || ''));
   }
 
   /**
@@ -263,6 +297,7 @@ class DiscordVoiceCapture {
   receive (userId, name, pcm, at) {
     if (!this.connected) return;
     if (this._isBot(userId)) return;
+    if (!this.allowed(userId)) return;
     this.mixer.add(userId, name || this._nameOf(userId), pcm, at);
     if (this.occupancy > 0) this._clearIdle();
   }
@@ -311,7 +346,7 @@ class DiscordVoiceCapture {
   }
 
   _openSpeaker (userId) {
-    if (!this.connected || this._isBot(userId) || this._subscriptions.has(userId)) return;
+    if (!this.connected || this._isBot(userId) || !this.allowed(userId) || this._subscriptions.has(userId)) return;
     let stream;
     try {
       stream = this._subscribe(this._connection, userId);

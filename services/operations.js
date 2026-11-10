@@ -8,9 +8,13 @@ const MetricsPipeline = require('@fabric/discord/types/metricsPipeline');
 const { voiceActivity, messageActivity, gatewayIntents } = require('@fabric/discord/plugins');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 
+const orgDiscord = require('../functions/orgDiscord');
+
 const BASE = '/services/operations';
 const DEFAULT_FILE = path.join(__dirname, '../contracts/operations.json');
+const DEFAULT_ALLIANCE = path.join(__dirname, '../contracts/alliance.json');
 const PERMAFLEET_PATH = '/operations/PERMAFLEET';
+const ANY_VOICE = '/./';
 
 function sendJson (res, status, body) {
   res.statusCode = status;
@@ -60,6 +64,7 @@ class Operations {
    * @param {Object} [settings]
    * @param {string} [settings.path] Store directory.
    * @param {string} [settings.file] Operations contract (contracts/operations.json).
+   * @param {string} [settings.allianceFile] Member-org roster (`guilds: "alliance"`).
    * @param {Object} [settings.discord] settings.discord (token / secretsFile).
    * @param {boolean} [settings.gateway] Connect to the Discord gateway (default true).
    * @param {string[]} [settings.intents] More GatewayIntentBits names for other consumers of this client.
@@ -74,6 +79,7 @@ class Operations {
     this.settings = Object.assign({
       path: './stores/operations',
       file: DEFAULT_FILE,
+      allianceFile: DEFAULT_ALLIANCE,
       discord: {},
       gateway: true
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
@@ -100,13 +106,43 @@ class Operations {
     return this;
   }
 
+  _allianceGuildIds () {
+    try {
+      return orgDiscord.guildIds(JSON.parse(fs.readFileSync(this.settings.allianceFile, 'utf8')));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  _expandAllianceMetrics (op, allianceGuilds) {
+    if (!op || !Array.isArray(op.metrics)) return op;
+    const fallback = allianceGuilds.length
+      ? allianceGuilds
+      : (op.guildId ? [String(op.guildId)] : []);
+    const metrics = [];
+    for (const entry of op.metrics) {
+      if (!entry || typeof entry === 'string' || entry.guilds !== 'alliance') {
+        metrics.push(entry);
+        continue;
+      }
+      const channels = Array.isArray(entry.channels) && entry.channels.length
+        ? entry.channels
+        : [ANY_VOICE];
+      for (const guildId of fallback) {
+        metrics.push({ plugin: entry.plugin, channels, guildId });
+      }
+    }
+    return Object.assign({}, op, { metrics });
+  }
+
   _load () {
     const raw = JSON.parse(fs.readFileSync(this.settings.file, 'utf8'));
     const guildId = raw.guildId ? String(raw.guildId) : null;
-    return (raw.operations || []).filter((op) => op && op.id).map((op) => Object.assign({
+    const allianceGuilds = this._allianceGuildIds();
+    return (raw.operations || []).filter((op) => op && op.id).map((op) => this._expandAllianceMetrics(Object.assign({
       guildId,
       path: `${PERMAFLEET_PATH}#${op.id}`
-    }, op));
+    }, op), allianceGuilds));
   }
 
   async start () {

@@ -1,6 +1,7 @@
 'use strict';
 
 const escapeHtml = require('../functions/escapeHtml');
+const { membersInVoiceFromWidgets } = require('../functions/permafleetVoiceListing');
 const Organizations = require('./Organizations');
 const RedArmyPage = require('./RedArmyPage');
 
@@ -584,18 +585,20 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
 }
 
 /**
- * Live voice roster (Discord guild widget) + quantum-travel particle canvas.
- * Only started when the PERMAFLEET operation page is the active route.
+ * Live voice roster (Discord guild widgets for every member-org Discord) +
+ * quantum-travel particle canvas. Only started when the PERMAFLEET operation
+ * page is the active route.
  */
 function renderPermafleetScript (opts) {
+  const guildIds = Array.isArray(opts.guildIds) && opts.guildIds.length
+    ? opts.guildIds.map((id) => String(id))
+    : (opts.guildId ? [String(opts.guildId)] : []);
   return `<script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');
         if (!page || page.style.display === 'none' || !page.style.display) return;
 
-        var GUILD_ID = ${JSON.stringify(String(opts.guildId))};
-        var PERMAFLEET_ID = ${JSON.stringify(String(opts.channelId))};
-        var PERMAFLEET_NAME = ${JSON.stringify(String(opts.channelName).toLowerCase())};
+        var GUILD_IDS = ${JSON.stringify(guildIds)};
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');
@@ -603,19 +606,9 @@ function renderPermafleetScript (opts) {
         var emptyEl = document.getElementById('permafleet-empty');
         var serverEl = document.getElementById('permafleet-online');
 
-        function resolveChannelId (channels) {
-          if (!channels || !channels.length) return PERMAFLEET_ID;
-          for (var i = 0; i < channels.length; i++) {
-            if ((channels[i].name || '').toLowerCase() === PERMAFLEET_NAME) return String(channels[i].id);
-          }
-          return PERMAFLEET_ID;
-        }
+        ${membersInVoiceFromWidgets.toString()}
 
-        function renderPanel (data) {
-          var channelId = resolveChannelId(data.channels);
-          var members = (data.members || []).filter(function (m) {
-            return m.channel_id != null && String(m.channel_id) === channelId;
-          });
+        function renderPanel (members) {
           voiceN.textContent = String(members.length);
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
@@ -637,9 +630,7 @@ function renderPermafleetScript (opts) {
             li.appendChild(name);
             listEl.appendChild(li);
           });
-          if (typeof data.presence_count === 'number') {
-            serverEl.textContent = data.presence_count + ' online on server';
-          }
+          serverEl.textContent = '';
         }
 
         function renderFallback () {
@@ -649,12 +640,17 @@ function renderPermafleetScript (opts) {
           serverEl.textContent = '';
         }
 
-        window.fetch('https://discord.com/api/guilds/' + GUILD_ID + '/widget.json')
-          .then(function (res) {
-            if (!res.ok) throw new Error('widget ' + res.status);
-            return res.json();
-          })
-          .then(renderPanel)
+        function fetchWidget (guildId) {
+          return window.fetch('https://discord.com/api/guilds/' + guildId + '/widget.json')
+            .then(function (res) {
+              if (!res.ok) throw new Error('widget ' + res.status);
+              return res.json();
+            })
+            .catch(function () { return null; });
+        }
+
+        Promise.all(GUILD_IDS.map(fetchWidget))
+          .then(function (widgets) { renderPanel(membersInVoiceFromWidgets(widgets)); })
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause

@@ -35,4 +35,15 @@ describe('org Discord status', function () {
     ]);
     assert.ok(!JSON.stringify(rows).includes(GOON) && !JSON.stringify(rows).includes(TRDE));
   });
+
+  it('lists each member Discord once, roster order', function () {
+    assert.deepStrictEqual(orgDiscord.guildIds({
+      organizations: [
+        { symbol: 'G00N', guildId: GOON },
+        { symbol: 'INFN' },
+        { symbol: 'TRDE', guildId: TRDE },
+        { symbol: 'DOUBLEDOGZ', guildId: GOON }
+      ]
+    }), [GOON, TRDE]);
+  });
 });

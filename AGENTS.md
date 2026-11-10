@@ -86,7 +86,11 @@ Store). Bots cannot read listing prices or perks, so the button links to
 Discord's subscriptions page; the block stays hidden when there are no tiers.
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
-guild's public `widget.json` (no iframe). PERMAFLEET detail lives under
+guild's public `widget.json` (no iframe). The PERMAFLEET operation page
+lists people in voice the same way, one widget per unique member-org Discord
+in `contracts/alliance.json` (DOUBLEDOGZ shares G00N SQUAD, so once; a server
+with its widget off contributes nobody), names and avatars only — never
+Discord ids. PERMAFLEET detail lives under
 `/operations/PERMAFLEET/*`; the overview keeps a short teaser.
 `/operations/PERMAFLEET/squadrons` is "Your path to membership" (join → Prospect
 ranks → selected by leadership → elite units; never name a rank as the
@@ -105,9 +109,11 @@ The G00N SQUAD Discord's live channel and Prospect role ids live in
 `contracts/goon-squad.json` (`#clips`, `#embassy`, the PERMAFLEET voice channel,
 Prospect I–VI); PERMAFLEET setup matches those ids on that server even after a
 rename. `/operations` lists the operations in `contracts/operations.json` — currently
-only PERMAFLEET, whose **metrics** count the public PERMAFLEET voice channel.
-Each entry names the Discord channels its metrics count (channel id, exact
-name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
+only PERMAFLEET, whose **metrics** count members in voice on every member-org
+Discord (`guilds: "alliance"` in `contracts/operations.json`, unique
+`guildId`s from `contracts/alliance.json`; a channel matcher of `"/./"` is
+every voice channel the bot can see there). Each entry names the Discord
+channels its metrics count (channel id, exact name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
 gateway client (Guilds + GuildVoiceStates + GuildMessages only) into a
 `@fabric/discord` `MetricsPipeline`; plugins (`voice`, `messages` from
 `@fabric/discord/plugins`) keep per-operation UTC day buckets in a Fabric Store
@@ -648,9 +654,12 @@ runs, and Manage Server for `/goon`. It reads nothing about the caller and
 makes no member profile. Add a `HELP` entry with every new command.
 `/clips` (registered only while clips voice is on; `GOON_CLIPS_VOICE=0` turns it
 off) `listen` joins the caller’s current voice channel and records talk into
-`/clips`; `leave` disconnects. Servers only; the reply is private and names the
-channel (never an id). The bot is visible in the channel while recording. Commands
-takes `clips` lazily, same pattern as market. `GOON_COMMANDS=0` skips registration.
+`/clips`; `leave` disconnects. Servers only; Mute Members; the reply is private
+and names the channel (never an id). A notice in that channel has Record me /
+Don’t record me — other speakers, including people who join later, are mixed
+only after they press Record me. The bot is visible in the channel while
+recording. Commands takes `clips` lazily, same pattern as market.
+`GOON_COMMANDS=0` skips registration.
 `/schedule` (registered only while scheduling runs; `GOON_SCHEDULE=0` turns it
 off) `open` posts a poll in the channel it was run. `people` (names or
 `@handles`, commas between display names) and/or `role` and `also` say who
@@ -820,8 +829,11 @@ intent it hasn't granted is asked for. Only then does the gateway ask for
 `GuildMembers` (plus `DirectMessages` / `Channel` as for scripts;
 `Community.gateway(settings)` says which). Community supplies the `discord`
 audience (`Community#discordAudience`: `guild.members.fetch()` for each server
-the bot is in, or only the campaign's own server; role and exclusion filters;
-never bots) and the activity hook (last active: the later of `Presence#lastSeen`,
+the bot is in, or only the campaign's own server; a successful listing is
+kept warm for a few minutes so Send after preview does not ask Discord again,
+and a refused fetch uses that cache or Discord's member cache, else 429
+“Could not list the members…”; role and exclusion filters; never bots) and
+the activity hook (last active: the later of `Presence#lastSeen`,
 the last time the member was present in voice, and `Activity#lastPosted`, their
 last post in the home server), and lists the scripts a campaign may offer (those without
 `requires`). `/goon campaign message [role] [exclude_role] [active_days] [script]
@@ -989,13 +1001,15 @@ public `durationMs`, so blocks, lanes, and session span work unchanged;
 sessions count `screenshotCount` inside `clipCount`). In a project its segment
 is `{ in: 0, out }`, `out` being how long it shows (≤ `maxStillSeconds`, 60 s;
 added at `stillSeconds`), rendered as a looped still (`-loop 1`) over silence.
-**Voice:** `/clips listen` (the caller must be in that voice channel) joins
-through `@fabric/discord` voice receive (`joinVoiceReceive` on the shared
-operations Discord client; `@discordjs/voice` lives in that package) and
-records people talking — not Go Live video or game audio — into `media: 'audio'`
-clips (`kind: 'voice'`, `recording.source: 'discord-voice'`). `/clips leave`
-disconnects; the bot also leaves after `idleMs` of an empty channel. One channel
-at a time (`maxConcurrent: 1`); a restart does not rejoin. Chunks rotate on
+**Voice:** `/clips listen` (Mute Members; the caller must be in that voice
+channel) joins through `@fabric/discord` voice receive (`joinVoiceReceive` on
+the shared operations Discord client; `@discordjs/voice` lives in that package)
+and records people talking — not Go Live video or game audio — into
+`media: 'audio'` clips (`kind: 'voice'`, `recording.source: 'discord-voice'`).
+The caller is included; everyone else (including people who join later) is
+recorded only after they press Record me on the notice in that channel.
+`/clips leave` disconnects; the bot also leaves after `idleMs` of an empty
+channel. One channel at a time (`maxConcurrent: 1`); a restart does not rejoin. Chunks rotate on
 `chunkMs` (60s) or `silenceMs` (3s of nobody speaking). Public JSON and UI are
 names only (speakers, channel) — never Discord user ids. `GOON_CLIPS_VOICE=0`
 turns listen off (and skips registering `/clips`). Settings

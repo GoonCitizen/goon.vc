@@ -433,6 +433,7 @@ class GoonVC {
     this.operations = new Operations({
       path: operationSettings.path || './stores/operations',
       file: operationSettings.file ? path.resolve(operationSettings.file) : undefined,
+      allianceFile: operationSettings.allianceFile ? path.resolve(operationSettings.allianceFile) : undefined,
       discord,
       gateway: operationSettings.gateway,
       intents: intents.length ? intents : undefined,

@@ -38,6 +38,8 @@ const MeleeRotationDrill = require('../components/MeleeRotationDrill');
 const TournamentBracket = require('../components/TournamentBracket');
 const ClipLibrary = require('../components/ClipLibrary');
 const ClipTimelineEditor = require('../components/ClipTimelineEditor');
+const orgDiscord = require('../functions/orgDiscord');
+const allianceRoster = require('../contracts/alliance.json');
 
 const ORGANIZATIONS_FILE = path.join(__dirname, '../contracts/organizations.json');
 const OPERATIONS_FILE = path.join(__dirname, '../contracts/operations.json');
@@ -774,10 +776,11 @@ class GoonSPA extends FabricSPA {
       organizationsPath,
       inviteUrl: permafleetInviteUrl
     });
+    const allianceGuildIds = orgDiscord.guildIds(allianceRoster);
+    if (widgetId && !allianceGuildIds.includes(String(widgetId))) allianceGuildIds.unshift(String(widgetId));
     const permafleetScript = PermafleetOperation.script({
+      guildIds: allianceGuildIds,
       guildId: widgetId,
-      channelId: this._site('permafleetChannelId'),
-      channelName: this._site('permafleetChannelName'),
       inviteUrl: permafleetInviteUrl
     });
 

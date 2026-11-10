@@ -27,6 +27,7 @@ const SWITCH_BUTTON = /^(checkins|welcome):(send|stop|cancel)(?::([0-9a-f]{8}))?
 const MARKET_BUTTON = new RegExp(`^${marketPost.BUY_PREFIX}([0-9a-f]{12})$`);
 const SCHED_VOTE = /^sched:vote:([0-9a-f]{12})$/;
 const SCHED_BUTTON = /^sched:(pick|skip):([0-9a-f]{12})(?::([0-9a-f]{2}))?$/;
+const CLIPS_CONSENT = /^clips:consent:(1|0)$/;
 const MARKET_ROWS = 10;
 const REPLY_TEXT = 1900;
 const MARKET_STATUSES = ['available', 'reserved', 'sold', 'hidden'];
@@ -37,6 +38,7 @@ const RECIPIENT_TEXT = 3500;
 const RECIPIENT_FILE = 'recipients.txt';
 const DISCORD_MEMBER = 'discord:';
 const MANAGE_GUILD = 1n << 5n;
+const MUTE_MEMBERS = 1n << 22n;
 const DM_CLOSED = 50007;
 const SETUP_SCRIPT = 'goon-setup';
 const HANGAR_SCRIPT = 'hangar-import';
@@ -261,6 +263,7 @@ const DEFINITIONS = [
     type: CHAT_INPUT,
     contexts: [GUILD_CONTEXT],
     integration_types: [GUILD_INSTALL],
+    default_member_permissions: String(MUTE_MEMBERS),
     options: [
       { type: OPTION.subcommand, name: 'listen', description: 'Join your current voice channel and record talk until you leave, or the channel is empty.' },
       { type: OPTION.subcommand, name: 'leave', description: 'Stop recording and leave the voice channel.' }
@@ -292,7 +295,7 @@ const HELP = {
   },
   rsi: (commands) => `You prove the handle is yours by putting a short code in your RSI bio for a minute. <${commands._url(commands.settings.rsiPath)}>`,
   hangar: (commands) => `Export your pledges with the Hangar Export add-on for Firefox, then import the .json file. Only fleet totals are public, never who owns what: <${commands._url(commands.settings.rsiPath)}>`,
-  clips: (commands) => `The bot joins only when asked, and only records people talking — not Go Live video or game audio. Clips: <${commands._url(commands.settings.clipsPath)}>`,
+  clips: (commands) => `Needs Mute Members. The bot joins only when asked, records only people who press Record me (you are included when you start it), and only records talk — not Go Live video or game audio. Clips: <${commands._url(commands.settings.clipsPath)}>`,
   goon: () => 'For members who can manage the server. The PERMAFLEET channel and rank commands are for the org’s officers on record, and campaigns, check-ins, and welcome DMs show every recipient before anything is sent.'
 };
 
@@ -655,11 +658,12 @@ class Commands {
     const marketButton = isButton ? MARKET_BUTTON.exec(String(interaction.customId || '')) : null;
     const schedVote = isSelect ? SCHED_VOTE.exec(String(interaction.customId || '')) : null;
     const schedButton = isButton ? SCHED_BUTTON.exec(String(interaction.customId || '')) : null;
+    const clipsConsent = isButton ? CLIPS_CONSENT.exec(String(interaction.customId || '')) : null;
     const command = typeof interaction.isChatInputCommand === 'function' && interaction.isChatInputCommand() &&
       COMMAND_NAMES.includes(interaction.commandName) ? interaction.commandName : null;
     // A select menu this service doesn't own (a DM script) is left for Doorman.
     if (isSelect && !schedVote) return;
-    if (!button && !campaignButton && !switchButton && !marketButton && !schedVote && !schedButton && !command) return;
+    if (!button && !campaignButton && !switchButton && !marketButton && !schedVote && !schedButton && !clipsConsent && !command) return;
     let out;
     // Campaign, check-in, welcome, and schedule buttons read from Discord or post an event, which can outlast the 3 s reply window.
     let updating = false;
@@ -687,6 +691,8 @@ class Commands {
           if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
           out = await this.clipsCommand(interaction);
         }
+      } else if (clipsConsent) {
+        out = await this.clipsConsent(interaction, clipsConsent[1] === '1');
       }
       // `/market` is also installed on members' own accounts, so it runs in DMs and servers without the bot.
       // `/rsi` and `/hangar` also run in the bot's DMs.
@@ -1174,6 +1180,18 @@ class Commands {
     return !community || typeof community.maySendCampaign !== 'function' || community.maySendCampaign(userId) === true;
   }
 
+  _permissionLabel (definition) {
+    if (!definition || !definition.default_member_permissions) return '';
+    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return ' (who can mute members)';
+    return ' (server managers)';
+  }
+
+  _permissionTail (definition, where) {
+    if (!definition || !definition.default_member_permissions) return where;
+    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return `${where} Needs Mute Members.`;
+    return `${where} Needs Manage Server.`;
+  }
+
   _private (content) {
     return { content, flags: EPHEMERAL };
   }
@@ -1534,7 +1552,8 @@ class Commands {
 
   /**
    * `/clips listen` joins the caller's voice channel and records talk until
-   * `/clips leave` or the channel stays empty. Private reply; names only.
+   * `/clips leave` or the channel stays empty. Mute Members only. Private
+   * reply; names only. Other speakers opt in on the channel notice.
    * @param {Object} interaction
    * @returns {Promise<Object>} reply
    */
@@ -1542,6 +1561,7 @@ class Commands {
     const clips = this._clips();
     if (!clips) return this._private('Voice clips are not running right now.');
     if (interaction.user && interaction.user.bot) return this._private('Bots don’t record.');
+    if (!this._canMuteMembers(interaction)) return this._private('You need the Mute Members permission to record a voice channel.');
     const subcommand = this._subcommand(interaction);
     if (subcommand === 'leave') {
       const status = await clips.leaveVoice();
@@ -1555,11 +1575,43 @@ class Commands {
     const listening = await clips.listen({
       guildId: interaction.guildId,
       channelId: String(channelId),
-      channelName
+      channelName,
+      by: String(interaction.user.id)
     });
     const where = listening.channel ? `#${escapeMarkdown(listening.channel)}` : 'that channel';
     const page = this._url(this.settings.clipsPath);
-    return this._private(`Listening in ${where} — people talking are recorded into the clip library (not Go Live video). I’m visible in the channel while this runs. [Clips](<${page}>) · \`/clips leave\` to stop.`);
+    const notice = listening.notice
+      ? 'Others in the channel (and anyone who joins later) are recorded only after they press Record me on the notice there.'
+      : 'I couldn’t post the opt-in notice in that channel, so only you are recorded until they can press Record me.';
+    return this._private(`Listening in ${where} — your talk is recorded into the clip library (not Go Live video). ${notice} [Clips](<${page}>) · \`/clips leave\` to stop.`);
+  }
+
+  /**
+   * Record-me / Don’t-record-me on the voice-channel notice. Anyone in the
+   * server may press them; only opted-in speakers are mixed.
+   * @param {Object} interaction
+   * @param {boolean} yes
+   * @returns {Promise<Object>} reply
+   */
+  async clipsConsent (interaction, yes) {
+    const clips = this._clips();
+    if (!clips || typeof clips.consent !== 'function') return this._private('Voice clips are not running right now.');
+    const user = interaction.user || {};
+    if (user.bot) return this._private('Bots aren’t recorded.');
+    const result = clips.consent(String(user.id), yes);
+    if (!result.listening) return this._private('Nobody is recording right now.');
+    if (yes) return this._private('You’re included. Talk in this channel is recorded into the clip library with your display name.');
+    return this._private('You won’t be recorded. Press Record me if you change your mind.');
+  }
+
+  _canMuteMembers (interaction) {
+    const perms = interaction && interaction.memberPermissions;
+    if (!perms || typeof perms.has !== 'function') return false;
+    try {
+      return perms.has(MUTE_MEMBERS) || perms.has('MuteMembers');
+    } catch (_) {
+      return false;
+    }
   }
 
   /**
@@ -1677,7 +1729,7 @@ class Commands {
     if (!asked) {
       const lines = live.map((definition) => {
         const parts = (definition.options || []).filter((option) => option.type === OPTION.subcommand).map((option) => option.name);
-        const manage = definition.default_member_permissions ? ' (server managers)' : '';
+        const manage = this._permissionLabel(definition);
         return `**/${definition.name}**${parts.length ? ` ${parts.join(' · ')}` : ''}${manage} — ${definition.description}`;
       });
       return this._private(this._fit('**goon.vc commands**', lines, `Run \`/help command\` for one in detail, or visit <${this._url('/')}>.`));
@@ -1693,7 +1745,7 @@ class Commands {
       : [usage(definition.name, definition.options)];
     const contexts = definition.contexts || [];
     const where = contexts.includes(PRIVATE_CHANNEL_CONTEXT) ? WHERE.anywhere : contexts.includes(BOT_DM_CONTEXT) ? WHERE.dm : WHERE.guild;
-    const tail = definition.default_member_permissions ? `${where} Needs Manage Server.` : where;
+    const tail = this._permissionTail(definition, where);
     return this._private(this._fit(head.join('\n'), lines, tail));
   }
 

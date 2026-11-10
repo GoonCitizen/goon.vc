@@ -475,6 +475,12 @@ describe('goon.vc HTTP', function () {
     assert.ok(!teaser.includes('<form'), 'the squadron application lives on the squadrons page');
     assert.strictEqual(res.body.split('id="operation-permafleet"').length, 2, 'unique id');
     assert.ok(res.body.includes("var movedSquadron = document.getElementById('squadron-' + window.location.hash.slice(1).toLowerCase());"), 'old #squadron links move to their pages');
+    const voiceScript = res.body.slice(res.body.indexOf('var GUILD_IDS ='), res.body.indexOf('Promise.all(GUILD_IDS.map(fetchWidget))'));
+    for (const guildId of ['1190527980120850493', '937681528790609970', '1145511542637482114', '1439226629867044976', '1200935959961817088']) {
+      assert.ok(voiceScript.includes(guildId), guildId);
+    }
+    assert.strictEqual(voiceScript.split('1190527980120850493').length - 1, 1, 'DOUBLEDOGZ shares G00N SQUAD');
+    assert.ok(voiceScript.includes('membersInVoiceFromWidgets'), 'alliance widgets merge into one roster');
   });
 
   it('breaks PERMAFLEET squadrons out into their own pages', async function () {

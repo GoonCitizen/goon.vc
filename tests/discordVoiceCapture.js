@@ -24,6 +24,20 @@ describe('discordVoiceCapture', function () {
     assert.ok(view.every((n) => n === 32767));
   });
 
+  it('copies a PCM slice with an odd byte offset instead of throwing', function () {
+    const dest = pcm(2, 0);
+    const padded = Buffer.alloc(9);
+    padded.writeInt16LE(1000, 1);
+    padded.writeInt16LE(1000, 3);
+    padded.writeInt16LE(1000, 5);
+    padded.writeInt16LE(1000, 7);
+    const src = padded.subarray(1, 9);
+    assert.strictEqual(src.byteOffset % 2, 1);
+    mixInto(dest, src, 0);
+    const view = new Int16Array(dest.buffer, dest.byteOffset, dest.length / 2);
+    assert.ok(view.every((n) => n === 1000));
+  });
+
   it('chunks on duration and on silence, naming speakers', function () {
     let now = 1_000;
     const mixer = new VoiceMixer({ now: () => now, chunkMs: 1000, silenceMs: 200 });
@@ -66,12 +80,14 @@ describe('discordVoiceCapture', function () {
       isBot: (id) => id === 'bot',
       onChunk: async (chunk) => { chunks.push(chunk); }
     });
-    await capture.join({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET' });
+    await capture.join({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET', allowed: ['u1'] });
     assert.strictEqual(capture.connected, true);
     await assert.rejects(() => capture.join({ guildId: 'g1', channelId: 'c2' }), /Already listening in #PERMAFLEET/);
 
     capture.receive('bot', 'Bot', pcm(48), now);
     assert.strictEqual(capture.mixer.hasAudio(), false);
+    capture.receive('u2', 'Bix', pcm(48), now);
+    assert.strictEqual(capture.mixer.hasAudio(), false, 'speakers who have not opted in are not mixed');
     capture.receive('u1', 'Ace', pcm(48), now);
     now += 600;
     await capture._rotate();
@@ -88,6 +104,26 @@ describe('discordVoiceCapture', function () {
     assert.strictEqual(capture.connected, false);
     assert.strictEqual(last.channel, 'PERMAFLEET');
     assert.strictEqual(chunks.length, 2, 'open chunk flushes on leave');
+  });
+
+  it('records a speaker only after they opt in, and drops them when they opt out', async function () {
+    const capture = new DiscordVoiceCapture({
+      join: async () => ({ receiver: { speaking: new EventEmitter() } }),
+      subscribe: () => new EventEmitter(),
+      leave: () => {}
+    });
+    await capture.join({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET', allowed: ['host'] });
+    assert.strictEqual(capture.allowed('host'), true);
+    capture.receive('guest', 'Guest', pcm(48));
+    assert.strictEqual(capture.mixer.hasAudio(), false);
+    assert.strictEqual(capture.consent('guest', true), true);
+    capture.receive('guest', 'Guest', pcm(48));
+    assert.strictEqual(capture.mixer.hasAudio(), true);
+    assert.strictEqual(capture.consent('guest', false), false);
+    capture.mixer.reset();
+    capture.receive('guest', 'Guest', pcm(48));
+    assert.strictEqual(capture.mixer.hasAudio(), false);
+    await capture.leave();
   });
 
   it('idle-leaves after the channel stays empty', async function () {

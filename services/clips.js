@@ -320,6 +320,7 @@ class Clips {
     this._usageCache = null;
     this._stopped = false;
     this._capture = null;
+    this._consentMessage = null;
     this._voiceDiscord = null;
     this._onGateway = (discord) => this._attachVoice(discord);
     this._onVoiceEvent = (event) => this._handleVoiceEvent(event);
@@ -493,8 +494,9 @@ class Clips {
 
   /**
    * Join the caller's voice channel and record talk. One channel at a time.
-   * Does not rejoin after a restart.
-   * @param {Object} input `{ guildId, channelId, channelName? }`
+   * Does not rejoin after a restart. Only speakers who opt in are mixed;
+   * `by` (the member who started listen) is opted in.
+   * @param {Object} input `{ guildId, channelId, channelName?, by? }`
    */
   async listen (input = {}) {
     if (!this.voiceEnabled) throw fail(409, 'Voice capture is turned off.');
@@ -504,6 +506,7 @@ class Clips {
     const guildId = String(input.guildId || '');
     const channelId = String(input.channelId || '');
     const channelName = text(input.channelName, LIMITS.name) || null;
+    const by = input.by ? String(input.by) : '';
     if (!guildId || !channelId) throw fail(400, 'Join a voice channel first, then run `/clips listen`.');
     const client = this._voiceClient();
     if (!client && !this.settings.voiceJoin && !this.settings.createCapture) {
@@ -519,11 +522,13 @@ class Clips {
       guildId,
       channelId,
       channelName,
-      adapterCreator: guild && guild.voiceAdapterCreator
+      adapterCreator: guild && guild.voiceAdapterCreator,
+      allowed: by ? [by] : []
     });
     this._capture.setOccupancy(this._voiceOccupancy(guildId, channelId));
+    const notice = await this._announceConsent();
     this._log(`listening in #${channelName || channelId}`);
-    return this.voiceStatus();
+    return Object.assign(this.voiceStatus(), { notice });
   }
 
   /**
@@ -538,8 +543,56 @@ class Clips {
     const capture = this._capture;
     this._capture = null;
     const status = await capture.leave();
+    await this._closeConsentNotice();
     if (!opts.silent && status && status.channel) this._log(`left #${status.channel}${opts.reason === 'idle' ? ' (empty)' : ''}`);
     return { listening: false, channel: null, stopped: true };
+  }
+
+  /**
+   * Include or drop a speaker while listening. Bots are never recorded.
+   * @param {string} userId
+   * @param {boolean} yes
+   * @returns {{ listening: boolean, included: boolean }}
+   */
+  consent (userId, yes) {
+    if (!this._capture || !this._capture.connected) return { listening: false, included: false };
+    if (this._voiceIsBot(userId)) return { listening: true, included: false };
+    return { listening: true, included: this._capture.consent(userId, yes) };
+  }
+
+  async _announceConsent () {
+    const capture = this._capture;
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && capture && client.guilds.cache.get(capture.guildId);
+    const channel = guild && guild.channels && guild.channels.cache && guild.channels.cache.get(capture.channelId);
+    if (!channel || typeof channel.send !== 'function') return false;
+    try {
+      this._consentMessage = await channel.send({
+        content: 'Recording this channel for the clip library. Talk is published with your display name. Press **Record me** to be included — people who join later must press it too.',
+        allowedMentions: { parse: [] },
+        components: [{
+          type: 1,
+          components: [
+            { type: 2, style: 3, label: 'Record me', custom_id: 'clips:consent:1' },
+            { type: 2, style: 2, label: 'Don’t record me', custom_id: 'clips:consent:0' }
+          ]
+        }]
+      });
+      return true;
+    } catch (error) {
+      this._consentMessage = null;
+      this._log(`could not post the recording notice: ${error && error.message ? error.message : error}`);
+      return false;
+    }
+  }
+
+  async _closeConsentNotice () {
+    const message = this._consentMessage;
+    this._consentMessage = null;
+    if (!message || typeof message.edit !== 'function') return;
+    try {
+      await message.edit({ content: 'Recording stopped.', components: [] });
+    } catch (_) { /* the notice is best-effort */ }
   }
 
   /**
