@@ -53,7 +53,6 @@ module.exports = {
         : [
             '1145511542637482114', // 4M-CONTRACTORS (discord.gg/4m-contractors)
             '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
-            '1439226629867044976', // AIMOS (discord.gg/aimos)
             '1200935959961817088', // Risky Business, IDBC (discord.gg/riskyb)
             '635948860459450400' // SC Shellback, SHELLBACKS org (RED ARMY; no public invite)
           ],

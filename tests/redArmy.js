@@ -15,6 +15,7 @@ const DIA = '1230782172944924722';
 const FABRIC = '498359331692085259';
 const NEORION = '814644536297914429';
 const TRDE = '937681528790609970';
+const AIMOS = '1439226629867044976';
 const MR_MEANER = 'discord:503419731286556703';
 const BROCK = 'discord:171376528838361088';
 
@@ -25,6 +26,7 @@ const GUILDS = [
   { id: HOME, name: 'G00N SQUAD' },
   { id: DIA, name: 'DIA' },
   { id: TRDE, name: 'Trans-Galactic' },
+  { id: AIMOS, name: 'A.I.M.O.S.' },
   { id: '111111111111111111', name: 'Random Org' }
 ];
 
@@ -56,6 +58,7 @@ describe('RED ARMY', function () {
     assert.ok(roster.servers[0].note.includes('not linked to an RSI org'));
     assert.ok(!roster.organizations.some((org) => org.symbol === 'DIA' || /diabolica/i.test(org.name)));
     assert.ok(!alliance.organizations.some((org) => ORG_SYMBOLS.includes(org.symbol) || org.symbol === 'DIA'));
+    assert.ok(roster.ignore.includes(AIMOS), 'AIMOS Discord stays ignored after eviction');
   });
 
   it('is linked only when the bot is in that org’s own server', function () {
@@ -87,6 +90,7 @@ describe('RED ARMY', function () {
     assert.ok(!names.includes('Trans-Galactic'));
     assert.ok(!names.includes('fabric'));
     assert.ok(!names.includes("Neorion's server"));
+    assert.ok(!names.includes('A.I.M.O.S.'), 'evicted AIMOS Discord is ignored, not RED ARMY');
     const body = JSON.stringify(listed);
     assert.ok(!body.includes(HOME) && !body.includes(SHELLBACKS) && !body.includes(DIA));
     assert.ok(!body.includes(FABRIC) && !body.includes(NEORION) && !body.includes(TRDE));

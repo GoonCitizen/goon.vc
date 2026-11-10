@@ -1,6 +1,6 @@
 {
   "name": "RED ARMY",
-  "about": "Orgs and Discord servers that have added the goon.vc bot but are not yet PERMAFLEET members, plus named alliance friends. Named officers are on record here. guildId is the org's own Discord; omit it until they add the bot. servers are Discords not tied to an RSI org. ignore is personal or Fabric-suite servers that should not appear as RED ARMY. This is not a vote and not a Fabric federation.",
+  "about": "Orgs and Discord servers that have added the goon.vc bot but are not yet PERMAFLEET members, plus named alliance friends. Named officers are on record here. guildId is the org's own Discord; omit it until they add the bot. servers are Discords not tied to an RSI org. ignore is personal, Fabric-suite, or evicted servers that should not appear as RED ARMY. This is not a vote and not a Fabric federation.",
   "organizations": [
     {
       "symbol": "RR",
@@ -51,6 +51,7 @@
   ],
   "ignore": [
     { "guildId": "498359331692085259", "name": "fabric" },
-    { "guildId": "814644536297914429", "name": "Neorion's server" }
+    { "guildId": "814644536297914429", "name": "Neorion's server" },
+    { "guildId": "1439226629867044976", "name": "AIMOS (evicted from PERMAFLEET)" }
   ]
 }

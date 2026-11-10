@@ -5,7 +5,6 @@ digraph Alliance {
   "Legacy Corporation"
   "Trade Trans-Galactic"
   "4M Contractors"
-  "A.I.M.O.S."
   "Risky Business"
 
   "Black Exodus"
@@ -30,10 +29,6 @@ digraph Alliance {
     "Tortuga"
   }
 
-  "A.I.M.O.S." -> {
-    "Risky Business"
-  }
-
   "PERMAFLEET" -> {
     "G00N SQUAD"
     "Infinity Industries"
@@ -41,7 +36,6 @@ digraph Alliance {
     "Legacy Corporation"
     "Trade Trans-Galactic"
     "4M Contractors"
-    "A.I.M.O.S."
     "Risky Business"
   }
 
@@ -54,7 +48,6 @@ digraph Alliance {
     "Legacy Corporation"
     "Trade Trans-Galactic"
     "4M Contractors"
-    "A.I.M.O.S."
     "Risky Business"
 
     subgraph cluster_inhouse {

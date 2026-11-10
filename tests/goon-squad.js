@@ -44,8 +44,8 @@ describe('G00N SQUAD home Discord', function () {
     assert.strictEqual(bySymbol.DOUBLEDOGZ, home.guildId, 'DOUBLEDOGZ shares the G00N SQUAD server');
     assert.strictEqual(bySymbol.TRDE, '937681528790609970');
     assert.strictEqual(bySymbol['4MCONTRACT'], '1145511542637482114');
-    assert.strictEqual(bySymbol.AIMOS, '1439226629867044976');
     assert.strictEqual(bySymbol.IDBC, '1200935959961817088');
+    assert.ok(!('AIMOS' in bySymbol), 'AIMOS is evicted');
     assert.strictEqual(bySymbol.INFN, undefined);
     assert.strictEqual(bySymbol.LCRP, undefined);
   });

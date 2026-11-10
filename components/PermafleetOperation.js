@@ -52,7 +52,7 @@ const MEMBER_ORGS = Object.freeze([
   'Trans-Galactic Trade',
   'DoubleDog Delivery, Inc.',
   '4M Contractors',
-  'A.I.M.O.S.'
+  'Risky Business'
 ]);
 
 function renderMemberOrgsHtml (orgs, organizationsPath, onboardingPath) {

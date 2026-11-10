@@ -52,7 +52,7 @@ zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 the element's contract. `/operations/PERMAFLEET/schedule` is the same element
 pinned to `server=permafleet`: the home server's events plus those of the member
 orgs' and squadrons' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
-4M-CONTRACTORS, TRDE, AIMOS, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
+4M-CONTRACTORS, TRDE, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
 in it; DOUBLEDOGZ points at the G00N SQUAD server), home server first so its day themes win, PERMAFLEET brand, no server
 picker; a single server id draws just that server under its own name; every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button

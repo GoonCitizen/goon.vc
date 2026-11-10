@@ -1383,7 +1383,8 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         assert.ok(!('preview' in preview), 'the Doorman preview id stays inside');
         assert.deepStrictEqual([preview.recent, preview.earlier, preview.welcomed], [1, 1, 0], 'Fresh joined too recently; Oldtimer before the window');
         assert.strictEqual(preview.message, welcomeContract.message);
-        assert.ok(preview.roles.alliance.includes('[AIM] A.I.M.O.S.'));
+        assert.ok(preview.roles.alliance.includes('Risky Business'));
+        assert.ok(!preview.roles.alliance.includes('[AIM] A.I.M.O.S.'));
         assert.strictEqual(preview.script.id, 'permafleet-apply');
         assert.ok(preview.script.questions.some((question) => /RSI handle/.test(question.say)));
         const again = await welcome.preview();
