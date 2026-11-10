@@ -7,7 +7,8 @@ const os = require('os');
 const path = require('path');
 const Clips = require('../services/clips');
 const { extractClips, snowflakeAt, plainCaption } = Clips;
-const { normalizeSegments, buildRenderPlan, creditsSrt } = require('../functions/clipRenderPlan');
+const { normalizeSegments, buildRenderPlan, creditsSrt, programDurationSeconds } = require('../functions/clipRenderPlan');
+const { DiscordVoiceCapture } = require('../functions/discordVoiceCapture');
 
 const GUILD = '1190527980120850493';
 const CLIPS_CHANNEL = '1300000000000000001';
@@ -138,6 +139,56 @@ describe('clips', function () {
       assert.ok(graph[3].startsWith('anullsrc='), 'silent audio under the screenshot');
       const row = plan.manifest.segments[1];
       assert.deepStrictEqual([row.at, row.duration, row.clip.media, row.recordedFrom, row.recordedTo], [4, 3, 'image', '2026-10-20T02:33:30.000Z', '2026-10-20T02:33:30.000Z']);
+    });
+
+    it('mixes delayed voice overlays onto the picture concat', function () {
+      const all = Object.assign({
+        v: {
+          id: 'v',
+          media: 'audio',
+          kind: 'voice',
+          path: '/tmp/v.m4a',
+          durationMs: 8000,
+          hasAudio: true,
+          author: 'PERMAFLEET',
+          channelName: 'PERMAFLEET',
+          speakers: [{ name: 'Ace' }],
+          recording: { recordedAt: '2026-10-20T02:33:14.000Z', source: 'discord-voice', confidence: 'high' }
+        }
+      }, clips);
+      const segments = normalizeSegments([
+        { clipId: 'a', in: 0, out: 4 },
+        { clipId: 'v', in: 0, out: 3, at: 1.5, volume: 0.8 }
+      ], all);
+      assert.strictEqual(segments[1].at, 1.5);
+      assert.strictEqual(programDurationSeconds(segments), 4, 'overlays do not add picture time');
+      const plan = buildRenderPlan({ id: 'p3', name: 'Comms', revision: 1 }, segments, all, { output: '/tmp/out.mp4', width: 1280, height: 720, fps: 30 });
+      assert.strictEqual(plan.durationMs, 4000);
+      const inputs = [];
+      for (let i = 0; i < plan.args.length; i++) {
+        if (plan.args[i] === '-i') inputs.push(plan.args[i + 1]);
+      }
+      assert.deepStrictEqual(inputs, ['/tmp/a.mp4', '/tmp/v.m4a']);
+      const graph = plan.args[plan.args.indexOf('-filter_complex') + 1];
+      assert.ok(graph.includes('[v0][a0]concat=n=1:v=1:a=1[vout][aout]'), graph);
+      assert.ok(/\[1:a\].*adelay=1500:all=1/.test(graph), graph);
+      assert.ok(/volume=0\.8/.test(graph), graph);
+      assert.ok(graph.includes('[aout][ov0]amix=inputs=2:duration=first:dropout_transition=0[amixed]'), graph);
+      assert.ok(plan.args.includes('[amixed]'));
+      assert.strictEqual(plan.manifest.segments[1].overlay, true);
+      assert.strictEqual(plan.manifest.segments[1].at, 1.5);
+    });
+
+    it('renders a voice-only project as black picture plus the mix', function () {
+      const all = {
+        v: { id: 'v', media: 'audio', path: '/tmp/v.m4a', durationMs: 2000, hasAudio: true, author: 'Ace' }
+      };
+      const segments = normalizeSegments([{ clipId: 'v', in: 0, out: 2 }], all);
+      const plan = buildRenderPlan({ id: 'p4', name: 'Talk', revision: 1 }, segments, all, { output: '/tmp/out.mp4', width: 1280, height: 720, fps: 30 });
+      assert.strictEqual(plan.durationMs, 2000);
+      const graph = plan.args[plan.args.indexOf('-filter_complex') + 1];
+      assert.ok(graph.includes('color=c=black:s=1280x720'), graph);
+      assert.ok(graph.includes('amix=inputs=2'), graph);
     });
   });
 
@@ -1351,6 +1402,153 @@ describe('clips', function () {
       logs.length = 0;
       await clips.reclaim();
       assert.ok(logs.some((line) => /reclaiming/.test(line)));
+    });
+  });
+
+  describe('Clips voice', function () {
+    this.timeout(20000);
+    let root;
+    let clips;
+    let runs;
+
+    function pcm (seconds) {
+      return Buffer.alloc(Math.round(seconds * 48000 * 4), 1);
+    }
+
+    async function fakeRun (command, args) {
+      runs.push([command, args]);
+      if (command === 'ffmpeg') {
+        fs.writeFileSync(args[args.length - 1], 'FAKE-' + path.basename(args[args.length - 1]));
+        return { code: 0, stdout: '', stderr: '' };
+      }
+      return { code: 1, stdout: '', stderr: 'unexpected command' };
+    }
+
+    beforeEach(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-voice-'));
+      runs = [];
+      clips = new Clips({
+        path: root,
+        discord: {},
+        poll: false,
+        refreshOnStart: false,
+        keepMasters: false,
+        minFreeBytes: 0,
+        run: fakeRun,
+        now: () => Date.parse('2026-11-09T20:00:00Z'),
+        createCapture: (opts) => new DiscordVoiceCapture(Object.assign({}, opts, {
+          idleMs: 20,
+          join: async () => ({ receiver: null }),
+          leave: () => {},
+          subscribe: () => null
+        }))
+      });
+      await clips.start();
+    });
+
+    afterEach(async function () {
+      await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('ingests a mixed chunk as an audio clip, names only in public JSON', async function () {
+      const clip = await clips._ingestVoiceChunk({
+        pcm: pcm(0.25),
+        startedAt: Date.parse('2026-11-09T20:00:00Z'),
+        durationMs: 250,
+        speakers: [{ id: '7001', name: 'Ace' }, { id: '7002', name: 'Bix' }],
+        guildId: '1190527980120850493',
+        channelId: '1236721094153732276',
+        channelName: 'PERMAFLEET'
+      });
+      assert.ok(clip);
+      assert.strictEqual(clip.media, 'audio');
+      assert.strictEqual(clip.kind, 'voice');
+      assert.strictEqual(clip.recording.source, 'discord-voice');
+      assert.deepStrictEqual(clip.speakers, [{ name: 'Ace' }, { name: 'Bix' }]);
+      assert.strictEqual(clip.author, 'PERMAFLEET');
+      assert.ok(fs.existsSync(path.join(root, 'media', `${clip.id}.m4a`)));
+      const pub = clips.publicClip(clip);
+      assert.strictEqual(pub.media, 'audio');
+      assert.ok(pub.hasAudio);
+      assert.deepStrictEqual(pub.speakers, [{ name: 'Ace' }, { name: 'Bix' }]);
+      assert.strictEqual(pub.channel, 'PERMAFLEET');
+      assert.ok(pub.proxyUrl.endsWith('/proxy'));
+      const dumped = JSON.stringify(pub);
+      assert.ok(!dumped.includes('7001') && !dumped.includes('7002'), dumped);
+      assert.ok(!dumped.includes('1190527980120850493'), dumped);
+      assert.ok(!dumped.includes('1236721094153732276'), dumped);
+      assert.ok(!/speakerIds|authorId|guildId|channelId/.test(dumped), dumped);
+      const list = await clips.list();
+      assert.strictEqual(list.status.voice, 1);
+      assert.deepStrictEqual(list.status.listening, { listening: false, channel: null });
+      assert.ok(!JSON.stringify(list).includes('7001'));
+    });
+
+    it('refuses listen without a channel, one at a time, idle-leaves, and does not rejoin on start', async function () {
+      await assert.rejects(() => clips.listen({}), /Join a voice channel/);
+      assert.deepStrictEqual(await clips.listen({ guildId: 'g1', channelId: 'c1', channelName: 'PERMAFLEET' }), {
+        listening: true,
+        channel: 'PERMAFLEET'
+      });
+      await assert.rejects(
+        () => clips.listen({ guildId: 'g1', channelId: 'c2', channelName: 'ops' }),
+        /Already listening in #PERMAFLEET/
+      );
+      clips._capture.setOccupancy(0);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.deepStrictEqual(clips.voiceStatus(), { listening: false, channel: null });
+      await clips.stop();
+      const again = new Clips({
+        path: root,
+        poll: false,
+        refreshOnStart: false,
+        minFreeBytes: 0,
+        createCapture: (opts) => new DiscordVoiceCapture(Object.assign({}, opts, {
+          join: async () => ({ receiver: null }),
+          leave: () => {}
+        }))
+      });
+      await again.start();
+      assert.deepStrictEqual(again.voiceStatus(), { listening: false, channel: null }, 'a restart does not rejoin');
+      await again.stop();
+    });
+
+    it('starts a session project with overlapping voice as overlay segments', async function () {
+      const video = {
+        id: '5001',
+        kind: 'attachment',
+        media: 'video',
+        author: 'Ace',
+        channelName: 'clips',
+        durationMs: 10000,
+        hasAudio: true,
+        proxy: { status: 'ready' },
+        recording: { recordedAt: '2026-11-09T20:00:00.000Z', source: 'filename', confidence: 'high' }
+      };
+      await clips.store.set('/clips/5001', video);
+      await clips._append('clips', '5001');
+      const voice = await clips._ingestVoiceChunk({
+        pcm: pcm(0.5),
+        startedAt: Date.parse('2026-11-09T20:00:02Z'),
+        durationMs: 500,
+        speakers: [{ id: '7001', name: 'Ace' }],
+        channelName: 'PERMAFLEET'
+      });
+      const sessions = await clips.sessions();
+      const session = sessions.find((entry) => entry.clips.some((row) => row.id === '5001'));
+      assert.ok(session);
+      assert.ok(session.voiceCount >= 1);
+      const project = await clips.createProject({
+        name: 'Raid night',
+        sessionId: session.id,
+        segments: [{ clipId: '5001', in: 0, out: 4 }]
+      });
+      const overlay = project.segments.find((segment) => segment.clipId === voice.id);
+      assert.ok(overlay, JSON.stringify(project.segments));
+      assert.strictEqual(overlay.at, 2);
+      assert.strictEqual(overlay.out, 0.5);
+      assert.strictEqual(project.segments[0].clipId, '5001');
     });
   });
 });

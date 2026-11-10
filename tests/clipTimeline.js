@@ -94,4 +94,15 @@ describe('clipTimeline', function () {
     assert.strictEqual(session.tracks[0].lanes, 2);
     assert.deepStrictEqual(session.tracks[0].clips.map((c) => c.lane), [0, 1]);
   });
+
+  it('counts voice clips on a session and uses durationMs for the track', function () {
+    const voice = clip('v1', 'PERMAFLEET', 1, 0.5, { media: 'audio', kind: 'voice', speakers: [{ name: 'Ace' }] });
+    const [session] = groupSessions([clip('a', 'Ace', 0, 2), voice]);
+    assert.strictEqual(session.voiceCount, 1);
+    assert.strictEqual(session.screenshotCount, 0);
+    assert.strictEqual(session.clipCount, 2);
+    const track = session.tracks.find((row) => row.author === 'PERMAFLEET');
+    assert.strictEqual(track.clips[0].durationMs, 0.5 * MIN);
+    assert.strictEqual(track.clips[0].offsetMs, MIN);
+  });
 });

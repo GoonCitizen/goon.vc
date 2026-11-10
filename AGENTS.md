@@ -26,7 +26,7 @@ Fabric relay below only dials out), no bitcoind, no
 signatures through the core federation helpers; it never holds a buyer's or
 seller's key, and the coins sit in a vault the Hub watches. The one Discord gateway client is the metrics bot
 below (non-privileged intents unless the Fabric relay, the Market forum mirror, or campaigns are configured, `autoCommands: false`); it never answers chat,
-only the `/idlerpg`, `/1v1`, `/vote`, `/market`, `/rsi`, `/hangar`, `/goon`, and `/help` application commands, and DMs only when a command starts it: inside a setup
+only the `/idlerpg`, `/1v1`, `/vote`, `/market`, `/rsi`, `/hangar`, `/clips`, `/goon`, and `/help` application commands, and DMs only when a command starts it: inside a setup
 script a server admin started with `/goon setup` (or `/goon council`, `embassy`,
 `permafleet`, `voice`, `roles`, which also create those channels and Prospect ranks on the admin's server
 when the bot may and the admin is one of the org's officers on record), the hangar walkthrough a member started with `/hangar guide`,
@@ -646,6 +646,11 @@ command and its subcommands, or one command in detail: each subcommand's
 arguments (`[optional]`), a line of `HELP` copy with its goon.vc page, where it
 runs, and Manage Server for `/goon`. It reads nothing about the caller and
 makes no member profile. Add a `HELP` entry with every new command.
+`/clips` (registered only while clips voice is on; `GOON_CLIPS_VOICE=0` turns it
+off) `listen` joins the caller’s current voice channel and records talk into
+`/clips`; `leave` disconnects. Servers only; the reply is private and names the
+channel (never an id). The bot is visible in the channel while recording. Commands
+takes `clips` lazily, same pattern as market. `GOON_COMMANDS=0` skips registration.
 `/schedule` (registered only while scheduling runs; `GOON_SCHEDULE=0` turns it
 off) `open` posts a poll in the channel it was run. `people` (names or
 `@handles`, commas between display names) and/or `role` and `also` say who
@@ -984,6 +989,17 @@ public `durationMs`, so blocks, lanes, and session span work unchanged;
 sessions count `screenshotCount` inside `clipCount`). In a project its segment
 is `{ in: 0, out }`, `out` being how long it shows (≤ `maxStillSeconds`, 60 s;
 added at `stillSeconds`), rendered as a looped still (`-loop 1`) over silence.
+**Voice:** `/clips listen` (the caller must be in that voice channel) joins
+through `@fabric/discord` voice receive (`joinVoiceReceive` on the shared
+operations Discord client; `@discordjs/voice` lives in that package) and
+records people talking — not Go Live video or game audio — into `media: 'audio'`
+clips (`kind: 'voice'`, `recording.source: 'discord-voice'`). `/clips leave`
+disconnects; the bot also leaves after `idleMs` of an empty channel. One channel
+at a time (`maxConcurrent: 1`); a restart does not rejoin. Chunks rotate on
+`chunkMs` (60s) or `silenceMs` (3s of nobody speaking). Public JSON and UI are
+names only (speakers, channel) — never Discord user ids. `GOON_CLIPS_VOICE=0`
+turns listen off (and skips registering `/clips`). Settings
+`clips.voice.{enabled,chunkMs,silenceMs,idleMs}`.
 Medal links (most #clips posts) are downloaded with yt-dlp and
 become local clips too; other hosts stay link-only unless listed in
 `externalLinks` (`GOON_CLIPS_LINKS`: unset = `medal.tv`, `1`/`all` = YouTube,
@@ -1036,15 +1052,19 @@ multi-hour sessions stay whole, separate evenings don't merge) with one track pe
 `<clip-library>` (`components/ClipLibrary.js`): each session is a card
 that wraps beside the others (as wide as up to four of its clips; bigger
 sessions take the row) holding clip cards (sprite thumbnail with hover scrub, pilot, recorded time, length or "Screenshot", caption),
-search + pilot / channel / sort / link / screenshot filters, a player (`?clip=<id>`) with
+search + pilot / channel / sort / link / screenshot / voice filters, a player (`?clip=<id>`) with
 details, the Discord link, and the other pilots' overlapping angles at the same
 moment, "Start a project" per session, and the project list.
 `/clips/timeline?session=<id>|clip=<id>` is `<clip-timeline-editor>`
 (`components/ClipTimelineEditor.js`) browsing one session. Both are shadow
 DOM with no goon.vc dependencies; `components/ClipsPage.js` sets `src` only on
 the active route. Projects live at `/clips/projects/<id>`: a program of segments
-`{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
-`revision`; old revisions kept, nothing deleted). A render
+`{ clipId, in, out, audio, volume, at? }`, saved as revisions (409 on a stale
+`revision`; old revisions kept, nothing deleted). Audio clips are overlays
+(`at` seconds on the film; mixed onto `[aout]` with `adelay` / `amix`); picture
+stays the video/screenshot concat (or black if the project is voice-only).
+“Start a project” on a session includes overlapping voice clips as overlays.
+A render
 (`functions/clipRenderPlan.js`, a pure ffmpeg argument builder; one at a time,
 `maxRenderSeconds` / `maxSegments`) cuts from the masters (fetching the source
 again only for a clip without one, so deleted messages and links still render) and

@@ -595,6 +595,16 @@ class GoonVC {
       await this.schedule.start();
     }
 
+    const clipSettings = this.settings.clips || {};
+    this.clips = new Clips(Object.assign({}, clipSettings, {
+      path: clipSettings.path || './stores/clips',
+      discord,
+      basePath: spa._site('clipsPath'),
+      identify,
+      operations: this.operations
+    }));
+    await this.clips.start();
+
     const commandSettings = this.settings.commands || {};
     this.commands = new Commands({
       operations: commandSettings.enabled === false ? null : this.operations,
@@ -609,7 +619,9 @@ class GoonVC {
       reviews: this.reviews,
       hangar: this.hangar,
       schedule: this.schedule,
+      clips: () => this.clips,
       siteUrl: spa._site('siteUrl'),
+      clipsPath: spa._site('clipsPath'),
       rsiPath: spa._site('rsiClaimPath'),
       votesPath: spa._site('permafleetVotesPath'),
       idlerpgPath: spa._site('idlerpgPath'),
@@ -633,15 +645,6 @@ class GoonVC {
       resolveToken: leaderboardSettings.resolveToken
     });
     await this.leaderboard.start();
-
-    const clipSettings = this.settings.clips || {};
-    this.clips = new Clips(Object.assign({}, clipSettings, {
-      path: clipSettings.path || './stores/clips',
-      discord,
-      basePath: spa._site('clipsPath'),
-      identify
-    }));
-    await this.clips.start();
 
     this.fabric = new FabricRelay(Object.assign({}, fabricSettings, {
       path: fabricSettings.path || './stores/fabric',

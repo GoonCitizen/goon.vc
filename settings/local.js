@@ -236,6 +236,9 @@ module.exports = {
 
   // /clips: videos and screenshots from the Discord clip channels, low-res proxies for the
   // storyboard editor, and server-side renders (Fabric Store + media on disk).
+  // `/clips listen` joins the caller's voice channel and records talk (not Go Live
+  // video); GOON_CLIPS_VOICE=0 turns that off. One channel at a time; idle leave
+  // when empty. Public JSON is names only.
   // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)"/"screenshot(s)",
   // plus every media channel); threads under a matched channel are read too.
   // Needs ffmpeg + ffprobe on PATH; the bot needs View Channel + Read Message History.
@@ -276,7 +279,13 @@ module.exports = {
         ? process.env.GOON_CLIPS_STREAM_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
         : [goonSquad.channels.streams.id, '/(^|[^a-z])streams?([^a-z]|$)/']
     },
-    poll: process.env.GOON_CLIPS !== '0'
+    poll: process.env.GOON_CLIPS !== '0',
+    voice: {
+      enabled: process.env.GOON_CLIPS_VOICE !== '0',
+      chunkMs: process.env.GOON_CLIPS_VOICE_CHUNK_MS ? Number(process.env.GOON_CLIPS_VOICE_CHUNK_MS) : undefined,
+      silenceMs: process.env.GOON_CLIPS_VOICE_SILENCE_MS ? Number(process.env.GOON_CLIPS_VOICE_SILENCE_MS) : undefined,
+      idleMs: process.env.GOON_CLIPS_VOICE_IDLE_MS ? Number(process.env.GOON_CLIPS_VOICE_IDLE_MS) : undefined
+    }
   },
 
   // Relay of G00N SQUAD public channels (@everyone can view; text / announcement,

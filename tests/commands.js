@@ -1344,4 +1344,93 @@ describe('Discord application commands', function () {
       assert.strictEqual(off.replies[0].content, 'Hangar sync is not running right now.');
     });
   });
+
+  describe('/clips', function () {
+    class FakeClips {
+      constructor () {
+        this.voiceEnabled = true;
+        this.channel = null;
+      }
+
+      async listen (input) {
+        if (!input.channelId) {
+          const error = new Error('Join a voice channel first, then run `/clips listen`.');
+          error.status = 400;
+          throw error;
+        }
+        if (this.channel) {
+          const error = new Error(`Already listening in #${this.channel}.`);
+          error.status = 409;
+          throw error;
+        }
+        this.channel = input.channelName || 'voice';
+        return { listening: true, channel: this.channel };
+      }
+
+      async leaveVoice () {
+        if (!this.channel) return { listening: false, channel: null, stopped: false };
+        this.channel = null;
+        return { listening: false, channel: null, stopped: true };
+      }
+    }
+
+    it('is registered only while clips voice is on, servers only', function () {
+      assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'clips'));
+      const commands = new Commands({ clips: () => new FakeClips(), register: false });
+      const definition = commands.definitions.find((entry) => entry.name === 'clips');
+      assert.ok(definition);
+      assert.deepStrictEqual(definition.contexts, [0]);
+      assert.deepStrictEqual(definition.options.map((option) => option.name), ['listen', 'leave']);
+    });
+
+    it('joins the caller’s voice channel, refuses when they are not in one, and leaves', async function () {
+      const clips = new FakeClips();
+      const commands = new Commands({ clips: () => clips, siteUrl: 'https://goon.vc', register: false });
+      const missing = interaction({ name: 'clips', subcommand: 'listen', user: KERSA });
+      await commands.handle(missing);
+      assert.ok(missing.deferred);
+      assert.strictEqual(missing.replies[0].content, 'Join a voice channel first, then run `/clips listen`.');
+
+      const listen = interaction({
+        name: 'clips',
+        subcommand: 'listen',
+        user: KERSA,
+        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+      });
+      await commands.handle(listen);
+      assert.ok(listen.replies[0].content.includes('Listening in #PERMAFLEET'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('not Go Live'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('<https://goon.vc/clips>'), listen.replies[0].content);
+      assert.ok(!listen.replies[0].content.includes(VOICE), 'no channel id');
+      assert.strictEqual(clips.channel, 'PERMAFLEET');
+
+      const twice = interaction({
+        name: 'clips',
+        subcommand: 'listen',
+        user: KERSA,
+        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+      });
+      await commands.handle(twice);
+      assert.ok(twice.replies[0].content.includes('Already listening in #PERMAFLEET'), twice.replies[0].content);
+
+      const leave = interaction({ name: 'clips', subcommand: 'leave', user: KERSA });
+      await commands.handle(leave);
+      assert.ok(leave.replies[0].content.includes('Left the voice channel'), leave.replies[0].content);
+      const idle = interaction({ name: 'clips', subcommand: 'leave', user: KERSA });
+      await commands.handle(idle);
+      assert.strictEqual(idle.replies[0].content, 'I was not listening.');
+    });
+
+    it('/help lists listen and leave while clips voice is on', async function () {
+      const commands = new Commands({ clips: () => new FakeClips(), siteUrl: 'https://goon.vc', register: false });
+      const call = interaction({ name: 'help', user: KERSA, strings: { command: 'clips' } });
+      await commands.handle(call);
+      const text = call.replies[0].content;
+      assert.ok(text.includes('`/clips listen`'), text);
+      assert.ok(text.includes('`/clips leave`'), text);
+      assert.ok(text.includes('not Go Live video'), text);
+      assert.ok(text.includes('<https://goon.vc/clips>'), text);
+      assert.ok(!text.includes(VOICE), text);
+    });
+  });
 });

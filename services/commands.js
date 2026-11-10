@@ -256,6 +256,17 @@ const DEFINITIONS = [
     ]
   },
   {
+    name: 'clips',
+    description: 'Record people talking in a voice channel into the clip library.',
+    type: CHAT_INPUT,
+    contexts: [GUILD_CONTEXT],
+    integration_types: [GUILD_INSTALL],
+    options: [
+      { type: OPTION.subcommand, name: 'listen', description: 'Join your current voice channel and record talk until you leave, or the channel is empty.' },
+      { type: OPTION.subcommand, name: 'leave', description: 'Stop recording and leave the voice channel.' }
+    ]
+  },
+  {
     name: 'help',
     description: 'What each goon.vc command does.',
     type: CHAT_INPUT,
@@ -281,6 +292,7 @@ const HELP = {
   },
   rsi: (commands) => `You prove the handle is yours by putting a short code in your RSI bio for a minute. <${commands._url(commands.settings.rsiPath)}>`,
   hangar: (commands) => `Export your pledges with the Hangar Export add-on for Firefox, then import the .json file. Only fleet totals are public, never who owns what: <${commands._url(commands.settings.rsiPath)}>`,
+  clips: (commands) => `The bot joins only when asked, and only records people talking — not Go Live video or game audio. Clips: <${commands._url(commands.settings.clipsPath)}>`,
   goon: () => 'For members who can manage the server. The PERMAFLEET channel and rank commands are for the org’s officers on record, and campaigns, check-ins, and welcome DMs show every recipient before anything is sent.'
 };
 
@@ -490,11 +502,13 @@ class Commands {
       reviews: null,
       hangar: null,
       schedule: null,
+      clips: null,
       league: OPEN_LEAGUE_ID,
       siteUrl: 'https://goon.vc',
       idlerpgPath: '/services/idlerpg',
       leaguesPath: '/leagues',
       rsiPath: '/rsi',
+      clipsPath: '/clips',
       votesPath: '/operations/PERMAFLEET/votes',
       register: true,
       fetch: null,
@@ -548,6 +562,7 @@ class Commands {
     const live = DEFINITIONS.map((definition) => {
       if (definition.name === 'market') return this.settings.market ? definition : null;
       if (definition.name === 'schedule') return this._schedule() ? definition : null;
+      if (definition.name === 'clips') return this._clips() ? definition : null;
       if (definition.name === 'rsi') return this._members() ? definition : null;
       if (definition.name === 'hangar') {
         if (!this.settings.hangar || !this._members()) return null;
@@ -664,6 +679,13 @@ class Commands {
         else {
           if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
           out = await this.scheduleCommand(interaction);
+        }
+      }
+      else if (command === 'clips') {
+        if (!interaction.guildId) out = this._private('Use this in a server.');
+        else {
+          if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
+          out = await this.clipsCommand(interaction);
         }
       }
       // `/market` is also installed on members' own accounts, so it runs in DMs and servers without the bot.
@@ -1502,6 +1524,42 @@ class Commands {
   _schedule () {
     const schedule = this.settings.schedule;
     return schedule && typeof schedule.open === 'function' ? schedule : null;
+  }
+
+  _clips () {
+    const clips = this.settings.clips;
+    const service = typeof clips === 'function' ? clips() : clips;
+    return service && typeof service.listen === 'function' && service.voiceEnabled !== false ? service : null;
+  }
+
+  /**
+   * `/clips listen` joins the caller's voice channel and records talk until
+   * `/clips leave` or the channel stays empty. Private reply; names only.
+   * @param {Object} interaction
+   * @returns {Promise<Object>} reply
+   */
+  async clipsCommand (interaction) {
+    const clips = this._clips();
+    if (!clips) return this._private('Voice clips are not running right now.');
+    if (interaction.user && interaction.user.bot) return this._private('Bots don’t record.');
+    const subcommand = this._subcommand(interaction);
+    if (subcommand === 'leave') {
+      const status = await clips.leaveVoice();
+      if (status && status.stopped) return this._private('Left the voice channel. Recordings are in the clip library.');
+      return this._private('I was not listening.');
+    }
+    const voice = interaction.member && interaction.member.voice;
+    const channelId = voice && (voice.channelId || (voice.channel && voice.channel.id));
+    if (!channelId) return this._private('Join a voice channel first, then run `/clips listen`.');
+    const channelName = (voice.channel && voice.channel.name) || null;
+    const listening = await clips.listen({
+      guildId: interaction.guildId,
+      channelId: String(channelId),
+      channelName
+    });
+    const where = listening.channel ? `#${escapeMarkdown(listening.channel)}` : 'that channel';
+    const page = this._url(this.settings.clipsPath);
+    return this._private(`Listening in ${where} — people talking are recorded into the clip library (not Go Live video). I’m visible in the channel while this runs. [Clips](<${page}>) · \`/clips leave\` to stop.`);
   }
 
   /**
