@@ -1,0 +1,57 @@
+{
+  "id": "permafleet-voice",
+  "title": "Set up the PERMAFLEET voice channel",
+  "description": "Gives a member org a public PERMAFLEET voice channel, open to every PERMAFLEET pilot. goon.vc's bot creates it, or the server's own channel is used.",
+  "start": "welcome",
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Every PERMAFLEET member org keeps a public **PERMAFLEET** voice channel, open to every PERMAFLEET pilot, so anyone in the alliance can drop in and fly with you. Let's set one up on **{{context.guildName}}**.",
+      "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
+      "next": "channel"
+    },
+    "channel": {
+      "say": "Should goon.vc's bot create the PERMAFLEET voice channel? That's the recommended way: it's set up the same on every member org's Discord. Or pick a voice channel **{{context.guildName}}** already has.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.channels.voice" },
+      "next": [
+        { "when": { "answers.channel": "new" }, "goto": "category" },
+        { "goto": "existing" }
+      ]
+    },
+    "category": {
+      "say": "Which category should it go in? It stays open to everyone on your server, whatever the category allows.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.categories", "optional": true },
+      "next": [
+        { "when": { "context.channelMissing": null }, "goto": "summary" },
+        { "goto": "permissions" }
+      ]
+    },
+    "permissions": {
+      "say": "To create the voice channel, goon.vc's bot needs **Manage Channels**, plus the permissions it opens up there. Missing on **{{context.guildName}}** right now: {{context.channelMissing}}.\nGrant them with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's the plan for **{{context.guildName}}**:\n- Create a PERMAFLEET voice channel everyone on your server can join and talk in\n- Category: {{labels.category|none, top of the channel list}}\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    },
+    "existing": {
+      "say": "I'll use {{labels.channel}} as the PERMAFLEET voice channel on **{{context.guildName}}** and leave its permissions as they are. Every PERMAFLEET pilot should be able to join it.\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "{{labels.result}} PERMAFLEET pilots can drop in any time. Run `/goon voice` again any time."
+  },
+  "cancelled": {
+    "say": "Nothing changed. Run `/goon voice` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.channel", "kind": "voice" }, { "action": "record" }]
+}

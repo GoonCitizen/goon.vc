@@ -1,0 +1,6 @@
+digraph Structure {
+  "GREENBACKS"
+  "ENLISTED"
+
+  "GREENBACKS" -> "ENLISTED" -> "CANDIDATE" -> "OFFICER" -> "ADMIRAL"
+}

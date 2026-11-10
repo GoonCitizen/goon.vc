@@ -1,0 +1,57 @@
+{
+  "id": "permafleet-embassy",
+  "title": "Set up #embassy for PERMAFLEET",
+  "description": "Gives a member org an #embassy channel where other orgs and alliance leadership can reach it. goon.vc's bot creates it, or the server's own channel is used.",
+  "start": "welcome",
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Every PERMAFLEET member org keeps an **#embassy** channel, where other orgs and alliance leadership can reach it. Let's set one up on **{{context.guildName}}**.",
+      "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
+      "next": "channel"
+    },
+    "channel": {
+      "say": "Should goon.vc's bot create #embassy? That's the recommended way: it's set up the same on every member org's Discord. Or pick a channel **{{context.guildName}}** already has.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.channels.embassy" },
+      "next": [
+        { "when": { "answers.channel": "new" }, "goto": "category" },
+        { "goto": "existing" }
+      ]
+    },
+    "category": {
+      "say": "Which category should #embassy go in? It stays open to everyone on your server, whatever the category allows.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.categories", "optional": true },
+      "next": [
+        { "when": { "context.channelMissing": null }, "goto": "summary" },
+        { "goto": "permissions" }
+      ]
+    },
+    "permissions": {
+      "say": "To create #embassy, goon.vc's bot needs **Manage Channels**, plus the permissions it opens up there. Missing on **{{context.guildName}}** right now: {{context.channelMissing}}.\nGrant them with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's the plan for **{{context.guildName}}**:\n- Create #embassy, where everyone on your server can read and post\n- Category: {{labels.category|none, top of the channel list}}\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    },
+    "existing": {
+      "say": "I'll use {{labels.channel}} as #embassy on **{{context.guildName}}** and leave its permissions as they are. Visitors from other orgs should be able to read and post there.\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "{{labels.result}} Post an invite to it in #embassy on the G00N SQUAD Discord so alliance leadership can reach you. Run `/goon embassy` again any time."
+  },
+  "cancelled": {
+    "say": "Nothing changed. Run `/goon embassy` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.channel", "kind": "embassy" }, { "action": "record" }]
+}

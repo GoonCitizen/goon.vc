@@ -1,0 +1,107 @@
+{
+  "id": "goon-setup",
+  "title": "Connect your server to goon.vc",
+  "description": "Walks a server admin through what goon.vc should do for their Discord server. PERMAFLEET membership is offered only to an org's officers on record, and sets up the channels and Prospect ranks every member org keeps. The answers are recorded per server for alliance leadership.",
+  "start": "welcome",
+  "requires": ["ManageGuild"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Let's connect **{{context.guildName}}** to goon.vc. It takes a couple of minutes: I'll record your answers, and alliance leadership finishes the hookup.",
+      "input": { "type": "confirm" },
+      "next": "features"
+    },
+    "features": {
+      "say": "What should goon.vc do for **{{context.guildName}}**? Pick everything you want.{{context.permafleetNote}}",
+      "input": { "type": "choice", "optionsFrom": "goon.features", "multiple": true },
+      "next": [
+        { "when": { "answers.features": "calendar" }, "goto": "calendar" },
+        { "when": { "answers.features": "clips" }, "goto": "clips" },
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "calendar": {
+      "say": "Your scheduled events show on the goon.vc calendar. Should they also go on the alliance-wide PERMAFLEET schedule?",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "permafleet", "label": "Yes, on the PERMAFLEET schedule" },
+          { "id": "own", "label": "No, only our own calendar" }
+        ]
+      },
+      "next": [
+        { "when": { "answers.features": "clips" }, "goto": "clips" },
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "clips": {
+      "say": "Which channel do your members post clips in? goon.vc collects the videos and Medal links posted there into the clip library.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.textChannels", "optional": true },
+      "saveAs": "clipsChannel",
+      "next": [
+        { "when": { "answers.features": "idlerpg" }, "goto": "announcements" },
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "announcements": {
+      "say": "Which channel should IdleRPG post in? It welcomes new players and announces level-ups, battles, and finds there. Chatting in that channel costs players XP, so pick a quiet one.",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.textChannels", "optional": true },
+      "saveAs": "idlerpgChannel",
+      "next": [
+        { "when": { "answers.features": "permafleet" }, "goto": "org" },
+        { "goto": "permissions" }
+      ]
+    },
+    "org": {
+      "say": "Which org is **{{context.guildName}}** joining PERMAFLEET for? You can act for these because PERMAFLEET leadership has your account on record as one of their officers. Their officers on record:\n{{context.permafleetRecord}}\n\nOnly they will see #council. Ask in #embassy on the G00N SQUAD Discord if someone is missing.\n\nEvery pilot joins the [PERMAFLEET] org on RSI before undocking; the tag is how our operators know you're ours.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.orgs" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Here's where **{{context.guildName}}** stands with PERMAFLEET today. Nothing has changed yet:\n\n{{context.compliance|I couldn't read your server just now.}}",
+      "input": { "type": "confirm" },
+      "next": "build"
+    },
+    "build": {
+      "say": "How should I set up PERMAFLEET on **{{context.guildName}}**?\n\n**Recommended:** goon.vc's bot sets up everything a member org keeps, the same way on every member org's Discord. That's #embassy, the PERMAFLEET voice channel, and #permafleet, all open to everyone, plus a private #council open only to your org's officers on record, in a PERMAFLEET category. It also adds the Prospect ranks I to VI. Channels and ranks you already have by those names are kept as they are.\n\nOr pick existing channels and roles yourself afterwards, one at a time: `/goon embassy`, `/goon voice`, `/goon permafleet`, `/goon council`, and `/goon roles`.",
+      "input": {
+        "type": "choice",
+        "options": [
+          { "id": "create", "label": "Set it all up (recommended)" },
+          { "id": "existing", "label": "I'll pick existing channels and roles" }
+        ]
+      },
+      "next": [
+        { "when": { "answers.build": "create", "context.setupMissing": null }, "goto": "permissions" },
+        { "when": { "answers.build": "create" }, "goto": "setupPermissions" },
+        { "goto": "permissions" }
+      ]
+    },
+    "setupPermissions": {
+      "say": "To set up PERMAFLEET, goon.vc's bot needs **Manage Channels**, **Manage Roles** (for the Prospect ranks), and the permissions it gives in those channels. Missing on **{{context.guildName}}** right now: {{context.setupMissing}}.\nGrant them with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "permissions"
+    },
+    "permissions": {
+      "say": "goon.vc's bot needs **View Channels**, **Send Messages**, and **Read Message History** in the channels you picked. Missing on **{{context.guildName}}** right now: {{context.botMissing|nothing, you're set}}.\nAdd the bot, or update its permissions: {{context.inviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's what I'll record for **{{context.guildName}}**:\n- Features: {{labels.features|none}}\n- Calendar: {{labels.calendar|n/a}}\n- Clips channel: {{labels.clipsChannel|n/a}}\n- IdleRPG channel: {{labels.idlerpgChannel|n/a}}\n- Org: {{labels.org|n/a}}\n- PERMAFLEET channels and roles: {{labels.build|n/a}}\n\nSave it?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "Saved.{{labels.permafleet}}\n\nAlliance leadership will finish connecting **{{context.guildName}}**; ask in #embassy on the G00N SQUAD Discord if anything comes up. Run `/goon setup` again any time to change your answers."
+  },
+  "cancelled": {
+    "say": "Setup cancelled, and nothing was saved. Run `/goon setup` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.org" }, { "action": "permafleet.setup" }, { "action": "record" }]
+}

@@ -1,0 +1,14 @@
+{
+  "about": "Operations listed on /operations, and the Discord channels each operation's metrics count. Channel matchers: a channel id, an exact name, or \"/regex/\" on the name (@fabric/discord functions/channelMatcher).",
+  "guildId": "1190527980120850493",
+  "operations": [
+    {
+      "id": "permafleet",
+      "name": "PERMAFLEET",
+      "path": "/operations/PERMAFLEET",
+      "metrics": [
+        { "plugin": "voice", "channels": ["1236721094153732276"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "about": "Recruiting campaigns for PERMAFLEET units (`npm run campaigns:recruiting`). Each one DMs the members of the G00N SQUAD server who hold the rank just beneath the unit in contracts/roles.dot (`qualified`: Prospect IV; Prospect ranks are cumulative on Discord, so Prospect V and VI hold it too) and none of the unit's `roles` (the unit and everything above it, so current members are skipped), and offers the unit's DM script. `qualified.name` is also the script `requires` entry: the script re-checks the role fresh from Discord when it starts and before it records the answers. Role ids are G00N SQUAD Discord role snowflakes. Leadership selects who joins; Prospect IV makes a member eligible, never selected.",
+  "guildId": "1190527980120850493",
+  "activeWithinDays": 30,
+  "qualified": {
+    "name": "[P4] Prospect IV",
+    "roles": { "[P4] Prospect IV": "1234739335312703548" }
+  },
+  "units": [
+    {
+      "id": "turtle-brigade",
+      "name": "TURTLE BRIGADE",
+      "script": "recruit-turtle-brigade",
+      "roles": {
+        "TURTLE BRIGADE": "1480517986262454383",
+        "SHELLBACK": "1518976133515837521"
+      },
+      "message": "**TURTLE BRIGADE is recruiting.**\nYou're a Prospect IV in PERMAFLEET, which makes you eligible for TURTLE BRIGADE: PERMAFLEET's infantry, the FPS side of the fleet. It starts with basic infantry training, and the best go on to SHELLBACK, the elite infantry unit.\n\nLeadership selects who joins. Press **Start** to answer a few questions (about two minutes) and put your name in front of them."
+    },
+    {
+      "id": "bravo-squadron",
+      "name": "BRAVO SQUADRON",
+      "script": "recruit-bravo-squadron",
+      "roles": {
+        "BRAVO SQUADRON": "1205021360783364097",
+        "ALPHA SQUADRON": "1205021280747651112"
+      },
+      "message": "**BRAVO SQUADRON is recruiting.**\nYou're a Prospect IV in PERMAFLEET, which makes you eligible for BRAVO SQUADRON: fighter pilots from every member org who fly security for PERMAFLEET. Official training runs on **Friday Night Fights**, and the top 5% go on to ALPHA SQUADRON.\n\nLeadership selects who joins. Press **Start** to answer a few questions (about two minutes) and put your name in front of them."
+    },
+    {
+      "id": "permafleet-officers",
+      "name": "PERMAFLEET OFFICERS",
+      "script": "recruit-permafleet-officers",
+      "roles": {
+        "[PO] PERMAFLEET OFFICERS": "1300330274139279445",
+        "[O1] Officer 1": "1227734928452751451",
+        "[O2] Officer 2": "1498548768021286923",
+        "[LT] Lieutenant": "1234740074546204733",
+        "[CPT] Captain": "1234740631843242079",
+        "[MAJ] Major": "1325682930701565983",
+        "[RADM] Rear Admiral": "1235213554467078246",
+        "[VADM] Vice Admiral": "1234741445655658506",
+        "[ADM] WARLORDS": "1234741732894183475",
+        "[FADM] Fleet Admiral": "1234741793711587389",
+        "COMMAND": "1298550587964788807",
+        "LEADERSHIP": "1298441796786851881"
+      },
+      "message": "**PERMAFLEET is looking for officers.**\nYou're a Prospect IV in PERMAFLEET, which makes you eligible for officer training. PERMAFLEET OFFICERS run ops, lead wings and squads, and bring the next Prospects up through the ranks. From there, Lieutenants are selected by a Captain, and Captains by a Major.\n\nLeadership selects who trains. Press **Start** to answer a few questions (about two minutes) and put your name in front of them."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "id": "permafleet-council",
+  "title": "Set up #council for PERMAFLEET",
+  "description": "Gives a member org's officers a private #council channel to settle PERMAFLEET alliance votes. goon.vc's bot creates it, open to the org's officers on record (recommended), or the server's own channel is used. Only the org's officers on record can run it.",
+  "start": "welcome",
+  "requires": ["ManageGuild", "PERMAFLEET org officer"],
+  "steps": {
+    "welcome": {
+      "say": "Hi {{user.name}}! Every PERMAFLEET member org keeps a private **#council** channel, where its officers settle alliance votes before the org casts its one vote. Let's set one up on **{{context.guildName}}**.",
+      "input": { "type": "confirm" },
+      "next": "compliance"
+    },
+    "compliance": {
+      "say": "Before I change anything, here's where **{{context.guildName}}** stands with PERMAFLEET:\n\n{{context.compliance|I couldn't read your server just now.}}\n\n{{context.complianceFocus}}",
+      "input": { "type": "confirm" },
+      "next": "channel"
+    },
+    "channel": {
+      "say": "Should goon.vc's bot create #council? That's the recommended way: it's set up the same on every member org's Discord. Or pick a channel **{{context.guildName}}** already has.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.channels.council" },
+      "next": [
+        { "when": { "answers.channel": "new" }, "goto": "category" },
+        { "goto": "existing" }
+      ]
+    },
+    "category": {
+      "say": "Which category should #council go in?",
+      "input": { "type": "choice", "optionsFrom": "discord.guild.categories", "optional": true },
+      "next": "roles"
+    },
+    "roles": {
+      "say": "Who may see #council? **Your officers on record** is recommended: goon.vc's bot opens it to each officer PERMAFLEET leadership has on record who is on **{{context.guildName}}** ({{context.permafleetOfficers|nobody on record yet}}), with no role to hand out. Add any roles your officers hold if you like. Nobody else will see #council; goon.vc's bot keeps access too.",
+      "input": { "type": "choice", "optionsFrom": "permafleet.council.access", "multiple": true },
+      "next": [
+        { "when": { "context.channelMissing": null }, "goto": "summary" },
+        { "goto": "permissions" }
+      ]
+    },
+    "permissions": {
+      "say": "To create #council, goon.vc's bot needs **Manage Channels**, plus the permissions it gives your officers there. Missing on **{{context.guildName}}** right now: {{context.channelMissing}}.\nGrant them with this link (it updates the bot if it's already in your server), then press Continue: {{context.channelInviteUrl}}",
+      "input": { "type": "confirm" },
+      "next": "summary"
+    },
+    "summary": {
+      "say": "Here's the plan for **{{context.guildName}}**:\n- Create a private #council\n- Category: {{labels.category|none, top of the channel list}}\n- Who can see it: {{labels.roles}}, and goon.vc's bot\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    },
+    "existing": {
+      "say": "I'll use {{labels.channel}} as #council on **{{context.guildName}}** and leave its permissions as they are. Make sure only your officers can see it.\n\nGo ahead?",
+      "input": { "type": "confirm" },
+      "next": null
+    }
+  },
+  "complete": {
+    "say": "{{labels.result}} Your officers settle PERMAFLEET alliance votes there. Run `/goon council` again any time."
+  },
+  "cancelled": {
+    "say": "Nothing changed. Run `/goon council` in your server to start again."
+  },
+  "onComplete": [{ "action": "permafleet.channel", "kind": "council" }, { "action": "record" }]
+}
