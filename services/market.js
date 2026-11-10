@@ -11,7 +11,7 @@ const discordEvents = require('../functions/discordScheduledEvents');
 const discordThreads = require('../functions/discordThreads');
 const resolveDiscordToken = require('../functions/resolveDiscordToken');
 const { displayName } = require('../functions/duelLeaderboard');
-const { isUnreachable } = require('../functions/hubApiProxy');
+const { isMailboxSafeOrigin, isUnreachable } = require('../functions/hubApiProxy');
 const { fabricPubkey } = require('../functions/accountKey');
 const { frameHex, frameUri, openFrame, signFrame } = require('../functions/fabricFederation');
 const post = require('../functions/marketPost');
@@ -1610,6 +1610,7 @@ class Market extends EventEmitter {
       let res;
       try {
         const extra = typeof extraHeaders === 'function' ? extraHeaders(origin) : extraHeaders;
+        if (extra === false) continue;
         res = await this._fetch(origin + apiPath, {
           method,
           headers: Object.assign({ Accept: 'application/json' }, body !== undefined ? { 'Content-Type': 'application/json' } : {}, extra),
@@ -2235,9 +2236,18 @@ class Market extends EventEmitter {
     const order = this.orders.get(id);
     const since = Number(order.mailboxSeq) || 0;
     const key = this._arbiter(order).key;
-    const res = await this._hub('GET', '/services/federations/messages?limit=200', undefined, (origin) => ({
-      'X-Fabric-Mailbox': createMailboxFetch({ origin, purpose: 'federation-mailbox', since }, key).uri
-    }));
+    const origins = this.settings.hubs && typeof this.settings.hubs.order === 'function'
+      ? this.settings.hubs.order()
+      : [];
+    if (!origins.some(isMailboxSafeOrigin)) {
+      this._warn(`order ${id}: Hub mailbox is only read over HTTPS (or loopback)`);
+      return;
+    }
+    const res = await this._hub('GET', '/services/federations/messages?limit=200', undefined, (origin) => (
+      isMailboxSafeOrigin(origin)
+        ? { 'X-Fabric-Mailbox': createMailboxFetch({ origin, purpose: 'federation-mailbox', since }, key).uri }
+        : false
+    ));
     if (res.status !== 200) this._warn(`order ${id}: the Hub mailbox answered ${res.status}`);
     if (res.status !== 200 || !res.json || !Array.isArray(res.json.messages)) return;
     for (const message of res.json.messages) {

@@ -364,6 +364,8 @@ class FabricRelay {
    */
   _flush () {
     if (!this.connected) return 0;
+    // Without the guild we cannot tell which queued channels are still public.
+    if (!this._guild()) return 0;
     let sent = this._catalogDirty ? this._sendCatalog() : 0;
     if (!this.pending.size) return sent;
     for (const pack of share.messagePacks(this._byChannel(this._publicOnly(this.pending.values())))) sent += this._publish([pack]);
@@ -378,6 +380,7 @@ class FabricRelay {
    */
   _shareAll () {
     if (!this.connected) return 0;
+    if (!this._guild()) return 0;
     let sent = this._sendCatalog();
     const records = new Map();
     for (const channel of this.recent.values()) for (const record of channel.values()) records.set(record.discordMessageId, record);

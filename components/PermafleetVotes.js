@@ -188,9 +188,18 @@ function client () {
     return orgs.map((org) => esc(orgLabel(org))).join(' and ');
   }
 
+  function discordLine (discord) {
+    if (!discord) return '';
+    const linked = !!discord.linked;
+    const label = linked
+      ? (discord.name ? 'Discord: ' + discord.name : 'Discord linked')
+      : 'Discord not linked';
+    return ` · <span class="org-discord ${linked ? 'linked' : 'unlinked'}">${esc(label)}</span>`;
+  }
+
   function orgItem (org, extra) {
     const logo = org.logoUrl ? `<img src="${esc(org.logoUrl)}" alt="" loading="lazy">` : '';
-    return `<li>${logo}<span><a href="${esc(org.path)}">${esc(org.name)}</a><small>${esc(org.symbol)}${extra && extra.sub ? ` · ${esc(extra.sub)}` : ''}</small></span>${extra && extra.badge ? extra.badge : ''}</li>`;
+    return `<li>${logo}<span><a href="${esc(org.path)}">${esc(org.name)}</a><small>${esc(org.symbol)}${extra && extra.sub ? ` · ${esc(extra.sub)}` : ''}${discordLine(org.discord)}</small></span>${extra && extra.badge ? extra.badge : ''}</li>`;
   }
 
   function voterNote (you) {

@@ -1297,4 +1297,60 @@ describe('clips', function () {
       }
     });
   });
+
+  describe('Clips reclaim', function () {
+    this.timeout(20000);
+    let root;
+    let clips;
+    let logs;
+
+    beforeEach(async function () {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-clips-reclaim-'));
+      logs = [];
+      clips = new Clips({
+        path: root,
+        discord: {},
+        poll: false,
+        refreshOnStart: false,
+        minFreeBytes: 0,
+        log: (message) => logs.push(message),
+        now: () => Date.parse('2026-11-09T12:00:00Z')
+      });
+      await clips.start();
+    });
+
+    afterEach(async function () {
+      await clips.stop();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('defaults minFreeRatio to 0 so a shared volume does not force master deletion', function () {
+      assert.strictEqual(clips.settings.minFreeRatio, 0);
+      assert.strictEqual(clips._freeTarget({ total: 2 * 1024 ** 4, free: 100 * 1024 ** 3 }), 0);
+      clips.settings.minFreeBytes = 20 * 1024 ** 3;
+      assert.strictEqual(clips._freeTarget({ total: 2 * 1024 ** 4, free: 100 * 1024 ** 3 }), 20 * 1024 ** 3);
+    });
+
+    it('keeps completed renders younger than renderKeepMs', async function () {
+      const young = 'r-young';
+      const old = 'r-old';
+      for (const [id, at] of [[young, '2026-11-09T11:00:00.000Z'], [old, '2026-10-01T00:00:00.000Z']]) {
+        fs.writeFileSync(path.join(clips.dirs.renders, `${id}.mp4`), id);
+        await clips.store.set(`/renders/${id}`, { id, status: 'complete', completedAt: at });
+        await clips._append('renders', id);
+      }
+      const dropped = await clips._dropOldRenders(1e9);
+      assert.strictEqual(dropped.count, 1);
+      assert.ok(fs.existsSync(path.join(clips.dirs.renders, `${young}.mp4`)));
+      assert.ok(!fs.existsSync(path.join(clips.dirs.renders, `${old}.mp4`)));
+    });
+
+    it('logs the planned reclaim before deleting files', async function () {
+      fs.writeFileSync(path.join(clips.dirs.masters, 'x.bin'), Buffer.alloc(100));
+      clips.settings.maxBytes = 1;
+      logs.length = 0;
+      await clips.reclaim();
+      assert.ok(logs.some((line) => /reclaiming/.test(line)));
+    });
+  });
 });

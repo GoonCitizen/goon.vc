@@ -55,7 +55,7 @@ module.exports = {
             '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
             '1439226629867044976', // AIMOS (discord.gg/aimos)
             '1200935959961817088', // Risky Business, IDBC (discord.gg/riskyb)
-            '635948860459450400' // SC Shellback, SHELLBACK squadron (no public invite)
+            '635948860459450400' // SC Shellback, SHELLBACKS org (RED ARMY; no public invite)
           ],
       // Last successful fetch; reused when Discord is unreachable.
       snapshot: 'stores/discord/scheduled-events.json'
@@ -163,6 +163,12 @@ module.exports = {
   alliance: {
     path: process.env.GOON_ALLIANCE_STORE || 'stores/alliance',
     file: process.env.GOON_ALLIANCE_ROSTER || 'contracts/alliance.json'
+  },
+
+  // /red-army: orgs and Discord servers that have added the bot but are not yet
+  // PERMAFLEET members (contracts/red-army.json). Not a vote and not a federation.
+  redArmy: {
+    file: process.env.GOON_RED_ARMY_ROSTER || 'contracts/red-army.json'
   },
 
   // /services/market: the G00N SQUAD Market forum mirrored both ways (each thread is a

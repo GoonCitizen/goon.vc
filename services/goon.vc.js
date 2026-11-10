@@ -27,6 +27,7 @@ const Welcome = require('./welcome');
 const Reviews = require('./reviews');
 const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
+const RedArmy = require('./redArmy');
 const Market = require('./market');
 const Hangar = require('./hangar');
 const Schedule = require('./schedule');
@@ -154,6 +155,7 @@ class GoonVC {
     this.clips = null;
     this.fabric = null;
     this.alliance = null;
+    this.redArmy = null;
     this.market = null;
     this.id = 'goon.vc';
     this.name = merged.name || 'GOON.VC';
@@ -650,6 +652,15 @@ class GoonVC {
     this.fabric.on('error', (...parts) => this.emit('error', ...parts));
     await this.fabric.start();
 
+    const discordGuilds = async () => {
+      if (!this.events || typeof this.events.list !== 'function') return [];
+      try {
+        const snap = await this.events.list();
+        return (snap.guilds || []).map((guild) => ({ id: String(guild.id), name: guild.name || null }));
+      } catch (_) {
+        return [];
+      }
+    };
     const allianceSettings = this.settings.alliance || {};
     this.alliance = new Alliance({
       path: allianceSettings.path || './stores/alliance',
@@ -659,12 +670,21 @@ class GoonVC {
       federationsPath: spa._site('federationsPath'),
       xprv: () => this.fabric.xprv,
       members: this.members,
+      discordGuilds,
       publish: (frame) => this.fabric.publish(frame),
       bridge: Object.assign({ origin: spa._site('siteUrl') }, allianceSettings.bridge || {})
     });
     this.alliance.on('log', (...parts) => this.emit('log', ...parts));
     this.alliance.on('error', (...parts) => this.emit('error', ...parts));
     await this.alliance.start();
+    const redArmySettings = this.settings.redArmy || {};
+    this.redArmy = new RedArmy({
+      file: redArmySettings.file ? path.resolve(redArmySettings.file) : undefined,
+      homeGuildId: discord.guildId,
+      alliance: () => this.alliance && this.alliance.roster,
+      discordGuilds
+    });
+    await this.redArmy.start();
     // PERMAFLEET setup acts for an org only for its officers on record.
     this.community.alliance({
       representing: (accountKey) => this.alliance.representing(accountKey),
@@ -729,6 +749,7 @@ class GoonVC {
         clips: this.clips.middleware(),
         fabric: this.fabric.middleware(),
         alliance: this.alliance.middleware(),
+        redArmy: this.redArmy.middleware(),
         market: this.market ? this.market.middleware() : (req, res, next) => next()
       }
     });
@@ -751,7 +772,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.market, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
+    for (const service of [this.http, this.market, this.redArmy, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

@@ -6,6 +6,7 @@ const Store = require('@fabric/core/types/store');
 const startStore = require('../functions/startStore');
 const federation = require('../functions/allianceFederation');
 const bridgeAttestation = require('../functions/bridgeAttestation');
+const orgDiscord = require('../functions/orgDiscord');
 const { fabricPubkey, parseAccountKey } = require('../functions/accountKey');
 
 const BASE = '/services/alliance';
@@ -77,6 +78,7 @@ class Alliance {
    * @param {string} [settings.federationsPath] Site path of the federation pages.
    * @param {string|Function} [settings.xprv] goon.vc's key, or a function returning it.
    * @param {Object} [settings.members] goon.vc {@link Members}: who is signed in.
+   * @param {Array<{ id: string, name?: string }>|Function} [settings.discordGuilds] Servers the bot is in (`Events#list` `guilds`), or a function returning them.
    * @param {Function} [settings.publish] `(frameHex) => void`, puts accepted frames on the Fabric network.
    * @param {Object} [settings.bridge] `{ name, origin, platforms }` of this Bridge.
    * @param {Function} [settings.now] Clock, injected for tests.
@@ -106,6 +108,7 @@ class Alliance {
     this.error = null;
     this._xprv = null;
     this._orgs = new Map();
+    this._guilds = [];
     this._queue = Promise.resolve();
     this._listeners = {};
   }
@@ -182,14 +185,41 @@ class Alliance {
     } catch (_) { /* names fall back to symbols */ }
   }
 
+  async _refreshGuilds () {
+    const src = this.settings.discordGuilds;
+    try {
+      const list = typeof src === 'function' ? await src() : src;
+      this._guilds = Array.isArray(list) ? list : [];
+    } catch (_) {
+      this._guilds = [];
+    }
+    return this._guilds;
+  }
+
+  _rosterOrg (symbol) {
+    return this.roster && this.roster.organizations.find((org) => org.symbol === symbol);
+  }
+
   _orgView (symbol) {
     const org = this._orgs.get(symbol) || {};
     return {
       symbol,
       name: org.displayName || org.name || symbol,
       logoUrl: org.logoUrl || null,
-      path: `${this.settings.organizationsPath}/${encodeURIComponent(symbol)}`
+      path: `${this.settings.organizationsPath}/${encodeURIComponent(symbol)}`,
+      discord: orgDiscord.view(this._rosterOrg(symbol), this._guilds)
     };
+  }
+
+  /**
+   * Member orgs and whether the bot is in each one's Discord. Always available
+   * while the roster loads, even when votes are off.
+   * @returns {Promise<{ organizations: Array<Object> }>}
+   */
+  async organizations () {
+    if (!this.roster) throw fail(503, this.error || 'Alliance votes are not set up right now.');
+    await this._refreshGuilds();
+    return { organizations: this.roster.organizations.map((org) => this._orgView(org.symbol)) };
   }
 
   /** Save a federation the first time it is seen, with its publisher-signed invite. */
@@ -1064,8 +1094,19 @@ class Alliance {
    * @returns {Promise<Object>}
    */
   async overview (actor = { member: null, officers: [] }) {
+    await this._refreshGuilds();
     const you = { signedIn: !!actor.member, officers: (actor.officers || []).map((symbol) => this._orgView(symbol)) };
-    if (!this.current) return { name: this.roster ? this.roster.name : null, status: 'unconfigured', error: this.error, bridge: this._bridgeView(), you, proposals: [] };
+    if (!this.current) {
+      return {
+        name: this.roster ? this.roster.name : null,
+        status: 'unconfigured',
+        error: this.error,
+        bridge: this._bridgeView(),
+        you,
+        proposals: [],
+        organizations: this.roster ? this.roster.organizations.map((org) => this._orgView(org.symbol)) : []
+      };
+    }
     const record = this.current;
     return {
       name: record.name,
@@ -1266,11 +1307,23 @@ class Alliance {
   middleware () {
     return (req, res, next) => {
       const pathname = (req.path || new URL(req.url, 'http://localhost').pathname).replace(/\/+$/, '');
-      if (pathname !== BASE && !pathname.startsWith(BASE + '/')) return next();
       const method = String(req.method || 'GET').toUpperCase();
+      if (pathname === '/services/organizations') {
+        if (method !== 'GET') {
+          sendJson(res, 405, { error: 'Method not allowed' });
+          return;
+        }
+        Promise.resolve().then(() => this.organizations()).then(
+          (payload) => sendJson(res, 200, payload),
+          (error) => sendJson(res, error && error.status ? error.status : 500, { error: error && error.message ? error.message : 'Alliance request failed' })
+        );
+        return;
+      }
+      if (pathname !== BASE && !pathname.startsWith(BASE + '/')) return next();
       const parts = pathname.slice(BASE.length).split('/').filter(Boolean);
       const body = (req.body && typeof req.body === 'object') ? req.body : {};
       Promise.resolve().then(async () => {
+        if (method === 'GET') await this._refreshGuilds();
         const [collection, id, action] = parts;
         if (!parts.length && method === 'GET') return [200, await this.overview(await this.actor(req))];
         if (collection === 'proposals') {

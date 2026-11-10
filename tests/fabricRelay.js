@@ -304,6 +304,26 @@ describe('FabricRelay service', function () {
     await relay.stop();
   });
 
+  it('keeps queued messages when the home guild is unavailable', async function () {
+    const guild = fakeGuild();
+    const general = fakeChannel(guild, { id: '10', name: 'general' });
+    const discord = new FakeDiscord([guild]);
+    discord.botReady = true;
+    const relay = new FabricRelay({ path: dir, guildId: GUILD, group: GROUP, contract: CONTRACT, operations: { discord }, Peer: FakePeer, backfill: 0, flushMs: 0, shareMs: 0, reconnectMs: 0 });
+    await relay.start();
+    const peer = FakePeer.last;
+    discord.client.emit('messageCreate', fakeMessage(general, 'keep me'));
+    assert.strictEqual(relay.pending.size, 1);
+    discord.client.guilds.cache.delete(GUILD);
+    peer.open();
+    assert.strictEqual(relay._flush(), 0, 'nothing goes out without the guild');
+    assert.strictEqual(relay._shareAll(), 0);
+    assert.strictEqual(relay.pending.size, 1, 'queued messages wait for the guild');
+    discord.client.guilds.cache.set(GUILD, guild);
+    assert.ok(relay._flush() > 0);
+    await relay.stop();
+  });
+
   it('delivers a signed GroupDataShare to a real Fabric peer', async function () {
     const Peer = require('@fabric/core/types/peer');
     const port = await freePort();

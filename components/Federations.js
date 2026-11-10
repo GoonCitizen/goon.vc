@@ -122,12 +122,21 @@ function client () {
     }
   }
 
+  function discordLine (discord) {
+    if (!discord) return '';
+    const linked = !!discord.linked;
+    const label = linked
+      ? (discord.name ? 'Discord: ' + discord.name : 'Discord linked')
+      : 'Discord not linked';
+    return ` · <span class="org-discord ${linked ? 'linked' : 'unlinked'}">${esc(label)}</span>`;
+  }
+
   function orgItem (org) {
     const logo = org.logoUrl ? `<img src="${esc(org.logoUrl)}" alt="" loading="lazy">` : '';
     const sub = org.federation
       ? `<a href="${esc(org.federation.path)}">${esc(org.federation.threshold)} of ${esc(org.federation.officers)} officers decide</a>`
       : esc(CUSTODY[org.custody] || org.custody);
-    return `<li>${logo}<span><a href="${esc(org.path)}">${esc(org.name)}</a><small>${esc(org.symbol)} · ${sub}</small></span></li>`;
+    return `<li>${logo}<span><a href="${esc(org.path)}">${esc(org.name)}</a><small>${esc(org.symbol)} · ${sub}${discordLine(org.discord)}</small></span></li>`;
   }
 
   function proposalItem (p) {

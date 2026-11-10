@@ -28,6 +28,11 @@ describe('compiled client scripts', function () {
     for (const name of compiled.keys()) assert.ok(fs.existsSync(path.join(SCRIPTS, name)), `assets/scripts/${name} is missing; run npm run build`);
   });
 
+  it('the built index.html starts with a doctype (run `npm run build`)', function () {
+    const index = fs.readFileSync(path.join(__dirname, '../assets/index.html'), 'utf8');
+    assert.ok(/^<!doctype html>/i.test(index), 'quirks mode otherwise');
+  });
+
   it('loads each client at its current version from the built index.html (run `npm run build`)', function () {
     const index = fs.readFileSync(path.join(__dirname, '../assets/index.html'), 'utf8');
     for (const client of clients) {

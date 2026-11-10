@@ -1,6 +1,8 @@
 'use strict';
 
 const escapeHtml = require('../functions/escapeHtml');
+const Organizations = require('./Organizations');
+const RedArmyPage = require('./RedArmyPage');
 
 // Copy from the public RSI org page (robertsspaceindustries.com/orgs/PERMAFLEET)
 // and its cover image. Trusted HTML.
@@ -62,10 +64,13 @@ function renderMemberOrgsHtml (orgs, organizationsPath, onboardingPath) {
       org.symbol ? `[${escapeHtml(org.symbol)}]` : '',
       Number.isFinite(org.members) ? `${org.members} ${org.members === 1 ? 'member' : 'members'}` : ''
     ].filter(Boolean).join(' · ');
+    const discord = org.symbol
+      ? Organizations.discordStatus(org.symbol)
+      : '';
     const body = `<span class="op-member-tag" aria-hidden="true">Member</span>
               ${mark}
               <span class="op-member-name">${name}</span>${meta ? `
-              <span class="op-member-meta">${meta}</span>` : ''}`;
+              <span class="op-member-meta">${meta}</span>` : ''}${discord}`;
     return org.href
       ? `<li><a class="op-member" href="${escapeHtml(org.href)}">
               ${body}
@@ -468,6 +473,13 @@ function renderPermafleetCss (props) {
         .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { transform: none; }
       }
       .op-charter .op-resource-link { margin-top: 1rem; }
+      .op-page .red-army-block {
+        width: min(100%, 62rem);
+        margin-top: 2.5rem;
+        text-align: left;
+      }
+      .op-page .red-army-block a { color: #e08a8a; }
+      .op-page .red-army-block a:hover { color: #fff; }
       .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
         margin: 0;
@@ -557,6 +569,11 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
             <p class="op-laws">Members shall enjoy their freedoms.</p>
           </section>
           ${renderSquadronsHtml(opts)}
+          ${RedArmyPage.renderTeaser({
+            path: opts.redArmyPath,
+            id: 'permafleet-red-army',
+            titleId: 'permafleet-red-army-title'
+          })}
         </div>
         <footer class="op-footer">
           <div><a href="bitcoin:${escapeHtml(opts.bitcoinAddress)}"><code>${escapeHtml(opts.bitcoinAddress)}</code></a></div>

@@ -115,6 +115,9 @@ describe('schedule service', function () {
         if (fetchMode === 'forbidden') {
           return { status: 403, text: async () => JSON.stringify({ message: 'Missing Permissions', code: 50013 }) };
         }
+        if (fetchMode === 'unreadable') {
+          return { status: 200, text: async () => { throw new Error('The operation was aborted due to timeout'); } };
+        }
         const body = opts.body ? JSON.parse(opts.body) : {};
         return {
           status: 200,
@@ -318,6 +321,20 @@ describe('schedule service', function () {
     assert.strictEqual(voice.body.channel_id, VOICE);
     assert.strictEqual(voice.body.entity_metadata, undefined);
     assert.match(voice.body.description, /Channel: Ops/);
+  });
+
+  it('warns the opener when Discord may already have created the event', async function () {
+    const record = await schedule.open(openInput({ people: 'Kersa', roles: [], days: 1 }));
+    await schedule.vote(record.id, { userId: KERSA.id, name: 'Kersa', roleIds: [], slots: ['00'] });
+    now = START + 2 * 60 * 60 * 1000;
+    await schedule.sweep();
+    const slot = dms[0].message.components[0].components[0].custom_id.split(':')[3];
+    fetchMode = 'unreadable';
+    await assert.rejects(
+      schedule.pick(record.id, REF.id, slot),
+      (error) => error.status === 502 && /already have created/.test(error.message)
+    );
+    assert.strictEqual((await schedule.store.get(`/polls/${record.id}`)).status, 'choosing');
   });
 
   it('falls back to the channel when the opener’s DMs are closed, and skip creates nothing', async function () {

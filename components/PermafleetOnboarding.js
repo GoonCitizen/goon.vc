@@ -1,6 +1,7 @@
 'use strict';
 
 const escapeHtml = require('../functions/escapeHtml');
+const Organizations = require('./Organizations');
 
 const PERMAFLEET_RSI_URL = 'https://robertsspaceindustries.com/orgs/PERMAFLEET';
 
@@ -58,6 +59,7 @@ function renderStyles () {
         text-decoration: none;
       }
       .pf-onboarding-orgs a:hover { color: #fff; border-color: var(--pf-cyan); }
+      .pf-onboarding-orgs li { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
       .pf-onboarding > .pf-links { margin-top: 2rem; text-align: center; }`;
 }
 
@@ -119,7 +121,7 @@ ${RULES.map((rule) => `        <li>${rule}</li>`).join('\n')}
       <h2 id="onboarding-members">Already in the Protectorate</h2>
       <p class="pf-intro">You’ll be flying with these orgs.</p>
       <ul class="pf-onboarding-orgs" aria-label="Member organizations">
-${orgs.map((org) => `        <li><a href="${escapeHtml(org.href)}">[${escapeHtml(org.symbol)}] ${escapeHtml(org.name)}</a></li>`).join('\n')}
+${orgs.map((org) => `        <li><a href="${escapeHtml(org.href)}">[${escapeHtml(org.symbol)}] ${escapeHtml(org.name)}</a>${Organizations.discordStatus(org.symbol)}</li>`).join('\n')}
       </ul>` : ''}
       <p class="pf-links">Ready? ${external(props.embassyUrl, 'Talk to us in #embassy &raquo;')} · <a href="${escapeHtml(props.organizationsPath)}">Member organizations &raquo;</a></p>
     </main>`;

@@ -96,8 +96,8 @@ function parseOfficers (symbol, org) {
 /**
  * The alliance roster from `contracts/alliance.json`. Only an org's officers,
  * listed by account (`discord:<id>`), vote for it.
- * @param {Object} raw `{ name, network, publisher, csvBlocks?, organizations: [{ symbol, pubkey?, officers?, threshold? }] }`
- * @returns {{ name: string, network: string, publisher: string, csvBlocks: number, organizations: Array<{ symbol: string, pubkey: string|null, officers: string[], threshold: number|null }> }}
+ * @param {Object} raw `{ name, network, publisher, csvBlocks?, organizations: [{ symbol, pubkey?, officers?, threshold?, guildId? }] }`
+ * @returns {{ name: string, network, publisher, csvBlocks: number, organizations: Array<{ symbol: string, pubkey: string|null, officers: string[], threshold: number|null, guildId?: string }> }}
  */
 function parseRoster (raw = {}) {
   const name = String(raw.name || '').trim();
@@ -114,7 +114,13 @@ function parseRoster (raw = {}) {
       pubkey = compressedPubkey(org.pubkey);
       if (!pubkey) throw new Error(`${symbol}: pubkey must be a compressed secp256k1 key`);
     }
-    organizations.push(Object.assign({ symbol, pubkey }, parseOfficers(symbol, org)));
+    const parsed = Object.assign({ symbol, pubkey }, parseOfficers(symbol, org));
+    if (org.guildId !== undefined && org.guildId !== null && String(org.guildId).trim() !== '') {
+      const guildId = String(org.guildId).trim();
+      if (!/^\d{17,20}$/.test(guildId)) throw new Error(`${symbol}: guildId must be a Discord server id`);
+      parsed.guildId = guildId;
+    }
+    organizations.push(parsed);
   }
   if (!organizations.length) throw new Error('alliance roster lists no organizations');
   const publisher = String(raw.publisher || '').trim().toUpperCase();

@@ -132,6 +132,19 @@ describe('alliance federation', function () {
     assert.strictEqual(federation.validatorsFor(parsed, xprv)[0].custody, 'none');
   });
 
+  it('keeps an optional Discord server id off the federation descriptor', function () {
+    const parsed = federation.parseRoster(roster({
+      organizations: [{ symbol: 'G00N', officers: [], guildId: '1190527980120850493' }]
+    }));
+    assert.strictEqual(parsed.organizations[0].guildId, '1190527980120850493');
+    const validators = federation.validatorsFor(parsed, xprv);
+    const descriptor = federation.allianceDescriptor(parsed, validators);
+    assert.ok(!JSON.stringify(descriptor).includes('1190527980120850493'));
+    assert.throws(() => federation.parseRoster(roster({
+      organizations: [{ symbol: 'G00N', officers: [], guildId: 'not-a-server' }]
+    })), /guildId/);
+  });
+
   it('counts the latest vote per org and a majority of all orgs', function () {
     const parsed = federation.parseRoster(roster());
     const validators = federation.validatorsFor(parsed, xprv);
@@ -345,6 +358,25 @@ describe('Alliance service', function () {
     assert.deepStrictEqual([signed.you.signedIn, signed.you.officers.map((org) => org.symbol)], [true, ['TRDE']]);
     const rando = { id: 'aaaaaaaaaaaaaaaa', displayName: 'Rando', accounts: [{ key: 'discord:999999' }] };
     assert.deepStrictEqual((await overviewNow(rando)).you, { signedIn: true, officers: [] });
+  });
+
+  it('reports whether each org’s Discord is linked, without guild ids', async function () {
+    const goonGuild = '1190527980120850493';
+    await open(roster({
+      organizations: SYMBOLS.map((symbol, i) => Object.assign({
+        symbol,
+        officers: [officerAccount(symbol)]
+      }, i === 0 ? { guildId: goonGuild } : {}))
+    }), { discordGuilds: [{ id: goonGuild, name: 'G00N SQUAD' }] });
+    const listed = await route(service, 'GET', '/services/organizations');
+    assert.strictEqual(listed.status, 200);
+    const bySymbol = Object.fromEntries(listed.body.organizations.map((org) => [org.symbol, org.discord]));
+    assert.deepStrictEqual(bySymbol.G00N, { linked: true, name: 'G00N SQUAD' });
+    assert.deepStrictEqual(bySymbol.TRDE, { linked: false });
+    const overview = await overviewNow();
+    assert.deepStrictEqual(overview.federation.organizations[0].discord, { linked: true, name: 'G00N SQUAD' });
+    const json = JSON.stringify(listed.body) + JSON.stringify(overview);
+    assert.ok(!json.includes(goonGuild), 'no guild ids');
   });
 
   it('lets only signed-in officers on record propose and vote', async function () {

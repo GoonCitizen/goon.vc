@@ -26,6 +26,7 @@ describe('G00N SQUAD home Discord', function () {
     assert.strictEqual(home.roles['[P] Prospect I'], '1234735430587514970');
     assert.strictEqual(home.roles['[P4] Prospect IV'], '1234739335312703548');
     assert.strictEqual(home.roles.PERMAFLEET, '1298457632431931413');
+    assert.strictEqual(home.roles['RED ARMY'], '1231065501623652372');
     assert.ok(settings.clips.channels.includes(home.channels.clips.id));
     assert.ok(settings.clips.channels.includes(home.channels.videos.id));
     assert.ok(settings.clips.channels.includes(home.channels.screenshots.id));
@@ -35,6 +36,23 @@ describe('G00N SQUAD home Discord', function () {
     assert.strictEqual(allianceChannels.homeChannelId('embassy', home.guildId), home.channels.embassy.id);
     assert.strictEqual(allianceChannels.homeChannelId('voice', home.guildId), home.channels.voice.id);
     assert.strictEqual(allianceChannels.homeChannelId('embassy', '99'), null);
+  });
+
+  it('records each member org’s Discord server when known', function () {
+    const bySymbol = Object.fromEntries(alliance.organizations.map((org) => [org.symbol, org.guildId]));
+    assert.strictEqual(bySymbol.G00N, home.guildId);
+    assert.strictEqual(bySymbol.DOUBLEDOGZ, home.guildId, 'DOUBLEDOGZ shares the G00N SQUAD server');
+    assert.strictEqual(bySymbol.TRDE, '937681528790609970');
+    assert.strictEqual(bySymbol['4MCONTRACT'], '1145511542637482114');
+    assert.strictEqual(bySymbol.AIMOS, '1439226629867044976');
+    assert.strictEqual(bySymbol.IDBC, '1200935959961817088');
+    assert.strictEqual(bySymbol.INFN, undefined);
+    assert.strictEqual(bySymbol.LCRP, undefined);
+  });
+
+  it('records ADSVOLCANO as the INFN officer', function () {
+    const infn = alliance.organizations.find((org) => org.symbol === 'INFN');
+    assert.deepStrictEqual(infn.officers, ['discord:214804563826311169']);
   });
 
   it('counts G00N Prospect ranks by the pinned ids even when renamed', function () {

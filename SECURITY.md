@@ -14,6 +14,9 @@ never proxied. No Fabric Peer listen (it only dials out), no bitcoind, no
 **arbiter signing key** (derived from `GOON_FABRIC_XPRV` / `stores/fabric`; it
 signs withdrawal co-signatures, never a buyer's or seller's coins), and a
 **Discord bot token** with gateway access (the metrics bot and its commands).
+The same Fabric root also derives the alliance keys: each org's validator, each
+officer key, the Bridge attestation key, and each member-vote key. Anyone who
+holds it can sign those frames as goon.vc.
 
 ## Passport login
 Member sign-in with a Fabric key is Passport v2 (spec: `@fabric/core`

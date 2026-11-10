@@ -218,7 +218,7 @@ class Clips {
    * @param {number} [settings.maxSourceHeight] Tallest source downloaded (default the 1080p render height).
    * @param {number} [settings.minFreeBytes] Free space kept on the disk: a download waits until its largest allowed
    *   size still leaves this much, and no master is kept below it. `0` turns the floor (and `minFreeRatio`) off.
-   * @param {number} [settings.minFreeRatio] Also keep this fraction of the volume free (default 0.25). The larger
+   * @param {number} [settings.minFreeRatio] Also keep this fraction of the volume free (default 0). The larger
    *   of this and `minFreeBytes` wins. Masters that push past it are dropped (screenshots first, then clips, then VODs).
    * @param {number} [settings.maxBytes] Cap on `media/` + `masters/` + `renders/` + `tmp/` (0 = none).
    * @param {number} [settings.renderKeepMs] Completed renders older than this may be deleted when reclaiming space.
@@ -255,7 +255,7 @@ class Clips {
       keepMasters: true,
       maxSourceHeight: 1080,
       minFreeBytes: 20 * 1024 * 1024 * 1024,
-      minFreeRatio: 0.25,
+      minFreeRatio: 0,
       maxBytes: 0,
       renderKeepMs: 7 * DAY_MS,
       rescanEveryMs: 60 * 60 * 1000,
@@ -978,7 +978,7 @@ class Clips {
     for (const row of rows) {
       if (bytes >= needBytes) break;
       const age = now - Date.parse(row.at);
-      if (keepMs && Number.isFinite(age) && age < keepMs && rows.length - count <= 1) continue;
+      if (keepMs && Number.isFinite(age) && age < keepMs) continue;
       let size = 0;
       try { size = (await fsp.stat(row.file)).size; } catch (_) { continue; }
       await fsp.rm(row.file, { force: true }).catch(() => {});
@@ -1004,6 +1004,7 @@ class Clips {
       need = Math.max(need, usage.used - this.settings.maxBytes);
     }
     if (need <= 0) return { swept, dropped: [], bytes: 0, renders: 0 };
+    this._log(`reclaiming ${(need / 1e9).toFixed(1)} GB of clip masters and old renders`);
 
     const clips = [];
     for (const id of await this._list('clips')) {

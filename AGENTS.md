@@ -198,7 +198,8 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
-remaeus, kersa (neorion), and thejohnram. **Only officers vote for an org**;
+remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
+ADSVOLCANO. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with
@@ -255,7 +256,8 @@ other**: each officer's latest vote (`officerVotes`, with display name and
 `officer` index), the org's yes / no / abstain / waiting counts, and the
 names behind the org's vote are served only to that org's officers; everyone
 else sees the org's vote, its `officers { threshold, total }`, and the signed
-frames. Routes: `GET /services/alliance` (federation, orgs and their custody,
+frames. Routes: `GET /services/organizations` (each org's Discord `{ linked,
+name }`, no guild ids), `GET /services/alliance` (federation, orgs and their custody,
 `voting`, each org federation, the orgs you are an officer of
 (`you.officers`), proposals), `GET /services/alliance/proposals`,
 `GET /services/alliance/proposals/<id or 12-char prefix>` (each org's vote,
@@ -313,6 +315,31 @@ the `/organizations` call to action link to it.
 `/organizations` (plus `/organizations/<SYMBOL>`) lists PERMAFLEET member orgs
 from `contracts/organizations.json`, a plain-text snapshot of public RSI org
 pages refreshed by `npm run build:organizations` (never fetched at serve time).
+Each org card, profile, PERMAFLEET overview tile, onboarding list, and votes
+org row shows whether the bot is in that org's Discord (`guildId` on
+`contracts/alliance.json`; DOUBLEDOGZ shares the G00N SQUAD server; LCRP has
+none on record). Live status is `GET /services/organizations`
+(`{ symbol, name, path, discord: { linked, name } }`, names only — never guild
+ids), filled by `Organizations.client()` from `Events.list().guilds`. An org
+with no `guildId`, or one the bot is not in, shows as not linked. `guildId` is
+not part of the alliance federation descriptor.
+`/red-army` is **RED ARMY**: Discord servers and organizations that have added
+the goon.vc bot but are not yet PERMAFLEET members (`contracts/red-army.json`,
+`services/redArmy.js`, `functions/redArmy.js` — not a vote and not a Fabric
+federation). Named orgs list officers on record (Robert's Rejects / mr_meaner,
+SHELLBACKS / Brock_85); SHELLBACKS is the Shellback Industries org, not the
+SHELLBACK elite infantry squadron. Monkey Business is the next org joining.
+Alliance friends with PERMAFLEET Officer overlap or a mention on the G00N
+`#red-army` pin (BLACK EXODUS, Rintak, SC Homies) sit here too until they are
+members. Named `servers` are Discords not tied to an RSI org (DIA is a private
+Discord). Other servers the bot is in show up live, minus the home server,
+alliance `guildId`s, and an ignore list (personal and Fabric-suite servers).
+Live status is `GET /services/red-army` (`organizations` + `servers`, each
+`{ name, discord: { linked, name }, officers: [{ name }] }`, names only —
+never guild ids, account keys, or member ids), filled by `RedArmyPage.client()`.
+The G00N Discord role RED ARMY is pinned in `contracts/goon-squad.json`. The
+`/organizations` index and the PERMAFLEET operation page (below the squadrons
+path, after the member tiles) teaser it.
 `/resources` indexes guides and tools; `/resources/gooncitizen` describes the
 GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder
 synced from the pinned `# LEADERBOARD` message in G00N SQUAD #1v1-challenges

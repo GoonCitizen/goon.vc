@@ -6,7 +6,8 @@ const {
   HUB_API_PREFIXES,
   isHubApiPath,
   shouldProxyHubApi,
-  normalizeHubOrigin
+  normalizeHubOrigin,
+  isMailboxSafeOrigin
 } = require('../functions/hubApiProxy');
 const GoonVC = require('../services/goon.vc');
 
@@ -44,6 +45,13 @@ describe('goon.vc', function () {
     it('normalizes Hub origins', function () {
       assert.strictEqual(normalizeHubOrigin('https://hub.fabric.pub/'), 'https://hub.fabric.pub');
       assert.strictEqual(normalizeHubOrigin('not-a-url'), null);
+    });
+
+    it('reads Hub mailboxes only over HTTPS or loopback HTTP', function () {
+      assert.strictEqual(isMailboxSafeOrigin('https://hub.fabric.pub'), true);
+      assert.strictEqual(isMailboxSafeOrigin('http://127.0.0.1:8080'), true);
+      assert.strictEqual(isMailboxSafeOrigin('http://localhost:8080'), true);
+      assert.strictEqual(isMailboxSafeOrigin('http://hub.fabric.pub'), false);
     });
 
     it('proxies allowlisted POSTs through the middleware', async function () {
@@ -403,6 +411,7 @@ describe('goon.vc HTTP', function () {
       }).on('error', reject);
     });
     assert.strictEqual(res.status, 200);
+    assert.ok(/^<!doctype html>/i.test(res.body), 'doctype first so browsers stay out of quirks mode');
     assert.ok(/GOON SQUAD/i.test(res.body));
     assert.ok(res.body.includes('favicon.png'));
     assert.ok(res.body.includes('<meta name="theme-color" content="#520002">'));
@@ -453,8 +462,11 @@ describe('goon.vc HTTP', function () {
     const permafleet = res.body.slice(res.body.indexOf('id="operation-permafleet"'));
     const charterAt = permafleet.indexOf('id="permafleet-charter"');
     const squadronsAt = permafleet.indexOf('id="squadrons"');
-    assert.ok(permafleet.indexOf('class="op-pillars"') < charterAt && charterAt < squadronsAt, 'member orgs sit above the squadrons');
-    const teaser = permafleet.slice(squadronsAt, permafleet.indexOf('<footer class="op-footer">'));
+    const redArmyAt = permafleet.indexOf('id="permafleet-red-army"');
+    assert.ok(redArmyAt > 0, 'RED ARMY teaser on the operation page');
+    assert.ok(permafleet.indexOf('class="op-pillars"') < charterAt && charterAt < squadronsAt && squadronsAt < redArmyAt, 'member orgs, then path to membership, then RED ARMY');
+    assert.ok(permafleet.includes('data-red-army="teaser"'));
+    const teaser = permafleet.slice(squadronsAt, redArmyAt);
     assert.ok(teaser.includes('<h2 id="permafleet-squadrons">Your path to membership</h2>'));
     assert.ok(teaser.includes('<a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a>'));
     for (const id of ['bravo-squadron', 'rat-squadron', 'turtle-brigade', 'alpha-squadron', 'shellback']) {
@@ -866,6 +878,7 @@ describe('goon.vc HTTP', function () {
     const charter = res.body.slice(res.body.indexOf('id="permafleet-charter"'), res.body.indexOf('</section>', res.body.indexOf('id="permafleet-charter"')));
     assert.ok(charter.includes('<img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">'), 'charter tiles carry org logos');
     assert.ok(charter.includes('<span class="op-member-meta">[G00N] · 21 members</span>'));
+    assert.ok(charter.includes('data-org-discord="G00N"'), 'charter tiles show Discord link status');
     assert.strictEqual(charter.split('<span class="op-member-tag" aria-hidden="true">Member</span>').length, 9, 'every tile is badged as a member');
     const tiles = [...charter.matchAll(/<li><a class="([^"]+)" href="([^"]+)">/g)].map((m) => `${m[1]} ${m[2]}`);
     assert.strictEqual(tiles[tiles.length - 1], 'op-member op-member-add /operations/PERMAFLEET/onboarding', 'last tile invites new orgs to onboarding');
@@ -878,14 +891,52 @@ describe('goon.vc HTTP', function () {
     assert.ok(index.body.includes('<meta property="og:title" content="PERMAFLEET Organizations — GOON SQUAD">'));
     assert.ok(index.body.includes('<meta property="og:image" content="https://goon.vc/hero-quantum.jpg">'));
     const orgIndex = index.body.slice(index.body.indexOf('<main id="organizations-page"'));
-    const cta = orgIndex.slice(orgIndex.indexOf('<section class="org-roster-cta" id="add-your-organization"'), orgIndex.indexOf('</section>'));
-    assert.ok(cta.length > 0, 'roster call to action is anchored');
+    const ctaStart = orgIndex.indexOf('<section class="org-roster-cta" id="add-your-organization"');
+    assert.ok(ctaStart >= 0, 'roster call to action is anchored');
+    const cta = orgIndex.slice(ctaStart, orgIndex.indexOf('</section>', ctaStart));
     assert.ok(cta.includes('<h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>'));
     const hotline = /#embassy chat on the <a href="([^"]+)"/.exec(index.body)[1];
     assert.ok(cta.includes(`<a class="goon-button" href="${hotline}" target="_blank" rel="noopener noreferrer">Go to #embassy &raquo;</a>`), 'same Discord as the #embassy hotline');
     assert.ok(cta.includes('See <a href="/operations/PERMAFLEET/onboarding">how onboarding works</a>'), 'points org leaders at onboarding');
     assert.ok(orgIndex.indexOf('org-roster-cta') < orgIndex.indexOf('</main>'), 'on the index');
     assert.strictEqual(index.body.split('class="org-roster-cta"').length, 2, 'index only, not each org profile');
+    assert.ok(orgIndex.includes('data-org-discord="AIMOS"'), 'org cards show Discord link status');
+    assert.match(index.body, /<script src="\/scripts\/organizations\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const status = await fetchJson('/services/organizations');
+    assert.strictEqual(status.status, 200);
+    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']);
+    assert.ok(status.json.organizations.every((org) => org.discord && typeof org.discord.linked === 'boolean'));
+    assert.ok(!/\d{17,}/.test(status.body), 'no Discord ids');
+    assert.ok(orgIndex.includes('id="red-army"'), 'RED ARMY teaser on the index');
+    assert.ok(orgIndex.includes('Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.'));
+    assert.ok(orgIndex.includes('href="/red-army">RED ARMY roster'));
+    assert.ok(res.body.includes('id="permafleet-red-army"'), 'RED ARMY below PERMAFLEET members');
+    assert.notStrictEqual(res.body.indexOf('id="red-army"'), res.body.indexOf('id="permafleet-red-army"'));
+  });
+
+  it('serves RED ARMY as orgs and Discord servers that added the bot but are not alliance members', async function () {
+    const page = await fetchJson('/red-army', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(page.status, 200);
+    assert.ok(page.body.includes('<meta property="og:title" content="RED ARMY — GOON SQUAD">'));
+    assert.ok(page.body.includes('Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.'));
+    assert.ok(page.body.includes('id="red-army-page"'));
+    assert.ok(page.body.includes('data-red-army="page"'));
+    assert.ok(page.body.includes('href="/organizations">PERMAFLEET organizations</a>'));
+    assert.ok(!/toggle\('pf-section'[^;]*isRedArmy/.test(page.body), 'RED ARMY is not a PERMAFLEET section');
+    assert.match(page.body, /<script src="\/scripts\/red-army\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const status = await fetchJson('/services/red-army');
+    assert.strictEqual(status.status, 200);
+    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['RR', 'SHELLBACKS', 'MB', 'BKEX', 'RINTAK', 'SCHOMIES']);
+    assert.strictEqual(status.json.organizations[0].name, "Robert's Rejects");
+    assert.deepStrictEqual(status.json.organizations[0].officers, [{ name: 'mr_meaner' }]);
+    assert.deepStrictEqual(status.json.organizations[1].officers, [{ name: 'Brock_85' }]);
+    assert.strictEqual(status.json.organizations[2].name, 'Monkey Business');
+    assert.ok(!status.json.organizations.some((org) => /diabolica/i.test(org.name)));
+    assert.ok(status.json.servers.some((row) => row.name === 'DIA'));
+    assert.ok(status.json.organizations.every((org) => org.discord && typeof org.discord.linked === 'boolean'));
+    assert.ok(Array.isArray(status.json.servers));
+    assert.ok(!/\d{17,}/.test(status.body), 'no Discord ids');
+    assert.ok(!status.body.includes('discord:'), 'no account keys');
   });
 
   it('gives the PERMAFLEET section its own header menu', async function () {
@@ -931,6 +982,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(page.includes('href="/operations/PERMAFLEET/squadrons"'));
     for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'AIMOS', 'IDBC']) {
       assert.ok(page.includes(`<li><a href="/organizations/${symbol}">[${symbol}] `), `${symbol} listed`);
+      assert.ok(page.includes(`data-org-discord="${symbol}"`), `${symbol} Discord status`);
     }
     assert.ok(!/\d{17,}/.test(page.replace(/https:\/\/discord\.com\/[^"]+/g, '')), 'no Discord ids outside Discord links');
     assert.ok(res.body.includes('var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";'));

@@ -292,6 +292,9 @@ class Schedule {
       const created = await this._createEvent(record, slot);
       if (!created.ok) {
         if (!created.status) throw fail(503, 'Discord isn’t configured, so I couldn’t create the event.');
+        if (created.error && /may have applied/.test(created.error)) {
+          throw fail(502, 'Discord may already have created the event. Check the server calendar before picking again.');
+        }
         const missing = created.status === 403 || created.code === 50013 || created.code === 50001;
         if (missing) {
           const invite = await this.invite('events');

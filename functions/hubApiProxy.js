@@ -77,6 +77,26 @@ function normalizeHubOrigin (raw) {
 }
 
 /**
+ * Mailbox proofs name the Hub origin. HTTPS is fine; HTTP only on loopback so
+ * the signed fetch is never sent in the clear to a public Hub.
+ * @param {string} origin
+ * @returns {boolean}
+ */
+function isMailboxSafeOrigin (origin) {
+  const normalized = normalizeHubOrigin(origin);
+  if (!normalized) return false;
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol === 'https:') return true;
+    if (parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Ordered Hubs: requests go to the Hub that answered last, then the others in
  * order. One list is shared by everything that talks to the Hub, so a session
  * started through the proxy is polled where it was created.
@@ -320,6 +340,7 @@ module.exports = {
   isHubApiPath,
   shouldProxyHubApi,
   normalizeHubOrigin,
+  isMailboxSafeOrigin,
   createHubList,
   isHubList,
   isUnreachable,

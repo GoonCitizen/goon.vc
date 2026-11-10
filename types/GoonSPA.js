@@ -21,6 +21,7 @@ const OperationsIndex = require('../components/OperationsIndex');
 const IdleRPGPage = require('../components/IdleRPGPage');
 const IdleRPGPlayerPage = require('../components/IdleRPGPlayerPage');
 const Organizations = require('../components/Organizations');
+const RedArmyPage = require('../components/RedArmyPage');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
 const DrillsPage = require('../components/DrillsPage');
@@ -92,6 +93,11 @@ const DEFAULTS = {
   organizationsDocumentTitle: 'PERMAFLEET Organizations — GOON SQUAD',
   // Output of `npm run build:organizations`.
   organizationsFile: ORGANIZATIONS_FILE,
+  // RED ARMY: friends of the alliance who are not yet PERMAFLEET members.
+  redArmyPath: '/red-army',
+  redArmyHeading: 'RED ARMY',
+  redArmyIntro: RedArmyPage.intro,
+  redArmyDocumentTitle: 'RED ARMY — GOON SQUAD',
   resourcesPath: '/resources',
   resourcesLabel: 'RESOURCES',
   resourcesHeading: 'RESOURCES',
@@ -275,6 +281,8 @@ class GoonSPA extends FabricSPA {
       RsiClaimPage,
       Federations,
       PermafleetVotes,
+      Organizations,
+      RedArmyPage,
       LeaguesPage,
       MarketPage,
       TournamentsPage
@@ -303,6 +311,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
       page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
       page(this._site('organizationsPath'), this._site('organizationsDocumentTitle'), this._site('organizationsIntro'), permafleet),
+      page(this._site('redArmyPath'), this._site('redArmyDocumentTitle'), this._site('redArmyIntro')),
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
       page(this._site('leaderboardPath'), this._site('leaderboardDocumentTitle'), this._site('leaderboardDescription')),
@@ -367,6 +376,8 @@ class GoonSPA extends FabricSPA {
     const idlerpgTitleJson = JSON.stringify(this._site('idlerpgDocumentTitle'));
     const organizationsPath = this._site('organizationsPath');
     const organizationsTitleJson = JSON.stringify(this._site('organizationsDocumentTitle'));
+    const redArmyPath = this._site('redArmyPath');
+    const redArmyTitleJson = JSON.stringify(this._site('redArmyDocumentTitle'));
     const orgData = loadOrganizations(this._site('organizationsFile'));
     const orgPathPattern = '^' + organizationsPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/([^/]+)$';
     const resourcesPath = this._site('resourcesPath');
@@ -664,6 +675,7 @@ class GoonSPA extends FabricSPA {
       fetchedAt: orgData.fetchedAt,
       embassyUrl: joinUrl,
       onboardingPath,
+      redArmyPath,
       allianceName: this._site('permafleetHeading'),
       alliancePath: permafleetPath,
       loginPath,
@@ -672,6 +684,15 @@ class GoonSPA extends FabricSPA {
       copyright
     };
     const organizationsMainHtml = Organizations.render(orgProps);
+    const redArmyMainHtml = RedArmyPage.render({
+      heading: escapeHtml(this._site('redArmyHeading')),
+      intro: escapeHtml(this._site('redArmyIntro')),
+      organizationsPath,
+      onboardingPath,
+      loginPath,
+      loginLabel,
+      copyright
+    });
     const organizationMainsHtml = orgData.organizations
       .map((org) => Organizations.renderOrganization(org, orgProps))
       .join('\n');
@@ -733,6 +754,7 @@ class GoonSPA extends FabricSPA {
         }))
         : null,
       organizationsPath,
+      redArmyPath,
       heading: escapeHtml(this._site('permafleetHeading')),
       tagline: escapeHtml(this._site('permafleetTagline')),
       intro: escapeHtml(this._site('permafleetIntro')),
@@ -759,7 +781,8 @@ class GoonSPA extends FabricSPA {
       inviteUrl: permafleetInviteUrl
     });
 
-    return `<html>
+    return `<!doctype html>
+<html>
   <head>
     <title>${escapeHtml(title)}</title>
     ${pageMeta.renderMetaTags(this.pages()[0], this.metaSite())}
@@ -817,6 +840,7 @@ ${OperationsIndex.styles()}
 ${IdleRPGPage.styles()}
 ${IdleRPGPlayerPage.styles()}
 ${Organizations.styles()}
+${RedArmyPage.styles()}
 ${Resources.styles()}
 ${DrillsPage.styles()}
 ${TournamentsPage.styles()}
@@ -840,6 +864,7 @@ ${MarketPage.styles()}
     ${idlerpgPlayerMainHtml}
     ${organizationsMainHtml}
 ${organizationMainsHtml}
+    ${redArmyMainHtml}
     ${resourcesMainHtml}
     ${gooncitizenMainHtml}
     ${leaderboardMainHtml}
@@ -893,6 +918,7 @@ ${squadronMainsHtml}
           ? document.getElementById('idlerpg-player-page')
           : null;
         var isOrganizations = path.toLowerCase() === ${JSON.stringify(organizationsPath.toLowerCase())};
+        var isRedArmy = path.toLowerCase() === ${JSON.stringify(redArmyPath.toLowerCase())};
         var orgMatch = new RegExp(${JSON.stringify(orgPathPattern)}, 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === ${JSON.stringify(resourcesPath.toLowerCase())};
@@ -950,7 +976,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -969,6 +995,8 @@ ${squadronMainsHtml}
         if (idlerpgPlayerPageEl) idlerpgPlayerPageEl.style.display = idlerpgPlayerEl ? 'block' : 'none';
         var organizationsEl = document.getElementById('organizations-page');
         if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
+        var redArmyEl = document.getElementById('red-army-page');
+        if (redArmyEl) redArmyEl.style.display = isRedArmy ? 'block' : 'none';
         document.querySelectorAll('.organization-page').forEach(function (el) {
           el.style.display = el === orgEl ? 'block' : 'none';
         });
@@ -1030,6 +1058,7 @@ ${squadronMainsHtml}
         else if (isOperations) document.title = ${operationsTitleJson};
         else if (isIdleRPG || idlerpgPlayerEl) document.title = ${idlerpgTitleJson};
         else if (isOrganizations) document.title = ${organizationsTitleJson};
+        else if (isRedArmy) document.title = ${redArmyTitleJson};
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
         else if (isLeaderboard) document.title = ${leaderboardTitleJson};
@@ -1074,6 +1103,8 @@ ${squadronMainsHtml}
     ${permafleetScript}
     ${PermafleetVotes.script()}
     ${Federations.script()}
+    ${Organizations.script()}
+    ${RedArmyPage.script()}
     ${applicationScript}
   </body>
 </html>

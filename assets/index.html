@@ -1,3 +1,4 @@
+<!doctype html>
 <html>
   <head>
     <title>GOON SQUAD</title>
@@ -562,6 +563,13 @@
         .op-member:hover .op-member-logo, .op-member:focus-visible .op-member-logo { transform: none; }
       }
       .op-charter .op-resource-link { margin-top: 1rem; }
+      .op-page .red-army-block {
+        width: min(100%, 62rem);
+        margin-top: 2.5rem;
+        text-align: left;
+      }
+      .op-page .red-army-block a { color: #e08a8a; }
+      .op-page .red-army-block a:hover { color: #fff; }
       .op-squadrons { width: min(100%, 62rem); margin-top: 2.5rem; text-align: center; scroll-margin-top: 5rem; }
       .op-squadrons > h2 {
         margin: 0;
@@ -791,6 +799,7 @@
         text-decoration: none;
       }
       .pf-onboarding-orgs a:hover { color: #fff; border-color: var(--pf-cyan); }
+      .pf-onboarding-orgs li { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
       .pf-onboarding > .pf-links { margin-top: 2rem; text-align: center; }
 
       .pf-votes [hidden] { display: none !important; }
@@ -1022,6 +1031,43 @@
       .org-roster-cta strong { color: #E8F4FF; }
       .org-source { color: rgba(138, 164, 184, 0.75); font-size: 0.78rem; margin-top: 1rem; text-align: center; }
       .organizations-empty { color: #8AA4B8; padding: 2em 0; text-align: center; }
+      .org-discord {
+        display: inline-block;
+        margin-top: 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #8AA4B8;
+      }
+      .org-discord.linked { color: #7dffb0; }
+      .org-discord.unlinked { color: #8AA4B8; }
+      .op-member .org-discord, .pf-onboarding-orgs .org-discord { display: block; }
+      .op-member .org-discord { font-size: 0.62rem; }
+      .pf-votes-orgs .org-discord { display: block; margin-top: 0.15rem; }
+
+      .red-army-page { display: none; margin: 0 auto; max-width: 38em; padding: 1.5em 1em 3em; text-align: left; color: #E8F4FF; }
+      .red-army-page > h1, .red-army-intro { text-align: center; }
+      .red-army-page > h1 { color: #fff; margin-top: 0.5em; }
+      .red-army-intro { color: #8AA4B8; font-size: 0.92em; line-height: 1.45; margin: 0 auto 2em; max-width: 28em; }
+      .red-army-page [hidden], .red-army-block [hidden] { display: none !important; }
+      .red-army-page .page-back a, .red-army-page footer a:not(.footer-login-button), .red-army-block a { color: #e08a8a; }
+      .red-army-block {
+        background: rgba(40, 10, 12, 0.55);
+        border: 1px solid rgba(194, 59, 59, 0.35);
+        border-left: 3px solid #c23b3b;
+        margin-top: 2rem;
+        padding: 1.25rem 1.15rem;
+        scroll-margin-top: 5rem;
+      }
+      .red-army-block h2 { color: #fff; font-size: 1.15rem; margin: 0 0 0.4rem; }
+      .red-army-block > p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
+      .red-army-more { margin: 0.9rem 0 0; text-align: center; }
+      .red-army-card { border-left-color: #c23b3b; }
+      .red-army-officers { color: #E8F4FF; font-size: 0.88rem; margin: 0.35rem 0 0; }
+      .red-army-note { color: #8AA4B8; font-size: 0.85rem; line-height: 1.4; margin: 0.45rem 0 0; }
+      .red-army-servers-title { color: #fff; font-size: 1.05rem; margin: 1.5rem 0 0.75rem; }
+      .red-army-grid { margin-top: 0.75rem; }
 
       .resources-page, .gooncitizen-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .resources-page > h1, .resources-page > .operations-intro { text-align: center; }
@@ -1562,6 +1608,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/G00N">G00N SQUAD</a></h2>
             <p class="org-meta"><span class="org-symbol">[G00N]</span> · 21 members · PMC · Hardcore · Role play</p>
+            <span class="org-discord" data-org-discord="G00N" hidden></span>
             <p class="org-focus">Focus: Security / Infiltration</p>
             <p class="org-summary">WE ARE GOON</p>
             <div class="org-links"><a class="goon-button" href="/organizations/G00N">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1572,6 +1619,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/INFN">Infinity Industries</a></h2>
             <p class="org-meta"><span class="org-symbol">[INFN]</span> · 19 members · Syndicate · Casual · Role play</p>
+            <span class="org-discord" data-org-discord="INFN" hidden></span>
             <p class="org-focus">Focus: Resources / Transport</p>
             <p class="org-summary">We do Logi for whoever pays us more.</p>
             <div class="org-links"><a class="goon-button" href="/organizations/INFN">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1582,6 +1630,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/TRDE">Trans-Galactic Trade</a></h2>
             <p class="org-meta"><span class="org-symbol">[TRDE]</span> · 55 members · Corporation · Regular</p>
+            <span class="org-discord" data-org-discord="TRDE" hidden></span>
             <p class="org-focus">Focus: Trading / Freelancing</p>
             <p class="org-summary">The Galaxy on time.™</p>
             <div class="org-links"><a class="goon-button" href="/organizations/TRDE">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1592,6 +1641,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/LCRP">Legacy Corporation</a></h2>
             <p class="org-meta"><span class="org-symbol">[LCRP]</span> · 33 members · Corporation · Casual · Role play</p>
+            <span class="org-discord" data-org-discord="LCRP" hidden></span>
             <p class="org-focus">Focus: Security / Freelancing</p>
             <p class="org-summary">The Legacy Corporation: Forging Destiny Among the Stars</p>
             <div class="org-links"><a class="goon-button" href="/organizations/LCRP">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1602,6 +1652,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/DOUBLEDOGZ">DoubleDog Delivery, Inc.</a></h2>
             <p class="org-meta"><span class="org-symbol">[DOUBLEDOGZ]</span> · 15 members · Corporation · Casual · Role play</p>
+            <span class="org-discord" data-org-discord="DOUBLEDOGZ" hidden></span>
             <p class="org-focus">Focus: Transport / Trading</p>
             <p class="org-summary">We deliver doubledogs to the farthest reaches of the galaxy. Any time, any where.</p>
             <div class="org-links"><a class="goon-button" href="/organizations/DOUBLEDOGZ">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1612,6 +1663,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/4MCONTRACT">4M Contractors</a></h2>
             <p class="org-meta"><span class="org-symbol">[4MCONTRACT]</span> · 84 members · Organization · Regular · Role play</p>
+            <span class="org-discord" data-org-discord="4MCONTRACT" hidden></span>
             <p class="org-focus">Focus: Freelancing / Trading</p>
             <p class="org-summary">Welcome Citizen</p>
             <div class="org-links"><a class="goon-button" href="/organizations/4MCONTRACT">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1622,6 +1674,7 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/AIMOS">A.I.M.O.S.</a></h2>
             <p class="org-meta"><span class="org-symbol">[AIMOS]</span> · 149 members · Syndicate · Hardcore · Role play</p>
+            <span class="org-discord" data-org-discord="AIMOS" hidden></span>
             <p class="org-focus">Focus: Resources / Security</p>
             <p class="org-summary">Armored Interstellar Mercenary Operations Syndicate</p>
             <div class="org-links"><a class="goon-button" href="/organizations/AIMOS">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
@@ -1632,12 +1685,19 @@
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/IDBC">Risky Business</a></h2>
             <p class="org-meta"><span class="org-symbol">[IDBC]</span> · 98 members · Corporation · Hardcore</p>
+            <span class="org-discord" data-org-discord="IDBC" hidden></span>
             <p class="org-focus">Focus: Infiltration / Social</p>
             <p class="org-summary">you be you. our discord is https://discord.gg/riskyb</p>
             <div class="org-links"><a class="goon-button" href="/organizations/IDBC">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/IDBC" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/IDBC" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
           </div>
         </article>
       </div>
+      <section class="red-army-block" id="red-army" aria-labelledby="red-army-teaser-title">
+        <h2 id="red-army-teaser-title">RED ARMY</h2>
+        <p>Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.</p>
+        <div data-red-army="teaser" hidden></div>
+        <p class="red-army-more"><a href="/red-army">RED ARMY roster &raquo;</a></p>
+      </section>
       <section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
         <p>See <a href="/operations/PERMAFLEET/onboarding">how onboarding works</a>, then talk to us in <strong>#embassy</strong> on the GOON SQUAD Discord.</p>
@@ -1663,6 +1723,7 @@
           <p class="org-meta">Listed on RSI as <strong>GOON SQUAD</strong></p>
           <p class="org-focus">Focus: Security / Infiltration</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="G00N" hidden></span>
           <p>WE ARE GOON</p><p>GOONS TOGETHER STRONK</p><p>GOON SQUAD</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/G00N" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1702,6 +1763,7 @@
           
           <p class="org-focus">Focus: Resources / Transport</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="INFN" hidden></span>
           <p>We do Logi for whoever pays us more.</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/INFN" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1741,6 +1803,7 @@
           <p class="org-meta">Listed on RSI as <strong>Trans-Galactic Delivery Enterprise</strong></p>
           <p class="org-focus">Focus: Trading / Freelancing</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="TRDE" hidden></span>
           <p>The Galaxy on time.™</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1780,6 +1843,7 @@
           <p class="org-meta">Listed on RSI as <strong>The Legacy Corporation</strong></p>
           <p class="org-focus">Focus: Security / Freelancing</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="LCRP" hidden></span>
           <p>The Legacy Corporation: Forging Destiny Among the Stars</p><p>In the vast expanse of the ‘Verse, where danger lurks around every asteroid belt and intrigue echoes through the vacuum of space, stands The Legacy Corporation — a beacon of strength, honor, and unwavering resolve.</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/LCRP" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1816,6 +1880,7 @@
           
           <p class="org-focus">Focus: Transport / Trading</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="DOUBLEDOGZ" hidden></span>
           <p>We deliver doubledogs to the farthest reaches of the galaxy. Any time, any where.</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/DOUBLEDOGZ" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1846,6 +1911,7 @@
           <p class="org-meta">Listed on RSI as <strong>4M-CONTRACTORS</strong></p>
           <p class="org-focus">Focus: Freelancing / Trading</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="4MCONTRACT" hidden></span>
           <p>Welcome Citizen</p><p>Built by friends and driven by purpose, 4M-CONTRACTORS unites combat pilots, industrial crews, medics, merchants, and outlaws into one unstoppable organization. Through loyalty, strategy, and controlled chaos, we forge our legacy across every corner of the ‘verse.</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1885,6 +1951,7 @@
           <p class="org-meta">Listed on RSI as <strong>A.I.M.O.S</strong></p>
           <p class="org-focus">Focus: Resources / Security</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="AIMOS" hidden></span>
           <p>Armored Interstellar Mercenary Operations Syndicate</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1924,6 +1991,7 @@
           
           <p class="org-focus">Focus: Infiltration / Social</p>
           <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="IDBC" hidden></span>
           <p>you be you. our discord is https://discord.gg/riskyb</p>
           <div class="org-actions">
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/IDBC" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
@@ -1938,6 +2006,15 @@
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+    <main id="red-army-page" class="red-army-page">
+      <h1>RED ARMY</h1>
+      <p class="red-army-intro">Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god. Not a vote, and not a Fabric federation. <a href="/organizations">PERMAFLEET organizations</a>. <a href="/operations/PERMAFLEET/onboarding">How an organization joins</a>.</p>
+      <div data-red-army="page" hidden></div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
@@ -2417,49 +2494,49 @@
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">G00N SQUAD</span>
-              <span class="op-member-meta">[G00N] · 21 members</span>
+              <span class="op-member-meta">[G00N] · 21 members</span><span class="org-discord" data-org-discord="G00N" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/INFN">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/syndicate.jpg" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">Infinity Industries</span>
-              <span class="op-member-meta">[INFN] · 19 members</span>
+              <span class="op-member-meta">[INFN] · 19 members</span><span class="org-discord" data-org-discord="INFN" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/TRDE">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://robertsspaceindustries.com/media/o6rxr78fbjcj7r/logo/TRDE-Logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">Trans-Galactic Trade</span>
-              <span class="op-member-meta">[TRDE] · 55 members</span>
+              <span class="op-member-meta">[TRDE] · 55 members</span><span class="org-discord" data-org-discord="TRDE" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/LCRP">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://robertsspaceindustries.com/media/t411fijq0tppor/logo/LCRP-Logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">Legacy Corporation</span>
-              <span class="op-member-meta">[LCRP] · 33 members</span>
+              <span class="op-member-meta">[LCRP] · 33 members</span><span class="org-discord" data-org-discord="LCRP" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/DOUBLEDOGZ">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/logo/corp.jpg" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">DoubleDog Delivery, Inc.</span>
-              <span class="op-member-meta">[DOUBLEDOGZ] · 15 members</span>
+              <span class="op-member-meta">[DOUBLEDOGZ] · 15 members</span><span class="org-discord" data-org-discord="DOUBLEDOGZ" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/4MCONTRACT">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://robertsspaceindustries.com/media/qhn3ydociar7xr/logo/4MCONTRACT-Logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">4M Contractors</span>
-              <span class="op-member-meta">[4MCONTRACT] · 84 members</span>
+              <span class="op-member-meta">[4MCONTRACT] · 84 members</span><span class="org-discord" data-org-discord="4MCONTRACT" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/AIMOS">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">A.I.M.O.S.</span>
-              <span class="op-member-meta">[AIMOS] · 149 members</span>
+              <span class="op-member-meta">[AIMOS] · 149 members</span><span class="org-discord" data-org-discord="AIMOS" hidden></span>
             </a></li>
             <li><a class="op-member" href="/organizations/IDBC">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://theverse.robertsspaceindustries.com/r1dtzznb1edd4/logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">Risky Business</span>
-              <span class="op-member-meta">[IDBC] · 98 members</span>
+              <span class="op-member-meta">[IDBC] · 98 members</span><span class="org-discord" data-org-discord="IDBC" hidden></span>
             </a></li>
             <li><a class="op-member op-member-add" href="/operations/PERMAFLEET/onboarding">
               <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
@@ -2477,6 +2554,12 @@
             <ul class="op-orgs op-squadron-chips"><li><a href="/operations/PERMAFLEET/squadrons/bravo-squadron">BRAVO SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/rat-squadron">RAT SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/turtle-brigade">TURTLE BRIGADE</a></li><li><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON</a></li><li><a href="/operations/PERMAFLEET/squadrons/shellback">SHELLBACK</a></li></ul>
             <p class="op-resource-link"><a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a></p>
           </section>
+          <section class="red-army-block" id="permafleet-red-army" aria-labelledby="permafleet-red-army-title">
+        <h2 id="permafleet-red-army-title">RED ARMY</h2>
+        <p>Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.</p>
+        <div data-red-army="teaser" hidden></div>
+        <p class="red-army-more"><a href="/red-army">RED ARMY roster &raquo;</a></p>
+      </section>
         </div>
         <footer class="op-footer">
           <div><a href="bitcoin:bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0"><code>bc1qx5ktkj6utjw3vl43htvn434c9kg89m73lympr0</code></a></div>
@@ -2701,14 +2784,14 @@
       <h2 id="onboarding-members">Already in the Protectorate</h2>
       <p class="pf-intro">You’ll be flying with these orgs.</p>
       <ul class="pf-onboarding-orgs" aria-label="Member organizations">
-        <li><a href="/organizations/G00N">[G00N] G00N SQUAD</a></li>
-        <li><a href="/organizations/INFN">[INFN] Infinity Industries</a></li>
-        <li><a href="/organizations/TRDE">[TRDE] Trans-Galactic Trade</a></li>
-        <li><a href="/organizations/LCRP">[LCRP] Legacy Corporation</a></li>
-        <li><a href="/organizations/DOUBLEDOGZ">[DOUBLEDOGZ] DoubleDog Delivery, Inc.</a></li>
-        <li><a href="/organizations/4MCONTRACT">[4MCONTRACT] 4M Contractors</a></li>
-        <li><a href="/organizations/AIMOS">[AIMOS] A.I.M.O.S.</a></li>
-        <li><a href="/organizations/IDBC">[IDBC] Risky Business</a></li>
+        <li><a href="/organizations/G00N">[G00N] G00N SQUAD</a><span class="org-discord" data-org-discord="G00N" hidden></span></li>
+        <li><a href="/organizations/INFN">[INFN] Infinity Industries</a><span class="org-discord" data-org-discord="INFN" hidden></span></li>
+        <li><a href="/organizations/TRDE">[TRDE] Trans-Galactic Trade</a><span class="org-discord" data-org-discord="TRDE" hidden></span></li>
+        <li><a href="/organizations/LCRP">[LCRP] Legacy Corporation</a><span class="org-discord" data-org-discord="LCRP" hidden></span></li>
+        <li><a href="/organizations/DOUBLEDOGZ">[DOUBLEDOGZ] DoubleDog Delivery, Inc.</a><span class="org-discord" data-org-discord="DOUBLEDOGZ" hidden></span></li>
+        <li><a href="/organizations/4MCONTRACT">[4MCONTRACT] 4M Contractors</a><span class="org-discord" data-org-discord="4MCONTRACT" hidden></span></li>
+        <li><a href="/organizations/AIMOS">[AIMOS] A.I.M.O.S.</a><span class="org-discord" data-org-discord="AIMOS" hidden></span></li>
+        <li><a href="/organizations/IDBC">[IDBC] Risky Business</a><span class="org-discord" data-org-discord="IDBC" hidden></span></li>
       </ul>
       <p class="pf-links">Ready? <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Talk to us in #embassy &raquo;</a> · <a href="/organizations">Member organizations &raquo;</a></p>
     </main>
@@ -2775,6 +2858,7 @@
           ? document.getElementById('idlerpg-player-page')
           : null;
         var isOrganizations = path.toLowerCase() === "/organizations";
+        var isRedArmy = path.toLowerCase() === "/red-army";
         var orgMatch = new RegExp("^/organizations/([^/]+)$", 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === "/resources";
@@ -2832,7 +2916,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -2851,6 +2935,8 @@
         if (idlerpgPlayerPageEl) idlerpgPlayerPageEl.style.display = idlerpgPlayerEl ? 'block' : 'none';
         var organizationsEl = document.getElementById('organizations-page');
         if (organizationsEl) organizationsEl.style.display = isOrganizations ? 'block' : 'none';
+        var redArmyEl = document.getElementById('red-army-page');
+        if (redArmyEl) redArmyEl.style.display = isRedArmy ? 'block' : 'none';
         document.querySelectorAll('.organization-page').forEach(function (el) {
           el.style.display = el === orgEl ? 'block' : 'none';
         });
@@ -2912,6 +2998,7 @@
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
         else if (isOrganizations) document.title = "PERMAFLEET Organizations — GOON SQUAD";
+        else if (isRedArmy) document.title = "RED ARMY — GOON SQUAD";
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
         else if (isLeaderboard) document.title = "1v1 Leaderboard — GOON SQUAD";
@@ -4349,8 +4436,10 @@
         });
       })();
     </script>
-    <script src="/scripts/alliance-votes.js?v=41259997657c" defer></script>
-    <script src="/scripts/federations.js?v=b455f5069334" defer></script>
+    <script src="/scripts/alliance-votes.js?v=975c9e6cec15" defer></script>
+    <script src="/scripts/federations.js?v=521a844a6250" defer></script>
+    <script src="/scripts/organizations.js?v=119af2be4be3" defer></script>
+    <script src="/scripts/red-army.js?v=b7d15fd8347a" defer></script>
     <script type="text/javascript">
       (function () {
         var form = document.getElementById("squadron-application-form");

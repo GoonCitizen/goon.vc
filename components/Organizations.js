@@ -1,6 +1,8 @@
 'use strict';
 
+const clientScript = require('../functions/clientScript');
 const escapeHtml = require('../functions/escapeHtml');
+const RedArmyPage = require('./RedArmyPage');
 
 const SECTIONS = [
   { key: 'history', label: 'History' },
@@ -48,7 +50,25 @@ function renderOrganizationsCss () {
       .org-roster-cta p { color: #8AA4B8; line-height: 1.45; margin: 0 0 0.9rem; }
       .org-roster-cta strong { color: #E8F4FF; }
       .org-source { color: rgba(138, 164, 184, 0.75); font-size: 0.78rem; margin-top: 1rem; text-align: center; }
-      .organizations-empty { color: #8AA4B8; padding: 2em 0; text-align: center; }`;
+      .organizations-empty { color: #8AA4B8; padding: 2em 0; text-align: center; }
+      .org-discord {
+        display: inline-block;
+        margin-top: 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #8AA4B8;
+      }
+      .org-discord.linked { color: #7dffb0; }
+      .org-discord.unlinked { color: #8AA4B8; }
+      .op-member .org-discord, .pf-onboarding-orgs .org-discord { display: block; }
+      .op-member .org-discord { font-size: 0.62rem; }
+      .pf-votes-orgs .org-discord { display: block; margin-top: 0.15rem; }`;
+}
+
+function discordStatus (symbol) {
+  return `<span class="org-discord" data-org-discord="${escapeHtml(symbol)}" hidden></span>`;
 }
 
 function externalLink (href, label, extra = '') {
@@ -122,6 +142,7 @@ function renderSource (props) {
  * @param {string} [props.fetchedAt]
  * @param {string} [props.embassyUrl] Discord invite for the #embassy roster call to action.
  * @param {string} [props.onboardingPath] How an organization joins the Protectorate.
+ * @param {string} [props.redArmyPath] RED ARMY roster of non-member Discord servers.
  * @param {string} props.loginPath
  * @param {string} props.loginLabel Trusted HTML.
  * @param {string} props.copyright Trusted HTML.
@@ -135,6 +156,7 @@ function renderIndexHtml (props) {
           <div class="org-card-body">
             <h2 class="org-name"><a href="${escapeHtml(href)}">${escapeHtml(org.displayName || org.name)}</a></h2>
             ${metaLine(org)}
+            ${discordStatus(org.symbol)}
             ${focusLine(org)}
             ${summary ? `<p class="org-summary">${escapeHtml(summary)}</p>` : ''}
             <div class="org-links"><a class="goon-button" href="${escapeHtml(href)}">Profile</a>${rsiButtons(org)}</div>
@@ -147,6 +169,7 @@ function renderIndexHtml (props) {
       <div class="organizations-grid">
         ${cards || '<p class="organizations-empty">No member organizations listed.</p>'}
       </div>
+      ${RedArmyPage.renderTeaser({ path: props.redArmyPath })}
       ${renderRosterCta(props)}
       ${renderSource(props)}
       ${renderFooter(props)}
@@ -191,6 +214,7 @@ function renderOrganizationHtml (org, props) {
           ${rsiName}
           ${focusLine(org)}
           ${alliance}
+          ${discordStatus(org.symbol)}
           ${intro}
           <div class="org-actions">
             ${org.recruiting ? externalLink(org.url, 'Apply on RSI', ' title="Opens the RSI org page; choose “Join us now!” there"') : ''}
@@ -206,10 +230,56 @@ function renderOrganizationHtml (org, props) {
     </main>`;
 }
 
+/**
+ * Fills `[data-org-discord]` from `GET /services/organizations`: whether the
+ * bot is in that org's Discord. Hidden until the answer arrives.
+ */
+function client () {
+  var nodes = document.querySelectorAll('[data-org-discord]');
+  if (!nodes.length) return;
+
+  function paint (bySymbol) {
+    Array.prototype.forEach.call(nodes, function (el) {
+      var discord = bySymbol[el.getAttribute('data-org-discord')];
+      if (!discord) return;
+      var linked = !!discord.linked;
+      el.hidden = false;
+      el.classList.toggle('linked', linked);
+      el.classList.toggle('unlinked', !linked);
+      el.textContent = linked
+        ? (discord.name ? 'Discord: ' + discord.name : 'Discord linked')
+        : 'Discord not linked';
+    });
+  }
+
+  fetch('/services/organizations', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+    .then(function (res) {
+      if (!res.ok) throw new Error('unavailable');
+      return res.json();
+    })
+    .then(function (data) {
+      var bySymbol = {};
+      (data.organizations || []).forEach(function (org) {
+        bySymbol[org.symbol] = org.discord || { linked: false };
+      });
+      paint(bySymbol);
+    })
+    .catch(function () { /* leave the placeholders hidden */ });
+}
+
+const CLIENT = clientScript('/scripts/organizations.js', client, __filename);
+
+function renderScript () {
+  return CLIENT.tag();
+}
+
 module.exports = {
   id: 'organizations-page',
+  client: CLIENT,
   styles: renderOrganizationsCss,
   render: renderIndexHtml,
   renderOrganization: renderOrganizationHtml,
-  organizationPath
+  organizationPath,
+  discordStatus,
+  script: renderScript
 };
