@@ -60,8 +60,32 @@ describe('Presence service (Doorman + IdleRPG)', function () {
     assert.strictEqual(posted.length, 1);
     assert.strictEqual(posted[0].channel, ANNOUNCE);
     assert.ok(posted[0].text.startsWith('Welcome to IdleRPG'));
+    assert.ok(!posted[0].text.startsWith('[DEV]'), 'no prefix unless one is configured');
     assert.ok(!posted[0].text.includes('111111111111111111'), 'no member ids in public posts');
     assert.strictEqual(presence.adapter.canSend, false, 'commands are never answered');
+    await presence.stop();
+  });
+
+  it('prefixes announcements when a prefix is configured', async function () {
+    const ANNOUNCE = '1560112808283086929';
+    const operations = new FakeOperations();
+    const presence = new Presence({
+      path: path.join(dir, 'store'),
+      tickMs: 0,
+      operations,
+      announcements: [ANNOUNCE],
+      prefix: '  [DEV]\n'
+    });
+    await presence.start();
+    const discord = operations.connect();
+    const posted = [];
+    discord.postToChannel = async (channel, text) => { posted.push({ channel, text }); return {}; };
+
+    discord.emit('voice', { guildId: GUILD, userId: '111111111111111111', oldChannelId: null, newChannelId: VOICE, channelName: 'PERMAFLEET' });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.strictEqual(posted.length, 1);
+    assert.ok(posted[0].text.startsWith('[DEV] Welcome to IdleRPG'));
+    assert.ok(!posted[0].text.includes('\n'), 'the prefix stays on one line');
     await presence.stop();
   });
 

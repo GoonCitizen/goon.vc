@@ -141,7 +141,10 @@ module.exports = {
     // member present for 30 minutes). goon.vc pays voice only.
     sources: (process.env.GOON_PRESENCE_SOURCES || 'voice').split(','),
     channels: [], // empty = every voice channel the bot can see counts
-    announcements: [goonSquad.channels.idlerpg.id] // G00N SQUAD #idlerpg
+    announcements: [goonSquad.channels.idlerpg.id], // G00N SQUAD #idlerpg
+    // Prepended to every #idlerpg post. Unset posts the game text as written,
+    // which is what production does. Env only (this file is tracked).
+    prefix: process.env.GOON_PRESENCE_PREFIX || ''
   },
 
   // /tournaments: templates and every tournament run from one (Fabric Store, kept forever).

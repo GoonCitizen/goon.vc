@@ -25,6 +25,7 @@ const RedArmyPage = require('../components/RedArmyPage');
 const Resources = require('../components/Resources');
 const SquadronApplication = require('../components/SquadronApplication');
 const DrillsPage = require('../components/DrillsPage');
+const ToolsPage = require('../components/ToolsPage');
 const TournamentsPage = require('../components/TournamentsPage');
 const LeaguesPage = require('../components/LeaguesPage');
 const DuelLeaderboard = require('../components/DuelLeaderboard');
@@ -33,6 +34,7 @@ const MarketPage = require('../components/MarketPage');
 const RsiClaimPage = require('../components/RsiClaimPage');
 const WaitingPage = require('../components/WaitingPage');
 const MembersPage = require('../components/MembersPage');
+const AdminPage = require('../components/AdminPage');
 const FabricCalendar = require('../components/FabricCalendar');
 const MeleeRotationDrill = require('../components/MeleeRotationDrill');
 const TournamentBracket = require('../components/TournamentBracket');
@@ -69,6 +71,10 @@ const DEFAULTS = {
   membersPath: '/members',
   membersDocumentTitle: 'Members — GOON SQUAD',
   membersDescription: 'G00N SQUAD members. Sign in to see your profile.',
+  // Operator panel (components/AdminPage.js). Unlisted; the API is 404 for anyone else.
+  adminPath: '/admin',
+  adminDocumentTitle: 'Admin — GOON SQUAD',
+  adminDescription: 'G00N SQUAD operator tools. Sign in.',
   eventsPath: '/events',
   eventsLabel: 'EVENTS',
   eventsIntro: 'Upcoming scheduled events from every Discord server we fly with.',
@@ -107,6 +113,17 @@ const DEFAULTS = {
   resourcesDocumentTitle: 'RESOURCES — GOON SQUAD',
   // Extra index entries beyond GoonCitizen: [{ name, path, tagline, summary, links: [{ label, href }] }].
   resources: [],
+  // One-off tools, each a page under /resources. [{ id, name, tagline?, summary?, openLabel?, html, css, script }]
+  tools: [{
+    id: 'breakdown-tool',
+    name: 'Breakdown planner',
+    tagline: 'The cheapest shop items to break down for the materials you want to craft.',
+    summary: 'Prices and recipes for the current Star Citizen build.',
+    openLabel: 'Open the planner',
+    html: path.join(__dirname, '../components/tools/breakdown-planner.html'),
+    css: path.join(__dirname, '../components/tools/breakdown-planner.css'),
+    script: '/tool-scripts/breakdown-planner.js'
+  }],
   // Flight-training drills: /drills index + one page per drill hosting its Web Component.
   drillsPath: '/drills',
   drillsHeading: 'DRILLS',
@@ -279,6 +296,7 @@ class GoonSPA extends FabricSPA {
       ClipLibrary,
       ClipTimelineEditor,
       MembersPage,
+      AdminPage,
       WaitingPage,
       RsiClaimPage,
       Federations,
@@ -309,6 +327,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('rsiClaimPath'), this._site('rsiClaimDocumentTitle'), this._site('rsiClaimDescription')),
       page(this._site('waitingPath'), this._site('waitingDocumentTitle'), this._site('waitingDescription')),
       page(this._site('membersPath'), this._site('membersDocumentTitle'), this._site('membersDescription')),
+      page(this._site('adminPath'), this._site('adminDocumentTitle'), this._site('adminDescription')),
       page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
       page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
@@ -317,6 +336,11 @@ class GoonSPA extends FabricSPA {
       page(this._site('resourcesPath'), this._site('resourcesDocumentTitle'), this._site('resourcesIntro')),
       page(this._site('gooncitizenPath'), this._site('gooncitizenDocumentTitle'), `${this._site('gooncitizenTagline')} ${this._site('gooncitizenSummary')}`),
       page(this._site('leaderboardPath'), this._site('leaderboardDocumentTitle'), this._site('leaderboardDescription')),
+      ...ToolsPage.validTools(this._site('tools')).map((tool) => page(
+        ToolsPage.toolPath(tool, this._site('resourcesPath')),
+        `${tool.name} — ${title}`,
+        tool.summary || tool.tagline || tool.name
+      )),
       page(this._site('drillsPath'), this._site('drillsDocumentTitle'), this._site('drillsIntro')),
       ...DrillsPage.validDrills(this._site('drills')).map((drill) => page(
         DrillsPage.drillPath(drill, this._site('drillsPath')),
@@ -371,6 +395,7 @@ class GoonSPA extends FabricSPA {
     const rsiClaimPath = this._site('rsiClaimPath');
     const waitingPath = this._site('waitingPath');
     const membersPath = this._site('membersPath');
+    const adminPath = this._site('adminPath');
     const eventsPath = this._site('eventsPath');
     const eventsTitleJson = JSON.stringify(this._site('eventsDocumentTitle'));
     const operationsPath = this._site('operationsPath');
@@ -456,7 +481,7 @@ class GoonSPA extends FabricSPA {
       copyright
     });
     const loginMainHtml = Login.render({ title: loginLabel, joinUrl });
-    const loginScript = Login.script({ path: loginPath, waitingPath, membersPath });
+    const loginScript = Login.script({ path: loginPath, waitingPath, membersPath, adminPath });
     const eventsMainHtml = EventsPage.render({
       description: this._site('eventsIntro'),
       loginPath,
@@ -534,6 +559,12 @@ class GoonSPA extends FabricSPA {
         tagline: 'Flight training you can run on a second screen.',
         summary: this._site('drillsIntro')
       }, {
+        name: 'Breakdown planner',
+        path: ToolsPage.toolPath({ id: 'breakdown-tool' }, resourcesPath),
+        tagline: 'The cheapest shop items to break down for the materials you want to craft.',
+        summary: 'Prices and recipes for the current Star Citizen build.',
+        openLabel: 'Open the planner'
+      }, {
         name: 'Tournaments',
         path: tournamentsPath,
         tagline: 'Single and double elimination brackets, best of n, with every result on record.',
@@ -599,6 +630,15 @@ class GoonSPA extends FabricSPA {
       channelUrl: leaderboardChannelUrl,
       joinUrl,
       tournamentsPath,
+      loginPath,
+      loginLabel,
+      alliance,
+      copyright
+    });
+    const toolMainsHtml = ToolsPage.renderTools({
+      basePath: resourcesPath,
+      tools: this._site('tools'),
+      siteTitle: title,
       loginPath,
       loginLabel,
       alliance,
@@ -838,6 +878,7 @@ ${Login.styles()}
 ${RsiClaimPage.styles()}
 ${WaitingPage.styles()}
 ${MembersPage.styles()}
+${AdminPage.styles()}
 ${EventsPage.styles()}
 ${OperationsIndex.styles()}
 ${IdleRPGPage.styles()}
@@ -845,6 +886,7 @@ ${IdleRPGPlayerPage.styles()}
 ${Organizations.styles()}
 ${RedArmyPage.styles()}
 ${Resources.styles()}
+${ToolsPage.styles()}
 ${DrillsPage.styles()}
 ${TournamentsPage.styles()}
 ${LeaguesPage.styles()}
@@ -861,6 +903,7 @@ ${MarketPage.styles()}
     ${RsiClaimPage.render({ path: rsiClaimPath, loginPath, joinUrl })}
     ${WaitingPage.render({ path: waitingPath, loginPath, joinUrl, eventsPath, squadronsPath, rsiClaimPath })}
     ${MembersPage.render({ path: membersPath, loginPath, waitingPath, rsiClaimPath })}
+    ${AdminPage.render({ path: adminPath, loginPath })}
     ${eventsMainHtml}
     ${operationsMainHtml}
     ${idlerpgMainHtml}
@@ -871,6 +914,7 @@ ${organizationMainsHtml}
     ${resourcesMainHtml}
     ${gooncitizenMainHtml}
     ${leaderboardMainHtml}
+${toolMainsHtml}
     ${drillsMainHtml}
 ${drillMainsHtml}
     ${tournamentsMainHtml}
@@ -914,6 +958,7 @@ ${squadronMainsHtml}
         var isWaiting = path.toLowerCase() === ${JSON.stringify(waitingPath.toLowerCase())};
         var isMembers = path.toLowerCase() === ${JSON.stringify(membersPath.toLowerCase())};
         var isMember = path.toLowerCase().indexOf(${JSON.stringify(membersPath.toLowerCase() + '/')}) === 0;
+        var isAdmin = path.toLowerCase() === ${JSON.stringify(adminPath.toLowerCase())};
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
         var isIdleRPG = path.toLowerCase() === ${JSON.stringify(idlerpgPath.toLowerCase())};
@@ -927,6 +972,10 @@ ${squadronMainsHtml}
         var isResources = path.toLowerCase() === ${JSON.stringify(resourcesPath.toLowerCase())};
         var isGoonCitizen = path.toLowerCase() === ${JSON.stringify(gooncitizenPath.toLowerCase())};
         var isLeaderboard = path.toLowerCase() === ${JSON.stringify(leaderboardPath.toLowerCase())};
+        var toolEl = null;
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          if (el.getAttribute('data-path') === path.toLowerCase()) toolEl = el;
+        });
         var isDrills = path.toLowerCase() === ${JSON.stringify(drillsPath.toLowerCase())};
         var drillEl = null;
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -979,7 +1028,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -990,6 +1039,8 @@ ${squadronMainsHtml}
         if (membersEl) membersEl.style.display = isMembers ? 'block' : 'none';
         var memberEl = document.getElementById('member-page');
         if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
+        var adminEl = document.getElementById('admin-page');
+        if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -1009,6 +1060,18 @@ ${squadronMainsHtml}
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
         var leaderboardEl = document.getElementById('leaderboard-page');
         if (leaderboardEl) leaderboardEl.style.display = isLeaderboard ? 'block' : 'none';
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          el.style.display = el === toolEl ? 'block' : 'none';
+        });
+        if (toolEl && !toolEl.getAttribute('data-script-loaded')) {
+          var toolScript = toolEl.getAttribute('data-script');
+          if (toolScript) {
+            toolEl.setAttribute('data-script-loaded', '1');
+            var toolTag = document.createElement('script');
+            toolTag.src = toolScript;
+            document.body.appendChild(toolTag);
+          }
+        }
         var drillsEl = document.getElementById('drills-page');
         if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -1057,6 +1120,7 @@ ${squadronMainsHtml}
         else if (isWaiting) document.title = ${JSON.stringify(this._site('waitingDocumentTitle'))};
         else if (isMembers) document.title = ${JSON.stringify(this._site('membersDocumentTitle'))};
         else if (isMember) document.title = 'Member profile — ' + ${titleJson};
+        else if (isAdmin) document.title = ${JSON.stringify(this._site('adminDocumentTitle'))};
         else if (isEvents) document.title = ${eventsTitleJson};
         else if (isOperations) document.title = ${operationsTitleJson};
         else if (isIdleRPG || idlerpgPlayerEl) document.title = ${idlerpgTitleJson};
@@ -1065,6 +1129,7 @@ ${squadronMainsHtml}
         else if (isResources) document.title = ${resourcesTitleJson};
         else if (isGoonCitizen) document.title = ${gooncitizenTitleJson};
         else if (isLeaderboard) document.title = ${leaderboardTitleJson};
+        else if (toolEl) document.title = toolEl.getAttribute('data-title');
         else if (isDrills) document.title = ${drillsTitleJson};
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = ${tournamentsTitleJson};
@@ -1090,6 +1155,7 @@ ${squadronMainsHtml}
     ${RsiClaimPage.script()}
     ${WaitingPage.script()}
     ${MembersPage.script()}
+    ${AdminPage.script()}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
     ${operationsScript}

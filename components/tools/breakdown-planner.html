@@ -1,0 +1,86 @@
+<div class="scan" aria-hidden="true"></div>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+    <h1>Breakdown planner</h1>
+    <p class="lede">Pick what you want to craft in Star Citizen. This finds the cheapest shop items to buy and break down for the materials. Prices and recipes are for <span data-fill="version"></span>.</p>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="true" aria-controls="tab-plan">Plan a build</button>
+  <button type="button" role="tab" id="t-items" data-tab="items" aria-selected="false" aria-controls="tab-items">All items</button>
+  <button type="button" role="tab" id="t-mats" data-tab="mats" aria-selected="false" aria-controls="tab-mats">Materials</button>
+</nav>
+
+<div class="tool-body">
+<section id="tab-plan" role="tabpanel" aria-labelledby="t-plan">
+  <div class="panel">
+    <label class="ask" for="bpq">What do you want to make?</label>
+    <input class="field" id="bpq" type="search" placeholder="Type a name, like Greatsword" autocomplete="off" spellcheck="false">
+    <div class="results" id="bpres" hidden></div>
+    <div class="chosen" id="chosen"></div>
+    <p class="try" id="try">Try one:</p>
+  </div>
+  <div id="planout"></div>
+</section>
+
+<section id="tab-items" role="tabpanel" aria-labelledby="t-items" hidden>
+  <div class="find">
+    <input class="field" id="q" type="search" placeholder="Search items, makers, materials" aria-label="Search items, makers and materials" autocomplete="off" spellcheck="false">
+    <label class="check"><input type="checkbox" id="sold"> Sold in shops only</label>
+  </div>
+  <details class="filt">
+    <summary>Filter by material</summary>
+    <div class="seg" role="group" aria-label="What the material filter looks at">
+      <button type="button" id="mRet" aria-pressed="true">Gives it back</button>
+      <button type="button" id="mInp" aria-pressed="false">Needs it to craft</button>
+    </div>
+    <div class="rack" id="rack" role="group" aria-label="Materials"></div>
+    <p class="note">Pick more than one to find items with all of them. Notched tiles are counted in pieces; the rest are measured in cSCU.</p>
+  </details>
+  <div class="facets" id="fcat"><span class="lab">Type</span></div>
+  <div class="facets" id="fcls"><span class="lab">Class</span></div>
+  <div class="bar">
+    <span class="n" id="count"></span>
+    <button type="button" class="link" id="clear" hidden>Clear filters</button>
+    <span class="sp"></span>
+    <label for="sort" class="note">Sort by</label>
+    <select id="sort">
+      <option value="name">Name</option>
+      <option value="price">Lowest price</option>
+      <option value="type">Type, then size</option>
+      <option value="qty">Most of the picked material</option>
+    </select>
+    <button type="button" class="link" id="csv">Download these rows (CSV)</button>
+  </div>
+  <p class="note" style="margin:10px 0">A material shown <span class="chip x" style="font-size:12px"><span>dashed</span></span> never comes back when you break the item down. Tap any material to see where to get it.</p>
+  <table class="cards">
+    <thead><tr><th class="lab">Item</th><th class="lab">Type</th><th class="lab">Shop price</th><th class="lab">You get back</th>
+    <th class="lab">Costs to craft</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden><p>Nothing matches those filters.</p><button type="button" class="link" id="clear2">Clear filters</button></div>
+  <button type="button" class="btn more" id="more" hidden></button>
+</section>
+
+<section id="tab-mats" role="tabpanel" aria-labelledby="t-mats" hidden>
+  <div class="rack" id="mrack" role="group" aria-label="Materials"></div>
+  <div id="mdetail"></div>
+</section>
+</div>
+
+<footer>
+  <h2>Good to know</h2>
+  <p>Breaking an item down gives back half of each material that can be recovered. Some materials never come back.</p>
+  <p>Only gear and ship parts can be broken down in a fabricator. Whole ships cannot, and neither can items bought with real money.</p>
+  <p>Materials from broken-down shop items come out at quality 500, according to the community wiki. Raw materials at trade terminals are listed at quality 0. Ship-part blueprints ask for quality 1 or better; armor and hand weapons accept 0. None of this was tested at a fabricator in game.</p>
+  <h2>Where the numbers come from</h2>
+  <p>Recipes, break-down returns and mining spots come from the game files for <span data-fill="vfull"></span>, unpacked by the Star Citizen Wiki (github.com/StarCitizenWiki/scunpacked-data). <span data-fill="nbuy"></span> of <span data-fill="nitems"></span> items are sold in shops.</p>
+  <p>Shop prices come from UEX (uexcorp.space), where players report them. They were pulled on <span data-fill="pulled"></span>; the reports date from <span data-fill="pold"></span> to <span data-fill="pnew"></span>. Prices and stock change, so check before a big shopping trip.</p>
+  <p>In the mining lists, the percentage is how often that rock shows up among rocks of the same mining type at that place.</p>
+  <p>Unofficial fan-made tool. Star Citizen is a trademark of Cloud Imperium Games.</p>
+</footer>
+</div>

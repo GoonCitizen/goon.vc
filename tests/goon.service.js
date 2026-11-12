@@ -934,7 +934,7 @@ describe('goon.vc HTTP', function () {
     assert.match(page.body, /<script src="\/scripts\/red-army\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const status = await fetchJson('/services/red-army');
     assert.strictEqual(status.status, 200);
-    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'BKEX', 'RINTAK', 'SCHOMIES']);
+    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'RINTAK', 'SCHOMIES']);
     assert.strictEqual(status.json.organizations[0].name, "Robert's Rejects");
     assert.deepStrictEqual(status.json.organizations[0].officers, [{ name: 'mr_meaner' }]);
     assert.deepStrictEqual(status.json.organizations[1].officers, [{ name: 'Brock_85' }]);
@@ -1084,6 +1084,34 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual((await fetchJson('/services/alliance/federations/000000000000')).status, 404);
   });
 
+  it('lists the breakdown planner on /resources and serves it at /resources/breakdown-tool', async function () {
+    const page = await fetchJson('/resources', { headers: { Accept: 'text/html' } });
+    const start = page.body.indexOf('id="resources-page"');
+    const resources = page.body.slice(start, page.body.indexOf('</main>', start));
+    assert.ok(resources.includes('href="/resources/breakdown-tool">Breakdown planner</a>'));
+    const tool = await fetchJson('/resources/breakdown-tool', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(tool.status, 200);
+    assert.ok(tool.body.includes('id="site-header"'));
+    assert.ok(tool.body.includes('id="tool-breakdown-tool"'));
+    assert.ok(tool.body.includes('<h1>Breakdown planner</h1>'));
+    assert.ok(tool.body.includes('href="/resources">&larr; Resources</a>'));
+    assert.ok(tool.body.includes('data-script="/tool-scripts/breakdown-planner.js"'));
+    const script = await fetchJson('/tool-scripts/breakdown-planner.js');
+    assert.strictEqual(script.status, 200);
+    assert.ok(script.body.includes('function drawPlan'));
+    assert.ok(!tool.body.includes('class="voice"'));
+    assert.ok(!script.body.includes('function load()'));
+    const moved = await fetchJson('/resources/breakdown-planner.html', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(moved.status, 302);
+    assert.strictEqual(moved.headers.location, '/resources/breakdown-tool');
+    const oldIndex = await fetchJson('/tools', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(oldIndex.status, 302);
+    assert.strictEqual(oldIndex.headers.location, '/resources');
+    const oldTool = await fetchJson('/tools/breakdown-planner', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(oldTool.status, 302);
+    assert.strictEqual(oldTool.headers.location, '/resources/breakdown-tool');
+  });
+
   it('serves /resources with a dedicated GoonCitizen page', async function () {
     const res = await new Promise((resolve, reject) => {
       http.get({
@@ -1219,7 +1247,17 @@ describe('goon.vc HTTP', function () {
     assert.ok(!res.body.includes('member-login'));
 
     const home = await fetchJson('/', { headers: { Accept: 'text/html' } });
-    assert.ok(!home.headers['content-security-policy'], 'only the login page carries frame-ancestors');
+    assert.ok(!home.headers['content-security-policy'], 'the home page stays frameable');
+
+    const adminPage = await fetchJson('/admin', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(adminPage.status, 200);
+    assert.strictEqual(adminPage.headers['content-security-policy'], "frame-ancestors 'none'");
+    assert.ok(adminPage.body.includes('id="admin-page"'));
+    assert.ok(adminPage.body.includes('<title>Admin — GOON SQUAD</title>'));
+    assert.match(adminPage.body, /<script src="\/scripts\/admin\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const adminApi = await fetchJson('/services/admin');
+    assert.strictEqual(adminApi.status, 401);
+    assert.strictEqual(adminApi.json.error, 'Not signed in');
   });
 
   it('issues Passport challenges for the site origin without a Hub', async function () {
@@ -1490,7 +1528,7 @@ describe('goon.vc page paths', function () {
   }
 
   it('serves a page even when assets has a directory of the same name', async function () {
-    for (const pathname of ['/drills', '/drills/melee-rotation', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/resources/breakdown-tool', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
       assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
     }
   });

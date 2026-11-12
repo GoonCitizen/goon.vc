@@ -117,8 +117,10 @@ function compact (object) {
  * What a signed-in member sees of themselves: no account ids, only which
  * platforms are linked and which one this session signed in with. With
  * reviews on, `review` is their place in the waiting area (no reviewer).
+ * `admin` is set only for an operator (`settings.isAdmin`), and never for a
+ * one-time RSI claim-link session.
  */
-function publicMember (member, via, review) {
+function publicMember (member, via, review, admin) {
   if (!member) return null;
   return Object.assign({
     id: member.id,
@@ -129,7 +131,7 @@ function publicMember (member, via, review) {
     platforms: Array.from(new Set((member.accounts || []).map((account) => account.platform))),
     createdAt: member.createdAt,
     lastLoginAt: member.lastLoginAt || null
-  }, review === undefined ? {} : { review });
+  }, review === undefined ? {} : { review }, admin ? { admin: true } : {});
 }
 
 function accountView (account) {
@@ -258,6 +260,8 @@ class Members extends EventEmitter {
    * @param {number} [settings.sessionTtlMs]
    * @param {string} [settings.cookieName]
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
+   * @param {Function} [settings.isAdmin] `(member) => boolean`. When it returns
+   *   true, the session view includes `admin: true` (not for an RSI claim-link session).
    */
   constructor (settings = {}) {
     super();
@@ -698,7 +702,8 @@ class Members extends EventEmitter {
   }
 
   _view (member, via) {
-    return publicMember(member, via, this.reviewsEnabled ? this._reviewView(member) : undefined);
+    const admin = via !== 'rsi-link' && typeof this.settings.isAdmin === 'function' && this.settings.isAdmin(member) === true;
+    return publicMember(member, via, this.reviewsEnabled ? this._reviewView(member) : undefined, admin);
   }
 
   async _indexPending (memberId, requestedAt) {

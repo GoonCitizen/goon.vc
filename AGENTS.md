@@ -136,7 +136,9 @@ community). Doorman's Discord adapter is **attached** to the same `@fabric/disco
 has `replies: false`, never logs in, and never answers `!` commands). There is still
 exactly one gateway client and one Doorman. Apart from application command replies and the Market forum mirror (below), the only thing it posts is IdleRPG game
 announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
-channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
+channels in `presence.announcements` (G00N SQUAD `#idlerpg`). A `presence.prefix`
+(`GOON_PRESENCE_PREFIX`; unset posts the game text as written) is prepended to
+those posts, so a local bot can be told apart from production. The bot needs
 View Channel + Send Messages there. Chatting is penalized only in those
 announcement channels (never in voice channel chat or anywhere else); with
 none configured, `Presence` turns penalties off. IdleRPG credits every member present in a voice channel the bot
@@ -188,8 +190,8 @@ IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
 DocumentTitle}` in `GoonSPA`.
-Settings: `presence.{path,tickMs,luck,channels,sources,gateway}` (`GOON_PRESENCE_STORE`,
-`GOON_PRESENCE_TICK_MS`, `GOON_PRESENCE_SOURCES`); `gateway: false` keeps serving stored stats. `npm run
+Settings: `presence.{path,tickMs,luck,channels,sources,gateway,prefix}` (`GOON_PRESENCE_STORE`,
+`GOON_PRESENCE_TICK_MS`, `GOON_PRESENCE_SOURCES`, `GOON_PRESENCE_PREFIX`); `gateway: false` keeps serving stored stats. `npm run
 link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`; with a
 linked `idlerpg`, run its own `npm run link:rpg` to use `../rpg`.
 The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule`,
@@ -337,7 +339,7 @@ SHELLBACKS / Brock_85); SHELLBACKS is the Shellback Industries org, not the
 SHELLBACK elite infantry squadron. Monkey Business is the next org joining.
 House of Khans (H0K) asked in #embassy to join; membership is pending. Obsidia
 is the RSI org OBSX. Alliance friends with PERMAFLEET Officer overlap or a
-mention on the G00N `#red-army` pin (BLACK EXODUS, Rintak, SC Homies) sit here too until they are
+mention on the G00N `#red-army` pin (Rintak, SC Homies) sit here too until they are
 members. Named `servers` are Discords not tied to an RSI org (DIA is a private
 Discord). Other servers the bot is in show up live, minus the home server,
 alliance `guildId`s, and an ignore list (personal and Fabric-suite servers).
@@ -347,7 +349,11 @@ never guild ids, account keys, or member ids), filled by `RedArmyPage.client()`.
 The G00N Discord role RED ARMY is pinned in `contracts/goon-squad.json`. The
 `/organizations` index and the PERMAFLEET operation page (below the squadrons
 path, after the member tiles) teaser it.
-`/resources` indexes guides and tools; `/resources/gooncitizen` describes the
+`/resources` indexes guides and tools. One-off tools are pages under that
+index, inside the site shell. The breakdown planner is
+`/resources/breakdown-tool`. Add a tool by listing it on `tools` in `GoonSPA`
+(`id`, `name`, `html`, `css`, `script`) and keeping its stylesheet scoped to
+`.tool-sheet`. `/resources/gooncitizen` describes the
 GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder
 synced from the pinned `# LEADERBOARD` message in G00N SQUAD #1v1-challenges
 (`services/leaderboard.js`, Fabric Store `stores/leaderboard`,
@@ -1193,7 +1199,21 @@ from the profile page and lands back on it (`?linked=discord[&merged=1]` or
 **Members** (`/members`, `components/MembersPage.js`, `membersPath` in `GoonSPA`) is the future member
 directory. It isn't open yet: `GET /services/members/directory` returns
 `{ directory: false, members: [<you>] }` (401 signed out), so the page lists
-only the signed-in member. Each member's profile is `/members/<member id>`
+only the signed-in member. **Admin** (`/admin`, `components/AdminPage.js`,
+`services/admin.js`) is the operator panel. `contracts/goon-squad.json`
+`admins` names who may open it (today remaeus: Discord `420222636954615808`,
+Fabric identity `id1yqr9kjh0h3mxrjnrhermxnetkpgsk2zgcj9es5hlqr5ft75hv9zq6s7hsu`,
+also known as ChairmanPoW). A signed-in member matches by a linked Discord
+account or by the Fabric identity of a linked Passport key (the compressed
+`pubkeyHex`, or either parity of an x-only key); a display name, an RSI
+handle, and a one-time claim-link session do not. `GET /services/members/session`
+adds `admin: true` for them, and the footer and the login card show Admin.
+`GET /services/admin` is 401 signed out and 404 for everyone else, and the
+page is not framed. It lists every member and their linked accounts (Discord
+id, Fabric `id1` when the compressed key was stored, RSI handle), each
+campaign's status and counts (no server ids, no recipients), check-in and
+welcome status, and who is waiting for review. It does not send, schedule, or
+decide anything. Each member's profile is `/members/<member id>`
 (`GET /services/members/profiles/<id>`: display name, avatar, member since,
 in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI
 handle with its citizen page, a short Fabric key fingerprint — and RSI handles,

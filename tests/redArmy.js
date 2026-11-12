@@ -30,7 +30,7 @@ const GUILDS = [
   { id: '111111111111111111', name: 'Random Org' }
 ];
 
-const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'BKEX', 'RINTAK', 'SCHOMIES'];
+const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'RINTAK', 'SCHOMIES'];
 
 describe('RED ARMY', function () {
   const roster = redArmy.parseRoster(contract);
@@ -55,9 +55,9 @@ describe('RED ARMY', function () {
     assert.strictEqual(roster.organizations[4].name, 'Obsidia');
     assert.strictEqual(roster.organizations[4].rsi, 'OBSX');
     assert.strictEqual(roster.organizations[4].guildId, undefined);
-    assert.strictEqual(roster.organizations[5].name, 'BLACK EXODUS');
-    assert.strictEqual(roster.organizations[6].rsi, 'RINTAK');
-    assert.strictEqual(roster.organizations[7].rsi, 'SCHOMIES');
+    assert.strictEqual(roster.organizations[5].rsi, 'RINTAK');
+    assert.strictEqual(roster.organizations[6].rsi, 'SCHOMIES');
+    assert.ok(!roster.organizations.some((org) => org.symbol === 'BKEX'));
     assert.strictEqual(roster.servers.length, 1);
     assert.strictEqual(roster.servers[0].name, 'DIA');
     assert.strictEqual(roster.servers[0].guildId, DIA);

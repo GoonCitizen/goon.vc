@@ -2,6 +2,14 @@
   "about": "The G00N SQUAD Discord goon.vc is wired to. Channel and role ids are snowflakes; names are how they read today. Alliance officers live in alliance.json. Campaign DMs send only when campaignSenders (remaeus) initiate them.",
   "guildId": "1190527980120850493",
   "campaignSenders": ["420222636954615808"],
+  "admins": [
+    {
+      "name": "remaeus",
+      "also": ["ChairmanPoW"],
+      "discord": "420222636954615808",
+      "fabric": "id1yqr9kjh0h3mxrjnrhermxnetkpgsk2zgcj9es5hlqr5ft75hv9zq6s7hsu"
+    }
+  ],
   "channels": {
     "clips": { "id": "1502724643084304424", "name": "clips" },
     "videos": { "id": "1229874610539987094", "name": "videos" },

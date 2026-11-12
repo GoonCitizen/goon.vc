@@ -25,6 +25,9 @@ const Commands = require('./commands');
 const Checkins = require('./checkins');
 const Welcome = require('./welcome');
 const Reviews = require('./reviews');
+const Admin = require('./admin');
+const { memberIsAdmin } = require('../functions/siteAdmin');
+const homeDiscord = require('../contracts/goon-squad.json');
 const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
 const RedArmy = require('./redArmy');
@@ -134,7 +137,12 @@ class GoonVC {
         '/members/login': '/sessions',
         '/idlerpg': '/services/idlerpg',
         '/idlerpg/': '/services/idlerpg',
-        '/drills/melee-rotation-drill.html': '/drills/melee-rotation'
+        '/drills/melee-rotation-drill.html': '/drills/melee-rotation',
+        '/resources/breakdown-planner.html': '/resources/breakdown-tool',
+        '/tools': '/resources',
+        '/tools/': '/resources',
+        '/tools/breakdown-planner': '/resources/breakdown-tool',
+        '/tools/breakdown-planner/': '/resources/breakdown-tool'
       },
       spaFallback: true
     }, settings);
@@ -224,6 +232,7 @@ class GoonVC {
     const site = spa.metaSite();
     const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
     const loginPath = String(spa._site('loginPath') || '/sessions').toLowerCase();
+    const adminPath = String(spa._site('adminPath') || '/admin').toLowerCase();
     const stores = [
       [() => this.presence, pageMeta.findPage(pages, spa._site('idlerpgPath'))],
       [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
@@ -267,8 +276,9 @@ class GoonVC {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache');
-        // Another site must not frame the login page and click its buttons.
-        if ((req.path.replace(/\/+$/, '') || '/').toLowerCase() === loginPath) {
+        // Another site must not frame the login page or the operator panel.
+        const framed = (req.path.replace(/\/+$/, '') || '/').toLowerCase();
+        if (framed === loginPath || framed === adminPath) {
           res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
         }
         if (req.method === 'HEAD') return res.end();
@@ -380,6 +390,7 @@ class GoonVC {
       escrowNetwork: () => (this.market ? this.market._network() : null),
       // Passport peer sessions sign members in by goon.vc's relay key.
       peerKey: () => (this.fabric ? this.fabric.fabricKey : null),
+      isAdmin: (member) => memberIsAdmin(member, homeDiscord.admins),
       discord: {
         clientId: discord.clientId,
         clientSecret: (memberSettings.resolveClientSecret || resolveDiscordClientSecret)(discord).clientSecret,
@@ -474,6 +485,7 @@ class GoonVC {
       sources: presenceSettings.sources,
       channels: presenceSettings.channels,
       announcements: presenceSettings.announcements,
+      prefix: presenceSettings.prefix,
       gateway: presenceSettings.gateway,
       operations: this.operations,
       community: this.community,
@@ -536,6 +548,15 @@ class GoonVC {
     this.reviews.on('log', (...parts) => this.emit('log', ...parts));
     this.reviews.on('error', (...parts) => this.emit('error', ...parts));
     await this.reviews.start();
+
+    this.admin = new Admin({
+      members: this.members,
+      community: this.community,
+      checkins: this.checkins,
+      welcome: this.welcome,
+      reviews: this.reviews,
+      admins: homeDiscord.admins
+    });
 
     const tournamentSettings = this.settings.tournaments || {};
     const identify = async (req) => {
@@ -739,6 +760,7 @@ class GoonVC {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
         }),
         members: this.members.middleware(),
+        admin: this.admin.middleware(),
         hangar: this.hangar ? this.hangar.middleware() : (req, res, next) => next(),
         events: this.events.middleware(),
         operations: this.operations.middleware(),

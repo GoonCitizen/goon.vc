@@ -33,6 +33,9 @@ describe('G00N SQUAD home Discord', function () {
     assert.ok(settings.clips.streams.channels.includes(home.channels.streams.id));
     assert.deepStrictEqual(home.campaignSenders, ['420222636954615808']);
     assert.deepStrictEqual(settings.community.campaigns.senders, ['420222636954615808']);
+    assert.deepStrictEqual(home.admins.map((admin) => admin.discord), ['420222636954615808']);
+    assert.deepStrictEqual(home.admins[0].also, ['ChairmanPoW']);
+    assert.strictEqual(home.admins[0].fabric, 'id1yqr9kjh0h3mxrjnrhermxnetkpgsk2zgcj9es5hlqr5ft75hv9zq6s7hsu');
     assert.strictEqual(allianceChannels.homeChannelId('embassy', home.guildId), home.channels.embassy.id);
     assert.strictEqual(allianceChannels.homeChannelId('voice', home.guildId), home.channels.voice.id);
     assert.strictEqual(allianceChannels.homeChannelId('embassy', '99'), null);

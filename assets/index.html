@@ -920,6 +920,24 @@
       .member-rename-form .goon-button { margin: 0; }
       .members-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
 
+      .admin-page { display: none; margin: 3em auto; max-width: 46em; padding: 0 1em; text-align: left; }
+      .admin-page h1 { text-align: center; }
+      .admin-page [hidden] { display: none !important; }
+      .admin-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.5em 0; padding: 1em; }
+      .admin-page h2 { font-size: 1.2em; margin-top: 0; }
+      .admin-status { min-height: 1.2em; overflow-wrap: anywhere; text-align: center; }
+      .admin-note { color: #999; }
+      .admin-page input[type="search"] { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; box-sizing: border-box; color: #fff; font: inherit; margin: 0.5em 0 1em; padding: 0.45em 0.6em; width: 100%; }
+      .admin-list, .admin-accounts { list-style: none; margin: 0; padding: 0; }
+      .admin-list > li { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.55em 0; }
+      .admin-list > li:first-child { border-top: 0; }
+      .admin-page summary { cursor: pointer; }
+      .admin-page small, .admin-meta { color: #999; }
+      .admin-accounts li { padding: 0.25em 0 0.25em 0.5em; }
+      .admin-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
+      .site-admin-link { display: block; margin-top: 0.4em; text-align: center; }
+      .site-admin-link[hidden] { display: none !important; }
+
       .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
       .events-add-bot { padding-top: 2em; text-align: center; }
       .events-add-bot p { color: #999; font-size: 0.85em; margin: 0.6em 0 0; }
@@ -1089,6 +1107,16 @@
       .gooncitizen-actions .goon-button[hidden] { display: none; }
       #idlerpg-card { border-color: #4C1D95; border-style: dashed; }
       #idlerpg-card .operation-name a { color: #c4b5fd; }
+
+      .tools-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .tools-page > h1, .tools-page > .operations-intro { text-align: center; }
+      .tool-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 1em 3em; text-align: left; background: transparent; overflow: visible; }
+      .tool-page .page-back { text-align: left; }
+      .tool-sheet {
+        --line: #5a5a5a; --ink: #eee; --mute: #aaa; --acc: #fff; --acc-ink: #222;
+        --goon: #8f1d1d; --goon-hot: #b32626;
+        background: transparent; color: #ddd; overflow: visible;
+      }
 
       .drills-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .drills-page > h1, .drills-page > .operations-intro { text-align: center; }
@@ -1460,6 +1488,45 @@
           <a class="goon-button" href="/rsi">RSI profile and hangar</a>
         </p>
         <p class="members-note"><small>Only you can see this page.</small></p>
+      </div>
+    </main>
+    <main id="admin-page" class="admin-page" data-path="/admin">
+      <h1>Admin</h1>
+      <p id="admin-status" class="admin-status" role="status"></p>
+      <section id="admin-signed-out" hidden>
+        <p>Sign in to open the operator panel.</p>
+        <p class="admin-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="admin-denied" hidden>
+        <p>This page isn’t available.</p>
+      </section>
+      <div id="admin-panel" hidden>
+        <p id="admin-you" class="admin-note"></p>
+        <section>
+          <h2>Waiting for review</h2>
+          <p id="admin-reviews-note" class="admin-note"></p>
+          <ul id="admin-reviews" class="admin-list"></ul>
+        </section>
+        <section>
+          <h2>Campaigns</h2>
+          <p id="admin-campaigns-note" class="admin-note" hidden></p>
+          <ul id="admin-campaigns" class="admin-list"></ul>
+        </section>
+        <section>
+          <h2>Check-ins</h2>
+          <p id="admin-checkins" class="admin-note"></p>
+        </section>
+        <section>
+          <h2>Welcome</h2>
+          <p id="admin-welcome" class="admin-note"></p>
+        </section>
+        <section>
+          <h2>Linked accounts</h2>
+          <p class="admin-note">Every member and the accounts linked to them.</p>
+          <input id="admin-filter" type="search" placeholder="Search name, handle, or id" aria-label="Search members">
+          <p id="admin-count" class="admin-note"></p>
+          <ul id="admin-members" class="admin-list"></ul>
+        </section>
       </div>
     </main>
     <main id="events-page" class="events-page">
@@ -1986,6 +2053,13 @@
           <div class="operation-links"><a class="goon-button" href="/drills">Open</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/breakdown-tool">Breakdown planner</a></h2>
+          <p class="operation-tagline">The cheapest shop items to break down for the materials you want to craft.</p>
+          <p class="operation-summary">Prices and recipes for the current Star Citizen build.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/breakdown-tool">Open the planner</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/tournaments">Tournaments</a></h2>
           <p class="operation-tagline">Single and double elimination brackets, best of n, with every result on record.</p>
           <p class="operation-summary">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
@@ -2091,6 +2165,379 @@
         <ol class="duel-rules" data-duel-rules></ol>
       </section>
       <p class="duel-meta">Synced from the pinned message in #1v1-challenges. Looking for a bracket instead? See <a href="/tournaments">Tournaments</a>.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="tool-page" id="tool-breakdown-tool" data-path="/resources/breakdown-tool" data-title="Breakdown planner — GOON SQUAD" data-script="/tool-scripts/breakdown-planner.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { /* ---------- themes ---------- */
+html[data-look=steel]{
+  --bg:#18212c; --panel:#212c3a; --raise:#2a3748; --line:#374657; --ink:#e8edf3; --mute:#97a5b6;
+  --acc:#e3b55a; --acc-ink:#1d1608; --ret:#7fd1c2; --lost:#eb9382; --warn:#f0cf7a; --focus:#9cc7ff;
+  --r:4px; --pill:999px; --glow:none; --num:var(--disp); --case:none; --track:0; --labsize:13px; --h1w:600;
+}
+html[data-look=bright]{
+  --bg:#f3f6fa; --panel:#ffffff; --raise:#eef2f8; --line:#d9e0ea; --ink:#121a26; --mute:#566173;
+  --acc:#2457e6; --acc-ink:#ffffff; --ret:#087a5e; --lost:#b93a25; --warn:#8a5b00; --focus:#2457e6;
+  --r:12px; --pill:999px; --shadow:0 1px 2px rgba(18,26,38,.06),0 8px 24px rgba(18,26,38,.06); --glow:none;
+  --disp:var(--body); --num:var(--body); --case:none; --track:0; --labsize:13px; --h1w:700;
+}
+.tool-sheet{
+  color-scheme:dark;
+  --bg:transparent; --panel:transparent; --raise:transparent; --line:#5a5a5a; --ink:#eee; --mute:#aaa;
+  --acc:#fff; --acc-ink:#222; --ret:#fff; --lost:#e7a8a2; --warn:#e6c98a; --focus:#fff;
+  --goon:#8f1d1d; --goon-hot:#b32626;
+  --r:10px; --pill:8px; --shadow:none; --glow:none;
+  --body:"Rajdhani",sans-serif;
+  --disp:"Bungee","Rajdhani",sans-serif;
+  --num:"Rajdhani",sans-serif;
+  --case:none; --track:.04em; --labsize:13px; --h1w:400;
+  background:transparent;
+  color:#ddd;
+  font:500 17px/1.4 "Rajdhani",sans-serif;
+  overflow:visible;
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 17px/1.4 var(--body);min-height:100vh;text-align:left}
+.tool-sheet{font-size:17px;font-weight:500;line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--acc)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:none;width:100%;margin:0 auto;padding-block:0 70px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));position:relative;overflow:visible;box-sizing:border-box}
+h1,h2,h3,p{margin:0}
+.lab{font-size:var(--labsize);text-transform:var(--case);letter-spacing:var(--track);color:var(--mute)}
+.mute{color:var(--mute)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+/* backdrops */
+html[data-look=console] body{
+  background:
+    linear-gradient(rgba(255,157,46,.04) 1px,transparent 1px) 0 0/100% 34px,
+    linear-gradient(90deg,rgba(255,157,46,.04) 1px,transparent 1px) 0 0/34px 100%,
+    radial-gradient(1100px 520px at 78% -8%,#35200a 0,transparent 62%),var(--bg);
+  background-attachment:fixed}
+.scan{display:none}
+html[data-look=console] .scan{display:block;position:fixed;inset:0;pointer-events:none;z-index:9;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);opacity:.28}
+
+/* ---------- header ---------- */
+.top{display:grid;grid-template-columns:1fr auto;gap:18px 28px;align-items:start;padding:30px 0 16px}
+h1{font:var(--h1w) clamp(32px,5.4vw,56px)/1 var(--disp);letter-spacing:-.01em;font-stretch:condensed}
+html[data-look=console] h1{text-transform:uppercase;letter-spacing:.02em;color:var(--acc);text-shadow:var(--glow)}
+h1{font-family:"Bungee",sans-serif;font-weight:400;font-size:clamp(28px,4vw,42px);letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:none}
+.lede{max-width:58ch;color:var(--mute);margin-top:10px}
+.themes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.themes button{border:1px solid var(--line);background:none;border-radius:var(--pill);padding:5px 12px;font-size:13.5px;color:var(--mute)}
+.themes button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.side{display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 22px;overflow:visible}
+.tabs button{border:0;background:none;padding:12px 18px;font:600 16px/1 var(--disp);font-stretch:condensed;color:var(--mute);
+  border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;text-transform:var(--case);letter-spacing:calc(var(--track) * .6)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc)}
+html[data-look=console] .tabs button[aria-selected=true]{color:var(--acc)}
+
+/* ---------- panels ---------- */
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin:0 0 16px;box-shadow:var(--shadow)}
+html[data-look=console] .panel{border-top:2px solid var(--acc);background:linear-gradient(180deg,rgba(255,157,46,.06),transparent 90px),var(--panel)}
+.panel::before,.panel::after{content:none}
+h2{font:600 20px/1.2 var(--disp);font-stretch:condensed;margin:0 0 12px;text-transform:var(--case);letter-spacing:calc(var(--track) * .5)}
+html[data-look=console] h2{color:var(--acc);font-size:17px;display:flex;align-items:center;gap:12px}
+html[data-look=console] h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+h2,h3{font-family:"Bungee",sans-serif;font-weight:400;color:#fff;letter-spacing:.04em;text-transform:none}
+.note{color:var(--mute);font-size:13.5px}
+.warn{color:var(--warn);font-size:13.5px}
+.none{color:var(--mute);font-style:italic}
+
+/* ---------- controls ---------- */
+.field{width:100%;background:var(--raise);border:1px solid var(--line);border-radius:var(--r);padding:13px 16px;font-size:18px}
+.field::placeholder{color:var(--mute)}
+.btn{border:1px solid var(--line);background:none;border-radius:var(--r);padding:7px 14px;font-size:14px}
+.btn:hover{background:var(--raise)}
+.btn.go{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.btn.go{background:transparent;color:#fff;border:2px solid #fff;border-radius:8px;font-family:"Bungee",sans-serif;letter-spacing:.08em;font-weight:400}
+.btn.go:hover{background:rgba(255,255,255,.1)}
+.link{background:none;border:0;padding:0;color:var(--acc);text-decoration:underline;text-underline-offset:3px;font-size:inherit}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:visible;background:transparent}
+.seg button{border:0;background:none;padding:8px 14px;color:var(--mute);font-size:14px;line-height:1.25;text-align:center;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button small{display:block;font-size:12px;opacity:.85;font-family:var(--num)}
+.seg button[aria-pressed=true]{background:var(--acc);color:var(--acc-ink);font-weight:600}
+.seg button:disabled{opacity:.42;cursor:not-allowed;text-decoration:line-through}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--raise);border-radius:calc(var(--r) * .5 + 2px);padding:2px 8px;display:inline-flex;gap:7px;align-items:baseline;font-size:13.5px;white-space:nowrap}
+button.chip:hover{border-color:var(--acc)}
+.chip b{font-variant-numeric:tabular-nums;font-weight:600}
+.chip.r b{color:var(--ret)}
+.chip.x{border-style:dashed}
+.chip.x b,.chip.x span{color:var(--lost)}
+.chip.x span{text-decoration:line-through;text-decoration-thickness:1px}
+.chip.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.pick{border:1px solid var(--line);background:none;border-radius:var(--pill);padding:4px 12px;font-size:13.5px}
+.pick:hover{background:var(--raise)}
+.pick.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---------- plan: picker ---------- */
+.ask{display:block;font:600 20px/1.2 var(--disp);font-stretch:condensed;margin-bottom:10px;text-transform:var(--case);letter-spacing:calc(var(--track) * .5)}
+.results{border:1px solid var(--line);border-top:0;background:var(--raise);max-height:340px;overflow:auto}
+.results button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:9px 16px}
+.results button:hover,.results button:focus-visible{background:var(--panel)}
+.results b{font:600 16px/1.2 var(--disp);font-stretch:condensed;display:block}
+.results span{color:var(--mute);font-size:13px}
+.chosen{display:grid;gap:8px;margin-top:14px}
+.chosen .row{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;background:var(--raise)}
+.chosen .nm{flex:1;min-width:0}
+.chosen .nm b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.chosen .nm span{color:var(--mute);font-size:13px}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r);overflow:visible}
+.qty button{border:0;background:none;width:34px;height:34px;font-size:18px;line-height:1}
+.qty button:hover{background:var(--panel)}
+.qty output{min-width:34px;text-align:center;font-family:var(--num);font-weight:600}
+.x{border:0;background:none;color:var(--mute);font-size:20px;line-height:1;padding:4px 6px}
+.x:hover{color:var(--lost)}
+.try{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:14px}
+
+/* ---------- plan: the readout (the one loud thing) ---------- */
+.total{display:grid;grid-template-columns:1fr auto;gap:18px 28px;align-items:end}
+.big{display:block;font:700 clamp(46px,9vw,92px)/.95 var(--num);letter-spacing:-.02em;color:var(--acc);text-shadow:var(--glow);margin:6px 0 8px;font-variant-numeric:tabular-nums}
+.big small{font-size:.3em;letter-spacing:.04em;color:var(--mute);text-shadow:none;margin-left:.3em;font-weight:600}
+html[data-look=steel] .big,html[data-look=bright] .big{font-family:var(--disp);font-stretch:condensed}
+html[data-look=bright] .big{color:var(--ink)}
+.big{color:#fff;font-weight:700;text-shadow:none}
+.facts{color:var(--ink);font-size:15px}
+.proof{color:var(--mute);font-size:13.5px;margin-top:4px}
+.scope{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+
+/* ---------- plan: tables ---------- */
+table{width:100%;border-collapse:collapse}
+th{font-weight:400;text-align:left;padding:0 12px 8px 0;border-bottom:1px solid var(--line)}
+td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;padding-right:0}
+.mname{font:600 17px/1.2 var(--disp);font-stretch:condensed;background:none;border:0;padding:0;color:var(--ink);text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+.mname:hover{text-decoration-color:var(--acc)}
+.stop{border:1px solid var(--line);border-radius:var(--r);margin-top:12px;overflow:visible}
+.stop>header{display:flex;gap:12px;align-items:baseline;justify-content:space-between;padding:10px 14px;background:var(--raise);flex-wrap:wrap}
+.stop>header b{font:600 18px/1.2 var(--disp);font-stretch:condensed}
+.buy{display:grid;grid-template-columns:64px 1fr auto;gap:4px 14px;padding:12px 14px;border-top:1px solid var(--line);align-items:start}
+.buy .n{font:700 24px/1 var(--num);color:var(--acc);font-variant-numeric:tabular-nums}
+.buy .nm b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.buy .cost{text-align:right;white-space:nowrap}
+.buy .cost b{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:16px;display:block}
+.buy details{grid-column:2/4;font-size:13.5px}
+.buy summary{color:var(--acc);cursor:pointer;width:fit-content}
+.buy details ul{margin:6px 0 0;padding-left:18px;color:var(--mute)}
+.places{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.places li{display:flex;gap:2px 14px;flex-wrap:wrap;align-items:baseline;break-inside:avoid}
+.places.cols{display:block;columns:2 380px;column-gap:36px}
+.places.cols li{padding:3px 0}
+.places b{font-weight:600}
+.places a{font-size:13.5px;white-space:nowrap}
+.how{margin-top:10px}
+.how h3{font:600 14px/1.3 var(--body);color:var(--mute);margin:10px 0 2px}
+.selfmat{border-top:1px solid var(--line);padding:14px 0}
+.selfmat:first-of-type{border-top:0;padding-top:0}
+.selfmat>b{font:600 18px/1.2 var(--disp);font-stretch:condensed}
+.empty{padding:40px 0;text-align:center;color:var(--mute)}
+.empty p{font-size:17px;color:var(--ink);margin-bottom:8px}
+
+/* ---------- items tab ---------- */
+.find{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.find .field{flex:1 1 300px;width:auto}
+.check{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;white-space:nowrap}
+.check input{width:18px;height:18px;accent-color:var(--acc)}
+details.filt{margin:0 0 10px}
+details.filt>summary{cursor:pointer;color:var(--acc);width:fit-content;margin-bottom:8px}
+.rack{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;margin:8px 0 6px}
+.tile{position:relative;text-align:left;border:1px solid var(--line);background:var(--panel);padding:8px 10px 7px;border-radius:calc(var(--r) * .5);min-height:54px;display:flex;flex-direction:column;justify-content:space-between;gap:5px}
+.tile.gem{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+.tile .nm{font:600 15px/1.1 var(--disp);font-stretch:condensed}
+.tile .ct{font-size:12px;line-height:1;color:var(--mute);font-variant-numeric:tabular-nums}
+.tile:hover{background:var(--raise)}
+.tile.zero{opacity:.4}
+.tile.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.tile.on .ct{color:inherit;opacity:.8}
+.facets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.facets .lab{align-self:center;margin-right:4px;min-width:42px}
+.bar{position:static;z-index:auto;background:transparent;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);margin-top:8px}
+.bar .n{font:600 20px/1 var(--disp);font-stretch:condensed}
+.bar .sp{flex:1}
+.bar select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+.it b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.sub{color:var(--mute);font-size:13px;display:block}
+td.it{width:22%} td.ty{width:12%} td.pr{width:17%} td.gb{width:21%}
+td.act .btn{white-space:nowrap}
+.price{font-family:var(--num);font-variant-numeric:tabular-nums;font-weight:600}
+.more{display:block;margin:18px auto;padding:10px 22px}
+
+/* ---------- materials tab ---------- */
+.mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start}
+#mrack{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.mhead{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin:18px 0 14px}
+.mhead h2{font-size:30px;margin:0}
+html[data-look=console] .mhead h2::after{display:none}
+.tag{border:1px solid var(--line);border-radius:var(--pill);padding:2px 10px;font-size:13px;color:var(--mute)}
+.src{list-style:none;margin:0;padding:0}
+.src li{padding:9px 0;border-bottom:1px solid var(--line)}
+.src li:last-child{border-bottom:0}
+.src b{font:600 16px/1.2 var(--disp);font-stretch:condensed;display:block}
+.src .rate{color:var(--ret);font-family:var(--num);font-variant-numeric:tabular-nums}
+
+footer{color:var(--mute);font-size:13.5px;padding:26px 0 0;max-width:86ch}
+footer h2{font-size:15px;color:var(--ink);margin:14px 0 4px}
+html[data-look=console] footer h2::after{display:none}
+footer p{margin:0 0 6px}
+footer a{color:inherit}
+
+@media (max-width:860px){
+  .top{grid-template-columns:1fr}
+  .total{grid-template-columns:1fr}
+  .scope{align-items:flex-start}
+  .mgrid{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .panel{padding:16px 14px}
+  table.cards thead{display:none}
+  table.cards,table.cards tbody,table.cards tr,table.cards td{display:block;width:auto!important}
+  table.cards tr{padding:12px 0;border-bottom:1px solid var(--line)}
+  table.cards tr:last-child{border-bottom:0}
+  table.cards td{border:0;padding:0 0 8px;text-align:left}
+  table.cards td[data-l]::before{content:attr(data-l);display:block;color:var(--mute);font-size:12.5px;margin-bottom:3px}
+  .buy{grid-template-columns:48px 1fr}
+  .buy .cost{grid-column:2;text-align:left}
+  .buy details{grid-column:2}
+  .seg{display:flex}
+  .seg button{flex:1 1 auto}
+  .rack{grid-template-columns:repeat(3,1fr)} .tile{min-height:46px;padding:6px 8px} .tile .nm{font-size:13.5px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .seg button,.pick,.tile,.btn,.tabs button{transition:background-color .12s,color .12s,border-color .12s}
+}
+
+/* Goon pages: charcoal cards, a red top edge, filled primary actions. */
+.panel,.stop{
+  background:transparent;
+  border:1px solid #4e4e4e;
+  border-top:3px solid #c81e1e;
+  border-radius:10px;
+  box-shadow:none;
+  overflow:visible;
+}
+.panel::before,.panel::after{content:none}
+h1{font-family:"Bungee",sans-serif;font-weight:400;font-size:clamp(28px,4vw,44px);letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:none}
+h2,h3{font-family:"Bungee",sans-serif;font-weight:400;color:#fff;letter-spacing:.04em}
+.tabs{border-bottom-color:#3a3a3a}
+.tabs button[aria-selected=true]{color:#fff;border-bottom:3px solid #c81e1e}
+.field,.seg,.qty,select{border-color:#666}
+.btn.go{
+  background:#8f1d1d;color:#fff;border:1px solid #b32626;border-radius:8px;
+  font-family:"Bungee",sans-serif;font-weight:400;letter-spacing:.06em;text-transform:none;
+  box-shadow:none;
+}
+.btn.go:hover{background:#b32626;filter:none}
+.big{color:#fff;text-shadow:none}
+.bar{background:transparent;border-bottom-color:#3f3f3f}
+.stop>header{background:transparent}
+.page-back{margin:0 0 12px;text-align:left}
+html[data-look=bright]{color-scheme:light}
+ }</style>
+        <div class="scan" aria-hidden="true"></div>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+    <h1>Breakdown planner</h1>
+    <p class="lede">Pick what you want to craft in Star Citizen. This finds the cheapest shop items to buy and break down for the materials. Prices and recipes are for <span data-fill="version"></span>.</p>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="true" aria-controls="tab-plan">Plan a build</button>
+  <button type="button" role="tab" id="t-items" data-tab="items" aria-selected="false" aria-controls="tab-items">All items</button>
+  <button type="button" role="tab" id="t-mats" data-tab="mats" aria-selected="false" aria-controls="tab-mats">Materials</button>
+</nav>
+
+<div class="tool-body">
+<section id="tab-plan" role="tabpanel" aria-labelledby="t-plan">
+  <div class="panel">
+    <label class="ask" for="bpq">What do you want to make?</label>
+    <input class="field" id="bpq" type="search" placeholder="Type a name, like Greatsword" autocomplete="off" spellcheck="false">
+    <div class="results" id="bpres" hidden></div>
+    <div class="chosen" id="chosen"></div>
+    <p class="try" id="try">Try one:</p>
+  </div>
+  <div id="planout"></div>
+</section>
+
+<section id="tab-items" role="tabpanel" aria-labelledby="t-items" hidden>
+  <div class="find">
+    <input class="field" id="q" type="search" placeholder="Search items, makers, materials" aria-label="Search items, makers and materials" autocomplete="off" spellcheck="false">
+    <label class="check"><input type="checkbox" id="sold"> Sold in shops only</label>
+  </div>
+  <details class="filt">
+    <summary>Filter by material</summary>
+    <div class="seg" role="group" aria-label="What the material filter looks at">
+      <button type="button" id="mRet" aria-pressed="true">Gives it back</button>
+      <button type="button" id="mInp" aria-pressed="false">Needs it to craft</button>
+    </div>
+    <div class="rack" id="rack" role="group" aria-label="Materials"></div>
+    <p class="note">Pick more than one to find items with all of them. Notched tiles are counted in pieces; the rest are measured in cSCU.</p>
+  </details>
+  <div class="facets" id="fcat"><span class="lab">Type</span></div>
+  <div class="facets" id="fcls"><span class="lab">Class</span></div>
+  <div class="bar">
+    <span class="n" id="count"></span>
+    <button type="button" class="link" id="clear" hidden>Clear filters</button>
+    <span class="sp"></span>
+    <label for="sort" class="note">Sort by</label>
+    <select id="sort">
+      <option value="name">Name</option>
+      <option value="price">Lowest price</option>
+      <option value="type">Type, then size</option>
+      <option value="qty">Most of the picked material</option>
+    </select>
+    <button type="button" class="link" id="csv">Download these rows (CSV)</button>
+  </div>
+  <p class="note" style="margin:10px 0">A material shown <span class="chip x" style="font-size:12px"><span>dashed</span></span> never comes back when you break the item down. Tap any material to see where to get it.</p>
+  <table class="cards">
+    <thead><tr><th class="lab">Item</th><th class="lab">Type</th><th class="lab">Shop price</th><th class="lab">You get back</th>
+    <th class="lab">Costs to craft</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden><p>Nothing matches those filters.</p><button type="button" class="link" id="clear2">Clear filters</button></div>
+  <button type="button" class="btn more" id="more" hidden></button>
+</section>
+
+<section id="tab-mats" role="tabpanel" aria-labelledby="t-mats" hidden>
+  <div class="rack" id="mrack" role="group" aria-label="Materials"></div>
+  <div id="mdetail"></div>
+</section>
+</div>
+
+<footer>
+  <h2>Good to know</h2>
+  <p>Breaking an item down gives back half of each material that can be recovered. Some materials never come back.</p>
+  <p>Only gear and ship parts can be broken down in a fabricator. Whole ships cannot, and neither can items bought with real money.</p>
+  <p>Materials from broken-down shop items come out at quality 500, according to the community wiki. Raw materials at trade terminals are listed at quality 0. Ship-part blueprints ask for quality 1 or better; armor and hand weapons accept 0. None of this was tested at a fabricator in game.</p>
+  <h2>Where the numbers come from</h2>
+  <p>Recipes, break-down returns and mining spots come from the game files for <span data-fill="vfull"></span>, unpacked by the Star Citizen Wiki (github.com/StarCitizenWiki/scunpacked-data). <span data-fill="nbuy"></span> of <span data-fill="nitems"></span> items are sold in shops.</p>
+  <p>Shop prices come from UEX (uexcorp.space), where players report them. They were pulled on <span data-fill="pulled"></span>; the reports date from <span data-fill="pold"></span> to <span data-fill="pnew"></span>. Prices and stock change, so check before a big shopping trip.</p>
+  <p>In the mining lists, the percentage is how often that rock shows up among rocks of the same mining type at that place.</p>
+  <p>Unofficial fan-made tool. Star Citizen is a trademark of Cloud Imperium Games.</p>
+</footer>
+</div>
+
+      </div>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -2793,6 +3240,7 @@
         var isWaiting = path.toLowerCase() === "/waiting";
         var isMembers = path.toLowerCase() === "/members";
         var isMember = path.toLowerCase().indexOf("/members/") === 0;
+        var isAdmin = path.toLowerCase() === "/admin";
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
         var isIdleRPG = path.toLowerCase() === "/services/idlerpg";
@@ -2806,6 +3254,10 @@
         var isResources = path.toLowerCase() === "/resources";
         var isGoonCitizen = path.toLowerCase() === "/resources/gooncitizen";
         var isLeaderboard = path.toLowerCase() === "/resources/1v1-leaderboard";
+        var toolEl = null;
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          if (el.getAttribute('data-path') === path.toLowerCase()) toolEl = el;
+        });
         var isDrills = path.toLowerCase() === "/drills";
         var drillEl = null;
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -2858,7 +3310,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -2869,6 +3321,8 @@
         if (membersEl) membersEl.style.display = isMembers ? 'block' : 'none';
         var memberEl = document.getElementById('member-page');
         if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
+        var adminEl = document.getElementById('admin-page');
+        if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -2888,6 +3342,18 @@
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
         var leaderboardEl = document.getElementById('leaderboard-page');
         if (leaderboardEl) leaderboardEl.style.display = isLeaderboard ? 'block' : 'none';
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          el.style.display = el === toolEl ? 'block' : 'none';
+        });
+        if (toolEl && !toolEl.getAttribute('data-script-loaded')) {
+          var toolScript = toolEl.getAttribute('data-script');
+          if (toolScript) {
+            toolEl.setAttribute('data-script-loaded', '1');
+            var toolTag = document.createElement('script');
+            toolTag.src = toolScript;
+            document.body.appendChild(toolTag);
+          }
+        }
         var drillsEl = document.getElementById('drills-page');
         if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -2936,6 +3402,7 @@
         else if (isWaiting) document.title = "Waiting area — GOON SQUAD";
         else if (isMembers) document.title = "Members — GOON SQUAD";
         else if (isMember) document.title = 'Member profile — ' + "GOON SQUAD";
+        else if (isAdmin) document.title = "Admin — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
@@ -2944,6 +3411,7 @@
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
         else if (isLeaderboard) document.title = "1v1 Leaderboard — GOON SQUAD";
+        else if (toolEl) document.title = toolEl.getAttribute('data-title');
         else if (isDrills) document.title = "DRILLS — GOON SQUAD";
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
@@ -2987,6 +3455,7 @@
         var loginPath = "/sessions";
         var waitingPath = "/waiting";
         var membersPath = "/members";
+        var adminPath = "/admin";
         var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
         var onLoginPage = path === loginPath;
 
@@ -3028,6 +3497,21 @@
         }
 
         var siteFooter = document.getElementById('site-member-footer');
+        function setAdminLink (member) {
+          var link = document.getElementById('site-admin-link');
+          if (!link && siteFooter) {
+            link = document.createElement('a');
+            link.id = 'site-admin-link';
+            link.className = 'site-admin-link';
+            link.href = adminPath;
+            link.textContent = 'Admin';
+            siteFooter.appendChild(link);
+          }
+          if (!link) return;
+          link.hidden = !(member && member.admin);
+          if (path.toLowerCase() === String(adminPath).toLowerCase()) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        }
         if (siteFooter) {
           var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
             return window.getComputedStyle(el).display !== 'none';
@@ -3071,6 +3555,7 @@
             text.appendChild(small);
             el.appendChild(text);
           });
+          setAdminLink(member);
         }
 
         window.goonMember = markMember;
@@ -3296,6 +3781,14 @@
           profileLink.textContent = 'View your profile »';
           profileLine.appendChild(profileLink);
           sessionBox.appendChild(profileLine);
+          if (member.admin) {
+            var adminLine = document.createElement('p');
+            var adminA = document.createElement('a');
+            adminA.href = adminPath;
+            adminA.textContent = 'Admin »';
+            adminLine.appendChild(adminA);
+            sessionBox.appendChild(adminLine);
+          }
           if (member.review && member.review.status !== 'approved') {
             var reviewLine = document.createElement('p');
             var reviewLink = document.createElement('a');
@@ -3368,6 +3861,7 @@
     <script src="/scripts/rsi-claim.js?v=b9b9c626c500" defer></script>
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
+    <script src="/scripts/admin.js?v=5bfa9b9b661c" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
