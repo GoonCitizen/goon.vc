@@ -934,7 +934,7 @@ describe('goon.vc HTTP', function () {
     assert.match(page.body, /<script src="\/scripts\/red-army\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const status = await fetchJson('/services/red-army');
     assert.strictEqual(status.status, 200);
-    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['RR', 'SHELLBACKS', 'MB', 'BKEX', 'RINTAK', 'SCHOMIES']);
+    assert.deepStrictEqual(status.json.organizations.map((org) => org.symbol), ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'BKEX', 'RINTAK', 'SCHOMIES']);
     assert.strictEqual(status.json.organizations[0].name, "Robert's Rejects");
     assert.deepStrictEqual(status.json.organizations[0].officers, [{ name: 'mr_meaner' }]);
     assert.deepStrictEqual(status.json.organizations[1].officers, [{ name: 'Brock_85' }]);

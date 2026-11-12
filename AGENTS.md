@@ -335,8 +335,9 @@ the goon.vc bot but are not yet PERMAFLEET members (`contracts/red-army.json`,
 federation). Named orgs list officers on record (Robert's Rejects / mr_meaner,
 SHELLBACKS / Brock_85); SHELLBACKS is the Shellback Industries org, not the
 SHELLBACK elite infantry squadron. Monkey Business is the next org joining.
-Alliance friends with PERMAFLEET Officer overlap or a mention on the G00N
-`#red-army` pin (BLACK EXODUS, Rintak, SC Homies) sit here too until they are
+House of Khans (H0K) asked in #embassy to join; membership is pending. Obsidia
+is the RSI org OBSX. Alliance friends with PERMAFLEET Officer overlap or a
+mention on the G00N `#red-army` pin (BLACK EXODUS, Rintak, SC Homies) sit here too until they are
 members. Named `servers` are Discords not tied to an RSI org (DIA is a private
 Discord). Other servers the bot is in show up live, minus the home server,
 alliance `guildId`s, and an ignore list (personal and Fabric-suite servers).

@@ -30,7 +30,7 @@ const GUILDS = [
   { id: '111111111111111111', name: 'Random Org' }
 ];
 
-const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'BKEX', 'RINTAK', 'SCHOMIES'];
+const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'BKEX', 'RINTAK', 'SCHOMIES'];
 
 describe('RED ARMY', function () {
   const roster = redArmy.parseRoster(contract);
@@ -49,9 +49,15 @@ describe('RED ARMY', function () {
     assert.ok(shellbacks.note.includes('not the SHELLBACK elite'));
     assert.strictEqual(roster.organizations[2].name, 'Monkey Business');
     assert.strictEqual(roster.organizations[2].guildId, undefined);
-    assert.strictEqual(roster.organizations[3].name, 'BLACK EXODUS');
-    assert.strictEqual(roster.organizations[4].rsi, 'RINTAK');
-    assert.strictEqual(roster.organizations[5].rsi, 'SCHOMIES');
+    assert.strictEqual(roster.organizations[3].name, 'House of Khans');
+    assert.strictEqual(roster.organizations[3].rsi, 'H0K');
+    assert.strictEqual(roster.organizations[3].guildId, undefined);
+    assert.strictEqual(roster.organizations[4].name, 'Obsidia');
+    assert.strictEqual(roster.organizations[4].rsi, 'OBSX');
+    assert.strictEqual(roster.organizations[4].guildId, undefined);
+    assert.strictEqual(roster.organizations[5].name, 'BLACK EXODUS');
+    assert.strictEqual(roster.organizations[6].rsi, 'RINTAK');
+    assert.strictEqual(roster.organizations[7].rsi, 'SCHOMIES');
     assert.strictEqual(roster.servers.length, 1);
     assert.strictEqual(roster.servers[0].name, 'DIA');
     assert.strictEqual(roster.servers[0].guildId, DIA);
@@ -70,6 +76,16 @@ describe('RED ARMY', function () {
     assert.deepStrictEqual(bySymbol.RR.discord, { linked: false });
     assert.deepStrictEqual(bySymbol.SHELLBACKS.discord, { linked: true, name: 'SC Shellback' });
     assert.deepStrictEqual(bySymbol.MB.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.H0K.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.H0K.rsi, {
+      symbol: 'H0K',
+      url: 'https://robertsspaceindustries.com/orgs/H0K'
+    });
+    assert.deepStrictEqual(bySymbol.OBSX.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.OBSX.rsi, {
+      symbol: 'OBSX',
+      url: 'https://robertsspaceindustries.com/orgs/OBSX'
+    });
     assert.deepStrictEqual(bySymbol.RR.officers, [{ name: 'mr_meaner' }]);
     assert.deepStrictEqual(bySymbol.SHELLBACKS.officers, [{ name: 'Brock_85' }]);
     assert.deepStrictEqual(bySymbol.SHELLBACKS.rsi, {
