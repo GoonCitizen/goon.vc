@@ -94,6 +94,18 @@ member, and `/members/<id>` shows a profile only to that member.
   Names show on votes, the Market, and reviews, so no one can pick another
   member's name without holding their account.
 
+## Voice clips
+`/clips listen` records talk into the public clip library. Public JSON is
+display names only (never Discord ids), but the audio itself is public.
+- **Mute Members starts and stops it.** Discord hides `/clips` from everyone
+  else (`default_member_permissions`), and the command checks the permission
+  again on listen and leave.
+- **Each speaker opts in.** The member who started listen is included. A
+  notice in that voice channel has Record me / Don’t record me; speakers who
+  join later are not mixed until they press Record me. Bots are never recorded.
+- **A missing notice fails closed.** If the bot cannot post in that channel,
+  only the listener is recorded.
+
 ## Learnings (2026-08-14)
 - Hosted GoonCitizen privacy gates live in **`star-citizen-live`**, not here.
 - Sidechain path policy in `@fabric/core`: allow-prefix `'/'` matches every

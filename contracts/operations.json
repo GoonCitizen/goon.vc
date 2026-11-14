@@ -1,5 +1,5 @@
 {
-  "about": "Operations listed on /operations, and the Discord channels each operation's metrics count. Channel matchers: a channel id, an exact name, or \"/regex/\" on the name (@fabric/discord functions/channelMatcher).",
+  "about": "Operations listed on /operations, and the Discord channels each operation's metrics count. Channel matchers: a channel id, an exact name, or \"/regex/\" on the name (@fabric/discord functions/channelMatcher). guilds: \"alliance\" expands one voice entry per unique member-org Discord in contracts/alliance.json.",
   "guildId": "1190527980120850493",
   "operations": [
     {
@@ -7,7 +7,7 @@
       "name": "PERMAFLEET",
       "path": "/operations/PERMAFLEET",
       "metrics": [
-        { "plugin": "voice", "channels": ["1236721094153732276"] }
+        { "plugin": "voice", "channels": ["/./"], "guilds": "alliance" }
       ]
     }
   ]

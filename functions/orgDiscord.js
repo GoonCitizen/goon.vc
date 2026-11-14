@@ -29,6 +29,27 @@ function indexGuilds (guilds) {
 }
 
 /**
+ * Unique member-org Discord ids, roster order. Shared servers (DOUBLEDOGZ on
+ * G00N SQUAD) appear once. Public pages may embed these for widget.json.
+ * @param {Object} roster `{ organizations: Array<{ guildId? }> }`
+ * @returns {string[]}
+ */
+function guildIds (roster) {
+  const ids = [];
+  const seen = new Set();
+  const orgs = roster && roster.organizations
+    ? roster.organizations
+    : (roster && roster.roster && roster.roster.organizations) || [];
+  for (const org of orgs) {
+    const id = parseGuildId(org && org.guildId);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+/**
  * Public Discord status for one roster org.
  * @param {Object} org `{ guildId? }`
  * @param {Array<{ id: string, name?: string }>} [guilds] Servers the bot is in.
@@ -55,4 +76,4 @@ function report (roster, guilds) {
   }));
 }
 
-module.exports = { parseGuildId, guildName, view, report };
+module.exports = { parseGuildId, guildName, guildIds, view, report };

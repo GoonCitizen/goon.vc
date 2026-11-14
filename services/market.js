@@ -1038,12 +1038,7 @@ class Market extends EventEmitter {
     if (!members || !userId) return { member: null, name: message && message.author ? displayName(null, message.author) : null };
     const user = message && message.author && String(message.author.id) === String(userId) ? message.author : { id: userId };
     const name = user.username ? displayName(null, user) : null;
-    const member = await members.memberFor(`discord:${userId}`, {
-      create: true,
-      via: 'directory',
-      profile: { username: user.username || null, globalName: user.global_name || null },
-      displayName: name
-    });
+    const member = await members.memberFor(`discord:${userId}`).catch(() => null);
     return { member, name: (member && member.displayName) || name };
   }
 

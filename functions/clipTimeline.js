@@ -17,6 +17,10 @@ function isStill (clip) {
   return Boolean(clip && clip.media === 'image');
 }
 
+function isAudio (clip) {
+  return Boolean(clip && clip.media === 'audio');
+}
+
 /**
  * Start of a clip's recording in ms, after any manual override and sync nudge.
  * @param {Object} clip `{ recording: { recordedAt }, override?: { recordedAt?, syncOffsetMs? } }`
@@ -117,6 +121,7 @@ function groupSessions (clips, opts = {}) {
       durationMs: group.endMs - group.startMs,
       clipCount: group.items.length,
       screenshotCount: group.items.filter((item) => isStill(item.clip)).length,
+      voiceCount: group.items.filter((item) => isAudio(item.clip)).length,
       authors: tracks.map((track) => track.author),
       channels: Array.from(new Set(group.items.map((item) => item.clip.channelName).filter(Boolean))),
       tracks
@@ -128,6 +133,7 @@ module.exports = {
   DEFAULT_GAP_MS,
   DEFAULT_STILL_MS,
   isStill,
+  isAudio,
   clipStartMs,
   clipDurationMs,
   assignLanes,

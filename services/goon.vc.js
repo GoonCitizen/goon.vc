@@ -25,10 +25,15 @@ const Commands = require('./commands');
 const Checkins = require('./checkins');
 const Welcome = require('./welcome');
 const Reviews = require('./reviews');
+const Admin = require('./admin');
+const { memberIsAdmin } = require('../functions/siteAdmin');
+const reviewOfficers = require('../functions/reviewOfficers');
+const homeDiscord = require('../contracts/goon-squad.json');
 const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
 const RedArmy = require('./redArmy');
 const Market = require('./market');
+const Bounties = require('./bounties');
 const Hangar = require('./hangar');
 const Schedule = require('./schedule');
 const GoonSite = require('../types/GoonSite');
@@ -134,7 +139,12 @@ class GoonVC {
         '/members/login': '/sessions',
         '/idlerpg': '/services/idlerpg',
         '/idlerpg/': '/services/idlerpg',
-        '/drills/melee-rotation-drill.html': '/drills/melee-rotation'
+        '/drills/melee-rotation-drill.html': '/drills/melee-rotation',
+        '/resources/breakdown-planner.html': '/resources/breakdown-tool',
+        '/tools': '/resources',
+        '/tools/': '/resources',
+        '/tools/breakdown-planner': '/resources/breakdown-tool',
+        '/tools/breakdown-planner/': '/resources/breakdown-tool'
       },
       spaFallback: true
     }, settings);
@@ -224,6 +234,7 @@ class GoonVC {
     const site = spa.metaSite();
     const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
     const loginPath = String(spa._site('loginPath') || '/sessions').toLowerCase();
+    const adminPath = String(spa._site('adminPath') || '/admin').toLowerCase();
     const stores = [
       [() => this.presence, pageMeta.findPage(pages, spa._site('idlerpgPath'))],
       [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
@@ -232,6 +243,7 @@ class GoonVC {
       [() => this.alliance, pageMeta.findPage(pages, spa._site('permafleetVotesPath'))],
       [() => this.alliance && { page: (pathname) => this.alliance.federationPage(pathname) }, pageMeta.findPage(pages, spa._site('federationsPath'))],
       [() => this.market, pageMeta.findPage(pages, spa._site('marketPath'))],
+      [() => this.bounties, pageMeta.findPage(pages, spa._site('bountiesPath'))],
       [() => this.members, pageMeta.findPage(pages, spa._site('membersPath'))]
     ];
     const storedPage = async (pathname) => {
@@ -267,8 +279,9 @@ class GoonVC {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache');
-        // Another site must not frame the login page and click its buttons.
-        if ((req.path.replace(/\/+$/, '') || '/').toLowerCase() === loginPath) {
+        // Another site must not frame the login page or the operator panel.
+        const framed = (req.path.replace(/\/+$/, '') || '/').toLowerCase();
+        if (framed === loginPath || framed === adminPath) {
           res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
         }
         if (req.method === 'HEAD') return res.end();
@@ -291,7 +304,7 @@ class GoonVC {
   _canonicalPathMiddleware () {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const pages = spa.pages();
-    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath', 'permafleetVotesPath', 'federationsPath', 'membersPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
+    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath', 'permafleetVotesPath', 'federationsPath', 'membersPath', 'bountiesPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
     const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
       || prefixes.some((prefix) => pathname.toLowerCase().startsWith(prefix));
     return (req, res, next) => {
@@ -380,6 +393,8 @@ class GoonVC {
       escrowNetwork: () => (this.market ? this.market._network() : null),
       // Passport peer sessions sign members in by goon.vc's relay key.
       peerKey: () => (this.fabric ? this.fabric.fabricKey : null),
+      isAdmin: (member) => memberIsAdmin(member, homeDiscord.admins),
+      needsReview: (member) => reviewOfficers.memberNeedsReview(member),
       discord: {
         clientId: discord.clientId,
         clientSecret: (memberSettings.resolveClientSecret || resolveDiscordClientSecret)(discord).clientSecret,
@@ -433,6 +448,7 @@ class GoonVC {
     this.operations = new Operations({
       path: operationSettings.path || './stores/operations',
       file: operationSettings.file ? path.resolve(operationSettings.file) : undefined,
+      allianceFile: operationSettings.allianceFile ? path.resolve(operationSettings.allianceFile) : undefined,
       discord,
       gateway: operationSettings.gateway,
       intents: intents.length ? intents : undefined,
@@ -473,6 +489,7 @@ class GoonVC {
       sources: presenceSettings.sources,
       channels: presenceSettings.channels,
       announcements: presenceSettings.announcements,
+      prefix: presenceSettings.prefix,
       gateway: presenceSettings.gateway,
       operations: this.operations,
       community: this.community,
@@ -530,11 +547,22 @@ class GoonVC {
       members: this.members,
       community: this.community,
       reviewers: reviewSettings.reviewers,
-      waitingPath: spa._site('waitingPath')
+      waitingPath: spa._site('waitingPath'),
+      officerOf: (member) => reviewOfficers.officerSymbols(member)
     });
     this.reviews.on('log', (...parts) => this.emit('log', ...parts));
     this.reviews.on('error', (...parts) => this.emit('error', ...parts));
     await this.reviews.start();
+
+    this.admin = new Admin({
+      members: this.members,
+      community: this.community,
+      checkins: this.checkins,
+      welcome: this.welcome,
+      reviews: this.reviews,
+      officerOf: (member) => reviewOfficers.officerSymbols(member),
+      admins: homeDiscord.admins
+    });
 
     const tournamentSettings = this.settings.tournaments || {};
     const identify = async (req) => {
@@ -595,6 +623,16 @@ class GoonVC {
       await this.schedule.start();
     }
 
+    const clipSettings = this.settings.clips || {};
+    this.clips = new Clips(Object.assign({}, clipSettings, {
+      path: clipSettings.path || './stores/clips',
+      discord,
+      basePath: spa._site('clipsPath'),
+      identify,
+      operations: this.operations
+    }));
+    await this.clips.start();
+
     const commandSettings = this.settings.commands || {};
     this.commands = new Commands({
       operations: commandSettings.enabled === false ? null : this.operations,
@@ -604,12 +642,15 @@ class GoonVC {
       members: this.members,
       alliance: () => this.alliance,
       market: marketOn ? () => this.market : null,
+      bounties: () => this.bounties,
       checkins: this.checkins,
       welcome: this.welcome,
       reviews: this.reviews,
       hangar: this.hangar,
       schedule: this.schedule,
+      clips: () => this.clips,
       siteUrl: spa._site('siteUrl'),
+      clipsPath: spa._site('clipsPath'),
       rsiPath: spa._site('rsiClaimPath'),
       votesPath: spa._site('permafleetVotesPath'),
       idlerpgPath: spa._site('idlerpgPath'),
@@ -633,15 +674,6 @@ class GoonVC {
       resolveToken: leaderboardSettings.resolveToken
     });
     await this.leaderboard.start();
-
-    const clipSettings = this.settings.clips || {};
-    this.clips = new Clips(Object.assign({}, clipSettings, {
-      path: clipSettings.path || './stores/clips',
-      discord,
-      basePath: spa._site('clipsPath'),
-      identify
-    }));
-    await this.clips.start();
 
     this.fabric = new FabricRelay(Object.assign({}, fabricSettings, {
       path: fabricSettings.path || './stores/fabric',
@@ -710,6 +742,24 @@ class GoonVC {
       }));
     }
 
+    const bountySettings = this.settings.bounties || {};
+    if (bountySettings.enabled !== false) {
+      this.bounties = new Bounties(Object.assign({}, bountySettings, {
+        path: bountySettings.path || './stores/bounties',
+        basePath: spa._site('bountiesPath'),
+        siteUrl: spa._site('siteUrl'),
+        network: bountySettings.network || (marketSettings && marketSettings.network) || null,
+        allowMainnet: bountySettings.allowMainnet != null ? bountySettings.allowMainnet : !!(marketSettings && marketSettings.allowMainnet),
+        arbiters: bountySettings.arbiters || (marketSettings && marketSettings.arbiters) || [],
+        hubs,
+        xprv: () => this.fabric.xprv,
+        members: this.members
+      }));
+      this.bounties.on('log', (...parts) => this.emit('log', ...parts));
+      this.bounties.on('error', (...parts) => this.emit('error', ...parts));
+      await this.bounties.start();
+    }
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -735,6 +785,7 @@ class GoonVC {
           timeoutMs: this.settings.hub && this.settings.hub.timeoutMs
         }),
         members: this.members.middleware(),
+        admin: this.admin.middleware(),
         hangar: this.hangar ? this.hangar.middleware() : (req, res, next) => next(),
         events: this.events.middleware(),
         operations: this.operations.middleware(),
@@ -750,7 +801,8 @@ class GoonVC {
         fabric: this.fabric.middleware(),
         alliance: this.alliance.middleware(),
         redArmy: this.redArmy.middleware(),
-        market: this.market ? this.market.middleware() : (req, res, next) => next()
+        market: this.market ? this.market.middleware() : (req, res, next) => next(),
+        bounties: this.bounties ? this.bounties.middleware() : (req, res, next) => next()
       }
     });
 
@@ -772,7 +824,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.market, this.redArmy, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
+    for (const service of [this.http, this.bounties, this.market, this.redArmy, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

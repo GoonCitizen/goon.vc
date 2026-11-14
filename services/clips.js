@@ -17,8 +17,9 @@ const { displayName } = require('../functions/duelLeaderboard');
 const { estimateRecordingTime } = require('../functions/clipRecordingTime');
 const { containerTimeTags, imageTimeTags } = require('../functions/mediaTimeTags');
 const { readAnnouncement, readVod, pickVod, vodFinished } = require('../functions/streamAnnouncements');
-const { groupSessions, clipStartMs, isStill, DEFAULT_GAP_MS } = require('../functions/clipTimeline');
-const { normalizeSegments, buildRenderPlan } = require('../functions/clipRenderPlan');
+const { groupSessions, clipStartMs, isStill, isAudio, DEFAULT_GAP_MS } = require('../functions/clipTimeline');
+const { normalizeSegments, buildRenderPlan, programDurationSeconds } = require('../functions/clipRenderPlan');
+const { DiscordVoiceCapture } = require('../functions/discordVoiceCapture');
 
 const BASE = '/services/clips';
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -54,6 +55,13 @@ const STREAM_DEFAULTS = {
   settleMs: 30 * 60 * 1000,
   maxSourceHeight: 720,
   maxDownloadBytes: 8 * 1024 * 1024 * 1024
+};
+const VOICE_DEFAULTS = {
+  enabled: true,
+  chunkMs: 60 * 1000,
+  silenceMs: 3 * 1000,
+  idleMs: 5 * 60 * 1000,
+  maxConcurrent: 1
 };
 
 function sendJson (res, status, body) {
@@ -226,6 +234,10 @@ class Clips {
    * @param {number} [settings.recheckAfterMs] How long before a link clip's source is checked for a better version again.
    * @param {number} [settings.rescanBatch] Clips checked per rescan pass.
    * @param {number} [settings.maxQueuedRenders] Renders waiting at once before new ones are refused.
+   * @param {Object} [settings.voice] Join-when-requested voice capture: `enabled`, `chunkMs`,
+   *   `silenceMs`, `idleMs`, `maxConcurrent` (always 1). `GOON_CLIPS_VOICE=0` turns it off.
+   * @param {Object} [settings.operations] Shared operations gateway (`@fabric/discord`); Clips
+   *   joins through `operations.discord.client`, it never logs in itself.
    * @param {Function} [settings.identify] `async (req) => string|null` — the signed-in member's display name.
    * @param {Function} [settings.log] `(message) => void` progress while polling and building proxies.
    * @param {Function} [settings.run] `(command, args, { onStdout }) => Promise<{ code, stdout, stderr }>`, injected for tests.
@@ -279,10 +291,14 @@ class Clips {
       ytdlpPath: 'yt-dlp',
       identify: null,
       log: null,
+      operations: null,
       now: () => Date.now()
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.settings.streams = Object.assign({}, STREAM_DEFAULTS,
       Object.fromEntries(Object.entries(settings.streams || {}).filter(([, value]) => value !== undefined)));
+    this.settings.voice = Object.assign({}, VOICE_DEFAULTS,
+      Object.fromEntries(Object.entries(settings.voice || {}).filter(([, value]) => value !== undefined)));
+    this.settings.voice.maxConcurrent = 1;
     this._resolveToken = this.settings.resolveToken || resolveDiscordToken;
     this.root = path.resolve(this.settings.path);
     this.dirs = {
@@ -303,6 +319,15 @@ class Clips {
     this._lastBackgroundAt = 0;
     this._usageCache = null;
     this._stopped = false;
+    this._capture = null;
+    this._consentMessage = null;
+    this._voiceDiscord = null;
+    this._onGateway = (discord) => this._attachVoice(discord);
+    this._onVoiceEvent = (event) => this._handleVoiceEvent(event);
+  }
+
+  get voiceEnabled () {
+    return this.settings.voice && this.settings.voice.enabled !== false;
   }
 
   async start () {
@@ -346,6 +371,11 @@ class Clips {
         this._rescanTimer.unref();
       }
     }
+    const operations = this.settings.operations;
+    if (this.voiceEnabled && operations) {
+      if (operations.discord) this._attachVoice(operations.discord);
+      else if (typeof operations.on === 'function') operations.on('gateway', this._onGateway);
+    }
     return this;
   }
 
@@ -355,6 +385,10 @@ class Clips {
     if (this._rescanTimer) clearInterval(this._rescanTimer);
     this._timer = null;
     this._rescanTimer = null;
+    await this.leaveVoice({ silent: true }).catch(() => {});
+    this._detachVoice();
+    const operations = this.settings.operations;
+    if (operations && typeof operations.removeListener === 'function') operations.removeListener('gateway', this._onGateway);
     if (this._refreshing) await this._refreshing.catch(() => {});
     if (this._processing) await this._processing.catch(() => {});
     if (this._rescanning) await this._rescanning.catch(() => {});
@@ -362,6 +396,335 @@ class Clips {
     await this._queue.catch(() => {});
     if (this.store) await this.store.stop();
     return this;
+  }
+
+  _voiceClient () {
+    if (this._voiceDiscord && this._voiceDiscord.client) return this._voiceDiscord.client;
+    const operations = this.settings.operations;
+    return operations && operations.discord && operations.discord.client ? operations.discord.client : null;
+  }
+
+  _attachVoice (discord) {
+    if (!discord || this._voiceDiscord === discord) return;
+    this._detachVoice();
+    this._voiceDiscord = discord;
+    if (typeof discord.on === 'function') discord.on('voice', this._onVoiceEvent);
+  }
+
+  _detachVoice () {
+    if (this._voiceDiscord && typeof this._voiceDiscord.removeListener === 'function') {
+      this._voiceDiscord.removeListener('voice', this._onVoiceEvent);
+    }
+    this._voiceDiscord = null;
+  }
+
+  _handleVoiceEvent (event) {
+    if (!this._capture || !this._capture.connected) return;
+    if (event && event.guildId && event.guildId !== this._capture.guildId) return;
+    this._capture.setOccupancy(this._voiceOccupancy(this._capture.guildId, this._capture.channelId));
+  }
+
+  _voiceOccupancy (guildId, channelId) {
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && client.guilds.cache.get(guildId);
+    const channel = guild && guild.channels && guild.channels.cache && guild.channels.cache.get(channelId);
+    if (!channel || !channel.members || typeof channel.members.filter !== 'function') return 0;
+    return channel.members.filter((member) => !(member.user && member.user.bot)).size;
+  }
+
+  _voiceName (guildId, userId) {
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && client.guilds.cache.get(guildId);
+    const member = guild && guild.members && guild.members.cache && guild.members.cache.get(userId);
+    if (member) return displayName(member, member.user) || 'Unknown pilot';
+    const user = client && client.users && client.users.cache && client.users.cache.get(userId);
+    return displayName(null, user) || 'Unknown pilot';
+  }
+
+  _voiceIsBot (userId) {
+    const client = this._voiceClient();
+    const user = client && client.users && client.users.cache && client.users.cache.get(userId);
+    return Boolean(user && user.bot);
+  }
+
+  _canConnect (guildId, channelId) {
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && client.guilds.cache.get(guildId);
+    const channel = guild && guild.channels && guild.channels.cache && guild.channels.cache.get(channelId);
+    const me = guild && guild.members && guild.members.me;
+    if (!channel || !me || typeof channel.permissionsFor !== 'function') return true;
+    try {
+      return Boolean(channel.permissionsFor(me).has('Connect'));
+    } catch (_) {
+      return true;
+    }
+  }
+
+  _makeCapture () {
+    const make = this.settings.createCapture || ((opts) => new DiscordVoiceCapture(opts));
+    const discord = this._voiceDiscord;
+    return make({
+      chunkMs: this.settings.voice.chunkMs,
+      silenceMs: this.settings.voice.silenceMs,
+      idleMs: this.settings.voice.idleMs,
+      now: () => this.settings.now(),
+      join: this.settings.voiceJoin || (discord && typeof discord.joinVoiceReceive === 'function'
+        ? (input) => discord.joinVoiceReceive(input)
+        : undefined),
+      subscribe: this.settings.voiceSubscribe || (discord && typeof discord.subscribeVoiceReceive === 'function'
+        ? (connection, userId) => discord.subscribeVoiceReceive(connection, userId)
+        : undefined),
+      leave: this.settings.voiceLeave || (discord && typeof discord.leaveVoiceReceive === 'function'
+        ? (connection) => discord.leaveVoiceReceive(connection)
+        : undefined),
+      nameOf: (userId) => this._voiceName(this._capture && this._capture.guildId, userId),
+      isBot: (userId) => this._voiceIsBot(userId),
+      onChunk: (chunk) => this._ingestVoiceChunk(chunk),
+      onIdle: () => this.leaveVoice({ reason: 'idle' })
+    });
+  }
+
+  voiceStatus () {
+    const capture = this._capture;
+    if (!capture || !capture.connected) {
+      return { listening: false, channel: null };
+    }
+    return { listening: true, channel: capture.channelName || null };
+  }
+
+  /**
+   * Join the caller's voice channel and record talk. One channel at a time.
+   * Does not rejoin after a restart. Only speakers who opt in are mixed;
+   * `by` (the member who started listen) is opted in.
+   * @param {Object} input `{ guildId, channelId, channelName?, by? }`
+   */
+  async listen (input = {}) {
+    if (!this.voiceEnabled) throw fail(409, 'Voice capture is turned off.');
+    if (this._capture && this._capture.connected) {
+      throw fail(409, `Already listening in #${this._capture.channelName || 'voice'}.`);
+    }
+    const guildId = String(input.guildId || '');
+    const channelId = String(input.channelId || '');
+    const channelName = text(input.channelName, LIMITS.name) || null;
+    const by = input.by ? String(input.by) : '';
+    if (!guildId || !channelId) throw fail(400, 'Join a voice channel first, then run `/clips listen`.');
+    const client = this._voiceClient();
+    if (!client && !this.settings.voiceJoin && !this.settings.createCapture) {
+      throw fail(503, 'The Discord bot is not connected.');
+    }
+    if (!this._canConnect(guildId, channelId)) {
+      throw fail(403, `I can’t connect to #${channelName || 'that channel'}. Grant Connect and try again.`);
+    }
+    const guild = client && client.guilds && client.guilds.cache && client.guilds.cache.get(guildId);
+    this._capture = this._makeCapture();
+    await this._capture.join({
+      client,
+      guildId,
+      channelId,
+      channelName,
+      adapterCreator: guild && guild.voiceAdapterCreator,
+      allowed: by ? [by] : []
+    });
+    this._capture.setOccupancy(this._voiceOccupancy(guildId, channelId));
+    const notice = await this._announceConsent();
+    this._log(`listening in #${channelName || channelId}`);
+    return Object.assign(this.voiceStatus(), { notice });
+  }
+
+  /**
+   * Stop recording and leave. Open chunks flush to the library.
+   * @param {Object} [opts]
+   */
+  async leaveVoice (opts = {}) {
+    if (!this._capture || !this._capture.connected) {
+      this._capture = null;
+      return { listening: false, channel: null, stopped: false };
+    }
+    const capture = this._capture;
+    this._capture = null;
+    const status = await capture.leave();
+    await this._closeConsentNotice();
+    if (!opts.silent && status && status.channel) this._log(`left #${status.channel}${opts.reason === 'idle' ? ' (empty)' : ''}`);
+    return { listening: false, channel: null, stopped: true };
+  }
+
+  /**
+   * Include or drop a speaker while listening. Bots are never recorded.
+   * @param {string} userId
+   * @param {boolean} yes
+   * @returns {{ listening: boolean, included: boolean }}
+   */
+  consent (userId, yes) {
+    if (!this._capture || !this._capture.connected) return { listening: false, included: false };
+    if (this._voiceIsBot(userId)) return { listening: true, included: false };
+    return { listening: true, included: this._capture.consent(userId, yes) };
+  }
+
+  async _announceConsent () {
+    const capture = this._capture;
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && capture && client.guilds.cache.get(capture.guildId);
+    const channel = guild && guild.channels && guild.channels.cache && guild.channels.cache.get(capture.channelId);
+    if (!channel || typeof channel.send !== 'function') return false;
+    try {
+      this._consentMessage = await channel.send({
+        content: 'Recording this channel for the clip library. Talk is published with your display name. Press **Record me** to be included — people who join later must press it too.',
+        allowedMentions: { parse: [] },
+        components: [{
+          type: 1,
+          components: [
+            { type: 2, style: 3, label: 'Record me', custom_id: 'clips:consent:1' },
+            { type: 2, style: 2, label: 'Don’t record me', custom_id: 'clips:consent:0' }
+          ]
+        }]
+      });
+      return true;
+    } catch (error) {
+      this._consentMessage = null;
+      this._log(`could not post the recording notice: ${error && error.message ? error.message : error}`);
+      return false;
+    }
+  }
+
+  async _closeConsentNotice () {
+    const message = this._consentMessage;
+    this._consentMessage = null;
+    if (!message || typeof message.edit !== 'function') return;
+    try {
+      await message.edit({ content: 'Recording stopped.', components: [] });
+    } catch (_) { /* the notice is best-effort */ }
+  }
+
+  /**
+   * @param {Object} chunk `{ pcm, startedAt, durationMs, speakers, guildId, channelId, channelName }`
+   * @private
+   */
+  async _ingestVoiceChunk (chunk) {
+    if (!chunk || !chunk.pcm || !chunk.pcm.length) return null;
+    const bytes = chunk.pcm.length + 2 * 1024 * 1024;
+    if (!(await this._roomForVoice(bytes))) {
+      this._log('voice chunk skipped: disk floor');
+      return null;
+    }
+    const started = new Date(chunk.startedAt || this.settings.now()).toISOString();
+    const names = (chunk.speakers || []).map((row) => text(row && row.name, LIMITS.name) || 'Unknown pilot');
+    const unique = Array.from(new Set(names));
+    const channelName = text(chunk.channelName, LIMITS.name) || null;
+    const author = unique.length === 1 ? unique[0] : (channelName || 'Voice');
+    const id = `v${Date.now().toString(36)}${crypto.randomBytes(3).toString('hex')}`;
+    const work = path.join(this.dirs.tmp, `${id}-${crypto.randomBytes(3).toString('hex')}`);
+    await fsp.mkdir(work, { recursive: true });
+    try {
+      const encoded = await this._encodeVoice(chunk.pcm, work);
+      await fsp.rename(encoded.m4a, this._mediaPath(id, 'm4a'));
+      await fsp.rename(encoded.thumbs, this._mediaPath(id, 'jpg'));
+      const masterName = `${id}.m4a`;
+      let master = null;
+      if (this.settings.keepMasters && await this._hasMasterRoom()) {
+        await fsp.copyFile(this._mediaPath(id, 'm4a'), path.join(this.dirs.masters, masterName));
+        master = { file: masterName, width: 0, height: 0, bytes: (await fsp.stat(path.join(this.dirs.masters, masterName))).size };
+      }
+      const durationMs = Number(chunk.durationMs) || Math.max(1, Math.round((chunk.pcm.length / 192000) * 1000));
+      const clip = {
+        id,
+        kind: 'voice',
+        media: 'audio',
+        guildId: chunk.guildId || null,
+        guildName: this._voiceGuildName(chunk.guildId),
+        channelId: chunk.channelId || null,
+        channelName,
+        threadName: null,
+        messageId: null,
+        messageUrl: null,
+        authorId: null,
+        author,
+        speakerIds: (chunk.speakers || []).map((row) => String(row.id || '')).filter(Boolean),
+        speakers: unique.map((name) => ({ name })),
+        caption: unique.length ? unique.join(', ') : (channelName ? `#${channelName}` : 'Voice'),
+        filename: `${channelName || 'voice'}-${started.slice(0, 19).replace(/[:T]/g, '')}.m4a`,
+        postedAt: started,
+        durationMs,
+        width: 320,
+        height: 68,
+        hasAudio: true,
+        codec: 'aac',
+        creationTime: started,
+        recording: {
+          recordedAt: started,
+          source: 'discord-voice',
+          zone: 'UTC',
+          confidence: 'high',
+          field: null
+        },
+        override: null,
+        master,
+        proxy: {
+          status: 'ready',
+          attempts: 1,
+          error: null,
+          width: 320,
+          height: 68,
+          thumbs: { every: Math.max(0.1, durationMs / 1000), count: 1, columns: 1, rows: 1, width: 320, height: 68 }
+        },
+        indexedAt: this._iso(),
+        log: [{ at: this._iso(), type: 'voice' }]
+      };
+      await this._exclusive(async () => {
+        await this.store.set(`/clips/${id}`, clip);
+        await this._append('clips', id);
+      });
+      this._log(`voice clip ${id} (${Math.round(durationMs / 1000)}s, ${author})`);
+      return clip;
+    } catch (error) {
+      this._log(`voice chunk failed: ${error && error.message ? error.message : error}`);
+      return null;
+    } finally {
+      await fsp.rm(work, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+
+  _voiceGuildName (guildId) {
+    const client = this._voiceClient();
+    const guild = client && client.guilds && client.guilds.cache && client.guilds.cache.get(guildId);
+    return (guild && guild.name) || null;
+  }
+
+  async _hasMasterRoom () {
+    return this._roomForMasters();
+  }
+
+  async _roomForVoice (extra) {
+    try {
+      const disk = await this._disk();
+      if (disk.free == null) return true;
+      if (disk.free < this._freeTarget(disk) + (Number(extra) || 0)) return false;
+      if (this.settings.maxBytes) {
+        const used = (await this.usage()).used;
+        if (used + (Number(extra) || 0) > this.settings.maxBytes) return false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  async _encodeVoice (pcm, work) {
+    const raw = path.join(work, 'voice.s16le');
+    const m4a = path.join(work, 'voice.m4a');
+    const thumbs = path.join(work, 'thumbs.jpg');
+    await fsp.writeFile(raw, pcm);
+    await this._run(this.settings.ffmpegPath, [
+      '-y', '-hide_banner', '-nostdin',
+      '-f', 's16le', '-ar', '48000', '-ac', '2', '-i', raw,
+      '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart',
+      m4a
+    ]);
+    await this._run(this.settings.ffmpegPath, [
+      '-y', '-hide_banner', '-nostdin', '-i', m4a,
+      '-filter_complex', 'showwavespic=s=320x68:colors=#88c0d0',
+      '-frames:v', '1', '-q:v', '5', thumbs
+    ]);
+    return { m4a, thumbs };
   }
 
   _iso () {
@@ -1231,6 +1594,20 @@ class Clips {
     return Boolean(file && fs.existsSync(file));
   }
 
+  /**
+   * Local original for a render: a stored master, or the voice AAC on disk.
+   * @param {Object} clip
+   * @returns {string|null}
+   */
+  _clipSourcePath (clip) {
+    if (this._hasMaster(clip)) return this._masterPath(clip);
+    if (isAudio(clip)) {
+      const file = this._mediaPath(clip.id, 'm4a');
+      if (fs.existsSync(file)) return file;
+    }
+    return null;
+  }
+
   async _roomForMasters () {
     if (!this.settings.minFreeBytes && !this.settings.maxBytes) return true;
     try {
@@ -1482,6 +1859,7 @@ class Clips {
       .sort((a, b) => String(a.postedAt || '').localeCompare(String(b.postedAt || '')));
     let changed = 0;
     for (const clip of clips) {
+      if (clip.kind === 'voice' || (clip.recording && clip.recording.source === 'discord-voice')) continue;
       const recording = await this._dateRecording(clip, {
         timeTags: clip.timeTags,
         creationTime: clip.creationTime,
@@ -1755,11 +2133,16 @@ class Clips {
     const start = clipStartMs(clip);
     const ready = clip.proxy && clip.proxy.status === 'ready';
     const still = isStill(clip);
+    const audio = isAudio(clip);
+    const speakers = Array.isArray(clip.speakers)
+      ? clip.speakers.map((row) => ({ name: text(row && row.name, LIMITS.name) || 'Unknown pilot' }))
+      : null;
     return {
       id: clip.id,
       kind: clip.kind,
-      media: still ? 'image' : 'video',
+      media: still ? 'image' : (audio ? 'audio' : 'video'),
       author: clip.author,
+      speakers,
       guild: clip.guildName,
       channel: clip.channelName,
       thread: clip.threadName || null,
@@ -1772,7 +2155,7 @@ class Clips {
       durationMs: still ? this._stillMs() : clip.durationMs,
       width: clip.width,
       height: clip.height,
-      hasAudio: clip.hasAudio,
+      hasAudio: audio ? true : clip.hasAudio,
       master: this._hasMaster(clip) ? { width: clip.master.width, height: clip.master.height } : null,
       recordedAt: Number.isFinite(start) ? new Date(start).toISOString() : null,
       recording: clip.recording,
@@ -1830,8 +2213,10 @@ class Clips {
         failed: count('failed'),
         linksOnly: count('skipped'),
         screenshots: clips.filter(isStill).length,
+        voice: clips.filter(isAudio).length,
         vods: clips.filter((clip) => clip.stream).length,
         streams,
+        listening: this.voiceStatus(),
         disk: {
           used: disk.used,
           free: disk.free,
@@ -1924,7 +2309,7 @@ class Clips {
       sessionId: project.sessionId || null,
       revision: project.revision,
       segments: project.segments.length,
-      durationMs: Math.round(project.segments.reduce((sum, s) => sum + (s.out - s.in), 0) * 1000),
+      durationMs: Math.round(programDurationSeconds(project.segments) * 1000),
       createdAt: project.createdAt,
       createdBy: project.createdBy || null,
       updatedAt: project.updatedAt,
@@ -1971,10 +2356,43 @@ class Clips {
    * @param {Object} input `{ name, sessionId?, notes?, segments? }`
    * @param {string} [by]
    */
+  async _voiceOverlaysForSession (sessionId) {
+    const sessions = await this.sessions();
+    const session = sessions.find((entry) => entry.id === sessionId);
+    if (!session) return [];
+    const start = Date.parse(session.startsAt);
+    const overlays = [];
+    for (const clip of session.clips || []) {
+      if (!isAudio(clip) || !clip.proxyUrl || !(clip.durationMs > 0)) continue;
+      const at = Math.max(0, (Date.parse(clip.recordedAt) - start) / 1000);
+      overlays.push({
+        clipId: clip.id,
+        in: 0,
+        out: clip.durationMs / 1000,
+        audio: 'on',
+        volume: 1,
+        at
+      });
+    }
+    return overlays;
+  }
+
+  /**
+   * @param {Object} input `{ name, sessionId?, notes?, segments? }`
+   * @param {string} [by]
+   */
   async createProject (input = {}, by) {
     const name = text(input.name, LIMITS.name);
     if (name.length < 2) throw fail(400, 'A project needs a name.');
-    const segments = await this._segments(input.segments);
+    let raw = Array.isArray(input.segments) ? input.segments.slice() : [];
+    if (input.sessionId) {
+      const overlays = await this._voiceOverlaysForSession(input.sessionId);
+      const seen = new Set(raw.map((segment) => segment && segment.clipId).filter(Boolean));
+      for (const overlay of overlays) {
+        if (!seen.has(overlay.clipId)) raw.push(overlay);
+      }
+    }
+    const segments = await this._segments(raw);
     return this._exclusive(async () => {
       let id;
       do { id = crypto.randomBytes(5).toString('hex'); } while (await this.store.get(`/projects/${id}`));
@@ -2139,7 +2557,7 @@ class Clips {
         createdBy: by || null,
         startedAt: null,
         completedAt: null,
-        durationMs: Math.round(project.segments.reduce((sum, s) => sum + (s.out - s.in), 0) * 1000),
+        durationMs: Math.round(programDurationSeconds(project.segments) * 1000),
         bytes: null,
         error: null
       };
@@ -2179,11 +2597,11 @@ class Clips {
         if (!clip) throw new Error(`Clip ${clipId} is gone`);
         clips.push(clip);
       }
-      const remote = clips.filter((clip) => !this._hasMaster(clip));
+      const remote = clips.filter((clip) => !this._clipSourcePath(clip));
       const urls = remote.length ? await this._freshUrls(remote, this._token()) : new Map();
       const byId = {};
       for (const clip of clips) {
-        const file = this._hasMaster(clip) ? this._masterPath(clip) : await this._fetchOriginal(clip, urls.get(clip.id), path.join(work, clip.id));
+        const file = this._clipSourcePath(clip) || await this._fetchOriginal(clip, urls.get(clip.id), path.join(work, clip.id));
         byId[clip.id] = Object.assign({}, clip, { path: file });
       }
       const srtPath = this.settings.renderCredits ? path.join(work, 'sources.srt') : undefined;
@@ -2325,9 +2743,9 @@ class Clips {
     if (parts.length === 2 && read && (second === 'proxy' || second === 'thumbs')) {
       if (!clip.proxy || clip.proxy.status !== 'ready') throw fail(404, 'This clip has no proxy yet.');
       if (second === 'thumbs') return { file: this._mediaPath(clip.id, 'jpg'), type: 'image/jpeg' };
-      return isStill(clip)
-        ? { file: this._mediaPath(clip.id, 'preview.jpg'), type: 'image/jpeg' }
-        : { file: this._mediaPath(clip.id, 'mp4'), type: 'video/mp4' };
+      if (isStill(clip)) return { file: this._mediaPath(clip.id, 'preview.jpg'), type: 'image/jpeg' };
+      if (isAudio(clip)) return { file: this._mediaPath(clip.id, 'm4a'), type: 'audio/mp4' };
+      return { file: this._mediaPath(clip.id, 'mp4'), type: 'video/mp4' };
     }
     throw fail(parts.length > 2 ? 404 : 405, parts.length > 2 ? 'Not found' : 'Method not allowed');
   }

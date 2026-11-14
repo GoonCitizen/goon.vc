@@ -33,7 +33,7 @@
         "type": "choice",
         "options": [
           { "id": "none", "label": "No, PERMAFLEET will be my first" },
-          { "id": "alliance", "label": "Yes, a PERMAFLEET member org", "description": "G00N, INFN, TRDE, LCRP, Doubledog, 4M, A.I.M.O.S." },
+          { "id": "alliance", "label": "Yes, a PERMAFLEET member org", "description": "G00N, INFN, TRDE, LCRP, Doubledog, 4M, Risky Business" },
           { "id": "other", "label": "Yes, a different org" }
         ]
       },

@@ -15,6 +15,7 @@ const DIA = '1230782172944924722';
 const FABRIC = '498359331692085259';
 const NEORION = '814644536297914429';
 const TRDE = '937681528790609970';
+const AIMOS = '1439226629867044976';
 const MR_MEANER = 'discord:503419731286556703';
 const BROCK = 'discord:171376528838361088';
 
@@ -25,10 +26,11 @@ const GUILDS = [
   { id: HOME, name: 'G00N SQUAD' },
   { id: DIA, name: 'DIA' },
   { id: TRDE, name: 'Trans-Galactic' },
+  { id: AIMOS, name: 'A.I.M.O.S.' },
   { id: '111111111111111111', name: 'Random Org' }
 ];
 
-const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'BKEX', 'RINTAK', 'SCHOMIES'];
+const ORG_SYMBOLS = ['RR', 'SHELLBACKS', 'MB', 'H0K', 'OBSX', 'RINTAK', 'SCHOMIES'];
 
 describe('RED ARMY', function () {
   const roster = redArmy.parseRoster(contract);
@@ -47,15 +49,22 @@ describe('RED ARMY', function () {
     assert.ok(shellbacks.note.includes('not the SHELLBACK elite'));
     assert.strictEqual(roster.organizations[2].name, 'Monkey Business');
     assert.strictEqual(roster.organizations[2].guildId, undefined);
-    assert.strictEqual(roster.organizations[3].name, 'BLACK EXODUS');
-    assert.strictEqual(roster.organizations[4].rsi, 'RINTAK');
-    assert.strictEqual(roster.organizations[5].rsi, 'SCHOMIES');
+    assert.strictEqual(roster.organizations[3].name, 'House of Khans');
+    assert.strictEqual(roster.organizations[3].rsi, 'H0K');
+    assert.strictEqual(roster.organizations[3].guildId, undefined);
+    assert.strictEqual(roster.organizations[4].name, 'Obsidia');
+    assert.strictEqual(roster.organizations[4].rsi, 'OBSX');
+    assert.strictEqual(roster.organizations[4].guildId, undefined);
+    assert.strictEqual(roster.organizations[5].rsi, 'RINTAK');
+    assert.strictEqual(roster.organizations[6].rsi, 'SCHOMIES');
+    assert.ok(!roster.organizations.some((org) => org.symbol === 'BKEX'));
     assert.strictEqual(roster.servers.length, 1);
     assert.strictEqual(roster.servers[0].name, 'DIA');
     assert.strictEqual(roster.servers[0].guildId, DIA);
     assert.ok(roster.servers[0].note.includes('not linked to an RSI org'));
     assert.ok(!roster.organizations.some((org) => org.symbol === 'DIA' || /diabolica/i.test(org.name)));
     assert.ok(!alliance.organizations.some((org) => ORG_SYMBOLS.includes(org.symbol) || org.symbol === 'DIA'));
+    assert.ok(roster.ignore.includes(AIMOS), 'AIMOS Discord stays ignored after eviction');
   });
 
   it('is linked only when the bot is in that org’s own server', function () {
@@ -67,6 +76,16 @@ describe('RED ARMY', function () {
     assert.deepStrictEqual(bySymbol.RR.discord, { linked: false });
     assert.deepStrictEqual(bySymbol.SHELLBACKS.discord, { linked: true, name: 'SC Shellback' });
     assert.deepStrictEqual(bySymbol.MB.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.H0K.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.H0K.rsi, {
+      symbol: 'H0K',
+      url: 'https://robertsspaceindustries.com/orgs/H0K'
+    });
+    assert.deepStrictEqual(bySymbol.OBSX.discord, { linked: false });
+    assert.deepStrictEqual(bySymbol.OBSX.rsi, {
+      symbol: 'OBSX',
+      url: 'https://robertsspaceindustries.com/orgs/OBSX'
+    });
     assert.deepStrictEqual(bySymbol.RR.officers, [{ name: 'mr_meaner' }]);
     assert.deepStrictEqual(bySymbol.SHELLBACKS.officers, [{ name: 'Brock_85' }]);
     assert.deepStrictEqual(bySymbol.SHELLBACKS.rsi, {
@@ -87,6 +106,7 @@ describe('RED ARMY', function () {
     assert.ok(!names.includes('Trans-Galactic'));
     assert.ok(!names.includes('fabric'));
     assert.ok(!names.includes("Neorion's server"));
+    assert.ok(!names.includes('A.I.M.O.S.'), 'evicted AIMOS Discord is ignored, not RED ARMY');
     const body = JSON.stringify(listed);
     assert.ok(!body.includes(HOME) && !body.includes(SHELLBACKS) && !body.includes(DIA));
     assert.ok(!body.includes(FABRIC) && !body.includes(NEORION) && !body.includes(TRDE));

@@ -21,7 +21,6 @@ const MEMBERS = [
   { symbol: 'LCRP', displayName: 'Legacy Corporation' },
   { symbol: 'DOUBLEDOGZ', displayName: 'DoubleDog Delivery, Inc.' },
   { symbol: '4MCONTRACT', displayName: '4M Contractors' },
-  { symbol: 'AIMOS', displayName: 'A.I.M.O.S.' },
   { symbol: 'IDBC', displayName: 'Risky Business' }
 ];
 

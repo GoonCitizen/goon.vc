@@ -291,7 +291,7 @@ describe('Discord application commands', function () {
         subject: GUILD
       }
     }]);
-    assert.strictEqual((await members.getMember(`discord:${KERSA.id}`)).displayName, 'Kersa | PF');
+    assert.strictEqual(await members.getMember(`discord:${KERSA.id}`), null, 'setup does not link a profile');
   });
 
   it('/goon setup refuses members who cannot manage the server, and explains closed DMs', async function () {
@@ -354,12 +354,12 @@ describe('Discord application commands', function () {
     it('DMs a reviewer everyone waiting, and refuses everyone else', async function () {
       const reviews = new FakeReviews();
       const commands = new Commands({ members, reviews, register: false });
-      assert.strictEqual(await run(commands), 'Check your DMs: 2 sign-ins are waiting for review.');
+      assert.strictEqual(await run(commands), 'Check your DMs: 2 officer sign-ins are waiting for review.');
       assert.deepStrictEqual(reviews.begun, [{ id: KERSA.id, name: 'Kersa' }]);
       reviews.pending = 1;
-      assert.strictEqual(await run(commands), 'Check your DMs: 1 sign-in is waiting for review.');
+      assert.strictEqual(await run(commands), 'Check your DMs: 1 officer sign-in is waiting for review.');
       reviews.pending = 0;
-      assert.strictEqual(await run(commands), 'Nobody is waiting for review right now.');
+      assert.strictEqual(await run(commands), 'No officers are waiting for review right now.');
       assert.strictEqual(await run(commands, RATGROT), 'Only goon.vc’s sign-in reviewers can review sign-ins.');
       assert.strictEqual(reviews.begun.length, 3, 'the last call never reached it');
 
@@ -463,6 +463,24 @@ describe('Discord application commands', function () {
       const next = await run(commands, { strings: { message: 'Again' } });
       assert.ok(/^This server sent a campaign recently; the next one can go out <t:\d+:R>\.$/.test(next.replies[0].content), next.replies[0].content);
       assert.strictEqual(campaigns.list().length, 1, 'no draft is saved while the server is cooling down');
+    });
+
+    it('tells the author when Discord will not list members, instead of a generic error', async function () {
+      const commands = new Commands({ members, community, register: false, now: () => clock });
+      const call = await run(commands, { strings: { message: 'Hangar night' }, roles: { role: PILOTS } });
+      const [send] = buttons(call.replies[0]);
+      const original = campaigns.schedule.bind(campaigns);
+      campaigns.schedule = async () => {
+        throw Object.assign(new Error('Could not list the members of G00N SQUAD. Try again in a little while.'), { status: 429 });
+      };
+      try {
+        const sent = await press(commands, send.custom_id);
+        const text = sent.followUps[0].content;
+        assert.match(text, /Could not list the members of G00N SQUAD/);
+        assert.ok(!/Something went wrong/.test(text));
+      } finally {
+        campaigns.schedule = original;
+      }
     });
 
     it('refuses a Send button from an older preview of the same campaign', async function () {
@@ -796,8 +814,7 @@ describe('Discord application commands', function () {
     ]);
     assert.ok(!card.flags);
     assert.strictEqual((await leagues.getLeague(Leagues.OPEN_LEAGUE_ID)).duels.length, 0, 'nothing counts before the opponent confirms');
-    const caller = await members.getMember(`discord:${KERSA.id}`);
-    assert.deepStrictEqual([caller.displayName, caller.accounts[0].profile.username, caller.accounts[0].via, caller.lastLoginAt], ['Kersa | PF', 'kersa', 'command', null]);
+    assert.strictEqual(await members.getMember(`discord:${KERSA.id}`), null, 'proposing a duel does not link a profile');
     assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null);
 
     clock += 60 * 60 * 1000;
@@ -818,7 +835,7 @@ describe('Discord application commands', function () {
       ['Kersa | PF', 'Rat', [2, 1], 'Kersa | PF', 'Rat', new Date(START).toISOString(), new Date(clock).toISOString()]
     );
     assert.ok(!JSON.stringify(league).includes(KERSA.id) && !JSON.stringify(league).includes('discord:'), 'no Discord ids or member links in public');
-    assert.strictEqual((await members.getMember(`discord:${RATGROT.id}`)).displayName, 'Rat');
+    assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null, 'confirming a duel does not link a profile');
 
     const again = await press(commands, RATGROT, 'confirm', id);
     assert.ok(again.content.startsWith('**Kersa \\| PF** beat **Rat** 2–1'), 'a settled card just shows its outcome');
@@ -856,6 +873,7 @@ describe('Discord application commands', function () {
     assert.strictEqual((await leagues.store.get(`/league/${Leagues.OPEN_LEAGUE_ID}`)).players[0].member, rat.id, 'pre-account links move to the member');
 
     const commands = new Commands({ leagues, members, register: false });
+    await members.memberFor(`discord:${KERSA.id}`, { create: true, via: 'oauth', displayName: 'Kersa | PF', profile: { username: 'kersa' } });
     const { id } = await report(commands, KERSA, { winner: KERSA, loser: RATGROT, names: { [KERSA.id]: 'Kersa | PF', [RATGROT.id]: 'Rat' } });
     assert.ok((await press(commands, RATGROT, 'confirm', id)).content.startsWith('**Kersa \\| PF** beat **Old Rat**'));
 
@@ -918,7 +936,7 @@ describe('Discord application commands', function () {
     const outside = interaction({ name: '1v1', user: KERSA, users: { winner: KERSA, loser: RATGROT }, strings: { score: '1-0' }, guildId: null });
     await commands.handle(outside);
     assert.strictEqual(outside.replies[0].content, 'Use this in a server.');
-    assert.strictEqual((await members.getMember(`discord:${REF.id}`)).displayName, 'Referee', 'running a command creates the caller’s profile');
+    assert.strictEqual(await members.getMember(`discord:${REF.id}`), null, 'running a command does not create a profile');
     assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null, 'naming someone does not');
   });
 
@@ -984,20 +1002,8 @@ describe('Discord application commands', function () {
       const reply = call.replies[0];
       assert.strictEqual(reply.flags, 64);
       assert.deepStrictEqual(reply.allowedMentions, { parse: [] });
-      assert.ok(reply.content.startsWith('Recorded your **yes** on **Adopt the charter**.'), reply.content);
-      assert.ok(reply.content.includes('Members: 1 yes, 0 no, 0 abstain (advisory).'), reply.content);
-      assert.ok(reply.content.includes('Orgs: 0 of 2 yes needed'), reply.content);
-      assert.ok(reply.content.includes(`(<https://goon.vc/operations/PERMAFLEET/votes/${proposal.shortId}>)`), reply.content);
-      assert.ok(!reply.content.includes(RATGROT.id));
-      assert.strictEqual((await members.getMember(`discord:${RATGROT.id}`)).displayName, 'Rat', 'the voter gets a goon.vc profile');
-
-      const again = interaction({ name: 'vote', user: RATGROT, strings: { proposal: proposal.shortId, choice: 'no' } });
-      await commands.handle(again);
-      assert.ok(again.replies[0].content.includes('Members: 0 yes, 1 no, 0 abstain'), again.replies[0].content);
-      assert.ok(!again.replies[0].content.includes('as an officer'));
-      const view = await alliance.getProposal(proposal.id);
-      assert.deepStrictEqual(view.members, { yes: 0, no: 1, abstain: 0, total: 1 });
-      assert.strictEqual(view.tally.yes + view.tally.no, 0, 'member votes do not count as org votes');
+      assert.ok(reply.content.startsWith('Sign in on goon.vc before you vote.'), reply.content);
+      assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null, 'voting does not create a profile');
     });
 
     it('signs for the org when an officer on record votes, and counts their member vote', async function () {
@@ -1039,11 +1045,7 @@ describe('Discord application commands', function () {
     const call = interaction({ name: 'idlerpg', subcommand: 'stats', user: KERSA, member: { displayName: 'Kersa | PF' } });
     await commands.handle(call);
     assert.strictEqual(call.replies[0].content, 'IdleRPG is not running right now.');
-    const member = await members.getMember(`discord:${KERSA.id}`);
-    assert.deepStrictEqual([member.accounts[0].key, member.displayName, member.accounts[0].profile.username, member.lastLoginAt], [`discord:${KERSA.id}`, 'Kersa | PF', 'kersa', null]);
-    await members.store.set(`/members/${member.id}`, Object.assign({}, member, { displayName: 'Kersa' }));
-    await commands.handle(interaction({ name: 'idlerpg', subcommand: 'leaderboard', user: KERSA, member: { displayName: 'K' } }));
-    assert.strictEqual((await members.getMember(`discord:${KERSA.id}`)).displayName, 'Kersa', 'an existing display name is kept');
+    assert.strictEqual(await members.getMember(`discord:${KERSA.id}`), null, 'checking IdleRPG does not link a profile');
   });
 
   it('/idlerpg shows profiles, the leaderboard, and stats without member ids', async function () {
@@ -1111,7 +1113,8 @@ describe('Discord application commands', function () {
       for (const option of definition.options) assert.ok(option.description.length <= 100);
     });
 
-    it('lists, finds, and edits from a DM, linking the caller', async function () {
+    it('lists, finds, and edits from a DM for someone who has signed in', async function () {
+      await members.memberFor(`discord:${KERSA.id}`, { create: true, via: 'oauth', displayName: 'Kersa', profile: { username: 'kersa' } });
       const sell = interaction({
         name: 'market',
         subcommand: 'sell',
@@ -1133,7 +1136,7 @@ describe('Discord application commands', function () {
       assert.strictEqual(listing.insurance, 'LTI');
       assert.strictEqual(listing.priceSats, 1250000);
       const kersa = await members.getMember(`discord:${KERSA.id}`);
-      assert.ok(kersa, 'running /market creates the caller’s profile');
+      assert.strictEqual(kersa.accounts[0].via, 'oauth', 'selling does not create a profile');
 
       const search = interaction({ name: 'market', subcommand: 'search', user: RATGROT, guildId: null, strings: { query: 'carrack' } });
       await commands.handle(search);
@@ -1147,6 +1150,7 @@ describe('Discord application commands', function () {
       await commands.handle(own);
       assert.deepStrictEqual(own.replies[0], [{ name: 'Carrack Expedition — 0.0125 BTC (Available)', value: listing.id }]);
 
+      await members.memberFor(`discord:${RATGROT.id}`, { create: true, via: 'oauth', displayName: 'Rat', profile: { username: 'ratgrot' } });
       const refused = interaction({ name: 'market', subcommand: 'edit', user: RATGROT, guildId: null, strings: { listing: listing.id, price: '1 BTC' } });
       await commands.handle(refused);
       assert.strictEqual(refused.replies[0].content, 'Only the seller can change this listing.');
@@ -1163,7 +1167,7 @@ describe('Discord application commands', function () {
     });
 
     it('answers Buy with escrow on a forum post with where to open the order', async function () {
-      const kersa = await members.linkDiscord(KERSA, 'Kersa');
+      const kersa = await members.memberFor(`discord:${KERSA.id}`, { create: true, via: 'oauth', displayName: 'Kersa', profile: { username: 'kersa' } });
       const listing = await market.create({ title: 'Idris-P', price: '0.02 BTC' }, kersa);
       const button = `market:buy:${listing.id}`;
 
@@ -1172,8 +1176,9 @@ describe('Discord application commands', function () {
       assert.strictEqual(discordOnly.replies[0].flags, undefined, 'deferred privately, then edited');
       assert.deepStrictEqual(discordOnly.deferredWith, { flags: 64 });
       assert.ok(discordOnly.replies[0].content.includes('Escrow needs your escrow key'), discordOnly.replies[0].content);
+      assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null, 'buying does not link a profile');
 
-      const rat = await members.getMember(`discord:${RATGROT.id}`);
+      const rat = await members.memberFor(`discord:${RATGROT.id}`, { create: true, via: 'oauth', displayName: 'Rat', profile: { username: 'ratgrot' } });
       const identity = `fabric:${new Key().pubkey.slice(2)}`;
       await members.link(rat.id, identity, { via: 'passport' });
       const identityOnly = interaction({ user: RATGROT, customId: button, guildId: null });
@@ -1331,7 +1336,7 @@ describe('Discord application commands', function () {
         return call.replies[0].content;
       };
       assert.match(await status(), /^Nothing synced yet\. Claim your RSI handle with `\/rsi claim`/);
-      const member = await members.getMember(`discord:${KERSA.id}`);
+      const member = await members.linkDiscord(KERSA, 'Kersa');
       await members.link(member.id, 'rsi:Kersa', { via: 'bio' });
       assert.match(await status(), /^Nothing synced yet\. Run `\/hangar guide`/);
       await hangar.importExport(member.id, exportFor('Kersa'));
@@ -1342,6 +1347,166 @@ describe('Discord application commands', function () {
       const off = interaction({ name: 'hangar', subcommand: 'status', user: KERSA });
       await new Commands({ members, register: false }).handle(off);
       assert.strictEqual(off.replies[0].content, 'Hangar sync is not running right now.');
+    });
+  });
+
+  describe('/clips', function () {
+    const MUTE = 1n << 22n;
+    class FakeClips {
+      constructor () {
+        this.voiceEnabled = true;
+        this.channel = null;
+        this.by = null;
+        this.included = new Set();
+      }
+
+      async listen (input) {
+        if (!input.channelId) {
+          const error = new Error('Join a voice channel first, then run `/clips listen`.');
+          error.status = 400;
+          throw error;
+        }
+        if (this.channel) {
+          const error = new Error(`Already listening in #${this.channel}.`);
+          error.status = 409;
+          throw error;
+        }
+        this.channel = input.channelName || 'voice';
+        this.by = input.by || null;
+        if (this.by) this.included.add(this.by);
+        return { listening: true, channel: this.channel, notice: true };
+      }
+
+      async leaveVoice () {
+        if (!this.channel) return { listening: false, channel: null, stopped: false };
+        this.channel = null;
+        this.included = new Set();
+        return { listening: false, channel: null, stopped: true };
+      }
+
+      consent (userId, yes) {
+        if (!this.channel) return { listening: false, included: false };
+        if (yes) this.included.add(String(userId));
+        else this.included.delete(String(userId));
+        return { listening: true, included: yes };
+      }
+    }
+
+    const voiceCall = (opts = {}) => interaction(Object.assign({
+      name: 'clips',
+      user: KERSA,
+      permissions: MUTE,
+      member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+    }, opts));
+
+    it('is registered only while clips voice is on, servers only', function () {
+      assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'clips'));
+      const commands = new Commands({ clips: () => new FakeClips(), register: false });
+      const definition = commands.definitions.find((entry) => entry.name === 'clips');
+      assert.ok(definition);
+      assert.deepStrictEqual(definition.contexts, [0]);
+      assert.strictEqual(definition.default_member_permissions, String(MUTE));
+      assert.deepStrictEqual(definition.options.map((option) => option.name), ['listen', 'leave']);
+    });
+
+    it('joins the caller’s voice channel, refuses when they are not in one, and leaves', async function () {
+      const clips = new FakeClips();
+      const commands = new Commands({ clips: () => clips, siteUrl: 'https://goon.vc', register: false });
+      const missing = voiceCall({ subcommand: 'listen', member: { displayName: 'Kersa' } });
+      await commands.handle(missing);
+      assert.ok(missing.deferred);
+      assert.strictEqual(missing.replies[0].content, 'Join a voice channel first, then run `/clips listen`.');
+
+      const listen = voiceCall({ subcommand: 'listen' });
+      await commands.handle(listen);
+      assert.ok(listen.replies[0].content.includes('Listening in #PERMAFLEET'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('not Go Live'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('Record me'), listen.replies[0].content);
+      assert.ok(listen.replies[0].content.includes('<https://goon.vc/clips>'), listen.replies[0].content);
+      assert.ok(!listen.replies[0].content.includes(VOICE), 'no channel id');
+      assert.strictEqual(clips.channel, 'PERMAFLEET');
+      assert.strictEqual(clips.by, KERSA.id);
+
+      const twice = voiceCall({ subcommand: 'listen' });
+      await commands.handle(twice);
+      assert.ok(twice.replies[0].content.includes('Already listening in #PERMAFLEET'), twice.replies[0].content);
+
+      const leave = voiceCall({ subcommand: 'leave', member: { displayName: 'Kersa' } });
+      await commands.handle(leave);
+      assert.ok(leave.replies[0].content.includes('Left the voice channel'), leave.replies[0].content);
+      const idle = voiceCall({ subcommand: 'leave', member: { displayName: 'Kersa' } });
+      await commands.handle(idle);
+      assert.strictEqual(idle.replies[0].content, 'I was not listening.');
+    });
+
+    it('refuses listen and leave without Mute Members, and records others only after they opt in', async function () {
+      const clips = new FakeClips();
+      const commands = new Commands({ clips: () => clips, siteUrl: 'https://goon.vc', register: false });
+      const refused = interaction({
+        name: 'clips',
+        subcommand: 'listen',
+        user: KERSA,
+        permissions: 0n,
+        member: { displayName: 'Kersa', voice: { channelId: VOICE, channel: { id: VOICE, name: 'PERMAFLEET' } } }
+      });
+      await commands.handle(refused);
+      assert.strictEqual(refused.replies[0].content, 'You need the Mute Members permission to record a voice channel.');
+      assert.strictEqual(clips.channel, null);
+
+      await commands.handle(voiceCall({ subcommand: 'listen' }));
+      const guest = interaction({ user: RATGROT, customId: 'clips:consent:1' });
+      await commands.handle(guest);
+      assert.ok(guest.replies[0].content.includes('You’re included'), guest.replies[0].content);
+      assert.ok(clips.included.has(RATGROT.id));
+      const stop = interaction({ user: RATGROT, customId: 'clips:consent:0' });
+      await commands.handle(stop);
+      assert.ok(stop.replies[0].content.includes('You won’t be recorded'), stop.replies[0].content);
+      assert.ok(!clips.included.has(RATGROT.id));
+    });
+
+    it('posts and lists bounties without Discord ids', async function () {
+      const posted = [];
+      const bounties = {
+        base: '/bounties',
+        list () {
+          return [{ id: 'abc123', title: 'Paint the Idris', reward: '0.001 BTC', status: 'open', path: '/bounties/abc123', posterName: 'Poster' }];
+        },
+        async create (input, member) {
+          posted.push({ input, memberId: member.id });
+          return { id: 'abc123', title: input.title, reward: '0.001 BTC', path: '/bounties/abc123' };
+        }
+      };
+      const commands = new Commands({ members, bounties: () => bounties, siteUrl: 'https://goon.vc', register: false });
+      await members.memberFor(`discord:${KERSA.id}`, { create: true, via: 'oauth', displayName: 'Kersa', profile: { username: 'kersa' } });
+      assert.ok(commands.definitions.some((definition) => definition.name === 'bounty'));
+      assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'bounty'));
+      const post = interaction({ name: 'bounty', subcommand: 'post', user: KERSA, strings: { title: 'Paint the Idris', reward: '0.001 BTC', details: 'Two coats.' } });
+      await commands.handle(post);
+      assert.strictEqual(posted.length, 1);
+      assert.strictEqual(posted[0].input.reward, '0.001 BTC');
+      assert.ok(post.replies[0].content.includes('<https://goon.vc/bounties/abc123>'), post.replies[0].content);
+      assert.ok(!post.replies[0].content.includes(KERSA.id));
+      const list = interaction({ name: 'bounty', subcommand: 'list', user: RATGROT, strings: { query: 'idris' } });
+      await commands.handle(list);
+      assert.ok(list.replies[0].content.includes('[open](<https://goon.vc/bounties/abc123>)'), list.replies[0].content);
+      assert.ok(!list.replies[0].content.includes(RATGROT.id));
+      const help = interaction({ name: 'help', user: KERSA, strings: { command: 'bounty' } });
+      await commands.handle(help);
+      assert.ok(help.replies[0].content.includes('/bounty post'), help.replies[0].content);
+      assert.ok(help.replies[0].content.includes('<https://goon.vc/bounties>'), help.replies[0].content);
+    });
+
+    it('/help lists listen and leave while clips voice is on', async function () {
+      const commands = new Commands({ clips: () => new FakeClips(), siteUrl: 'https://goon.vc', register: false });
+      const call = interaction({ name: 'help', user: KERSA, strings: { command: 'clips' } });
+      await commands.handle(call);
+      const text = call.replies[0].content;
+      assert.ok(text.includes('`/clips listen`'), text);
+      assert.ok(text.includes('`/clips leave`'), text);
+      assert.ok(text.includes('Needs Mute Members.'), text);
+      assert.ok(text.includes('not Go Live video'), text);
+      assert.ok(text.includes('<https://goon.vc/clips>'), text);
+      assert.ok(!text.includes(VOICE), text);
     });
   });
 });
