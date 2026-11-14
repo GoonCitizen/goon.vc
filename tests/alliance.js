@@ -772,6 +772,31 @@ describe('Alliance service', function () {
       assert.ok(!json.includes('Alice') && !json.includes('Bob'), 'no member names');
     });
 
+    it('names a member vote with the org that lists that account as an officer', async function () {
+      const doubledog = {
+        id: 'dddd000000000001',
+        displayName: 'DoubleDogDelivery',
+        accounts: [{ key: 'discord:1300310404538437664' }]
+      };
+      const people = {
+        currentMember: async (req) => (req.member ? { member: req.member, via: null } : null),
+        resolve: async (key) => (key === doubledog.id || doubledog.accounts.some((account) => account.key === key) ? doubledog : null)
+      };
+      const json = roster();
+      json.organizations.find((org) => org.symbol === 'DOUBLEDOGZ').officers = ['discord:1300310404538437664'];
+      await open(json, { members: people });
+      const proposal = (await propose('G00N', 'Name the org')).body;
+      const view = await service.memberVote(proposal.id, { account: 'discord:1300310404538437664', member: doubledog.id, choice: 'no' });
+      const row = view.memberVotes.find((vote) => vote.name === 'DoubleDogDelivery');
+      assert.ok(row, 'the officer is named on the member vote');
+      assert.deepStrictEqual(row.orgs.map((org) => org.symbol), ['DOUBLEDOGZ']);
+      const org = view.organizations.find((entry) => entry.symbol === 'DOUBLEDOGZ');
+      assert.deepStrictEqual(org.advisors, [{ name: 'DoubleDogDelivery', choice: 'no', castAt: row.castAt }]);
+      assert.strictEqual(org.choice, null, 'a member vote still does not cast the org’s vote');
+      const body = JSON.stringify(view);
+      assert.ok(!body.includes('discord:1300310404538437664') && !body.includes(doubledog.id));
+    });
+
     it('signs with one stable key per account, attested once by the Bridge', async function () {
       const first = await service.memberVote(made.id, { account: 'discord:200000000000000001', member: alice.id, choice: 'yes' });
       const signer = first.memberVotes[0].signer;

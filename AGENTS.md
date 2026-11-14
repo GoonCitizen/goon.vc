@@ -207,7 +207,7 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
 remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
-ADSVOLCANO. **Only officers vote for an org**;
+ADSVOLCANO. DOUBLEDOGZ's officer on record is DoubleDogDelivery. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with
@@ -298,7 +298,8 @@ The latest vote per member counts, across their linked accounts and merges;
 votes are taken only while the proposal is open (409), and an older `castAt`
 from the same member is refused (409). Proposal JSON adds `members { yes, no,
 abstain, total }`, the counted `memberVotes` frames (choice, time, platform,
-account pubkey — no names, member ids, or account ids), `bridge`, and
+account pubkey — no member ids or account ids; an officer on record is also
+named with their org, as `advisors` on that org), `bridge`, and
 `you.memberVote`; summaries add `members`.
 `/federations` (`components/Federations.js`,
 `federationsPath` in `GoonSPA`) lists every alliance federation and every org
@@ -603,12 +604,10 @@ same gateway client (interactions need no intents) and registered globally for
 servers only when it is ready (`/market` also installs on a member's own account
 and runs in DMs and group DMs). The application is shared (today "sensemaker"),
 so only these names are upserted, never `set()`, and unchanged ones are skipped.
-Everyone who runs one in a server (except `/help`) gets a goon.vc member profile: the command
-links their Discord (`Members#linkDiscord`: the same member Discord login
-signs in to, found by the `discord:<id>` account; not a login, and an existing
-display name is kept),
-even when the command is then refused. A button press links only on Confirm
-(and on Buy with escrow under a Market post).
+A command does not create a profile or link an account. Discord is linked when
+that person finishes Discord sign-in, and a Fabric key when they finish
+Passport sign-in. `/vote` from someone who has not signed in asks them to sign
+in, except an officer on record, who can still sign for their org.
 `/idlerpg profile [pilot]` | `leaderboard` | `stats` reply from `Presence`
 (`discordPlayer`, `players`, `report`): public numbers and display names, with
 links to the player pages. `/1v1 winner loser score [league] [note]` is run by
@@ -1175,9 +1174,9 @@ sign-in inside an existing session: signed in, the login page's buttons become
 OAuth state; `POST /services/members/passport { fabric, link: true }` for
 Passport); a login while signed out never links. Each Fabric key is proven by
 its own signature; device clusters are not imported (accounts linked
-`via: cluster` by earlier versions stay until unlinked). Running a Discord
-command links `via: command`; a `@handle` typed into a duel makes a placeholder
-member `via: directory`. Linking an account another member already holds
+`via: cluster` by earlier versions stay until unlinked). A Discord command,
+a Market mirror, or a `@handle` typed into a duel does not create a member.
+Linking an account another member already holds
 **merges** them: the older member survives with its name and avatar, accounts
 and logs combine, the other id becomes an alias (`mergedInto`), and `merged
 { from, into }` is emitted. Members saved before accounts

@@ -128,10 +128,25 @@ function publicMember (member, via, review, admin) {
     displayName: member.displayName || null,
     avatarUrl: member.avatarUrl || null,
     inGuild: member.inGuild === true,
-    platforms: Array.from(new Set((member.accounts || []).map((account) => account.platform))),
+    platforms: Array.from(new Set(linkedAccounts(member).map((account) => account.platform))),
     createdAt: member.createdAt,
     lastLoginAt: member.lastLoginAt || null
   }, review === undefined ? {} : { review }, admin ? { admin: true } : {});
+}
+
+/** A login the person finished: Discord OAuth, Passport, or an RSI bio claim. */
+function provenLink (account, member) {
+  if (!account) return false;
+  if (account.via === 'oauth' || account.via === 'passport' || account.via === 'bio') return true;
+  return !!(member && member.lastLoginAt && account.via === 'command' && account.platform === 'discord');
+}
+
+function linkedAccounts (member) {
+  return ((member && member.accounts) || []).filter((account) => provenLink(account, member));
+}
+
+function signedInMember (member) {
+  return !!(member && (member.lastLoginAt || linkedAccounts(member).length));
 }
 
 function accountView (account) {
@@ -457,6 +472,12 @@ class Members extends EventEmitter {
       } else if (existing.via === 'cluster' && opts.from) {
         existing.from = opts.from;
       }
+      // A command or a typed @handle is not a login. Discord, Passport, or an
+      // RSI claim replaces that placeholder once the person actually signs in.
+      if ((existing.via === 'command' || existing.via === 'directory') && (via === 'oauth' || via === 'passport' || via === 'bio')) {
+        existing.via = via;
+        existing.linkedAt = now;
+      }
       if (JSON.stringify(existing) === before) return member;
     } else {
       const account = Object.assign({
@@ -551,10 +572,9 @@ class Members extends EventEmitter {
   }
 
   /**
-   * The goon.vc member for a Discord account, created on first sight — by a
-   * Discord command, say — as the same member Discord login signs in to.
-   * Not a login: sessions and `lastLoginAt` are untouched, and a display name
-   * already on the profile is kept.
+   * The goon.vc member for a Discord account, created only when a caller
+   * still asks for one. Discord commands do not call this: a profile is
+   * linked when the person finishes Discord or Passport sign-in.
    * @param {{ id: string, username?: string, globalName?: string }} user Discord user.
    * @param {string} [displayName] Name to start a new profile with.
    * @returns {Promise<Object>} the member
@@ -1361,7 +1381,7 @@ class Members extends EventEmitter {
   async _accounts (req, res) {
     const current = await this.currentMember(req);
     if (!current) return sendJson(res, 401, { error: 'Not signed in' });
-    return sendJson(res, 200, { ok: true, accounts: current.member.accounts.map(accountView) });
+    return sendJson(res, 200, { ok: true, accounts: linkedAccounts(current.member).map(accountView) });
   }
 
   async _unlink (req, res, key) {
@@ -1392,7 +1412,7 @@ class Members extends EventEmitter {
       path: this.profilePath(member.id),
       displayName: member.displayName || null,
       avatarUrl: member.avatarUrl || null,
-      platforms: Array.from(new Set((member.accounts || []).map((account) => account.platform))),
+      platforms: Array.from(new Set(linkedAccounts(member).map((account) => account.platform))),
       createdAt: member.createdAt
     };
   }
@@ -1402,7 +1422,7 @@ class Members extends EventEmitter {
       self,
       inGuild: member.inGuild === true,
       lastLoginAt: member.lastLoginAt || null,
-      accounts: (member.accounts || []).map((account) => profileAccountView(account, self)),
+      accounts: linkedAccounts(member).map((account) => profileAccountView(account, self)),
       rsiHandles: Members.rsiHandles(member)
     }, self ? { nameChoices: nameChoices(member) } : {}, self && this.reviewsEnabled ? { review: this._reviewView(member) } : {});
   }
@@ -1645,3 +1665,5 @@ class Members extends EventEmitter {
 module.exports = Members;
 module.exports.parseCookies = parseCookies;
 module.exports.publicMember = publicMember;
+module.exports.linkedAccounts = linkedAccounts;
+module.exports.signedInMember = signedInMember;

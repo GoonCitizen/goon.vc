@@ -11,6 +11,7 @@
 const home = require('../contracts/goon-squad.json');
 const rsiCitizen = require('../functions/rsiCitizen');
 const { memberIsAdmin, fabricIdentityId } = require('../functions/siteAdmin');
+const { linkedAccounts, signedInMember } = require('./members');
 
 const PATH = '/services/admin';
 const MEMBER_ID_RE = /^[0-9a-f]{16}$/;
@@ -55,7 +56,7 @@ function memberView (member) {
     createdAt: member.createdAt || null,
     lastLoginAt: member.lastLoginAt || null,
     review,
-    accounts: (member.accounts || []).map(accountView)
+    accounts: linkedAccounts(member).map(accountView)
   };
 }
 
@@ -180,6 +181,7 @@ class Admin {
   async snapshot () {
     const records = this.members && this.members.store ? await listMemberRecords(this.members.store) : [];
     const members = records
+      .filter((member) => signedInMember(member))
       .map((member) => memberView(member))
       .sort((a, b) => String(a.displayName || '').localeCompare(String(b.displayName || '')) || a.id.localeCompare(b.id));
 

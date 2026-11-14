@@ -742,10 +742,11 @@ class Commands {
       // `/rsi` and `/hangar` also run in the bot's DMs.
       else if (command === 'market' || marketButton || command === 'rsi' || command === 'hangar') {
         if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
-        const member = await this._linkMember(interaction.user, displayName(interaction.member, interaction.user));
-        if (command === 'rsi') out = await this.rsi(member);
-        else if (command === 'hangar') out = await this.hangar(interaction, member);
-        else out = marketButton ? await this.marketBuy(marketButton[1], member) : await this.market(interaction, member);
+        const signed = await this._signedInMember(interaction.user);
+        const known = signed || await this._knownMember(interaction.user);
+        if (command === 'rsi') out = await this.rsi(known || await this._claimMember(interaction));
+        else if (command === 'hangar') out = await this.hangar(interaction, known);
+        else out = marketButton ? await this.marketBuy(marketButton[1], signed) : await this.market(interaction, signed);
       } else if (!interaction.guildId) out = this._private('Use this in a server.');
       else if (button) out = await this.answer(interaction, button[1], button[2]);
       else if (campaignButton || switchButton) {
@@ -760,7 +761,8 @@ class Commands {
         // Setup reads permissions from Discord and sends a DM, and a campaign
         // preview lists the server's members: both can outlast the 3 s reply window.
         if (command === 'goon' && typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
-        const member = await this._link(interaction.user, displayName(interaction.member, interaction.user));
+        const member = await this._signedInMember(interaction.user);
+        const memberId = await this._actorId(interaction.user);
         if (command === 'idlerpg') out = await this.idlerpg(interaction);
         else if (command === 'goon') {
           const subcommand = this._subcommand(interaction);
@@ -775,7 +777,7 @@ class Commands {
           if (typeof interaction.deferReply === 'function' && !interaction.deferred) await interaction.deferReply({ flags: EPHEMERAL });
           out = await this.bounty(interaction, member);
         }
-        else out = await this.duel(interaction, member);
+        else out = await this.duel(interaction, memberId);
       }
     } catch (error) {
       const where = command || (schedButton || schedVote ? 'schedule' : campaignButton ? 'goon campaign card' : switchButton ? `goon ${switchButton[1]} card` : marketButton ? 'market buy button' : '1v1 card');
@@ -1306,6 +1308,7 @@ class Commands {
       return this._private('The walkthrough is not running right now. Export your hangar with the Hangar Export browser extension, then run `/hangar import` with the .json file.');
     }
     const handles = rsiHandles(member);
+    const holder = member || (handles.length ? null : await this._claimMember(interaction));
     try {
       await community.beginScript(HANGAR_SCRIPT, {
         user: `discord/users/${interaction.user.id}`,
@@ -1319,8 +1322,8 @@ class Commands {
       throw error;
     }
     const text = 'Check your DMs: I’ve sent the first step of exporting your hangar.';
-    if (handles.length) return this._private(text);
-    return this._claimReply(member, `${text}\nYou’ll also need to claim your RSI handle before the import: open this link.`);
+    if (handles.length || !holder) return this._private(text);
+    return this._claimReply(holder, `${text}\nYou’ll also need to claim your RSI handle before the import: open this link.`);
   }
 
   async hangarImport (interaction, member) {
@@ -1342,6 +1345,8 @@ class Commands {
       return this._private('I couldn’t download that file from Discord. Try again in a moment.');
     }
     if (text.length > HANGAR_FILE_BYTES) return this._private('That file is over 5 MB; a Hangar Export file is much smaller.');
+    const holder = member || await this._claimMember(interaction);
+    if (!holder) return this._private('Sign in on goon.vc first.');
     let data;
     try {
       data = JSON.parse(text);
@@ -1349,14 +1354,14 @@ class Commands {
       return this._private('I couldn’t read that file as JSON. Attach the .json file exactly as Hangar Export saved it.');
     }
     try {
-      const result = await this.settings.hangar.importExport(member.id, data);
+      const result = await this.settings.hangar.importExport(holder.id, data);
       return this._private([
         `Synced ${plural(result.ships, 'ship')} (${plural(result.models, 'model')}) for **${escapeMarkdown(result.handle)}**.`,
         `Only fleet totals are public: <${this._url(this.settings.rsiPath)}>. Run \`/hangar import\` again with a newer export whenever your hangar changes.`
       ].join('\n'));
     } catch (error) {
       if (error && error.code === 'UNCLAIMED') {
-        return this._claimReply(member, error.handle
+        return this._claimReply(holder, error.handle
           ? `That export is for **${escapeMarkdown(error.handle)}**, which you haven’t claimed on goon.vc. Claim it, then run \`/hangar import\` again.`
           : 'Claim your RSI handle on goon.vc first, then run `/hangar import` again.');
       }
@@ -1365,6 +1370,7 @@ class Commands {
   }
 
   async hangarStatus (member) {
+    if (!member) return this._private('Nothing synced yet. Claim your RSI handle with `/rsi claim`, then run `/hangar guide`.');
     const status = await this.settings.hangar.status(member.id);
     if (!status) {
       return this._private(rsiHandles(member).length
@@ -1434,20 +1440,38 @@ class Commands {
   }
 
   /**
-   * The goon.vc member for a Discord user, linked on the members Store when
-   * there is one. Everyone who runs a command gets a profile this way.
-   * @returns {Promise<string>} member id
+   * A Discord account that has finished sign-in, or null. Running a command
+   * does not create or link a profile.
+   * @returns {Promise<Object|null>}
    */
-  async _link (user, name) {
-    return (await this._linkMember(user, name)).id;
+  async _signedInMember (user) {
+    const members = this.settings.members;
+    if (!members || !user || !user.id) return null;
+    const member = await members.memberFor(`${DISCORD_MEMBER}${user.id}`).catch(() => null);
+    if (!member) return null;
+    const account = (member.accounts || []).find((held) => held.key === `${DISCORD_MEMBER}${user.id}`);
+    if (member.lastLoginAt) return member;
+    if (account && (account.via === 'oauth' || account.via === 'passport' || account.via === 'bio')) return member;
+    return null;
   }
 
-  /** {@link Commands#_link}, returning the member record. */
-  async _linkMember (user, name) {
+  /** A member record that already exists for this Discord account, linked or not. */
+  async _knownMember (user) {
     const members = this.settings.members;
-    if (members) return members.linkDiscord(user, name);
-    const key = `${DISCORD_MEMBER}${user.id}`;
-    return { id: key, displayName: name, accounts: [{ key, platform: 'discord', id: String(user.id) }] };
+    if (!members || !user || !user.id) return null;
+    return members.memberFor(`${DISCORD_MEMBER}${user.id}`).catch(() => null);
+  }
+
+  /** A member record for an RSI claim link. Not a completed login until the link is opened. */
+  async _claimMember (interaction) {
+    const members = this._members();
+    if (!members) return null;
+    return members.linkDiscord(interaction.user, displayName(interaction.member, interaction.user));
+  }
+
+  async _actorId (user) {
+    const member = await this._signedInMember(user);
+    return member ? member.id : `${DISCORD_MEMBER}${user.id}`;
   }
 
   /** The member id of a Discord user who has one, else their account key; links nothing. */
@@ -1552,7 +1576,6 @@ class Commands {
       ? await leagues.confirmDuel(proposalId, member)
       : await leagues.declineDuel(proposalId, member);
     if (result.duel) {
-      await this._link(interaction.user, displayName(interaction.member, interaction.user));
       if (typeof leagues.relinkMembers === 'function') await leagues.relinkMembers();
     }
     const league = result.league || await leagues.getLeague(result.proposal.league);
@@ -1607,6 +1630,9 @@ class Commands {
     const subcommand = this._subcommand(interaction);
     const options = interaction.options;
     const base = bounties.base;
+    if (subcommand === 'mine' || subcommand === 'post' || subcommand === 'done') {
+      if (!member) return this._private('Sign in on goon.vc first. A command does not link your account.');
+    }
     if (subcommand === 'list' || subcommand === 'mine') {
       const query = subcommand === 'list' ? String(options.getString('query') || '').trim() : '';
       const rows = bounties.list(subcommand === 'mine' ? { status: 'all', mine: member } : { q: query });
@@ -1892,7 +1918,11 @@ class Commands {
       const head = query ? `**Market:** ${plural(listings.length, 'listing')} matching “${escapeMarkdown(query)}”` : '**Market:** newest listings';
       return this._private(this._fit(head, listings.slice(0, MARKET_ROWS).map((listing) => this._listingLine(listing)), `[See them all](<${all}>)`));
     }
+    if (subcommand === 'sell' || subcommand === 'mine' || subcommand === 'edit') {
+      if (!member) return this._private('Sign in on goon.vc first. A command does not link your account.');
+    }
     if (subcommand === 'sell') {
+      if (!member) return this._private('Sign in on goon.vc before you sell. A command does not link your account.');
       const image = typeof options.getAttachment === 'function' ? options.getAttachment('image') : null;
       if (image && image.contentType && !/^image\//.test(image.contentType)) return this._private('The image has to be a picture.');
       const input = { title: options.getString('item'), price: options.getString('price') };
@@ -2009,7 +2039,7 @@ class Commands {
    * on record for an org in the proposal also signs for that org, which
    * votes once its threshold of officers agree.
    * @param {Object} interaction
-   * @param {string} member The caller's goon.vc member id.
+   * @param {Object|null} member The caller, once they have signed in.
    * @returns {Promise<Object>} reply
    */
   async vote (interaction, member) {
@@ -2022,9 +2052,24 @@ class Commands {
     if (!/^[0-9a-f]{12,64}$/.test(id)) return this._private('Pick the proposal from the list.');
     const account = `${DISCORD_MEMBER}${interaction.user.id}`;
     const actor = await alliance.actorFor(account);
-    const proposal = actor.officers.length
-      ? await alliance.vote(id, { account, choice }, actor)
-      : await alliance.memberVote(id, { account, member, choice });
+    const memberId = member && member.id;
+    const found = await alliance.getProposal(id);
+    if (!found) return this._private('No such proposal.');
+    let proposal;
+    if (actor.officers.length) {
+      try {
+        proposal = await alliance.vote(id, { account, choice }, actor);
+      } catch (error) {
+        if (!error || error.status !== 403) throw error;
+        if (!memberId) return this._private('Sign in on goon.vc to vote on this one. It was opened before your org listed you, so it can’t take an org signature.');
+        proposal = await alliance.memberVote(id, { account, member: memberId, choice });
+      }
+    } else if (!memberId) {
+      if (found.status !== 'open') return this._private(`Voting on this proposal is closed (${found.status}).`);
+      return this._private('Sign in on goon.vc before you vote. A command does not link your account.');
+    } else {
+      proposal = await alliance.memberVote(id, { account, member: memberId, choice });
+    }
     const members = proposal.members;
     const tally = proposal.tally;
     const lines = [`Recorded your **${choice}** on **${escapeMarkdown(proposal.title)}**.`];

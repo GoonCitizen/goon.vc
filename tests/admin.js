@@ -62,7 +62,7 @@ describe('Admin panel', function () {
     await members.start();
     const operator = await members.memberFor('discord:420222636954615808', {
       create: true,
-      via: 'command',
+      via: 'oauth',
       profile: { username: 'remaeus', globalName: 'remaeus' }
     });
     await members.link(operator.id, accountKey('fabric', key.pubkey).key, {
@@ -150,7 +150,7 @@ describe('Admin panel', function () {
     const res = await request('/services/admin', { headers: { Cookie: `goon.member=${adminToken}` } });
     assert.strictEqual(res.status, 200, res.text);
     assert.strictEqual(res.headers['cache-control'], 'no-store');
-    assert.strictEqual(res.json.you.displayName, 'remaeus');
+    assert.ok(!res.json.members.some((member) => member.displayName === 'Pilot'), 'a command does not count as a signed-in profile');
     const operator = res.json.members.find((member) => member.displayName === 'remaeus');
     const accounts = Object.fromEntries(operator.accounts.map((account) => [account.platform, account]));
     assert.strictEqual(accounts.discord.id, '420222636954615808');
