@@ -1,32 +1,25 @@
 {
   "id": "member-review",
-  "title": "Review goon.vc sign-ins",
-  "description": "Approve or turn away people who signed in to goon.vc with Discord and are waiting for review. Only goon.vc's reviewers can run it.",
-  "start": "approve",
+  "title": "Review officer sign-ins",
+  "description": "Approve or turn away officers who signed in to goon.vc with Discord and are waiting. Everyone else can claim an RSI handle without review. Only goon.vc's reviewers can run it. One officer at a time, so approving one leaves the rest waiting.",
+  "start": "decide",
   "requires": ["goon.vc reviewer"],
   "ttlMs": 259200000,
   "steps": {
-    "approve": {
-      "say": "Hi {{user.name|there}}! **{{context.waiting}}** waiting for review on goon.vc: they signed in with Discord and are in the waiting area ({{context.waitingUrl}}).\nPick everyone you approve, or Skip to approve nobody.",
-      "input": { "type": "choice", "optionsFrom": "goon.members.pending", "multiple": true, "optional": true },
-      "next": "deny"
-    },
-    "deny": {
-      "say": "Anyone to turn away? They'll see that on goon.vc. Skip to leave everyone else waiting.",
-      "input": { "type": "choice", "optionsFrom": "goon.members.pending", "multiple": true, "optional": true },
-      "next": "summary"
-    },
-    "summary": {
-      "say": "Here's the plan:\n- Approve: {{labels.approve|nobody}}\n- Turn away: {{labels.deny|nobody}}\n- Everyone else keeps waiting.\n\nGo ahead?",
-      "input": { "type": "confirm" },
-      "next": null
+    "decide": {
+      "say": "Hi {{user.name|there}}!\n{{context.card}}",
+      "input": { "type": "choice", "optionsFrom": "goon.members.pending", "optional": true },
+      "next": [
+        { "when": { "context.done": "yes" }, "goto": null },
+        { "goto": "decide" }
+      ]
     }
   },
   "complete": {
-    "say": "{{labels.result}}"
+    "say": "{{context.result}}"
   },
   "cancelled": {
-    "say": "Nothing changed; everyone is still waiting. Run `/goon review` to pick it up again."
+    "say": "Stopped. Anyone you already approved or turned away stays that way, and everyone else is still waiting. Run `/goon review` to continue."
   },
   "onComplete": [{ "action": "members.review" }]
 }

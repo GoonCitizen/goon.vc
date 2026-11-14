@@ -194,6 +194,17 @@ module.exports = {
     payGraceHours: 24,
     deliveryDays: 7,
     confirmDays: 3,
+    allowMainnet: process.env.GOON_MARKET_MAINNET === '1',
+    arbiters: (process.env.GOON_MARKET_ARBITERS || '').split(',').map((s) => s.trim()).filter(Boolean)
+  },
+
+  // /bounties: bitcoin rewards. A claim is a 2-of-3 escrow on the Market's Hub
+  // network. GOON_BOUNTIES=0 turns the board off.
+  bounties: {
+    enabled: process.env.GOON_BOUNTIES !== '0',
+    path: process.env.GOON_BOUNTIES_STORE || 'stores/bounties',
+    network: process.env.GOON_MARKET_NETWORK || null,
+    allowMainnet: process.env.GOON_MARKET_MAINNET === '1',
     arbiters: (process.env.GOON_MARKET_ARBITERS || '').split(',').map((s) => s.trim()).filter(Boolean)
   },
 

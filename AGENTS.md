@@ -571,6 +571,7 @@ must be on for the shared application in the Developer Portal. Settings:
 `market.{enabled,path,forum,tags,ttlMs,sync,webhook,network,allowMainnet,dibsHours,payHours,payGraceHours,deliveryDays,confirmDays,feeSats,arbiters,rateUrl}`;
 `GOON_MARKET=0` turns it off. Tests: `tests/marketPost.js`,
 `tests/marketEscrow.js`, `tests/market.service.js`.
+**Bounties** (`/bounties`, `services/bounties.js`, `functions/bountyEscrow.js`, page `components/BountiesPage.js`) are bitcoin rewards any signed-in member can post or claim. A bounty is listed first. Claiming it opens a Market-style 2-of-3 escrow — poster, claimant, goon.vc as arbiter — and the poster pays that vault. The arbiter key is goon.vc's Fabric key at `m/7777'/6'`, seeded by `bounty:<id>`, so it is never a Market order key. The claimant marks the work finished; the poster confirms, or `confirmDays` pass, and the escrow releases to the claimant. A claim that is never paid returns the bounty to the board. Public JSON is display names and bounty fields only. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) is servers only; claiming opens the page because a payout address is required. `GOON_BOUNTIES=0` turns the board off. Tests: `tests/bountyEscrow.js`, `tests/bounties.service.js`.
 The **Fabric relay** (`services/fabricRelay.js`, packs in
 `functions/discordFabricShare.js`) puts messages from the G00N SQUAD **public
 channels** (`discord.guildId` only; text and announcement channels @everyone
@@ -1212,8 +1213,10 @@ adds `admin: true` for them, and the footer and the login card show Admin.
 page is not framed. It lists every member and their linked accounts (Discord
 id, Fabric `id1` when the compressed key was stored, RSI handle), each
 campaign's status and counts (no server ids, no recipients), check-in and
-welcome status, and who is waiting for review. It does not send, schedule, or
-decide anything. Each member's profile is `/members/<member id>`
+welcome status, and the officers waiting for review. Approve and Turn away
+there decide one officer (`POST /services/admin/reviews/<id> { decision }`)
+and leave the rest of the queue waiting. It does not send or schedule
+campaigns. Each member's profile is `/members/<member id>`
 (`GET /services/members/profiles/<id>`: display name, avatar, member since,
 in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI
 handle with its citizen page, a short Fabric key fingerprint — and RSI handles,
@@ -1246,32 +1249,40 @@ the directory later means listing more members from `_directory` and
 widening `_profile`'s self check.
 **Waiting area** (`/waiting`, `components/WaitingPage.js`, `waitingPath` in `GoonSPA`; `services/reviews.js`,
 review state in `services/members.js`, script
-`contracts/scripts/member-review.json`) holds new Discord sign-ins until an
-alliance reviewer approves them. Settings `members.review.{enabled,reviewers}`
+`contracts/scripts/member-review.json`) holds **officers on record** after a
+Discord sign-in until an administrator approves them. Officers are the Discord
+accounts in `contracts/alliance.json` and the named officers in
+`contracts/red-army.json` (`functions/reviewOfficers.js`). Everyone else is
+approved as they sign in (`review.auto`) and can claim an RSI handle; a denial
+from when every sign-in waited is cleared the next time their session is read.
+Settings `members.review.{enabled,reviewers}`
 (`GOON_MEMBERS_REVIEW=0` turns it off; `GOON_MEMBERS_REVIEWERS`, comma list of
 Discord user ids, default @remaeus `420222636954615808`). It is a status only:
 nothing on the site is gated by it yet. The first start with reviews on
 records `/reviews/since`; members created before it count as approved
-(`grandfathered`), and so does anyone already approved. A member created
+(`grandfathered`), and so does anyone already approved. An officer created
 after it gets `review { status: 'pending', requestedAt }` on their first
-Discord sign-in or Discord link (Passport-only members have none), is indexed
-at `/reviews/pending`, and the sign-in lands on `/waiting?signedIn=discord`
-instead of `/sessions` (a denied member lands there too). A merge keeps the
+Discord sign-in or Discord link (Passport-only members have none), indexed one
+record at a time under `/reviews/pending/<id>` (an older single map at
+`/reviews/pending` is split on the next read), and the sign-in lands on
+`/waiting?signedIn=discord` instead of `/sessions` (a denied officer lands
+there too). A merge keeps the
 better review (approved, then pending, then denied). Members emits `review`
 on joining and `reviewed` on a decision; `Reviews` only logs a join and DMs
 nobody. A reviewer runs `/goon review` (registered only while reviews run;
 `/goon` still defaults to Manage Server, so reviewers need it where they run
-it) to get the `member-review` script in their DMs: everyone waiting (longest
-first, with how long, whether they are in the G00N SQUAD Discord, and any RSI
-handle), a multi-select of whom to approve, then whom to turn away, then a
-summary to confirm (`review.notifiedAt` notes who was shown). The script `requires` "goon.vc reviewer", a
+it) to get the `member-review` script in their DMs: one officer at a time
+(longest waiting), with their Discord id, org, RSI handle, and how long they
+have waited, and Approve / Turn away / Leave waiting buttons. Approving or
+turning one away does not decide the others (`review.notifiedAt` notes who
+was shown). The script `requires` "goon.vc reviewer", a
 Community requirement (`Community#requirement`) that checks the Discord id
-against the reviewer list at start and again before the `members.review`
-action decides, so `/goon campaign` never offers it. A member someone else
-already decided is left as they are. Session JSON carries `review { status,
+against the reviewer list at start and again before anything changes, so `/goon campaign` never offers it. A member someone else
+already decided is left as they are. The admin panel decides the same way,
+one officer per button. Session JSON carries `review { status,
 requestedAt, reviewedAt }` (or null) while reviews are on, never the
 reviewer; `GET /services/members` adds `review: true|false`. Tests:
-`tests/memberReviews.js`, `tests/reviews.js`.
+`tests/memberReviews.js`, `tests/reviews.js`, `tests/reviewQueue.js`.
 **RSI profile claim** (`/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
 `functions/rsiCitizen.js`, codes `functions/rsiClaim.js`) links an `rsi:<Handle>`
 account (the handle as RSI writes it) to a member. `/rsi claim` (servers and

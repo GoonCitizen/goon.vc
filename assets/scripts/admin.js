@@ -11,11 +11,18 @@
   var PLATFORMS = { discord: 'Discord', fabric: 'Fabric', rsi: 'RSI' };
   var status = document.getElementById('admin-status');
 
-  function call (url) {
-    return window.fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, status: res.status, j: j }; });
-      });
+  function call (url, opts) {
+    var options = opts || {};
+    var headers = Object.assign({ Accept: 'application/json' }, options.headers || {});
+    return window.fetch(url, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      method: options.method || 'GET',
+      headers: headers,
+      body: options.body || null
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, status: res.status, j: j }; });
+    });
   }
 
   function when (iso) {
@@ -101,23 +108,93 @@
       ? 'Signed in as ' + body.you.displayName + '.'
       : 'Signed in.');
 
-    var reviews = body.reviews || {};
-    var waiting = reviews.pending || [];
+    function showReviews (reviews) {
+    var waiting = (reviews && reviews.pending) || [];
     var reviewsNote = document.getElementById('admin-reviews-note');
     var reviewsList = document.getElementById('admin-reviews');
+    var reviewStatus = document.getElementById('admin-review-status');
     reviewsList.textContent = '';
     if (!reviews.available && !waiting.length) text(reviewsNote, 'Reviews are off.');
-    else if (!waiting.length) text(reviewsNote, 'Nobody is waiting.');
-    else {
-      text(reviewsNote, waiting.length + (waiting.length === 1 ? ' member is' : ' members are') + ' waiting.');
-      waiting.forEach(function (member) {
-        var li = document.createElement('li');
-        var label = (member.displayName || member.id) + (member.requestedAt ? ' · since ' + when(member.requestedAt) : '');
-        if (member.inGuild === false) label += ' · not in the G00N SQUAD Discord';
-        li.textContent = label;
-        reviewsList.appendChild(li);
+    else if (!waiting.length) text(reviewsNote, 'No officers are waiting. Everyone else can claim an RSI handle without approval.');
+    else text(reviewsNote, waiting.length + (waiting.length === 1 ? ' officer is' : ' officers are') + ' waiting. Approving one leaves the others waiting.');
+    waiting.forEach(function (member) { reviewsList.appendChild(reviewCard(member)); });
+
+    function reviewCard (member) {
+      var box = document.createElement('div');
+      box.className = 'admin-review';
+      var title = document.createElement('strong');
+      title.textContent = member.displayName || member.id;
+      box.appendChild(title);
+      var lines = [];
+      if (member.discord) {
+        lines.push('Discord @' + (member.discord.username || 'unknown') + ' (' + member.discord.id + ')');
+      } else lines.push('No Discord account on the profile');
+      if (member.officers && member.officers.length) lines.push('Officer of ' + member.officers.join(', '));
+      lines.push(member.inGuild ? 'In the G00N SQUAD Discord' : 'Not in the G00N SQUAD Discord');
+      (member.rsi || []).forEach(function (handle) { lines.push('RSI ' + handle.id); });
+      (member.fabric || []).forEach(function (account) {
+        if (account.identityId) lines.push('Fabric ' + account.identityId);
       });
+      if (member.requestedAt) lines.push('Waiting since ' + when(member.requestedAt));
+      lines.push('Member ' + member.id);
+      lines.forEach(function (line) {
+        var p = document.createElement('p');
+        p.className = 'admin-meta';
+        p.textContent = line;
+        box.appendChild(p);
+      });
+      (member.rsi || []).forEach(function (handle) {
+        if (!handle.url) return;
+        var p = document.createElement('p');
+        var a = document.createElement('a');
+        a.href = handle.url;
+        a.textContent = 'RSI profile';
+        p.appendChild(a);
+        box.appendChild(p);
+      });
+      var actions = document.createElement('div');
+      actions.className = 'admin-actions';
+      actions.appendChild(decisionButton(member, 'approved', 'Approve'));
+      actions.appendChild(decisionButton(member, 'denied', 'Turn away'));
+      box.appendChild(actions);
+      return box;
     }
+
+    function decisionButton (member, decision, label) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'goon-button';
+      button.textContent = label;
+      button.addEventListener('click', function () {
+        var name = member.displayName || member.id;
+        var question = decision === 'approved'
+          ? 'Approve ' + name + '? They can claim an RSI handle. Nobody else in line is changed.'
+          : 'Turn ' + name + ' away? Nobody else in line is changed.';
+        if (!window.confirm(question)) return;
+        reviewsList.querySelectorAll('button').forEach(function (el) { el.disabled = true; });
+        text(reviewStatus, '');
+        call('/services/admin/reviews/' + member.id, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ decision: decision })
+        }).then(function (r) {
+          if (!r.ok) {
+            text(reviewStatus, (r.j && r.j.error) || 'Could not update that sign-in.');
+            reviewsList.querySelectorAll('button').forEach(function (el) { el.disabled = false; });
+            return;
+          }
+          text(reviewStatus, (decision === 'approved' ? 'Approved ' : 'Turned away ') + name + '.');
+          showReviews(r.j.reviews || { pending: [] });
+        }).catch(function () {
+          text(reviewStatus, 'Could not update that sign-in. Reload to try again.');
+          reviewsList.querySelectorAll('button').forEach(function (el) { el.disabled = false; });
+        });
+      });
+      return button;
+    }
+    }
+
+    showReviews(body.reviews || {});
 
     var campaigns = (body.campaigns && body.campaigns.list) || [];
     var campaignBox = document.getElementById('admin-campaigns');

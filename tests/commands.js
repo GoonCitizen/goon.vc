@@ -354,12 +354,12 @@ describe('Discord application commands', function () {
     it('DMs a reviewer everyone waiting, and refuses everyone else', async function () {
       const reviews = new FakeReviews();
       const commands = new Commands({ members, reviews, register: false });
-      assert.strictEqual(await run(commands), 'Check your DMs: 2 sign-ins are waiting for review.');
+      assert.strictEqual(await run(commands), 'Check your DMs: 2 officer sign-ins are waiting for review.');
       assert.deepStrictEqual(reviews.begun, [{ id: KERSA.id, name: 'Kersa' }]);
       reviews.pending = 1;
-      assert.strictEqual(await run(commands), 'Check your DMs: 1 sign-in is waiting for review.');
+      assert.strictEqual(await run(commands), 'Check your DMs: 1 officer sign-in is waiting for review.');
       reviews.pending = 0;
-      assert.strictEqual(await run(commands), 'Nobody is waiting for review right now.');
+      assert.strictEqual(await run(commands), 'No officers are waiting for review right now.');
       assert.strictEqual(await run(commands, RATGROT), 'Only goon.vc’s sign-in reviewers can review sign-ins.');
       assert.strictEqual(reviews.begun.length, 3, 'the last call never reached it');
 
@@ -1475,6 +1475,37 @@ describe('Discord application commands', function () {
       await commands.handle(stop);
       assert.ok(stop.replies[0].content.includes('You won’t be recorded'), stop.replies[0].content);
       assert.ok(!clips.included.has(RATGROT.id));
+    });
+
+    it('posts and lists bounties without Discord ids', async function () {
+      const posted = [];
+      const bounties = {
+        base: '/bounties',
+        list () {
+          return [{ id: 'abc123', title: 'Paint the Idris', reward: '0.001 BTC', status: 'open', path: '/bounties/abc123', posterName: 'Poster' }];
+        },
+        async create (input, member) {
+          posted.push({ input, memberId: member.id });
+          return { id: 'abc123', title: input.title, reward: '0.001 BTC', path: '/bounties/abc123' };
+        }
+      };
+      const commands = new Commands({ members, bounties: () => bounties, siteUrl: 'https://goon.vc', register: false });
+      assert.ok(commands.definitions.some((definition) => definition.name === 'bounty'));
+      assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'bounty'));
+      const post = interaction({ name: 'bounty', subcommand: 'post', user: KERSA, strings: { title: 'Paint the Idris', reward: '0.001 BTC', details: 'Two coats.' } });
+      await commands.handle(post);
+      assert.strictEqual(posted.length, 1);
+      assert.strictEqual(posted[0].input.reward, '0.001 BTC');
+      assert.ok(post.replies[0].content.includes('<https://goon.vc/bounties/abc123>'), post.replies[0].content);
+      assert.ok(!post.replies[0].content.includes(KERSA.id));
+      const list = interaction({ name: 'bounty', subcommand: 'list', user: RATGROT, strings: { query: 'idris' } });
+      await commands.handle(list);
+      assert.ok(list.replies[0].content.includes('[open](<https://goon.vc/bounties/abc123>)'), list.replies[0].content);
+      assert.ok(!list.replies[0].content.includes(RATGROT.id));
+      const help = interaction({ name: 'help', user: KERSA, strings: { command: 'bounty' } });
+      await commands.handle(help);
+      assert.ok(help.replies[0].content.includes('/bounty post'), help.replies[0].content);
+      assert.ok(help.replies[0].content.includes('<https://goon.vc/bounties>'), help.replies[0].content);
     });
 
     it('/help lists listen and leave while clips voice is on', async function () {

@@ -31,6 +31,7 @@ const LeaguesPage = require('../components/LeaguesPage');
 const DuelLeaderboard = require('../components/DuelLeaderboard');
 const ClipsPage = require('../components/ClipsPage');
 const MarketPage = require('../components/MarketPage');
+const BountiesPage = require('../components/BountiesPage');
 const RsiClaimPage = require('../components/RsiClaimPage');
 const WaitingPage = require('../components/WaitingPage');
 const MembersPage = require('../components/MembersPage');
@@ -65,7 +66,7 @@ const DEFAULTS = {
   // Waiting area for Discord sign-ins awaiting review (components/WaitingPage.js).
   waitingPath: '/waiting',
   waitingDocumentTitle: 'Waiting area — GOON SQUAD',
-  waitingDescription: 'New G00N SQUAD members wait here after signing in with Discord, until an alliance administrator approves them.',
+  waitingDescription: 'Officers on record wait here after signing in with Discord, until an administrator approves them. Everyone else can claim an RSI handle without waiting.',
   // Member directory and profiles (components/MembersPage.js). Until the
   // directory opens, members see only themselves.
   membersPath: '/members',
@@ -169,6 +170,10 @@ const DEFAULTS = {
   marketMineDocumentTitle: 'YOUR MARKET — GOON SQUAD',
   marketMineDescription: 'Your G00N SQUAD Market listings and escrow orders.',
   marketInstallPath: '/services/discord/install',
+  // Bounties: /bounties and /bounties/<id> (services/bounties.js). A claim is a Market 2-of-3 escrow.
+  bountiesPath: '/bounties',
+  bountiesDocumentTitle: 'BOUNTIES — GOON SQUAD',
+  bountiesDescription: 'Post a bitcoin reward. Someone claims it, you fund the escrow, and confirming the work pays them.',
   // 1v1 ladder from the pinned message in G00N SQUAD #1v1-challenges (services/leaderboard.js).
   leaderboardPath: '/resources/1v1-leaderboard',
   leaderboardEndpoint: '/services/leaderboards/1v1',
@@ -305,6 +310,7 @@ class GoonSPA extends FabricSPA {
       RedArmyPage,
       LeaguesPage,
       MarketPage,
+      BountiesPage,
       TournamentsPage
     ].map((component) => component.client);
   }
@@ -352,6 +358,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('clipsPath'), this._site('clipsDocumentTitle'), this._site('clipsIntro')),
       page(this._site('marketPath'), this._site('marketDocumentTitle'), this._site('marketIntro')),
       page(`${this._site('marketPath')}/mine`, this._site('marketMineDocumentTitle'), this._site('marketMineDescription')),
+      page(this._site('bountiesPath'), this._site('bountiesDocumentTitle'), this._site('bountiesDescription')),
       page(ClipsPage.timelinePath(this._site('clipsPath')), this._site('clipsTimelineDocumentTitle'), this._site('clipsTimelineDescription')),
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
@@ -423,6 +430,7 @@ class GoonSPA extends FabricSPA {
     const clipsPath = this._site('clipsPath');
     const clipsTitleJson = JSON.stringify(this._site('clipsDocumentTitle'));
     const marketPath = this._site('marketPath');
+    const bountiesPath = this._site('bountiesPath');
     const marketTitleJson = JSON.stringify(this._site('marketDocumentTitle'));
     const permafleetPath = this._site('permafleetPath');
     const permafleetTitleJson = JSON.stringify(this._site('permafleetDocumentTitle'));
@@ -589,6 +597,12 @@ class GoonSPA extends FabricSPA {
         summary: this._site('marketIntro'),
         openLabel: 'Market',
         links: [{ label: 'Add /market to your Discord', href: this._site('marketInstallPath') }]
+      }, {
+        name: 'Bounties',
+        path: bountiesPath,
+        tagline: 'Bitcoin rewards held in escrow until the work is confirmed.',
+        summary: this._site('bountiesDescription'),
+        openLabel: 'Bounties'
       }, {
         name: '1v1 Leaderboard',
         path: leaderboardPath,
@@ -893,6 +907,7 @@ ${LeaguesPage.styles()}
 ${DuelLeaderboard.styles()}
 ${ClipsPage.styles()}
 ${MarketPage.styles()}
+${BountiesPage.styles()}
     </style>
   </head>
   <body>
@@ -929,6 +944,7 @@ ${tournamentMainsHtml}
     ${MarketPage.renderSeller(marketProps)}
     ${MarketPage.renderOrder(marketProps)}
     ${MarketPage.renderMine(marketProps)}
+    ${BountiesPage.render({ path: bountiesPath, loginPath })}
     ${permafleetMainHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
@@ -1004,6 +1020,9 @@ ${squadronMainsHtml}
           : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
           : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
           : null;
+        var bountiesBase = ${JSON.stringify(bountiesPath.toLowerCase())};
+        var isBounties = path.toLowerCase() === bountiesBase;
+        var bountyEl = path.toLowerCase().indexOf(bountiesBase + '/') === 0 ? document.getElementById('bounty-page') : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -1028,7 +1047,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -1094,6 +1113,10 @@ ${squadronMainsHtml}
         document.querySelectorAll('.market-page').forEach(function (el) {
           el.style.display = el === marketEl ? 'block' : 'none';
         });
+        var bountiesEl = document.getElementById('bounties-page');
+        if (bountiesEl) bountiesEl.style.display = isBounties ? 'block' : 'none';
+        var bountyPageEl = document.getElementById('bounty-page');
+        if (bountyPageEl) bountyPageEl.style.display = bountyEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -1138,6 +1161,7 @@ ${squadronMainsHtml}
         else if (isClipTimeline) document.title = ${JSON.stringify(this._site('clipsTimelineDocumentTitle'))};
         else if (isClips || clipProjectEl) document.title = ${clipsTitleJson};
         else if (marketEl) document.title = ${marketTitleJson};
+        else if (isBounties || bountyEl) document.title = ${JSON.stringify(this._site('bountiesDocumentTitle'))};
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = ${permafleetTitleJson};
         else if (isSchedule) document.title = ${scheduleTitleJson};
@@ -1169,6 +1193,7 @@ ${squadronMainsHtml}
     ${leaguesScript}
     ${clipsScript}
     ${MarketPage.script()}
+    ${BountiesPage.script()}
     ${permafleetScript}
     ${PermafleetVotes.script()}
     ${Federations.script()}

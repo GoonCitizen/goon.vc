@@ -931,7 +931,11 @@
       .admin-list, .admin-accounts { list-style: none; margin: 0; padding: 0; }
       .admin-list > li { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.55em 0; }
       .admin-list > li:first-child { border-top: 0; }
-      .admin-page summary { cursor: pointer; }
+      .admin-review { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.75em 0; }
+      .admin-review:first-child { border-top: 0; }
+      .admin-review p { margin: 0.25em 0; }
+      .admin-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
+      .admin-actions .goon-button { font-size: 0.85em; margin: 0; }
       .admin-page small, .admin-meta { color: #999; }
       .admin-accounts li { padding: 0.25em 0 0.25em 0.5em; }
       .admin-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
@@ -1278,6 +1282,19 @@
       .market-section h2 { font-size: 1.1em; letter-spacing: 0.06em; margin: 0 0 0.75em; }
       .market-muted { color: #aaa; }
       .market-page [hidden] { display: none !important; }
+
+      .bounties-page, .bounty-page { display: none; margin: 3em auto; max-width: 40em; padding: 0 1em 3em; text-align: left; }
+      .bounties-page h1, .bounty-page h1 { text-align: center; }
+      .bounties-page [hidden], .bounty-page [hidden] { display: none !important; }
+      .bounties-page section, .bounty-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.25em 0; padding: 1em; }
+      .bounty-card { color: inherit; display: block; text-decoration: none; }
+      .bounty-card:hover { background: rgba(255, 255, 255, 0.06); }
+      .bounty-card small, .bounty-meta { color: #999; }
+      .bounty-form { display: flex; flex-direction: column; gap: 0.6em; }
+      .bounty-form input, .bounty-form textarea { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; color: #fff; font: inherit; padding: 0.45em 0.6em; }
+      .bounty-actions { display: flex; flex-wrap: wrap; gap: 0.5em; }
+      .bounty-actions .goon-button { margin: 0; }
+      .bounty-status { min-height: 1.2em; text-align: center; }
     </style>
   </head>
   <body>
@@ -1397,12 +1414,12 @@
       <h1>Waiting area</h1>
       <p id="waiting-status" class="waiting-status" role="status"></p>
       <section id="waiting-signed-out" hidden>
-        <p>New members sign in with Discord, then wait here while an alliance administrator looks them over.</p>
+        <p>New members sign in with Discord. Officers on record wait here while an administrator approves them. Everyone else can claim an RSI handle without waiting.</p>
         <p class="waiting-links"><a class="goon-button" href="/sessions">Sign in</a></p>
       </section>
       <section id="waiting-pending" hidden>
         <h2>You’re in line</h2>
-        <p>Thanks for signing in<span id="waiting-name"></span>. An alliance administrator reviews every new Discord sign-in and has been told you’re here. There’s nothing else to do: come back to this page to see the result.</p>
+        <p>Thanks for signing in<span id="waiting-name"></span>. An administrator reviews officer sign-ins. There’s nothing else to do: come back to this page to see the result.</p>
         <p class="waiting-since" id="waiting-since"></p>
         <p id="waiting-join" hidden>You’re not in our Discord yet; joining it helps. <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the G00N SQUAD Discord &raquo;</a></p>
         <p class="waiting-links"><a href="/events">Events</a> <a href="/operations/PERMAFLEET/squadrons">PERMAFLEET squadrons</a></p>
@@ -1503,9 +1520,10 @@
       <div id="admin-panel" hidden>
         <p id="admin-you" class="admin-note"></p>
         <section>
-          <h2>Waiting for review</h2>
-          <p id="admin-reviews-note" class="admin-note"></p>
-          <ul id="admin-reviews" class="admin-list"></ul>
+          <h2>Officers waiting for review</h2>
+          <p id="admin-reviews-note" class="admin-note">Only officers on record wait here. Everyone else can claim an RSI handle on their own.</p>
+          <p id="admin-review-status" class="admin-status" role="status"></p>
+          <div id="admin-reviews"></div>
         </section>
         <section>
           <h2>Campaigns</h2>
@@ -2086,6 +2104,13 @@
           <p class="operation-summary">The G00N SQUAD Market forum on the web: every thread is a listing here, and every listing here is a thread there. Prices are in BTC; buy with 2-of-3 escrow between you, the seller, and goon.vc.</p>
           
           <div class="operation-links"><a class="goon-button" href="/services/market">Market</a><a class="goon-button" href="/services/discord/install">Add /market to your Discord</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/bounties">Bounties</a></h2>
+          <p class="operation-tagline">Bitcoin rewards held in escrow until the work is confirmed.</p>
+          <p class="operation-summary">Post a bitcoin reward. Someone claims it, you fund the escrow, and confirming the work pays them.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/bounties">Bounties</a></div>
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
@@ -2849,6 +2874,62 @@ html[data-look=bright]{color-scheme:light}
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+    <main id="bounties-page" class="bounties-page" data-path="/bounties">
+      <h1>Bounties</h1>
+      <p class="bounty-meta" style="text-align:center">Post a reward. Someone claims it, you pay the escrow, and confirming the work releases the bitcoin.</p>
+      <p id="bounties-status" class="bounty-status" role="status"></p>
+      <ul id="bounties-list" class="admin-list" style="list-style:none;padding:0"></ul>
+      <section>
+        <h2>Post a bounty</h2>
+        <p id="bounties-signed-out" hidden>Sign in to post or claim. <a href="/sessions">Sign in</a></p>
+        <form id="bounty-post" class="bounty-form">
+          <input name="title" required maxlength="120" placeholder="Title" aria-label="Title">
+          <textarea name="details" maxlength="2000" rows="3" placeholder="What done looks like" aria-label="Details"></textarea>
+          <input name="reward" required placeholder="Reward, 0.005 BTC or 500k sats" aria-label="Reward">
+          <input name="refundAddress" required placeholder="Your refund address" aria-label="Refund address">
+          <button class="goon-button" type="submit">Post</button>
+        </form>
+      </section>
+    </main>
+    <main id="bounty-page" class="bounty-page" data-base="/bounties">
+      <p><a href="/bounties">← Bounties</a></p>
+      <h1 id="bounty-title">Bounty</h1>
+      <p id="bounty-status" class="bounty-status" role="status"></p>
+      <p id="bounty-meta" class="bounty-meta"></p>
+      <p id="bounty-details"></p>
+      <section id="bounty-refund" hidden>
+        <h2>Refund address</h2>
+        <p class="bounty-meta">Someone can claim this once you give the address a refund would return to.</p>
+        <form id="bounty-refund-form" class="bounty-form">
+          <input name="refundAddress" required placeholder="Your refund address" aria-label="Refund address">
+          <button class="goon-button" type="submit">Save</button>
+        </form>
+      </section>
+      <section id="bounty-pay" hidden>
+        <h2>Pay the escrow</h2>
+        <p id="bounty-invoice"></p>
+        <form id="bounty-pay-form" class="bounty-form">
+          <input name="txid" required placeholder="Transaction id, if you already paid" aria-label="Transaction id">
+          <button class="goon-button" type="submit">I’ve paid</button>
+        </form>
+      </section>
+      <section id="bounty-claim" hidden>
+        <h2>Claim</h2>
+        <form id="bounty-claim-form" class="bounty-form">
+          <input name="payoutAddress" required placeholder="Address the reward should be paid to" aria-label="Payout address">
+          <button class="goon-button" type="submit">Claim</button>
+        </form>
+      </section>
+      <p id="bounty-actions" class="bounty-actions"></p>
+      <section id="bounty-sign" hidden>
+        <h2>Sign the payout</h2>
+        <p id="bounty-payout" class="bounty-meta"></p>
+        <form id="bounty-sign-form" class="bounty-form">
+          <textarea name="frame" required rows="3" placeholder="Paste the signed frame" aria-label="Signed frame"></textarea>
+          <button class="goon-button" type="submit">Submit signature</button>
+        </form>
+      </section>
+    </main>
     <main id="operation-permafleet" class="op-page">
       <div class="op-shell">
         <div class="op-hero-bg" aria-hidden="true"></div>
@@ -3286,6 +3367,9 @@ html[data-look=bright]{color-scheme:light}
           : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
           : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
           : null;
+        var bountiesBase = "/bounties";
+        var isBounties = path.toLowerCase() === bountiesBase;
+        var bountyEl = path.toLowerCase().indexOf(bountiesBase + '/') === 0 ? document.getElementById('bounty-page') : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
@@ -3310,7 +3394,7 @@ html[data-look=bright]{color-scheme:light}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -3376,6 +3460,10 @@ html[data-look=bright]{color-scheme:light}
         document.querySelectorAll('.market-page').forEach(function (el) {
           el.style.display = el === marketEl ? 'block' : 'none';
         });
+        var bountiesEl = document.getElementById('bounties-page');
+        if (bountiesEl) bountiesEl.style.display = isBounties ? 'block' : 'none';
+        var bountyPageEl = document.getElementById('bounty-page');
+        if (bountyPageEl) bountyPageEl.style.display = bountyEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -3420,6 +3508,7 @@ html[data-look=bright]{color-scheme:light}
         else if (isClipTimeline) document.title = "CLIP TIMELINE — GOON SQUAD";
         else if (isClips || clipProjectEl) document.title = "CLIPS — GOON SQUAD";
         else if (marketEl) document.title = "MARKET — GOON SQUAD";
+        else if (isBounties || bountyEl) document.title = "BOUNTIES — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
@@ -3861,7 +3950,7 @@ html[data-look=bright]{color-scheme:light}
     <script src="/scripts/rsi-claim.js?v=b9b9c626c500" defer></script>
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
-    <script src="/scripts/admin.js?v=5bfa9b9b661c" defer></script>
+    <script src="/scripts/admin.js?v=600294821319" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
@@ -4590,6 +4679,7 @@ html[data-look=bright]{color-scheme:light}
       })();
     </script>
     <script src="/scripts/market.js?v=344ce1e3179b" defer></script>
+    <script src="/scripts/bounties.js?v=f7833958dfe9" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');

@@ -47,6 +47,7 @@ describe('Admin panel', function () {
         });
       });
       req.on('error', reject);
+      if (opts.body) req.write(opts.body);
       req.end();
     });
   }
@@ -75,8 +76,15 @@ describe('Admin panel', function () {
       inGuild: false,
       profile: { username: 'pilot', globalName: 'Pilot' }
     });
+    const kept = await members.memberFor('discord:222222222222222222', {
+      create: true,
+      via: 'command',
+      inGuild: true,
+      profile: { username: 'kept', globalName: 'Kept' }
+    });
     otherName = other.displayName;
     await members.requestReview(other.id);
+    await members.requestReview(kept.id);
     adminToken = await members._createSession(operator.id, 'discord');
     otherToken = await members._createSession(other.id, 'discord');
     claimToken = await members._createSession(operator.id, 'rsi-link');
@@ -104,10 +112,17 @@ describe('Admin panel', function () {
     const adminMw = admin.middleware();
     const membersMw = members.middleware();
     server = http.createServer((req, res) => {
-      adminMw(req, res, () => membersMw(req, res, () => {
-        res.statusCode = 404;
-        res.end();
-      }));
+      const chunks = [];
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', () => {
+        if (chunks.length) {
+          try { req.body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (_) { req.body = {}; }
+        }
+        adminMw(req, res, () => membersMw(req, res, () => {
+          res.statusCode = 404;
+          res.end();
+        }));
+      });
     });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     port = server.address().port;
@@ -145,9 +160,19 @@ describe('Admin panel', function () {
     assert.ok(accounts.rsi.url.includes('ChairmanPoW'));
     assert.strictEqual(accounts.fabric.escrow, null);
     const waiting = res.json.reviews.pending;
-    assert.strictEqual(waiting.length, 1);
+    assert.strictEqual(waiting.length, 2);
     assert.strictEqual(waiting[0].displayName, otherName);
     assert.strictEqual(waiting[0].inGuild, false);
+    assert.strictEqual(waiting[0].discord.id, '111111111111111111');
+    assert.strictEqual(waiting[0].discord.username, 'pilot');
+    const decided = await request(`/services/admin/reviews/${waiting[0].id}`, {
+      method: 'POST',
+      headers: { Cookie: `goon.member=${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: 'approved' })
+    });
+    assert.strictEqual(decided.status, 200, decided.text);
+    assert.strictEqual(decided.json.decision, 'approved');
+    assert.deepStrictEqual(decided.json.reviews.pending.map((member) => member.displayName), ['Kept']);
     assert.strictEqual(res.json.campaigns.list.length, 1);
     assert.strictEqual(res.json.campaigns.list[0].status, 'sending');
     assert.strictEqual(res.json.campaigns.list[0].owner.name, 'G00N SQUAD');

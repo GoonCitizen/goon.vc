@@ -27,11 +27,13 @@ const Welcome = require('./welcome');
 const Reviews = require('./reviews');
 const Admin = require('./admin');
 const { memberIsAdmin } = require('../functions/siteAdmin');
+const reviewOfficers = require('../functions/reviewOfficers');
 const homeDiscord = require('../contracts/goon-squad.json');
 const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
 const RedArmy = require('./redArmy');
 const Market = require('./market');
+const Bounties = require('./bounties');
 const Hangar = require('./hangar');
 const Schedule = require('./schedule');
 const GoonSite = require('../types/GoonSite');
@@ -241,6 +243,7 @@ class GoonVC {
       [() => this.alliance, pageMeta.findPage(pages, spa._site('permafleetVotesPath'))],
       [() => this.alliance && { page: (pathname) => this.alliance.federationPage(pathname) }, pageMeta.findPage(pages, spa._site('federationsPath'))],
       [() => this.market, pageMeta.findPage(pages, spa._site('marketPath'))],
+      [() => this.bounties, pageMeta.findPage(pages, spa._site('bountiesPath'))],
       [() => this.members, pageMeta.findPage(pages, spa._site('membersPath'))]
     ];
     const storedPage = async (pathname) => {
@@ -301,7 +304,7 @@ class GoonVC {
   _canonicalPathMiddleware () {
     const spa = new GoonSite(this.settings.site || {}).spa;
     const pages = spa.pages();
-    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath', 'permafleetVotesPath', 'federationsPath', 'membersPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
+    const prefixes = ['tournamentsPath', 'leaguesPath', 'clipsPath', 'permafleetVotesPath', 'federationsPath', 'membersPath', 'bountiesPath'].map((key) => `${spa._site(key).toLowerCase()}/`);
     const isPage = (pathname) => !!pageMeta.findPage(pages, pathname)
       || prefixes.some((prefix) => pathname.toLowerCase().startsWith(prefix));
     return (req, res, next) => {
@@ -391,6 +394,7 @@ class GoonVC {
       // Passport peer sessions sign members in by goon.vc's relay key.
       peerKey: () => (this.fabric ? this.fabric.fabricKey : null),
       isAdmin: (member) => memberIsAdmin(member, homeDiscord.admins),
+      needsReview: (member) => reviewOfficers.memberNeedsReview(member),
       discord: {
         clientId: discord.clientId,
         clientSecret: (memberSettings.resolveClientSecret || resolveDiscordClientSecret)(discord).clientSecret,
@@ -543,7 +547,8 @@ class GoonVC {
       members: this.members,
       community: this.community,
       reviewers: reviewSettings.reviewers,
-      waitingPath: spa._site('waitingPath')
+      waitingPath: spa._site('waitingPath'),
+      officerOf: (member) => reviewOfficers.officerSymbols(member)
     });
     this.reviews.on('log', (...parts) => this.emit('log', ...parts));
     this.reviews.on('error', (...parts) => this.emit('error', ...parts));
@@ -555,6 +560,7 @@ class GoonVC {
       checkins: this.checkins,
       welcome: this.welcome,
       reviews: this.reviews,
+      officerOf: (member) => reviewOfficers.officerSymbols(member),
       admins: homeDiscord.admins
     });
 
@@ -636,6 +642,7 @@ class GoonVC {
       members: this.members,
       alliance: () => this.alliance,
       market: marketOn ? () => this.market : null,
+      bounties: () => this.bounties,
       checkins: this.checkins,
       welcome: this.welcome,
       reviews: this.reviews,
@@ -735,6 +742,24 @@ class GoonVC {
       }));
     }
 
+    const bountySettings = this.settings.bounties || {};
+    if (bountySettings.enabled !== false) {
+      this.bounties = new Bounties(Object.assign({}, bountySettings, {
+        path: bountySettings.path || './stores/bounties',
+        basePath: spa._site('bountiesPath'),
+        siteUrl: spa._site('siteUrl'),
+        network: bountySettings.network || (marketSettings && marketSettings.network) || null,
+        allowMainnet: bountySettings.allowMainnet != null ? bountySettings.allowMainnet : !!(marketSettings && marketSettings.allowMainnet),
+        arbiters: bountySettings.arbiters || (marketSettings && marketSettings.arbiters) || [],
+        hubs,
+        xprv: () => this.fabric.xprv,
+        members: this.members
+      }));
+      this.bounties.on('log', (...parts) => this.emit('log', ...parts));
+      this.bounties.on('error', (...parts) => this.emit('error', ...parts));
+      await this.bounties.start();
+    }
+
     this.http = new HTTPServer({
       name: this.name,
       assets,
@@ -776,7 +801,8 @@ class GoonVC {
         fabric: this.fabric.middleware(),
         alliance: this.alliance.middleware(),
         redArmy: this.redArmy.middleware(),
-        market: this.market ? this.market.middleware() : (req, res, next) => next()
+        market: this.market ? this.market.middleware() : (req, res, next) => next(),
+        bounties: this.bounties ? this.bounties.middleware() : (req, res, next) => next()
       }
     });
 
@@ -798,7 +824,7 @@ class GoonVC {
 
   async stop () {
     const errors = [];
-    for (const service of [this.http, this.market, this.redArmy, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
+    for (const service of [this.http, this.bounties, this.market, this.redArmy, this.alliance, this.fabric, this.commands, this.schedule, this.tournaments, this.leagues, this.leaderboard, this.reviews, this.welcome, this.checkins, this.activity, this.clips, this.hangar, this.members, this.events, this.presence, this.community, this.operations]) {
       if (!service || typeof service.stop !== 'function') continue;
       try {
         await service.stop();

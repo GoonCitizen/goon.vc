@@ -262,6 +262,10 @@ class Members extends EventEmitter {
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
    * @param {Function} [settings.isAdmin] `(member) => boolean`. When it returns
    *   true, the session view includes `admin: true` (not for an RSI claim-link session).
+   * @param {Function} [settings.needsReview] `(member) => boolean`. When it
+   *   returns false, Discord sign-in is approved immediately so they can claim
+   *   an RSI handle. Unset: every Discord sign-in waits. Officers on record
+   *   are the production check (`functions/reviewOfficers.js`).
    */
   constructor (settings = {}) {
     super();
@@ -695,6 +699,42 @@ class Members extends EventEmitter {
     return this.reviewsEnabled ? this._reviewRecord(member) : null;
   }
 
+  /**
+   * Whether this member's Discord sign-in has to be approved. Unset means
+   * every sign-in waits, which is what the tests use.
+   * @param {Object|null} member
+   * @returns {boolean}
+   */
+  needsReview (member) {
+    if (typeof this.settings.needsReview !== 'function') return true;
+    return this.settings.needsReview(member) === true;
+  }
+
+  /**
+   * Approve someone who is not an officer, including a denial from when every
+   * sign-in waited. Officers, and anyone already approved, are left as they are.
+   * @param {Object} member
+   * @returns {Promise<Object>}
+   */
+  async _autoApprove (member) {
+    if (!member || this.needsReview(member)) return member;
+    const review = member.review;
+    if (review && review.status === 'approved') return member;
+    if (!review && this._reviewSince && Date.parse(member.createdAt) < Date.parse(this._reviewSince)) return member;
+    const at = new Date().toISOString();
+    member.review = {
+      status: 'approved',
+      requestedAt: (review && review.requestedAt) || at,
+      reviewedAt: at,
+      auto: true
+    };
+    member.log = member.log || [];
+    member.log.push({ type: 'review', status: 'approved', auto: true, at });
+    await this._save(member);
+    await this._indexPending(member.id, null);
+    return member;
+  }
+
   _reviewView (member) {
     const review = this.reviewOf(member);
     if (!review) return null;
@@ -706,25 +746,74 @@ class Members extends EventEmitter {
     return publicMember(member, via, this.reviewsEnabled ? this._reviewView(member) : undefined, admin);
   }
 
+  async _migratePending () {
+    if (this._pendingMigrated) return;
+    this._pendingMigrated = true;
+    const blob = await this._read(REVIEW_PENDING_KEY);
+    if (!blob || typeof blob !== 'object' || Array.isArray(blob)) return;
+    const legacy = Object.entries(blob).filter(([id, value]) => MEMBER_ID_RE.test(id) && typeof value === 'string');
+    if (!legacy.length) return;
+    for (const [id, at] of legacy) await this.store.set(`${REVIEW_PENDING_KEY}/${id}`, { at });
+    await this.store.set(REVIEW_PENDING_KEY, { migrated: true });
+  }
+
+  async _pendingEntries () {
+    await this._migratePending();
+    const entries = new Map();
+    const take = (id, at) => {
+      if (MEMBER_ID_RE.test(id) && typeof at === 'string') entries.set(id, at);
+    };
+    const memory = this.store._state && this.store._state.content && this.store._state.content.reviews
+      && this.store._state.content.reviews.pending;
+    if (memory && typeof memory === 'object' && !Array.isArray(memory)) {
+      for (const [id, value] of Object.entries(memory)) {
+        if (value && typeof value === 'object') take(id, value.at);
+        else take(id, value);
+      }
+    }
+    if (this.store.db && typeof this.store.db.keys === 'function') {
+      try {
+        for await (const key of this.store.db.keys({ gte: `${REVIEW_PENDING_KEY}/`, lt: `${REVIEW_PENDING_KEY}0` })) {
+          const id = String(key).slice(REVIEW_PENDING_KEY.length + 1);
+          const value = await this.store.get(key);
+          if (value && typeof value.at === 'string') take(id, value.at);
+        }
+      } catch (_) { /* the in-memory copy still answers */ }
+    }
+    return entries;
+  }
+
   async _indexPending (memberId, requestedAt) {
-    const index = (await this._read(REVIEW_PENDING_KEY)) || {};
-    if (requestedAt) index[memberId] = requestedAt;
-    else if (Object.prototype.hasOwnProperty.call(index, memberId)) delete index[memberId];
-    else return;
-    await this.store.set(REVIEW_PENDING_KEY, index);
+    const key = `${REVIEW_PENDING_KEY}/${memberId}`;
+    if (requestedAt) {
+      await this.store.set(key, { at: requestedAt });
+      return;
+    }
+    const current = await this.store.get(key);
+    if (current) await this._drop(key);
+    const blob = await this._read(REVIEW_PENDING_KEY);
+    if (!blob || typeof blob !== 'object' || Array.isArray(blob) || typeof blob[memberId] !== 'string') return;
+    const next = {};
+    for (const [id, value] of Object.entries(blob)) {
+      if (id !== memberId && MEMBER_ID_RE.test(id) && typeof value === 'string') next[id] = value;
+    }
+    await this.store.set(REVIEW_PENDING_KEY, Object.keys(next).length ? next : { migrated: true });
   }
 
   /**
-   * Put a member in the waiting area, unless they already have a review
-   * (or reviews are off). Emits `review { member }` when they join it.
+   * Put an officer in the waiting area, unless they already have a review
+   * (or reviews are off). Anyone else is approved, so they can claim an RSI
+   * handle. Emits `review { member }` when an officer joins the queue.
    * @param {string} memberId
    * @returns {Promise<Object|null>} the member
    */
   requestReview (memberId) {
     if (!this.reviewsEnabled) return Promise.resolve(null);
     return this._serial(async () => {
-      const member = await this._resolve(memberId);
-      if (!member || this.reviewOf(member)) return member;
+      let member = await this._resolve(memberId);
+      if (!member) return null;
+      member = await this._autoApprove(member);
+      if (!this.needsReview(member) || this.reviewOf(member)) return member;
       const at = new Date().toISOString();
       member.review = { status: 'pending', requestedAt: at };
       member.log.push({ type: 'review', status: 'pending', at });
@@ -736,18 +825,25 @@ class Members extends EventEmitter {
   }
 
   /**
-   * Members in the waiting area, longest waiting first.
+   * Officers in the waiting area, longest waiting first. A pending member
+   * who is not an officer is approved here, one record at a time, so deciding
+   * one officer cannot rewrite the rest of the queue.
    * @returns {Promise<Object[]>}
    */
   pendingReviews () {
     if (!this.reviewsEnabled) return Promise.resolve([]);
     return this._serial(async () => {
-      const index = (await this._read(REVIEW_PENDING_KEY)) || {};
+      const entries = await this._pendingEntries();
       const out = [];
-      for (const id of Object.keys(index)) {
-        const member = await this._resolve(id);
+      for (const id of entries.keys()) {
+        let member = await this._resolve(id);
+        if (!member || member.id !== id) {
+          await this._indexPending(id, null);
+          continue;
+        }
+        member = await this._autoApprove(member);
         const review = this.reviewOf(member);
-        if (member && member.id === id && review && review.status === 'pending') out.push(member);
+        if (review && review.status === 'pending') out.push(member);
         else await this._indexPending(id, null);
       }
       return out.sort((a, b) => String(a.review.requestedAt).localeCompare(String(b.review.requestedAt)));
@@ -869,15 +965,18 @@ class Members extends EventEmitter {
     // A peer session (checked by the HTTP server), else the cookie.
     const peerSession = req && req.passportSession;
     if (peerSession) {
-      const member = peerSession.memberId ? await this.resolve(peerSession.memberId) : null;
-      return member ? { member, via: 'passport', key: null, session: peerSession } : null;
+    const member = peerSession.memberId ? await this.resolve(peerSession.memberId) : null;
+    if (!member) return null;
+    const released = await this._serial(async () => this._autoApprove(await this._resolve(member.id) || member));
+    return { member: released, via: 'passport', key: null, session: peerSession };
     }
     if (req && req.headers && req.headers['x-fabric-request']) return null;
     const current = await this._sessionFromRequest(req);
     if (!current) return null;
     const member = await this.resolve(current.session.memberId);
     if (!member) return null;
-    return { member, via: current.session.via || null, key: current.key, session: current.session };
+    const released = await this._serial(async () => this._autoApprove(await this._resolve(member.id) || member));
+    return { member: released, via: current.session.via || null, key: current.key, session: current.session };
   }
 
   /**

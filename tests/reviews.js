@@ -124,7 +124,6 @@ describe('Reviews (waiting area DMs to reviewers)', function () {
   const last = () => toReviewer()[toReviewer().length - 1].payload;
   const controls = () => last().components.flatMap((row) => row.components);
   const button = (label) => controls().find((component) => component.label === label).custom_id;
-  const select = () => controls().find((component) => component.options);
 
   async function press (customId, extra = {}) {
     const before = discord.dms.length;
@@ -139,7 +138,7 @@ describe('Reviews (waiting area DMs to reviewers)', function () {
     await until(() => discord.dms.length > before);
   }
 
-  it('DMs a reviewer everyone waiting only when they ask, and applies their picks', async function () {
+  it('shows one officer at a time, and approving one leaves the others waiting', async function () {
     assert.strictEqual(reviews.available, true);
     assert.deepStrictEqual(reviews.reviewers, [REVIEWER], 'ids only');
     await sleep(5);
@@ -150,46 +149,43 @@ describe('Reviews (waiting area DMs to reviewers)', function () {
     assert.deepStrictEqual(await reviews.begin(REVIEWER), { pending: 2 });
     assert.strictEqual(toReviewer().length, 1);
 
-    assert.ok(last().content.startsWith('Hi Remaeus! **2 people** waiting for review on goon.vc'), last().content);
-    assert.ok(last().content.includes('https://goon.vc/waiting'));
-    assert.deepStrictEqual(select().options.map((option) => [option.value, option.label, option.description]), [
-      [alpha.id, 'Alpha (@alpha)', 'Waiting 1 min · in G00N SQUAD'],
-      [bravo.id, 'Bravo (@bravo)', 'Waiting 1 min · not in the G00N SQUAD Discord']
+    assert.ok(last().content.startsWith('Hi Remaeus!'), last().content);
+    assert.ok(last().content.includes('**2** officers are waiting'), last().content);
+    assert.ok(last().content.includes('100000000000000001'), 'the Discord id is on the card');
+    assert.ok(last().content.includes('Alpha (@alpha)'));
+    assert.ok(last().content.includes('In the G00N SQUAD Discord'));
+    assert.ok(!controls().some((component) => component.options), 'one officer is three buttons, not a menu of everyone');
+    assert.deepStrictEqual(controls().filter((component) => component.type === 2).map((component) => component.label), [
+      'Approve', 'Turn away', 'Leave waiting', 'Skip', 'Cancel'
     ]);
-    assert.ok((await members.pendingReviews()).every((member) => member.review.notifiedAt), 'restarts do not resend them');
+    assert.ok((await members.pendingReviews()).every((member) => member.review.notifiedAt));
 
-    await press(select().custom_id, { values: [alpha.id] });
-    assert.ok(last().content.includes('Anyone to turn away?'), last().content);
-    assert.deepStrictEqual(select().options.map((option) => option.value), [bravo.id], 'approved members are not offered again');
-    await press(button('Skip'));
-    assert.ok(last().content.includes('- Approve: Alpha (@alpha)\n- Turn away: nobody'), last().content);
+    await press(button('Approve'));
+    assert.strictEqual(members.reviewOf(await members.getMember(alpha.id)).status, 'approved');
+    assert.strictEqual((await members.getMember(alpha.id)).review.reviewedBy, `discord:${REVIEWER}`);
+    assert.strictEqual(members.reviewOf(await members.getMember(bravo.id)).status, 'pending', 'approving one does not clear the rest');
+    assert.ok(last().content.includes('Bravo (@bravo)'), last().content);
+    assert.ok(last().content.includes('100000000000000002'));
+    assert.ok(last().content.includes('Not in the G00N SQUAD Discord'));
 
     const charlie = await newcomer('100000000000000003', 'Charlie', true);
     await sleep(60);
-    assert.ok(last().content.includes('Go ahead?'), 'a reviewer partway through is not interrupted');
+    assert.ok(last().content.includes('Bravo (@bravo)'), 'a reviewer partway through is not interrupted');
 
-    const before = toReviewer().length;
-    await press(button('Continue'));
-    assert.strictEqual(toReviewer()[before].payload.content,
-      'Approved: Alpha (@alpha).\n2 people still waiting; run `/goon review` to see them.');
-    assert.strictEqual(members.reviewOf(await members.getMember(alpha.id)).status, 'approved');
-    assert.strictEqual((await members.getMember(alpha.id)).review.reviewedBy, `discord:${REVIEWER}`);
+    await press(button('Leave waiting'));
     assert.strictEqual(members.reviewOf(await members.getMember(bravo.id)).status, 'pending');
+    assert.ok(last().content.includes('Charlie (@charlie)'), last().content);
+    assert.strictEqual(members.reviewOf(await members.getMember(charlie.id)).status, 'pending');
 
-    await sleep(60);
-    assert.strictEqual(toReviewer().length, before + 1, 'nobody new goes out until the reviewer asks again');
-    await reviews.begin(REVIEWER);
-    assert.ok(last().content.includes('**2 people** waiting'), last().content);
-    assert.deepStrictEqual(select().options.map((option) => option.value), [bravo.id, charlie.id]);
-
-    await press(button('Skip'));
-    await press(select().custom_id, { values: [bravo.id, charlie.id] });
-    await press(button('Continue'));
-    assert.strictEqual(last().content, 'Turned away: Bravo (@bravo), Charlie (@charlie).\nNobody else is waiting.');
-    assert.deepStrictEqual(await members.pendingReviews(), []);
+    await press(button('Turn away'));
+    assert.strictEqual(members.reviewOf(await members.getMember(charlie.id)).status, 'denied');
+    assert.strictEqual(members.reviewOf(await members.getMember(bravo.id)).status, 'pending');
+    assert.ok(last().content.includes('Turned away Charlie (@charlie).'), last().content);
+    assert.ok(last().content.includes('1 officer still waiting'), last().content);
+    assert.deepStrictEqual((await members.pendingReviews()).map((member) => member.id), [bravo.id]);
 
     const report = await reviews.report();
-    assert.deepStrictEqual(report, { available: true, reviewers: 1, pending: 0 });
+    assert.deepStrictEqual(report, { available: true, reviewers: 1, pending: 1 });
   });
 
   it('opens the list on demand for reviewers only', async function () {
@@ -200,7 +196,9 @@ describe('Reviews (waiting area DMs to reviewers)', function () {
     await sleep(5);
     const alpha = await newcomer('100000000000000001', 'Alpha', true);
     assert.deepStrictEqual(await reviews.begin(REVIEWER, 'Eric'), { pending: 1 });
-    assert.ok(last().content.startsWith('Hi Eric! **1 person** waiting'), last().content);
+    assert.ok(last().content.startsWith('Hi Eric!'), last().content);
+    assert.ok(last().content.includes('**1** officer is waiting'), last().content);
+    assert.ok(last().content.includes('100000000000000001'));
     assert.ok((await members.getMember(alpha.id)).review.notifiedAt);
     await sleep(60);
     assert.strictEqual(toReviewer().length, 1, 'nothing more goes out by itself');
@@ -213,10 +211,8 @@ describe('Reviews (waiting area DMs to reviewers)', function () {
     await sleep(5);
     const alpha = await newcomer('100000000000000001', 'Alpha', true);
     await reviews.begin(REVIEWER);
-    await press(select().custom_id, { values: [alpha.id] });
-    assert.ok(last().content.includes('Go ahead?'), 'nobody left to turn away, so that step is skipped');
     reviews.reviewers = [];
-    await press(button('Continue'));
+    await press(button('Approve'));
     assert.ok(/permission|reviewer/i.test(last().content), last().content);
     assert.strictEqual(members.reviewOf(await members.getMember(alpha.id)).status, 'pending');
   });

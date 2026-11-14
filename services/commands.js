@@ -231,6 +231,44 @@ const DEFINITIONS = [
     ]
   },
   {
+    name: 'bounty',
+    description: 'The bounty board: post a bitcoin reward, or claim one.',
+    type: CHAT_INPUT,
+    contexts: [GUILD_CONTEXT],
+    integration_types: [GUILD_INSTALL],
+    options: [
+      {
+        type: OPTION.subcommand,
+        name: 'list',
+        description: 'Open bounties.',
+        options: [{ type: OPTION.string, name: 'query', description: 'Title or detail', max_length: 100 }]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'post',
+        description: 'Post a bounty. You fund the escrow after someone claims it.',
+        options: [
+          { type: OPTION.string, name: 'title', description: 'What the bounty is called', required: true, max_length: 120 },
+          { type: OPTION.string, name: 'reward', description: 'In BTC (0.005 BTC) or sats (500k sats)', required: true, max_length: 40 },
+          { type: OPTION.string, name: 'details', description: 'What done looks like', max_length: 500 }
+        ]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'claim',
+        description: 'Open a bounty’s claim step. A payout address is required.',
+        options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'done',
+        description: 'Mark your claim finished, or confirm a bounty you posted.',
+        options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
+      },
+      { type: OPTION.subcommand, name: 'mine', description: 'Bounties you posted or claimed.' }
+    ]
+  },
+  {
     name: 'rsi',
     description: 'Link your RSI profile to your G00N SQUAD profile.',
     type: CHAT_INPUT,
@@ -292,6 +330,11 @@ const HELP = {
     const market = commands._market();
     const browse = market && market.base ? ` Browse: <${commands._url(market.base)}>` : '';
     return `Every listing is a thread in the G00N SQUAD Market forum. Pledges change hands by RSI gifting, and escrow holds the payment until the buyer confirms the gift. Add it to your own account to use it in any DM: <${commands._url('/services/discord/install')}>.${browse}`;
+  },
+  bounty: (commands) => {
+    const bounties = commands._bounties();
+    const board = bounties && bounties.base ? ` Board: <${commands._url(bounties.base)}>` : '';
+    return `Post a reward, then fund the escrow after someone claims it. Confirming the work pays them.${board}`;
   },
   rsi: (commands) => `You prove the handle is yours by putting a short code in your RSI bio for a minute. <${commands._url(commands.settings.rsiPath)}>`,
   hangar: (commands) => `Export your pledges with the Hangar Export add-on for Firefox, then import the .json file. Only fleet totals are public, never who owns what: <${commands._url(commands.settings.rsiPath)}>`,
@@ -564,6 +607,7 @@ class Commands {
     running[allianceRoles.SCRIPT.subcommand] = scripts;
     const live = DEFINITIONS.map((definition) => {
       if (definition.name === 'market') return this.settings.market ? definition : null;
+      if (definition.name === 'bounty') return this._bounties() ? definition : null;
       if (definition.name === 'schedule') return this._schedule() ? definition : null;
       if (definition.name === 'clips') return this._clips() ? definition : null;
       if (definition.name === 'rsi') return this._members() ? definition : null;
@@ -727,6 +771,10 @@ class Commands {
           else out = await this.setup(interaction, subcommand);
         }
         else if (command === 'vote') out = await this.vote(interaction, member);
+        else if (command === 'bounty') {
+          if (typeof interaction.deferReply === 'function' && !interaction.deferred) await interaction.deferReply({ flags: EPHEMERAL });
+          out = await this.bounty(interaction, member);
+        }
         else out = await this.duel(interaction, member);
       }
     } catch (error) {
@@ -1043,7 +1091,7 @@ class Commands {
   }
 
   /**
-   * `/goon review`: DM a reviewer everyone waiting for review on goon.vc.
+   * `/goon review`: DM a reviewer the officers waiting for review, one at a time.
    * Reviewers are goon.vc's own list, not a server permission.
    * @param {Object} interaction
    * @returns {Promise<Object>} reply
@@ -1061,8 +1109,8 @@ class Commands {
       }
       throw error;
     }
-    if (!result.pending) return this._private('Nobody is waiting for review right now.');
-    return this._private(`Check your DMs: ${result.pending === 1 ? '1 sign-in is' : `${result.pending} sign-ins are`} waiting for review.`);
+    if (!result.pending) return this._private('No officers are waiting for review right now.');
+    return this._private(`Check your DMs: ${result.pending === 1 ? '1 officer sign-in is' : `${result.pending} officer sign-ins are`} waiting for review.`);
   }
 
   /**
@@ -1537,6 +1585,63 @@ class Commands {
   _market () {
     const market = this.settings.market;
     return typeof market === 'function' ? market() : market;
+  }
+
+  _bounties () {
+    const bounties = this.settings.bounties;
+    return typeof bounties === 'function' ? bounties() : bounties;
+  }
+
+  /**
+   * `/bounty`: list, post, claim, done, and mine. Replies are private and
+   * carry names and links only. Claiming needs a payout address, so it opens
+   * the bounty page.
+   * @param {Object} interaction
+   * @param {Object} member
+   * @returns {Promise<Object>}
+   */
+  async bounty (interaction, member) {
+    const bounties = this._bounties();
+    if (!bounties) return this._private('The bounty board is not running right now.');
+    if (interaction.user && interaction.user.bot) return this._private('Bots don’t post bounties.');
+    const subcommand = this._subcommand(interaction);
+    const options = interaction.options;
+    const base = bounties.base;
+    if (subcommand === 'list' || subcommand === 'mine') {
+      const query = subcommand === 'list' ? String(options.getString('query') || '').trim() : '';
+      const rows = bounties.list(subcommand === 'mine' ? { status: 'all', mine: member } : { q: query });
+      const all = this._url(base);
+      if (!rows.length) return this._private(subcommand === 'mine' ? `You have no bounties. [The board](<${all}>)` : `No open bounties${query ? ` match “${escapeMarkdown(query)}”` : ''}. [The board](<${all}>)`);
+      const lines = rows.slice(0, 10).map((bounty) => `**${escapeMarkdown(bounty.title)}** · ${escapeMarkdown(bounty.reward)} · ${bounty.status} · [open](<${this._url(bounty.path)}>)`);
+      return this._private([subcommand === 'mine' ? '**Your bounties**' : '**Bounties**', ...lines, `[The board](<${all}>)`].join('\n'));
+    }
+    if (subcommand === 'post') {
+      const created = await bounties.create({
+        title: options.getString('title'),
+        reward: options.getString('reward'),
+        details: options.getString('details')
+      }, member);
+      return this._private(`Posted **${escapeMarkdown(created.title)}** · ${escapeMarkdown(created.reward)}. Add your refund address on the page before someone can claim it: <${this._url(created.path)}>`);
+    }
+    const id = String(options.getString('bounty') || '').trim().toLowerCase();
+    const page = this._url(`${base}/${id}`);
+    if (subcommand === 'claim') return this._private(`Claim it on goon.vc. You’ll give the address the reward should be paid to: <${page}>`);
+    if (subcommand === 'done') {
+      let bounty;
+      try { bounty = bounties.view(bounties._get(id), member); } catch (error) {
+        return this._private(error.status && error.status < 500 ? error.message : 'No such bounty.');
+      }
+      if (bounty.you === 'claimant' && bounty.status === 'funded') {
+        const updated = await bounties.finish(id, member);
+        return this._private(`Marked **${escapeMarkdown(updated.title)}** finished. The poster confirms it to release the reward. <${page}>`);
+      }
+      if (bounty.you === 'poster' && bounty.status === 'finished') {
+        const updated = await bounties.confirm(id, member);
+        return this._private(`Confirmed **${escapeMarkdown(updated.title)}**. The escrow releases to the claimant. <${page}>`);
+      }
+      return this._private(`Nothing for you to mark done on that bounty. <${page}>`);
+    }
+    return this._private(`Bounties: <${this._url(base)}>`);
   }
 
   _schedule () {

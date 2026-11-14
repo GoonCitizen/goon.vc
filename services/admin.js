@@ -4,7 +4,8 @@
  * Operator panel (`GET /services/admin`). Signed out is 401. Anyone who is
  * not an admin, including a one-time RSI claim-link session, is 404. The
  * body lists members and their linked accounts, campaign status, check-ins,
- * welcome DMs, and reviews waiting. It does not send or decide anything.
+ * welcome DMs, and officers waiting for review. Approve and turn away act on
+ * one officer at a time. It does not send campaigns.
  */
 
 const home = require('../contracts/goon-squad.json');
@@ -84,6 +85,32 @@ function campaignView (campaign) {
   };
 }
 
+function waitingView (member, officerOf) {
+  const discord = (member.accounts || []).find((account) => account.platform === 'discord');
+  const profile = (discord && discord.profile) || {};
+  const symbols = typeof officerOf === 'function' ? officerOf(member) : [];
+  return {
+    id: member.id,
+    displayName: member.displayName || null,
+    inGuild: member.inGuild === true,
+    requestedAt: member.review && member.review.requestedAt || null,
+    discord: discord ? {
+      id: discord.id,
+      username: profile.username || null,
+      name: profile.globalName || null
+    } : null,
+    rsi: (member.accounts || []).filter((account) => account.platform === 'rsi').map((account) => ({
+      id: account.id,
+      url: rsiCitizen.citizenUrl(account.id)
+    })),
+    fabric: (member.accounts || []).filter((account) => account.platform === 'fabric').map((account) => ({
+      id: account.id,
+      identityId: fabricIdentityId(account)
+    })),
+    officers: Array.isArray(symbols) ? symbols.map(String) : []
+  };
+}
+
 function safeCall (fn, fallback) {
   try {
     const value = fn();
@@ -125,6 +152,7 @@ class Admin {
    * @param {Object} [settings.checkins]
    * @param {Object} [settings.welcome]
    * @param {Object} [settings.reviews]
+   * @param {Function} [settings.officerOf] `(member) => string[]` org symbols.
    * @param {Array} [settings.admins] Defaults to `contracts/goon-squad.json`.
    */
   constructor (settings = {}) {
@@ -133,6 +161,7 @@ class Admin {
     this.checkins = settings.checkins || null;
     this.welcome = settings.welcome || null;
     this.reviews = settings.reviews || null;
+    this.officerOf = typeof settings.officerOf === 'function' ? settings.officerOf : () => [];
     this.admins = settings.admins === undefined ? home.admins : settings.admins;
   }
 
@@ -177,12 +206,7 @@ class Admin {
     let pending = [];
     if (this.members && this.members.reviewsEnabled && typeof this.members.pendingReviews === 'function') {
       const waiting = await this.members.pendingReviews();
-      pending = (waiting || []).map((member) => ({
-        id: member.id,
-        displayName: member.displayName || null,
-        inGuild: member.inGuild === true,
-        requestedAt: member.review && member.review.requestedAt || null
-      }));
+      pending = (waiting || []).map((member) => waitingView(member, this.officerOf));
     }
     const reviews = {
       available: !!(this.reviews && this.reviews.available),
@@ -192,23 +216,62 @@ class Admin {
     return { members, campaigns, checkins, welcome, reviews };
   }
 
+  async decide (memberId, decision, by) {
+    if (!MEMBER_ID_RE.test(String(memberId || ''))) {
+      const error = new Error('Unknown member');
+      error.status = 404;
+      throw error;
+    }
+    if (decision !== 'approved' && decision !== 'denied') {
+      const error = new Error('Choose approve or turn away.');
+      error.status = 400;
+      throw error;
+    }
+    const result = await this.members.decideReview(memberId, decision, { by });
+    if (!result.changed) {
+      const error = new Error(result.status ? `Already ${result.status}.` : 'That sign-in is not waiting.');
+      error.status = 409;
+      throw error;
+    }
+    const reviews = (await this.snapshot()).reviews;
+    return {
+      ok: true,
+      decision,
+      member: { id: result.member.id, displayName: result.member.displayName || null },
+      reviews
+    };
+  }
+
+  _reviewerKey (member) {
+    const discord = (member.accounts || []).find((account) => account.platform === 'discord');
+    return discord ? `discord:${discord.id}` : `member:${member.id}`;
+  }
+
   /**
    * @returns {Function}
    */
   middleware () {
     return (req, res, next) => {
       const pathname = (req.path || new URL(req.url, 'http://localhost').pathname).replace(/\/+$/, '');
-      if (pathname !== PATH) return next();
-      if (String(req.method || 'GET').toUpperCase() !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
+      const method = String(req.method || 'GET').toUpperCase();
+      const reviewPath = pathname.startsWith(`${PATH}/reviews/`) ? pathname.slice(`${PATH}/reviews/`.length) : null;
+      if (pathname !== PATH && reviewPath == null) return next();
+      if (pathname === PATH && method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
+      if (reviewPath != null && method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
       Promise.resolve(this.members && this.members.currentMember(req)).then(async (current) => {
         if (!current) return sendJson(res, 401, { error: 'Not signed in' });
         if (!this.allows(current)) return sendJson(res, 404, { error: 'Not found' });
+        if (reviewPath != null) {
+          const body = await this.decide(reviewPath.toLowerCase(), req.body && req.body.decision, this._reviewerKey(current.member));
+          return sendJson(res, 200, body);
+        }
         const body = await this.snapshot();
         return sendJson(res, 200, Object.assign({ ok: true, you: { id: current.member.id, displayName: current.member.displayName || null } }, body));
       }).catch((error) => {
         if (res.headersSent) return;
-        sendJson(res, 500, { error: 'Could not load the admin panel' });
-        if (this.members && typeof this.members.emit === 'function') {
+        const status = error && error.status >= 400 && error.status < 500 ? error.status : 500;
+        sendJson(res, status, { error: status === 500 ? 'Could not load the admin panel' : error.message });
+        if (status === 500 && this.members && typeof this.members.emit === 'function') {
           this.members.emit('error', 'admin', error && error.message ? error.message : error);
         }
       });
