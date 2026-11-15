@@ -428,16 +428,104 @@
       ]
     },
     {
-      "displayName": "Monkey Business",
       "symbol": "MB",
-      "name": "Monkey Business",
+      "name": "Space Monkey Universal Services",
+      "url": "https://robertsspaceindustries.com/orgs/SMUS",
+      "logoUrl": "https://theverse.robertsspaceindustries.com/99wqffbzqko9v/logo.png",
+      "bannerUrl": "https://theverse.robertsspaceindustries.com/k6v3syowy6rf8/banner.png",
+      "members": 12,
+      "model": "Organization",
+      "commitment": "Casual",
+      "roleplay": null,
+      "focus": {
+        "primary": "Social",
+        "secondary": "Security"
+      },
+      "recruiting": true,
       "intro": [
-        "Joining PERMAFLEET. No public RSI organization page is on record yet."
+        "Welcome to Space Monkey Universal Services. We’re a lawful, casual Star Citizen org built around industry, security, trade, and dependable teamwork. Casual community. Serious capability. Apes Together Strong!"
       ],
-      "links": [],
-      "history": [],
-      "manifesto": [],
-      "charter": []
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/SpaceMonkey"
+        }
+      ],
+      "history": [
+        "OUR HISTORY",
+        "Space Monkey Universal Services grew from a simple idea: good people working together can accomplish more than they can alone.",
+        "The Monkey Wrench Fleet began as an industrial group focused on mining, hauling, salvage, and keeping its members moving. As the scale of those activities grew, the need for dependable security led to the formation of the Space Monkey Marine Corps. The Space Monkey Supply Syndicate later expanded our capabilities into procurement, trade, sourcing, and commercial coordination.",
+        "These complementary branches came together as Space Monkey Universal Services—a unified organization built around industry, security, and supply, without losing the welcoming community that made it possible.",
+        "Today, SMUS combines casual participation with the ability to coordinate serious operations. Our ambitions may grow, but our purpose remains the same: help one another succeed and build a crew people can depend on.",
+        "Apes Together Strong!",
+        "Join Now! discord.gg/SpaceMonkey"
+      ],
+      "manifesto": [
+        "OUR MANIFESTO",
+        "CASUAL COMMUNITY. SERIOUS CAPABILITY.",
+        "Space Monkey Universal Services exists to help people enjoy more of the Star Citizen universe together. We believe organized teamwork should open opportunities, not turn a game into a second job. New pilots and veterans alike deserve a place where they can contribute, learn, and count on their crew.",
+        "Our operational identity is straightforward: BUILD. SUPPLY. PROTECT. Our branches specialize in different work, but none is secondary to the others. Every successful expedition, trade, and security operation contributes to the strength of the whole organization.",
+        "THREE BRANCHES. ONE TROOP.",
+        "MONKEY WRENCH FLEET (MWF)",
+        "The fleet behind the fleet.",
+        "MWF is our industrial strength: mining, salvage, hauling, engineering, recovery, maintenance, transport, and large-scale logistics. Industrial work is an achievement in its own right, not merely preparation for someone else’s victory. MWF has the people, ships, and expertise to move operations forward.",
+        "SPACE MONKEY MARINE CORPS (SMMC)",
+        "You pay. We deploy. They fall.",
+        "SMMC is our lawful combat and security arm. Its crews undertake mercenary contracts, escorts, fleet defense, tactical operations, anti-piracy work, and the protection of people, cargo, and objectives. We fight to accomplish a mission or defend what matters—not to harass other players.",
+        "SPACE MONKEY SUPPLY SYNDICATE (SMSS)",
+        "Markets move. We move faster.",
+        "SMSS is our commercial and procurement arm. Its members navigate markets, trade goods, source rare equipment, acquire materials, coordinate contracts, and connect the organization with the resources it needs. It focuses on opportunity and acquisition rather than duplicating the industrial work of MWF.",
+        "THE WAY WE OPERATE",
+        "We value community over ego, competence over rank, and reliability over promises. Members are welcome to explore all three branches, help when they can, and play at their own pace. Attendance and roleplay are never compulsory. When we commit to a joint operation, we communicate, cooperate, and respect one another’s time.",
+        "We are a lawful organization. Piracy, scams, griefing, and violence without a legitimate objective have no place under our banner. We defend our members, fulfill legitimate contracts, and respect the wider community.",
+        "THE BENEFITS OF BELONGING",
+        "SMUS offers dependable teammates, organized industrial, commercial, and tactical activities, shared experience, recognition through earned ranks, and exclusive member pricing through the SMSS marketplace. Every member begins with a 10% store discount, increasing by 10 percentage points per earned rank to 60% at Rank 5.",
+        "One Organization. Three Divisions. Unlimited Opportunities.",
+        "APES TOGETHER STRONG."
+      ],
+      "charter": [
+        "ARTICLE I — MEMBERSHIP",
+        "Space Monkey Universal Services (SMUS) welcomes Star Citizen players of all experience levels who support our values and lawful operating standards. No specific ship, profession, or prior experience is required for general membership.",
+        "Participation is voluntary. There are no mandatory weekly playtimes, deployments, or roleplay obligations. Members may work within any of the three branches and are encouraged to share knowledge and assist other players.",
+        "ARTICLE II — LEADERSHIP",
+        "Organization — Leader — Master Title",
+        "SMUS — TheyCallMeHero — Grand Simian",
+        "SMMC — ConvergedGaming — Ape-X Commander",
+        "SMSS — CurseofJericho — Magnate of Monkey Business",
+        "MWF — Milinko01 — Kong of Industry",
+        "ARTICLE III — RANKS & MEMBER DISCOUNTS",
+        "All new members join as Rank 0: Space Monkey. Ranks 1–5 are earned through participation and contribution. Rank recognizes activity and service; it does not replace practical experience or make every senior member an automatic mission commander.",
+        "Rank — Title — SMSS Store Discount",
+        "5 — Prime Ape — 60%",
+        "4 — Branch Commander — 50%",
+        "3 — Senior Simian — 40%",
+        "2 — Monkey Major — 30%",
+        "1 — Monkey First Class — 20%",
+        "0 — Space Monkey — 10%",
+        "The discount starts at 10% upon joining and increases by 10 percentage points for each rank earned. It applies to all items listed for sale on the official SMSS UEX storefront:",
+        "https://uexcorp.space/marketplace/orgs/@JERICHOSC",
+        "ARTICLE IV — CODE OF CONDUCT",
+        "Respect. Treat fellow members and other players with courtesy. Harassment, discrimination, bullying, targeted abuse, and personal attacks are not tolerated.",
+        "Integrity. Do not scam, steal from fellow members, deliberately mislead teammates, or exploit the trust of the organization.",
+        "Cooperation. Follow the agreed plan when participating in an organized mission. Communicate honestly about your availability and ability to fulfill an assigned role.",
+        "Reputation. When representing SMUS, conduct yourself in a way that reflects our values of reliability, professionalism, and fair play.",
+        "No mandatory roleplay. Our ranks and branding are part of our identity, not an expectation of in-character conduct, military formalities, or blind obedience.",
+        "ARTICLE V — RULES OF ENGAGEMENT",
+        "SMUS is a lawful organization. Members may engage in legitimate security and mercenary contracts, self-defense, defense of fellow members, protection of assets or cargo, escort operations, anti-piracy actions, and the defense of operational objectives.",
+        "We do not engage in piracy or griefing under the SMUS banner. Attacking uninvolved players solely for entertainment at their expense, repeated malicious targeting, scams, and violence without a legitimate gameplay objective are prohibited.",
+        "Members may defend themselves, their crew, and their property against aggression. They are not expected to surrender ships or cargo to hostile players.",
+        "We fight for a reason, not simply because we can.",
+        "ARTICLE VI — ORGANIZED OPERATIONS",
+        "SMUS may organize mining expeditions, salvage missions, trade initiatives, freight convoys, escort contracts, fleet operations, tactical deployments, and community activities.",
+        "Joining an operation is optional. Once a member accepts a role, they should coordinate with the appointed operation leader, communicate changes in availability, and make a reasonable effort to fulfill their commitment.",
+        "Operational leaders coordinate the mission and assign responsibilities according to capability and the needs of the activity. Leadership exists to help the crew succeed, not to establish unnecessary authority.",
+        "ARTICLE VII — OUR COMMITMENT",
+        "SMUS strives to offer a welcoming community, dependable teammates, shared knowledge, worthwhile activities across all three branches, recognition of contributions, and exclusive SMSS member discounts—without compulsory attendance or roleplay.",
+        "We ask members to respect each other, contribute when they can, and remember that the organization is only as strong as the people who stand together.",
+        "CASUAL COMMUNITY. SERIOUS CAPABILITY.",
+        "APES TOGETHER STRONG."
+      ],
+      "displayName": "Monkey Business"
     }
   ]
 }

@@ -209,7 +209,7 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
 ADSVOLCANO. DOUBLEDOGZ's officer on record is DoubleDogDelivery. House of
 Khans' officer on record is Patriarch. Obsidia's officers on record are Mello,
-toast, and Valgar. Monkey Business has none on record yet. **Only officers vote for an org**;
+toast, and Valgar. Monkey Business's officers on record are ConvergedGaming and CurseofJericho. The public RSI organization is Space Monkey Universal Services. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with

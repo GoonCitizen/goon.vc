@@ -884,7 +884,9 @@ describe('goon.vc HTTP', function () {
     }
     assert.ok(res.body.includes('id="org-MB"'), 'MB page');
     assert.ok(res.body.includes(`<li><a class="op-member" href="${base}/MB">`), 'MB charter tile');
-    assert.ok(!res.body.includes('href="https://robertsspaceindustries.com/orgs/MB"'), 'MB has no public RSI page');
+    assert.ok(res.body.includes('href="https://robertsspaceindustries.com/orgs/SMUS"'), 'Monkey Business is Space Monkey Universal Services on RSI');
+    assert.ok(res.body.includes('Listed on RSI as <strong>Space Monkey Universal Services</strong>'));
+    assert.ok(!res.body.includes('href="https://robertsspaceindustries.com/orgs/MB"'), 'the PERMAFLEET seat stays MB');
     assert.ok(!res.body.includes('id="org-AIMOS"'), 'AIMOS is not a member org');
     const charter = res.body.slice(res.body.indexOf('id="permafleet-charter"'), res.body.indexOf('</section>', res.body.indexOf('id="permafleet-charter"')));
     assert.ok(charter.includes('<img class="op-member-logo" src="https://robertsspaceindustries.com/media/9p4uiaylb9ci2r/logo/G00N-Logo.jpg" alt="" width="64" height="64" loading="lazy">'), 'charter tiles carry org logos');
