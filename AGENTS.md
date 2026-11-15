@@ -208,7 +208,7 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
 remaeus, kersa (neorion), and thejohnram. For the other orgs, an officer is someone who holds that org's role and PERMAFLEET OFFICERS, Officer 1, Officer 2, or ORG STEWARDS on a Discord the bot is in. INFN's officers on record are
 ADSVOLCANO, Lord_Phobos, AwfulWaffle16, Drewsta, Vincent_Lucerne, Fadingdoughnut0, thejohnram, and RockyTyger. TRDE's officers on record are trickE, Famous-Wolf, and MD Monster. LCRP's officers on record are Ablckbrn, Revan33, and MD Monster. DOUBLEDOGZ's officers on record are DoubleDogDelivery, remaeus, and Lord_Phobos. 4M Contractors' officers on record are Masterjedi, Commander-Sonic, and ZedDaMedic. Risky Business's officers on record are Thoriaz and psycoses. House of
-Khans' officer on record is Patriarch. Obsidia's officers on record are Mello,
+Khans' officers on record are Patriarch and Cian. Obsidia's officers on record are Mello,
 toast, and Valgar. Monkey Business's officers on record are ConvergedGaming and CurseofJericho. The public RSI organization is Space Monkey Universal Services. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
@@ -1221,8 +1221,9 @@ there decide one officer (`POST /services/admin/reviews/<id> { decision }`)
 and leave the rest of the queue waiting. It does not send or schedule
 campaigns. **Campaigns** (`/campaigns`, `components/CampaignsPage.js`,
 `services/campaignDesk.js`) is the same operators: the list, one campaign’s
-message, script, and log, a preview of who it would reach by name, and Send
-now, which previews a draft and then starts that preview. Signed out is 401
+message, script, and log, a preview of who it would reach by name, a new draft
+from a script anyone may run (the message is optional), and Send now, which
+previews a draft and then starts that preview. Signed out is 401
 and anyone else is 404. No server ids or recipient ids. Each member's profile is `/members/<member id>`
 (`GET /services/members/profiles/<id>`: display name, avatar, member since,
 in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI

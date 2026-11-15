@@ -1564,6 +1564,18 @@
         <p>This page isn’t available.</p>
       </section>
       <div id="campaigns-panel" hidden>
+        <section id="campaigns-new">
+          <h2>New campaign</h2>
+          <form id="campaigns-create">
+            <label>Script
+              <select id="campaigns-script" required></select>
+            </label>
+            <label>Message
+              <textarea id="campaigns-message" maxlength="1800" placeholder="Optional. The script carries the conversation when this is empty."></textarea>
+            </label>
+            <p class="campaigns-actions"><button class="goon-button" type="submit">Create draft</button></p>
+          </form>
+        </section>
         <p id="campaigns-note" class="campaigns-note"></p>
         <ul id="campaigns-list" class="campaigns-list"></ul>
       </div>
@@ -4144,7 +4156,7 @@ html[data-look=bright]{color-scheme:light}
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
     <script src="/scripts/admin.js?v=9e0b68b6f9b1" defer></script>
-    <script src="/scripts/campaigns.js?v=4d2ce1d205cb" defer></script>
+    <script src="/scripts/campaigns.js?v=fb6d8adca268" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");

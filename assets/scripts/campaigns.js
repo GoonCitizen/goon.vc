@@ -104,10 +104,30 @@
     return li;
   }
 
+  function fillScripts (scripts) {
+    var select = document.getElementById('campaigns-script');
+    var chosen = select.value;
+    select.textContent = '';
+    var none = document.createElement('option');
+    none.value = '';
+    none.textContent = scripts.length ? 'Choose a script' : 'No scripts available';
+    select.appendChild(none);
+    scripts.forEach(function (script) {
+      var option = document.createElement('option');
+      option.value = script.id;
+      option.textContent = script.title || script.id;
+      select.appendChild(option);
+    });
+    if (chosen) select.value = chosen;
+    select.disabled = !scripts.length;
+    document.getElementById('campaigns-new').hidden = !scripts.length;
+  }
+
   function draw (body) {
     document.getElementById('campaigns-panel').hidden = false;
     var note = document.getElementById('campaigns-note');
     list.textContent = '';
+    fillScripts(body.scripts || []);
     if (!body.available) {
       text(note, 'Campaigns are off.');
       return;
@@ -118,6 +138,33 @@
       list.appendChild(drawOne(open[campaign.id] || campaign));
     });
   }
+
+  document.getElementById('campaigns-create').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var script = document.getElementById('campaigns-script').value;
+    var message = document.getElementById('campaigns-message').value;
+    if (!script) {
+      text(status, 'Pick a script.');
+      return;
+    }
+    text(status, '');
+    call('/services/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ script: script, message: message })
+    }).then(function (r) {
+      if (!r.ok) {
+        text(status, (r.j && r.j.error) || 'Could not create that campaign.');
+        return;
+      }
+      document.getElementById('campaigns-message').value = '';
+      if (r.j.campaign) open[r.j.campaign.id] = r.j.campaign;
+      text(status, 'Draft saved.');
+      load();
+    }).catch(function () {
+      text(status, 'Could not create that campaign.');
+    });
+  });
 
   function load () {
     return call('/services/campaigns').then(function (r) {

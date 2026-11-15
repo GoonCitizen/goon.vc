@@ -56,7 +56,10 @@ describe('organization setup', function () {
     ]);
     assert.strictEqual(bySymbol.INFN.officers[0].account, 'discord:214804563826311169');
     assert.strictEqual(bySymbol.INFN.officers.length, 8);
-    assert.strictEqual(bySymbol.H0K.officers[0].account, 'discord:991362165586018324');
+    assert.deepStrictEqual(bySymbol.H0K.officers.map((officer) => officer.account), [
+      'discord:991362165586018324',
+      'discord:159790282026516480'
+    ]);
     assert.deepStrictEqual(bySymbol.OBSX.officers.map((officer) => officer.account), [
       'discord:1508231561454026993',
       'discord:123863917909901315',

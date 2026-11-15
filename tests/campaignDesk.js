@@ -56,8 +56,27 @@ describe('campaign desk', function () {
       scheduled = options;
       store[id].status = 'sending';
       return store[id];
+    },
+    async create (input, options) {
+      const id = 'bbbbbbbbbbbb';
+      store[id] = {
+        id,
+        title: input.title || 'Welcome aboard',
+        owner: options.owner,
+        status: 'draft',
+        content: input.content,
+        filter: {},
+        createdBy: options.by,
+        createdAt: '2026-11-03T00:00:00.000Z',
+        log: [],
+        stats: {},
+        preview: null
+      };
+      return store[id];
     }
   };
+
+  const scripts = [{ id: 'welcome', title: 'Welcome aboard' }];
 
   function request (pathname, opts = {}) {
     return new Promise((resolve, reject) => {
@@ -78,6 +97,7 @@ describe('campaign desk', function () {
         });
       });
       req.on('error', reject);
+      if (opts.body) req.write(opts.body);
       req.end();
     });
   }
@@ -95,10 +115,19 @@ describe('campaign desk', function () {
           return match ? sessions[match[1]] || null : null;
         }
       },
-      community: { campaigns }
+      community: { campaigns, campaignScripts () { return scripts; } }
     });
     const mw = desk.middleware();
-    server = http.createServer((req, res) => mw(req, res, () => { res.statusCode = 404; res.end(); }));
+    server = http.createServer((req, res) => {
+      const chunks = [];
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', () => {
+        if (chunks.length) {
+          try { req.body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (_) { req.body = {}; }
+        }
+        mw(req, res, () => { res.statusCode = 404; res.end(); });
+      });
+    });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     port = server.address().port;
   });
@@ -147,5 +176,25 @@ describe('campaign desk', function () {
     const sent = await request('/services/campaigns/abcdabcdabcd/send', { method: 'POST', headers: { Cookie: 'goon.member=admin' } });
     assert.strictEqual(sent.status, 409);
     assert.match(sent.json.error, /sending/);
+  });
+
+  it('creates a draft from a script and leaves the message out', async function () {
+    const res = await request('/services/campaigns', {
+      method: 'POST',
+      headers: { Cookie: 'goon.member=admin', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: 'welcome' })
+    });
+    assert.strictEqual(res.status, 200, res.text);
+    assert.strictEqual(res.json.campaign.content.script, 'welcome');
+    assert.strictEqual(res.json.campaign.content.text, '');
+    assert.strictEqual(res.json.campaign.title, 'Welcome aboard');
+    assert.ok(!res.text.includes(GUILD));
+    const refused = await request('/services/campaigns', {
+      method: 'POST',
+      headers: { Cookie: 'goon.member=admin', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: 'nope' })
+    });
+    assert.strictEqual(refused.status, 400);
+    assert.match(refused.json.error, /script/);
   });
 });

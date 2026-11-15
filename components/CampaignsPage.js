@@ -18,7 +18,10 @@ function renderStyles () {
       .campaigns-message { white-space: pre-wrap; }
       .campaigns-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
       .campaigns-actions .goon-button { font-size: 0.85em; margin: 0; }
-      .campaigns-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }`;
+      .campaigns-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
+      .campaigns-page label { display: block; margin: 0.6em 0; }
+      .campaigns-page select, .campaigns-page textarea { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; box-sizing: border-box; color: #fff; font: inherit; margin-top: 0.3em; padding: 0.45em 0.6em; width: 100%; }
+      .campaigns-page textarea { min-height: 5em; }`;
 }
 
 /**
@@ -40,6 +43,18 @@ function renderHtml (props) {
         <p>This page isn’t available.</p>
       </section>
       <div id="campaigns-panel" hidden>
+        <section id="campaigns-new">
+          <h2>New campaign</h2>
+          <form id="campaigns-create">
+            <label>Script
+              <select id="campaigns-script" required></select>
+            </label>
+            <label>Message
+              <textarea id="campaigns-message" maxlength="1800" placeholder="Optional. The script carries the conversation when this is empty."></textarea>
+            </label>
+            <p class="campaigns-actions"><button class="goon-button" type="submit">Create draft</button></p>
+          </form>
+        </section>
         <p id="campaigns-note" class="campaigns-note"></p>
         <ul id="campaigns-list" class="campaigns-list"></ul>
       </div>
@@ -157,10 +172,30 @@ function client () {
     return li;
   }
 
+  function fillScripts (scripts) {
+    var select = document.getElementById('campaigns-script');
+    var chosen = select.value;
+    select.textContent = '';
+    var none = document.createElement('option');
+    none.value = '';
+    none.textContent = scripts.length ? 'Choose a script' : 'No scripts available';
+    select.appendChild(none);
+    scripts.forEach(function (script) {
+      var option = document.createElement('option');
+      option.value = script.id;
+      option.textContent = script.title || script.id;
+      select.appendChild(option);
+    });
+    if (chosen) select.value = chosen;
+    select.disabled = !scripts.length;
+    document.getElementById('campaigns-new').hidden = !scripts.length;
+  }
+
   function draw (body) {
     document.getElementById('campaigns-panel').hidden = false;
     var note = document.getElementById('campaigns-note');
     list.textContent = '';
+    fillScripts(body.scripts || []);
     if (!body.available) {
       text(note, 'Campaigns are off.');
       return;
@@ -171,6 +206,33 @@ function client () {
       list.appendChild(drawOne(open[campaign.id] || campaign));
     });
   }
+
+  document.getElementById('campaigns-create').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var script = document.getElementById('campaigns-script').value;
+    var message = document.getElementById('campaigns-message').value;
+    if (!script) {
+      text(status, 'Pick a script.');
+      return;
+    }
+    text(status, '');
+    call('/services/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ script: script, message: message })
+    }).then(function (r) {
+      if (!r.ok) {
+        text(status, (r.j && r.j.error) || 'Could not create that campaign.');
+        return;
+      }
+      document.getElementById('campaigns-message').value = '';
+      if (r.j.campaign) open[r.j.campaign.id] = r.j.campaign;
+      text(status, 'Draft saved.');
+      load();
+    }).catch(function () {
+      text(status, 'Could not create that campaign.');
+    });
+  });
 
   function load () {
     return call('/services/campaigns').then(function (r) {
