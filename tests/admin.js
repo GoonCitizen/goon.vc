@@ -188,8 +188,17 @@ describe('Admin panel', function () {
     assert.strictEqual(setup.H0K.discord.invite, 'https://discord.gg/khans');
     assert.strictEqual(setup.H0K.discord.configured, true);
     assert.strictEqual(setup.MB.officers.length, 2);
-    assert.deepStrictEqual(setup.LCRP.officers, []);
+    assert.deepStrictEqual(setup.LCRP.officers.map((officer) => officer.account), [
+      'discord:525468619782750209',
+      'discord:1103845961043816548',
+      'discord:161858332712370176'
+    ]);
     assert.strictEqual(setup.LCRP.discord.configured, false);
+    assert.deepStrictEqual(setup['4MCONTRACT'].officers.map((officer) => officer.account), [
+      'discord:197877020451930112',
+      'discord:758034681475104788',
+      'discord:570746844817260565'
+    ]);
     assert.ok(!res.text.includes('259387737331859466'), 'no House of Khans server id');
     assert.ok(!res.text.includes('1376267243650023434'), 'no Monkey Business server id');
     assert.ok(!res.text.includes('1190527980120850493'), 'no G00N server id');

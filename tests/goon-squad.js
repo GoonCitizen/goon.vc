@@ -57,7 +57,17 @@ describe('G00N SQUAD home Discord', function () {
 
   it('records ADSVOLCANO as the INFN officer', function () {
     const infn = alliance.organizations.find((org) => org.symbol === 'INFN');
-    assert.deepStrictEqual(infn.officers, ['discord:214804563826311169']);
+    assert.strictEqual(infn.officers[0], 'discord:214804563826311169');
+    assert.deepStrictEqual(infn.officers, [
+      'discord:214804563826311169',
+      'discord:269881157250842624',
+      'discord:176007351046897664',
+      'discord:415278784414089216',
+      'discord:133880061643325441',
+      'discord:736430819513598034',
+      'discord:355141171095404554',
+      'discord:643156333104988162'
+    ]);
   });
 
   it('counts G00N Prospect ranks by the pinned ids even when renamed', function () {

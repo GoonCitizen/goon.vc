@@ -206,8 +206,8 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
-remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
-ADSVOLCANO. DOUBLEDOGZ's officer on record is DoubleDogDelivery. House of
+remaeus, kersa (neorion), and thejohnram. For the other orgs, an officer is someone who holds that org's role and PERMAFLEET OFFICERS, Officer 1, Officer 2, or ORG STEWARDS on a Discord the bot is in. INFN's officers on record are
+ADSVOLCANO, Lord_Phobos, AwfulWaffle16, Drewsta, Vincent_Lucerne, Fadingdoughnut0, thejohnram, and RockyTyger. TRDE's officers on record are trickE, Famous-Wolf, and MD Monster. LCRP's officers on record are Ablckbrn, Revan33, and MD Monster. DOUBLEDOGZ's officers on record are DoubleDogDelivery, remaeus, and Lord_Phobos. 4M Contractors' officers on record are Masterjedi, Commander-Sonic, and ZedDaMedic. Risky Business's officers on record are Thoriaz and psycoses. House of
 Khans' officer on record is Patriarch. Obsidia's officers on record are Mello,
 toast, and Valgar. Monkey Business's officers on record are ConvergedGaming and CurseofJericho. The public RSI organization is Space Monkey Universal Services. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
@@ -315,8 +315,8 @@ never Discord ids, account keys, or member ids; federation pages list officers b
 name only (the descriptor still lists their keys so anyone can check a vote). A broken roster leaves
 votes off (503) without failing the site. Tests: `tests/alliance.js`.
 `/operations/PERMAFLEET/onboarding` (`components/PermafleetOnboarding.js`) is
-for leaders of orgs joining the Protectorate: open an embassy in #embassy, tag
-pilots `[PERMAFLEET]` on RSI, name their officers, set up their Discord; then
+for leaders of orgs joining the Protectorate: open an embassy in #embassy, name
+their officers, set up their Discord; then
 what we expect of every member org (its own #embassy channel, a public
 PERMAFLEET voice channel, and the Prospect system for onboarding new members),
 what member orgs get, and the ground rules. Its copy follows the pinned #getting-started,

@@ -55,6 +55,7 @@ describe('organization setup', function () {
       'discord:355141171095404554'
     ]);
     assert.strictEqual(bySymbol.INFN.officers[0].account, 'discord:214804563826311169');
+    assert.strictEqual(bySymbol.INFN.officers.length, 8);
     assert.strictEqual(bySymbol.H0K.officers[0].account, 'discord:991362165586018324');
     assert.deepStrictEqual(bySymbol.OBSX.officers.map((officer) => officer.account), [
       'discord:1508231561454026993',
@@ -65,10 +66,25 @@ describe('organization setup', function () {
       ['discord:511146587515256832', 'ConvergedGaming'],
       ['discord:813203402543988757', null]
     ]);
-    assert.deepStrictEqual(bySymbol.TRDE.officers, []);
-    assert.deepStrictEqual(bySymbol.LCRP.officers, []);
-    assert.deepStrictEqual(bySymbol['4MCONTRACT'].officers, []);
-    assert.deepStrictEqual(bySymbol.IDBC.officers, []);
+    assert.deepStrictEqual(bySymbol.TRDE.officers.map((officer) => officer.account), [
+      'discord:357882771227803668',
+      'discord:280539499170234379',
+      'discord:161858332712370176'
+    ]);
+    assert.deepStrictEqual(bySymbol.LCRP.officers.map((officer) => officer.account), [
+      'discord:525468619782750209',
+      'discord:1103845961043816548',
+      'discord:161858332712370176'
+    ]);
+    assert.deepStrictEqual(bySymbol['4MCONTRACT'].officers.map((officer) => officer.account), [
+      'discord:197877020451930112',
+      'discord:758034681475104788',
+      'discord:570746844817260565'
+    ]);
+    assert.deepStrictEqual(bySymbol.IDBC.officers.map((officer) => officer.account), [
+      'discord:322940310567124992',
+      'discord:292455599831121921'
+    ]);
     assert.ok(!JSON.stringify(rows).includes(GOON), 'the view does not carry server ids');
   });
 });

@@ -8,12 +8,40 @@
       "discord:191401936245882880",
       "discord:355141171095404554"
     ] },
-    { "symbol": "INFN", "guildId": "1190527980120850493", "officers": ["discord:214804563826311169"] },
-    { "symbol": "TRDE", "guildId": "937681528790609970", "officers": [] },
-    { "symbol": "LCRP", "officers": [] },
-    { "symbol": "DOUBLEDOGZ", "guildId": "1190527980120850493", "officers": ["discord:1300310404538437664"] },
-    { "symbol": "4MCONTRACT", "guildId": "1145511542637482114", "officers": [] },
-    { "symbol": "IDBC", "guildId": "1200935959961817088", "officers": [] },
+    { "symbol": "INFN", "guildId": "1190527980120850493", "officers": [
+      "discord:214804563826311169",
+      "discord:269881157250842624",
+      "discord:176007351046897664",
+      "discord:415278784414089216",
+      "discord:133880061643325441",
+      "discord:736430819513598034",
+      "discord:355141171095404554",
+      "discord:643156333104988162"
+    ] },
+    { "symbol": "TRDE", "guildId": "937681528790609970", "officers": [
+      "discord:357882771227803668",
+      "discord:280539499170234379",
+      "discord:161858332712370176"
+    ] },
+    { "symbol": "LCRP", "officers": [
+      "discord:525468619782750209",
+      "discord:1103845961043816548",
+      "discord:161858332712370176"
+    ] },
+    { "symbol": "DOUBLEDOGZ", "guildId": "1190527980120850493", "officers": [
+      "discord:1300310404538437664",
+      "discord:420222636954615808",
+      "discord:269881157250842624"
+    ] },
+    { "symbol": "4MCONTRACT", "guildId": "1145511542637482114", "officers": [
+      "discord:197877020451930112",
+      "discord:758034681475104788",
+      "discord:570746844817260565"
+    ] },
+    { "symbol": "IDBC", "guildId": "1200935959961817088", "officers": [
+      "discord:322940310567124992",
+      "discord:292455599831121921"
+    ] },
     { "symbol": "H0K", "guildId": "259387737331859466", "officers": ["discord:991362165586018324"] },
     { "symbol": "OBSX", "officers": [
       "discord:1508231561454026993",

@@ -983,7 +983,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(start > 0, 'onboarding page');
     const page = res.body.slice(start, res.body.indexOf('</main>', start));
     const steps = [...page.matchAll(/<li>\s*<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
-    assert.deepStrictEqual(steps, ['Open an embassy', 'Tag your pilots', 'Name your officers', 'Set up your Discord']);
+    assert.deepStrictEqual(steps, ['Open an embassy', 'No org yet?', 'Name your officers', 'Set up your Discord']);
     const expectations = page.slice(page.indexOf('id="onboarding-expectations"'), page.indexOf('id="onboarding-benefits"'));
     assert.deepStrictEqual([...expectations.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]), [
       'An #embassy channel',
@@ -992,7 +992,10 @@ describe('goon.vc HTTP', function () {
     ], 'every member org keeps an #embassy, a public PERMAFLEET voice channel, and Prospect ranks');
     assert.ok(expectations.includes('<a href="/operations/PERMAFLEET/squadrons">How the ranks work &raquo;</a>'));
     assert.ok(page.includes('href="https://discord.com/channels/1190527980120850493/1205022843402977310"'), '#embassy');
-    assert.ok(page.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'tag up on RSI');
+    assert.ok(page.includes('Members of a PERMAFLEET member organization do not join the PERMAFLEET org.'));
+    assert.ok(page.includes('Apply to one of our member orgs to receive permissions.'));
+    assert.ok(page.includes('href="/organizations">Member organizations'), 'no org yet points at the member orgs');
+    assert.ok(!page.includes('href="https://robertsspaceindustries.com/orgs/PERMAFLEET"'), 'member-org pilots are not sent to join PERMAFLEET');
     assert.ok(page.includes('href="/services/discord/invite"'), 'add the bot');
     assert.ok(page.includes('href="/operations/PERMAFLEET/squadrons"'));
     for (const symbol of ['G00N', 'INFN', 'TRDE', 'LCRP', 'DOUBLEDOGZ', '4MCONTRACT', 'IDBC', 'H0K', 'OBSX', 'MB']) {
