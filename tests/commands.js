@@ -415,7 +415,8 @@ describe('Discord application commands', function () {
       const campaign = goon(community).options[0];
       assert.ok(campaign.description.length <= 100);
       assert.ok(campaign.options.every((option) => option.description.length <= 100));
-      assert.deepStrictEqual(campaign.options.map((option) => option.name), ['message', 'role', 'exclude_role', 'active_days', 'script', 'send_at']);
+      assert.deepStrictEqual(campaign.options.map((option) => option.name), ['script', 'message', 'role', 'exclude_role', 'active_days', 'send_at']);
+      assert.ok(campaign.options.every((option) => !option.required), 'script comes first, so message cannot be required');
     });
 
     it('previews privately with every recipient by name, then sends only to them when its author presses Send', async function () {
@@ -528,6 +529,17 @@ describe('Discord application commands', function () {
       assert.deepStrictEqual(choices.replies[0], [{ name: 'Welcome aboard', value: 'welcome' }]);
     });
 
+    it('runs a script with no message', async function () {
+      const commands = new Commands({ members, community, register: false, now: () => clock });
+      const call = await run(commands, { strings: { script: 'welcome' }, roles: { role: PILOTS } });
+      const preview = call.replies[0];
+      assert.ok(preview.content.includes('Offers **Welcome aboard** behind a Start button.'), preview.content);
+      assert.ok(!preview.content.includes('\n> '), preview.content);
+      const id = buttons(preview)[0].custom_id.split(':')[2];
+      assert.deepStrictEqual(campaigns.campaign(id).content, { type: 'script', script: 'welcome', text: '' });
+      assert.strictEqual(campaigns.campaign(id).title, 'Welcome aboard');
+    });
+
     it('does not send unless remaeus initiates it', async function () {
       community.maySendCampaign = (userId) => userId === REMAEUS.id;
       community.managers.add(REMAEUS.id);
@@ -553,6 +565,8 @@ describe('Discord application commands', function () {
       assert.strictEqual(refused.replies[0].content, 'You need the Manage Server permission to send a campaign here.');
       const unknown = await run(commands, { strings: { message: 'Hi', script: 'nope' } });
       assert.strictEqual(unknown.replies[0].content, 'There is no conversation called `nope`. Pick one from the list.');
+      const blank = await run(commands, { strings: {} });
+      assert.strictEqual(blank.replies[0].content, 'Write the message to send.');
       const late = await run(commands, { strings: { message: 'Hi', send_at: 'in 40 days' } });
       assert.strictEqual(late.replies[0].content, 'Campaigns can be scheduled up to 30 days ahead.');
       const garbled = await run(commands, { strings: { message: 'Hi', send_at: 'soonish' } });

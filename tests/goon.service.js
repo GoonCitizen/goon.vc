@@ -1269,6 +1269,16 @@ describe('goon.vc HTTP', function () {
     const adminApi = await fetchJson('/services/admin');
     assert.strictEqual(adminApi.status, 401);
     assert.strictEqual(adminApi.json.error, 'Not signed in');
+
+    const campaignsPage = await fetchJson('/campaigns', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(campaignsPage.status, 200);
+    assert.strictEqual(campaignsPage.headers['content-security-policy'], "frame-ancestors 'none'");
+    assert.ok(campaignsPage.body.includes('id="campaigns-page"'));
+    assert.ok(campaignsPage.body.includes('<title>Campaigns — GOON SQUAD</title>'));
+    assert.match(campaignsPage.body, /<script src="\/scripts\/campaigns\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    const campaignsApi = await fetchJson('/services/campaigns');
+    assert.strictEqual(campaignsApi.status, 401);
+    assert.strictEqual(campaignsApi.json.error, 'Not signed in');
   });
 
   it('issues Passport challenges for the site origin without a Hub', async function () {

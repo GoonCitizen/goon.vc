@@ -26,6 +26,7 @@ const Checkins = require('./checkins');
 const Welcome = require('./welcome');
 const Reviews = require('./reviews');
 const Admin = require('./admin');
+const CampaignDesk = require('./campaignDesk');
 const { memberIsAdmin } = require('../functions/siteAdmin');
 const reviewOfficers = require('../functions/reviewOfficers');
 const homeDiscord = require('../contracts/goon-squad.json');
@@ -235,6 +236,7 @@ class GoonVC {
     const pages = spa.pages().map((page) => Object.assign({}, page, { tags: pageMeta.renderMetaTags(page, site) }));
     const loginPath = String(spa._site('loginPath') || '/sessions').toLowerCase();
     const adminPath = String(spa._site('adminPath') || '/admin').toLowerCase();
+    const campaignsPath = String(spa._site('campaignsPath') || '/campaigns').toLowerCase();
     const stores = [
       [() => this.presence, pageMeta.findPage(pages, spa._site('idlerpgPath'))],
       [() => this.tournaments, pageMeta.findPage(pages, spa._site('tournamentsPath'))],
@@ -281,7 +283,7 @@ class GoonVC {
         res.setHeader('Cache-Control', 'no-cache');
         // Another site must not frame the login page or the operator panel.
         const framed = (req.path.replace(/\/+$/, '') || '/').toLowerCase();
-        if (framed === loginPath || framed === adminPath) {
+        if (framed === loginPath || framed === adminPath || framed === campaignsPath) {
           res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
         }
         if (req.method === 'HEAD') return res.end();
@@ -569,6 +571,11 @@ class GoonVC {
       officerOf: (member) => reviewOfficers.officerSymbols(member),
       admins: homeDiscord.admins
     });
+    this.campaignDesk = new CampaignDesk({
+      members: this.members,
+      community: this.community,
+      admins: homeDiscord.admins
+    });
 
     const tournamentSettings = this.settings.tournaments || {};
     const identify = async (req) => {
@@ -792,6 +799,7 @@ class GoonVC {
         }),
         members: this.members.middleware(),
         admin: this.admin.middleware(),
+        campaigns: this.campaignDesk.middleware(),
         hangar: this.hangar ? this.hangar.middleware() : (req, res, next) => next(),
         events: this.events.middleware(),
         operations: this.operations.middleware(),

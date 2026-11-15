@@ -844,9 +844,9 @@ and a refused fetch uses that cache or Discord's member cache, else 429
 the activity hook (last active: the later of `Presence#lastSeen`,
 the last time the member was present in voice, and `Activity#lastPosted`, their
 last post in the home server), and lists the scripts a campaign may offer (those without
-`requires`). `/goon campaign message [role] [exclude_role] [active_days] [script]
+`requires`). `/goon campaign [script] [message] [role] [exclude_role] [active_days]
 [send_at]` (Manage Server; registered only while campaigns run) saves a draft
-owned by the server and shows its author a private preview: the message, every
+owned by the server. `script` comes first; `message` is required unless a script carries the conversation. It shows its author a private preview: the message, every
 member it reaches by name, who is skipped (excluded role, opted out, not active
 lately), and Send — or Schedule, when `send_at` is "in 2 hours" or a date up to
 30 days ahead — plus Cancel
@@ -1219,7 +1219,11 @@ no recipients), check-in and welcome status, and the officers waiting for
 review. Approve and Turn away
 there decide one officer (`POST /services/admin/reviews/<id> { decision }`)
 and leave the rest of the queue waiting. It does not send or schedule
-campaigns. Each member's profile is `/members/<member id>`
+campaigns. **Campaigns** (`/campaigns`, `components/CampaignsPage.js`,
+`services/campaignDesk.js`) is the same operators: the list, one campaign’s
+message, script, and log, a preview of who it would reach by name, and Send
+now, which previews a draft and then starts that preview. Signed out is 401
+and anyone else is 404. No server ids or recipient ids. Each member's profile is `/members/<member id>`
 (`GET /services/members/profiles/<id>`: display name, avatar, member since,
 in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI
 handle with its citizen page, a short Fabric key fingerprint — and RSI handles,

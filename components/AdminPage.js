@@ -62,6 +62,7 @@ function renderHtml (props) {
         </section>
         <section>
           <h2>Campaigns</h2>
+          <p class="admin-links"><a href="${escapeHtml(props.campaignsPath || '/campaigns')}">Inspect and send &raquo;</a></p>
           <p id="admin-campaigns-note" class="admin-note" hidden></p>
           <ul id="admin-campaigns" class="admin-list"></ul>
         </section>

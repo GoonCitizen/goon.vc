@@ -116,11 +116,11 @@ const DEFINITIONS = [
         name: 'campaign',
         description: 'DM a message to this server’s members; you see who it reaches before it goes out.',
         options: [
-          { type: OPTION.string, name: 'message', description: 'What to send', required: true, max_length: CAMPAIGN_TEXT },
+          { type: OPTION.string, name: 'script', description: 'Guided conversation behind a Start button. The message is then optional.', autocomplete: true },
+          { type: OPTION.string, name: 'message', description: 'What to send. Leave it out when a script carries the conversation.', max_length: CAMPAIGN_TEXT },
           { type: OPTION.role, name: 'role', description: 'Only members with this role (default: everyone)' },
           { type: OPTION.role, name: 'exclude_role', description: 'Skip members with this role' },
           { type: OPTION.integer, name: 'active_days', description: 'Only members in voice or posting within this many days', min_value: 1, max_value: 365 },
-          { type: OPTION.string, name: 'script', description: 'Offer a guided conversation behind a Start button', autocomplete: true },
           { type: OPTION.string, name: 'send_at', description: 'When to send: "in 2 hours" or 2026-11-01T18:00Z (default: when you press Send)' }
         ]
       },
@@ -853,14 +853,14 @@ class Commands {
       return this._private('You need the Manage Server permission to send a campaign here.');
     }
     const options = interaction.options;
-    const text = String(options.getString('message') || '').trim();
-    if (!text) return this._private('Write the message to send.');
-    const role = this._role(options, 'role');
-    const excludeRole = this._role(options, 'exclude_role');
-    const activeDays = typeof options.getInteger === 'function' ? options.getInteger('active_days') : null;
     const script = options.getString('script');
     const offered = script ? community.campaignScripts().find((entry) => entry.id === script) : null;
     if (script && !offered) return this._private(`There is no conversation called \`${script}\`. Pick one from the list.`);
+    const text = String(options.getString('message') || '').trim();
+    if (!offered && !text) return this._private('Write the message to send.');
+    const role = this._role(options, 'role');
+    const excludeRole = this._role(options, 'exclude_role');
+    const activeDays = typeof options.getInteger === 'function' ? options.getInteger('active_days') : null;
     const now = this.settings.now();
     const sendAt = parseSendAt(options.getString('send_at'), now);
     const guildName = (interaction.guild && interaction.guild.name) || null;
@@ -870,6 +870,7 @@ class Commands {
 
     const by = displayName(interaction.member, interaction.user);
     const draft = await campaigns.create({
+      title: offered && !text ? offered.title : undefined,
       content: offered ? { type: 'script', script: offered.id, text } : { type: 'message', text },
       filter: {
         roles: role ? [String(role.id)] : [],
@@ -887,18 +888,18 @@ class Commands {
     this._campaignAuthors.set(draft.id, String(interaction.user.id));
     while (this._campaignAuthors.size > 500) this._campaignAuthors.delete(this._campaignAuthors.keys().next().value);
 
-    const quote = text.length > 1200 ? `${text.slice(0, 1199)}…` : text;
     const audience = role ? `<@&${role.id}>` : `**${escapeMarkdown(guildName || 'this server')}**`;
     const skipped = [
       excludeRole ? `skipping <@&${excludeRole.id}>` : null,
       preview.optedOut ? `${number(preview.optedOut)} opted out` : null,
       preview.inactive ? `${number(preview.inactive)} not active in ${plural(activeDays, 'day')}` : null
     ].filter(Boolean);
-    const lines = [
-      `**Campaign preview** — ${escapeMarkdown(guildName || 'this server')}`,
-      quote.split('\n').map((line) => `> ${line}`).join('\n'),
-      `Reaches **${number(preview.reach)}** ${preview.reach === 1 ? 'member' : 'members'} of ${audience}${skipped.length ? `; ${skipped.join(', ')}` : ''}.`
-    ];
+    const lines = [`**Campaign preview** — ${escapeMarkdown(guildName || 'this server')}`];
+    if (text) {
+      const quote = text.length > 1200 ? `${text.slice(0, 1199)}…` : text;
+      lines.push(quote.split('\n').map((line) => `> ${line}`).join('\n'));
+    }
+    lines.push(`Reaches **${number(preview.reach)}** ${preview.reach === 1 ? 'member' : 'members'} of ${audience}${skipped.length ? `; ${skipped.join(', ')}` : ''}.`);
     if (offered) lines.push(`Offers **${escapeMarkdown(offered.title)}** behind a Start button.`);
     const names = (preview.recipients || []).map((recipient) => recipient.name || 'Unnamed member');
     const buttons = [];

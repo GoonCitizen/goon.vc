@@ -36,6 +36,7 @@ const RsiClaimPage = require('../components/RsiClaimPage');
 const WaitingPage = require('../components/WaitingPage');
 const MembersPage = require('../components/MembersPage');
 const AdminPage = require('../components/AdminPage');
+const CampaignsPage = require('../components/CampaignsPage');
 const FabricCalendar = require('../components/FabricCalendar');
 const MeleeRotationDrill = require('../components/MeleeRotationDrill');
 const TournamentBracket = require('../components/TournamentBracket');
@@ -74,6 +75,9 @@ const DEFAULTS = {
   membersDescription: 'G00N SQUAD members. Sign in to see your profile.',
   // Operator panel (components/AdminPage.js). Unlisted; the API is 404 for anyone else.
   adminPath: '/admin',
+  campaignsPath: '/campaigns',
+  campaignsDocumentTitle: 'Campaigns — GOON SQUAD',
+  campaignsDescription: 'Inspect member campaigns and send a draft by hand.',
   adminDocumentTitle: 'Admin — GOON SQUAD',
   adminDescription: 'G00N SQUAD operator tools. Sign in.',
   eventsPath: '/events',
@@ -302,6 +306,7 @@ class GoonSPA extends FabricSPA {
       ClipTimelineEditor,
       MembersPage,
       AdminPage,
+      CampaignsPage,
       WaitingPage,
       RsiClaimPage,
       Federations,
@@ -334,6 +339,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('waitingPath'), this._site('waitingDocumentTitle'), this._site('waitingDescription')),
       page(this._site('membersPath'), this._site('membersDocumentTitle'), this._site('membersDescription')),
       page(this._site('adminPath'), this._site('adminDocumentTitle'), this._site('adminDescription')),
+      page(this._site('campaignsPath'), this._site('campaignsDocumentTitle'), this._site('campaignsDescription')),
       page(this._site('eventsPath'), this._site('eventsDocumentTitle'), this._site('eventsIntro')),
       page(this._site('operationsPath'), this._site('operationsDocumentTitle'), this._site('operationsIntro')),
       page(this._site('idlerpgPath'), this._site('idlerpgDocumentTitle'), this._site('idlerpgIntro')),
@@ -403,6 +409,7 @@ class GoonSPA extends FabricSPA {
     const waitingPath = this._site('waitingPath');
     const membersPath = this._site('membersPath');
     const adminPath = this._site('adminPath');
+    const campaignsPath = this._site('campaignsPath');
     const eventsPath = this._site('eventsPath');
     const eventsTitleJson = JSON.stringify(this._site('eventsDocumentTitle'));
     const operationsPath = this._site('operationsPath');
@@ -918,7 +925,8 @@ ${BountiesPage.styles()}
     ${RsiClaimPage.render({ path: rsiClaimPath, loginPath, joinUrl })}
     ${WaitingPage.render({ path: waitingPath, loginPath, joinUrl, eventsPath, squadronsPath, rsiClaimPath })}
     ${MembersPage.render({ path: membersPath, loginPath, waitingPath, rsiClaimPath })}
-    ${AdminPage.render({ path: adminPath, loginPath })}
+    ${AdminPage.render({ path: adminPath, loginPath, campaignsPath })}
+    ${CampaignsPage.render({ path: campaignsPath, loginPath })}
     ${eventsMainHtml}
     ${operationsMainHtml}
     ${idlerpgMainHtml}
@@ -975,6 +983,7 @@ ${squadronMainsHtml}
         var isMembers = path.toLowerCase() === ${JSON.stringify(membersPath.toLowerCase())};
         var isMember = path.toLowerCase().indexOf(${JSON.stringify(membersPath.toLowerCase() + '/')}) === 0;
         var isAdmin = path.toLowerCase() === ${JSON.stringify(adminPath.toLowerCase())};
+        var isCampaigns = path.toLowerCase() === ${JSON.stringify(campaignsPath.toLowerCase())};
         var isEvents = path.toLowerCase() === ${JSON.stringify(eventsPath.toLowerCase())};
         var isOperations = path.toLowerCase() === ${JSON.stringify(operationsPath.toLowerCase())};
         var isIdleRPG = path.toLowerCase() === ${JSON.stringify(idlerpgPath.toLowerCase())};
@@ -1047,7 +1056,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -1060,6 +1069,8 @@ ${squadronMainsHtml}
         if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
         var adminEl = document.getElementById('admin-page');
         if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
+        var campaignsEl = document.getElementById('campaigns-page');
+        if (campaignsEl) campaignsEl.style.display = isCampaigns ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -1144,6 +1155,7 @@ ${squadronMainsHtml}
         else if (isMembers) document.title = ${JSON.stringify(this._site('membersDocumentTitle'))};
         else if (isMember) document.title = 'Member profile — ' + ${titleJson};
         else if (isAdmin) document.title = ${JSON.stringify(this._site('adminDocumentTitle'))};
+        else if (isCampaigns) document.title = ${JSON.stringify(this._site('campaignsDocumentTitle'))};
         else if (isEvents) document.title = ${eventsTitleJson};
         else if (isOperations) document.title = ${operationsTitleJson};
         else if (isIdleRPG || idlerpgPlayerEl) document.title = ${idlerpgTitleJson};
@@ -1180,6 +1192,7 @@ ${squadronMainsHtml}
     ${WaitingPage.script()}
     ${MembersPage.script()}
     ${AdminPage.script()}
+    ${CampaignsPage.script()}
     ${HomePage.script({ guildId: widgetId })}
     ${eventsScript}
     ${operationsScript}

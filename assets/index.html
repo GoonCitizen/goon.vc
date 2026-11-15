@@ -1532,6 +1532,7 @@
         </section>
         <section>
           <h2>Campaigns</h2>
+          <p class="admin-links"><a href="/campaigns">Inspect and send &raquo;</a></p>
           <p id="admin-campaigns-note" class="admin-note" hidden></p>
           <ul id="admin-campaigns" class="admin-list"></ul>
         </section>
@@ -1550,6 +1551,21 @@
           <p id="admin-count" class="admin-note"></p>
           <ul id="admin-members" class="admin-list"></ul>
         </section>
+      </div>
+    </main>
+    <main id="campaigns-page" class="campaigns-page" data-path="/campaigns">
+      <h1>Campaigns</h1>
+      <p id="campaigns-status" class="campaigns-status" role="status"></p>
+      <section id="campaigns-signed-out" hidden>
+        <p>Sign in to inspect campaigns.</p>
+        <p class="campaigns-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="campaigns-denied" hidden>
+        <p>This page isn’t available.</p>
+      </section>
+      <div id="campaigns-panel" hidden>
+        <p id="campaigns-note" class="campaigns-note"></p>
+        <ul id="campaigns-list" class="campaigns-list"></ul>
       </div>
     </main>
     <main id="events-page" class="events-page">
@@ -3495,6 +3511,7 @@ html[data-look=bright]{color-scheme:light}
         var isMembers = path.toLowerCase() === "/members";
         var isMember = path.toLowerCase().indexOf("/members/") === 0;
         var isAdmin = path.toLowerCase() === "/admin";
+        var isCampaigns = path.toLowerCase() === "/campaigns";
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
         var isIdleRPG = path.toLowerCase() === "/services/idlerpg";
@@ -3567,7 +3584,7 @@ html[data-look=bright]{color-scheme:light}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -3580,6 +3597,8 @@ html[data-look=bright]{color-scheme:light}
         if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
         var adminEl = document.getElementById('admin-page');
         if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
+        var campaignsEl = document.getElementById('campaigns-page');
+        if (campaignsEl) campaignsEl.style.display = isCampaigns ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -3664,6 +3683,7 @@ html[data-look=bright]{color-scheme:light}
         else if (isMembers) document.title = "Members — GOON SQUAD";
         else if (isMember) document.title = 'Member profile — ' + "GOON SQUAD";
         else if (isAdmin) document.title = "Admin — GOON SQUAD";
+        else if (isCampaigns) document.title = "Campaigns — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
@@ -4124,6 +4144,7 @@ html[data-look=bright]{color-scheme:light}
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
     <script src="/scripts/admin.js?v=9e0b68b6f9b1" defer></script>
+    <script src="/scripts/campaigns.js?v=4d2ce1d205cb" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
