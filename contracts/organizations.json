@@ -353,6 +353,91 @@
       "history": [],
       "manifesto": [],
       "charter": []
+    },
+    {
+      "displayName": "House of Khans",
+      "symbol": "H0K",
+      "name": "House of Khans",
+      "url": "https://robertsspaceindustries.com/orgs/H0K",
+      "logoUrl": "https://robertsspaceindustries.com/media/zlkpobg5law9kr/logo/H0K-Logo.png",
+      "bannerUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/corp.jpg",
+      "members": 36,
+      "model": "Corporation",
+      "commitment": "Regular",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Security",
+        "secondary": "Engineering"
+      },
+      "recruiting": true,
+      "intro": [
+        "House of Khans is a Community that strives to bring a good fight and fun anywhere we go! Our goal is to maintain a mature a fun loving culture in our group. If you think you’re a good fit you’re welcome to join us!",
+        "Visit us on Discord – https://discord.gg/khans"
+      ],
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/khans"
+        }
+      ],
+      "history": [
+        "“There’s something special about getting together to kick someone’s ass.” – Patriarch",
+        "Established over a decade ago among the current Leadership cadre as a response to encroaching threats, House of Khans was officially formed and has grown ever since. HoK has had a historical presence in games such as EvE Online, Archeage, Life is Feudal, Rust, War Thunder, Arma III, and many more.",
+        "The Star Citizen Chapter of HoK specializes in boutique solutions that leverage Subject Matter Experts, networking, and our knowledge as advisors to help pilots traverse the universe better. Our members are rugged generalists that are capable and willing to complete their assigned mission.",
+        "Interested in joining? To be a Khan, ask a Khan!"
+      ],
+      "manifesto": [],
+      "charter": []
+    },
+    {
+      "displayName": "Obsidia",
+      "symbol": "OBSX",
+      "name": "Obsidia",
+      "url": "https://robertsspaceindustries.com/orgs/OBSX",
+      "logoUrl": "https://robertsspaceindustries.com/media/nlf8nubibgbjnr/logo/OBSX-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/8x0k6pgqnr0mir/banner/OBSX-Banner.png",
+      "members": 9,
+      "model": "Syndicate",
+      "commitment": "Regular",
+      "roleplay": null,
+      "focus": {
+        "primary": "Bounty Hunting",
+        "secondary": "Piracy"
+      },
+      "recruiting": true,
+      "intro": [
+        "Obsidia does not accept all who seek entry. We are a covert directive — a sovereign force forged from discipline, precision, and resolve. Every operative is hand-selected, trained, and trusted with missions beyond ordinary reach.",
+        "Your future or exclusion of The Directive will be decided here."
+      ],
+      "links": [],
+      "history": [
+        "“From shadow, order.”",
+        "Obsidia did not arise from ambition, but from abandonment. It was never meant to exist beyond a black file buried in the UEE’s intelligence archives — Project Obsidia, a classified initiative designed to house and train precision units capable of surgical interdiction, counter-insurgency, and asset recovery. It was a quiet tool in a violent age: autonomous, deniable, and loyal only to those who held the keys. When the Messer regime fell, the Empire scrambled to erase its own sins. Countless shadow programs were dissolved, scattered, or “lost.” But Project Obsidia didn’t disappear — it fractured and evolved. A cadre of its surviving architects, tacticians, and operatives refused to be cast aside with the broken empire. Disillusioned by both imperial authoritarianism and the chaotic rise of outlaw factions, they severed ties to their past and went dark — taking with them valuable ships, sealed doctrines, and the core code of the Directive. What they built in the void was not a rebellion, nor a rogue fleet, nor a self-righteous militia.",
+        "They built Obsidia — a sovereign directive with its own doctrine, its own structure, and its own vision of order."
+      ],
+      "manifesto": [
+        "Modern-day Obsidia operates across Stanton, Pyro, Nyx, and soon beyond. It functions as a semi-public, high-discipline force, moving with minimal footprint but maximal impact. Unlike loud mercenary groups or bloated alliances, Obsidia functions through precision, cohesion, and intent. It doesn’t seek domination through noise. It doesn’t chase popularity or numbers. It selects. Its ranks are filled with those who understand the value of discipline over disorder, loyalty over fame, and quiet efficiency over empty spectacle. Its agents are trained to work as one — whether piloting through asteroid fields, breaching derelict hulls, stabilizing forward installations, or protecting economic networks under fire.",
+        "Obsidia is not a name you hear often. But when it arrives, it is already too late."
+      ],
+      "charter": [
+        "Obsidia’s Core Values",
+        "• Fidelitas – Loyalty to the Directive and the operator beside you. Trust is earned and guarded.",
+        "• Silentium – Speak with action. Let presence be quiet, and precision be final.",
+        "• Exactus – Every deployment, every movement, every strike must be measured. No waste. No hesitation.",
+        "These values guide every member, from new recruit to Council leadership."
+      ]
+    },
+    {
+      "displayName": "Monkey Business",
+      "symbol": "MB",
+      "name": "Monkey Business",
+      "intro": [
+        "Joining PERMAFLEET. No public RSI organization page is on record yet."
+      ],
+      "links": [],
+      "history": [],
+      "manifesto": [],
+      "charter": []
     }
   ]
 }

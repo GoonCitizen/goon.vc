@@ -35,7 +35,7 @@ function renderStyles () {
  * Compact RED ARMY teaser. Unique `id` when the SPA also embeds it on the
  * PERMAFLEET operation page (`id="red-army"` stays on `/organizations`).
  * @param {Object} props
- * @param {string} props.path `/red-army`
+ * @param {string} props.path `/operations/red-army`
  * @param {string} [props.id]
  * @param {string} [props.titleId]
  * @returns {string}

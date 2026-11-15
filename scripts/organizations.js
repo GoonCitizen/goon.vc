@@ -21,7 +21,23 @@ const MEMBERS = [
   { symbol: 'LCRP', displayName: 'Legacy Corporation' },
   { symbol: 'DOUBLEDOGZ', displayName: 'DoubleDog Delivery, Inc.' },
   { symbol: '4MCONTRACT', displayName: '4M Contractors' },
-  { symbol: 'IDBC', displayName: 'Risky Business' }
+  { symbol: 'IDBC', displayName: 'Risky Business' },
+  { symbol: 'H0K', displayName: 'House of Khans' },
+  { symbol: 'OBSX', displayName: 'Obsidia' }
+];
+
+// No public RSI page yet. Kept locally so a refresh does not drop the org.
+const LOCAL = [
+  {
+    displayName: 'Monkey Business',
+    symbol: 'MB',
+    name: 'Monkey Business',
+    intro: ['Joining PERMAFLEET. No public RSI organization page is on record yet.'],
+    links: [],
+    history: [],
+    manifesto: [],
+    charter: []
+  }
 ];
 
 async function fetchOrganization (symbol) {
@@ -45,6 +61,7 @@ async function main () {
       organizations.push(kept);
     }
   }
+  organizations.push(...LOCAL);
   const payload = {
     fetchedAt: new Date().toISOString(),
     source: parseRsiOrganization.RSI_ORIGIN,

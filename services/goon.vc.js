@@ -310,6 +310,11 @@ class GoonVC {
     return (req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
       if (shouldProxyHubApi(req) || /^\/(services|identity)(\/|$)/.test(req.path)) return next();
+      const redArmy = (req.path.replace(/\/+$/, '') || '/').toLowerCase();
+      if (redArmy === '/red-army') {
+        const query = req.url.slice(req.path.length);
+        return res.redirect(301, '/operations/red-army' + query);
+      }
       if (Object.prototype.hasOwnProperty.call(this.settings.redirects || {}, req.path)) return next();
       const query = req.url.slice(req.path.length);
       if (req.path.length > 1 && req.path.endsWith('/')) {

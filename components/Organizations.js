@@ -72,6 +72,7 @@ function discordStatus (symbol) {
 }
 
 function externalLink (href, label, extra = '') {
+  if (!href) return '';
   return `<a class="goon-button" href="${escapeHtml(href)}" target="_blank" rel="noopener"${extra}>${escapeHtml(label)}</a>`;
 }
 
@@ -219,7 +220,7 @@ function renderOrganizationHtml (org, props) {
           <div class="org-actions">
             ${org.recruiting ? externalLink(org.url, 'Apply on RSI', ' title="Opens the RSI org page; choose “Join us now!” there"') : ''}
             ${externalLink(org.url, 'View on RSI')}
-            ${externalLink(`${org.url}/members`, 'Members')}
+            ${org.url ? externalLink(`${org.url}/members`, 'Members') : ''}
             ${links}
           </div>
           ${sections}

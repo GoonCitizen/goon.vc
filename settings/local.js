@@ -168,7 +168,7 @@ module.exports = {
     file: process.env.GOON_ALLIANCE_ROSTER || 'contracts/alliance.json'
   },
 
-  // /red-army: orgs and Discord servers that have added the bot but are not yet
+  // /operations/red-army: orgs and Discord servers that have added the bot but are not yet
   // PERMAFLEET members (contracts/red-army.json). Not a vote and not a federation.
   redArmy: {
     file: process.env.GOON_RED_ARMY_ROSTER || 'contracts/red-army.json'

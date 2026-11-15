@@ -207,7 +207,9 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
 remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
-ADSVOLCANO. DOUBLEDOGZ's officer on record is DoubleDogDelivery. **Only officers vote for an org**;
+ADSVOLCANO. DOUBLEDOGZ's officer on record is DoubleDogDelivery. House of
+Khans' officer on record is Patriarch. Obsidia's officers on record are Mello,
+toast, and Valgar. Monkey Business has none on record yet. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with
@@ -332,14 +334,13 @@ none on record). Live status is `GET /services/organizations`
 ids), filled by `Organizations.client()` from `Events.list().guilds`. An org
 with no `guildId`, or one the bot is not in, shows as not linked. `guildId` is
 not part of the alliance federation descriptor.
-`/red-army` is **RED ARMY**: Discord servers and organizations that have added
+`/operations/red-army` is **RED ARMY**: Discord servers and organizations that have added
 the goon.vc bot but are not yet PERMAFLEET members (`contracts/red-army.json`,
 `services/redArmy.js`, `functions/redArmy.js` — not a vote and not a Fabric
 federation). Named orgs list officers on record (Robert's Rejects / mr_meaner,
 SHELLBACKS / Brock_85); SHELLBACKS is the Shellback Industries org, not the
-SHELLBACK elite infantry squadron. Monkey Business is the next org joining.
-House of Khans (H0K) asked in #embassy to join; membership is pending. Obsidia
-is the RSI org OBSX. Alliance friends with PERMAFLEET Officer overlap or a
+SHELLBACK elite infantry squadron. House of Khans, Obsidia, and Monkey
+Business are PERMAFLEET members. Alliance friends with PERMAFLEET Officer overlap or a
 mention on the G00N `#red-army` pin (Rintak, SC Homies) sit here too until they are
 members. Named `servers` are Discords not tied to an RSI org (DIA is a private
 Discord). Other servers the bot is in show up live, minus the home server,

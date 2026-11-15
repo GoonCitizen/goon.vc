@@ -103,7 +103,7 @@ const DEFAULTS = {
   // Output of `npm run build:organizations`.
   organizationsFile: ORGANIZATIONS_FILE,
   // RED ARMY: friends of the alliance who are not yet PERMAFLEET members.
-  redArmyPath: '/red-army',
+  redArmyPath: '/operations/red-army',
   redArmyHeading: 'RED ARMY',
   redArmyIntro: RedArmyPage.intro,
   redArmyDocumentTitle: 'RED ARMY — GOON SQUAD',

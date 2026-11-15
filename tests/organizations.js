@@ -66,10 +66,10 @@ describe('organizations', function () {
     assert.ok(index.includes('data-org-discord="AIMOS"'));
     assert.ok(page.includes('data-org-discord="AIMOS"'));
     assert.ok(!index.includes('id="red-army"'), 'RED ARMY teaser only when the path is set');
-    const withArmy = Organizations.render(Object.assign({ heading: 'ORGS', intro: '', organizations: [org], redArmyPath: '/red-army' }, props));
+    const withArmy = Organizations.render(Object.assign({ heading: 'ORGS', intro: '', organizations: [org], redArmyPath: '/operations/red-army' }, props));
     assert.ok(withArmy.includes('id="red-army"'));
     assert.ok(withArmy.includes('data-red-army="teaser"'));
     assert.ok(withArmy.includes('Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.'));
-    assert.ok(withArmy.includes('href="/red-army">RED ARMY roster'));
+    assert.ok(withArmy.includes('href="/operations/red-army">RED ARMY roster'));
   });
 });
