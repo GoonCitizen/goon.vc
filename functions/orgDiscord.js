@@ -29,8 +29,8 @@ function indexGuilds (guilds) {
 }
 
 /**
- * Unique member-org Discord ids, roster order. Shared servers (DOUBLEDOGZ on
- * G00N SQUAD) appear once. Public pages may embed these for widget.json.
+ * Unique member-org Discord ids, roster order. Shared servers (INFN and
+ * DOUBLEDOGZ on G00N SQUAD) appear once. Public pages may embed these for widget.json.
  * @param {Object} roster `{ organizations: Array<{ guildId? }> }`
  * @returns {string[]}
  */

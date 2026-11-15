@@ -194,6 +194,44 @@
     }
     }
 
+    var orgs = document.getElementById('admin-orgs');
+    orgs.textContent = '';
+    (body.organizations || []).forEach(function (org) { orgs.appendChild(orgCard(org)); });
+
+    function orgCard (org) {
+      var box = document.createElement('div');
+      box.className = 'admin-review';
+      var title = document.createElement('strong');
+      title.textContent = (org.name || org.symbol) + ' [' + org.symbol + ']';
+      box.appendChild(title);
+      var discord = org.discord || {};
+      var lines = [];
+      if (discord.bot === true) lines.push('Bot is in ' + (discord.server || 'its Discord') + '.');
+      else if (discord.bot === false && discord.configured) lines.push('Server is on record. The bot is not in it.');
+      else if (discord.configured) lines.push('Server is on record.');
+      else lines.push('No Discord server on record.');
+      if (discord.shared && discord.shared.length) lines.push('Shares that server with ' + discord.shared.join(', ') + '.');
+      if (!discord.invite && !discord.configured) lines.push('No invite on record.');
+      var officers = org.officers || [];
+      if (!officers.length) lines.push('No officers on record.');
+      else lines.push('Officers: ' + officers.map(function (officer) { return officer.name || officer.account; }).join(', ') + '.');
+      lines.forEach(function (line) {
+        var p = document.createElement('p');
+        p.className = 'admin-meta';
+        p.textContent = line;
+        box.appendChild(p);
+      });
+      if (discord.invite) {
+        var p = document.createElement('p');
+        var a = document.createElement('a');
+        a.href = discord.invite;
+        a.textContent = 'Discord invite';
+        p.appendChild(a);
+        box.appendChild(p);
+      }
+      return box;
+    }
+
     showReviews(body.reviews || {});
 
     var campaigns = (body.campaigns && body.campaigns.list) || [];

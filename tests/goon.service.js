@@ -476,11 +476,11 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(res.body.split('id="operation-permafleet"').length, 2, 'unique id');
     assert.ok(res.body.includes("var movedSquadron = document.getElementById('squadron-' + window.location.hash.slice(1).toLowerCase());"), 'old #squadron links move to their pages');
     const voiceScript = res.body.slice(res.body.indexOf('var GUILD_IDS ='), res.body.indexOf('Promise.all(GUILD_IDS.map(fetchWidget))'));
-    for (const guildId of ['1190527980120850493', '937681528790609970', '1145511542637482114', '1200935959961817088']) {
+    for (const guildId of ['1190527980120850493', '937681528790609970', '1145511542637482114', '1200935959961817088', '259387737331859466', '1376267243650023434']) {
       assert.ok(voiceScript.includes(guildId), guildId);
     }
     assert.ok(!voiceScript.includes('1439226629867044976'), 'AIMOS is no longer a member Discord');
-    assert.strictEqual(voiceScript.split('1190527980120850493').length - 1, 1, 'DOUBLEDOGZ shares G00N SQUAD');
+    assert.strictEqual(voiceScript.split('1190527980120850493').length - 1, 1, 'INFN and DOUBLEDOGZ share G00N SQUAD');
     assert.ok(voiceScript.includes('membersInVoiceFromWidgets'), 'alliance widgets merge into one roster');
   });
 
@@ -1260,6 +1260,7 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(adminPage.status, 200);
     assert.strictEqual(adminPage.headers['content-security-policy'], "frame-ancestors 'none'");
     assert.ok(adminPage.body.includes('id="admin-page"'));
+    assert.ok(adminPage.body.includes('Organization setup'));
     assert.ok(adminPage.body.includes('<title>Admin — GOON SQUAD</title>'));
     assert.match(adminPage.body, /<script src="\/scripts\/admin\.js\?v=[0-9a-f]{12}" defer><\/script>/);
     const adminApi = await fetchJson('/services/admin');

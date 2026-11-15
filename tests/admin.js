@@ -182,6 +182,17 @@ describe('Admin panel', function () {
     assert.strictEqual(res.json.checkins.lastRun[0].reach, 2);
     assert.strictEqual(res.json.welcome.welcomed, 4);
     assert.strictEqual(res.json.welcome.sending, 1);
+    const setup = Object.fromEntries(res.json.organizations.map((org) => [org.symbol, org]));
+    assert.strictEqual(setup.G00N.discord.bot, null, 'no events service, so the bot check is unknown');
+    assert.strictEqual(setup.G00N.officers.find((officer) => officer.account === 'discord:420222636954615808').name, 'remaeus');
+    assert.strictEqual(setup.H0K.discord.invite, 'https://discord.gg/khans');
+    assert.strictEqual(setup.H0K.discord.configured, true);
+    assert.strictEqual(setup.MB.officers.length, 2);
+    assert.deepStrictEqual(setup.LCRP.officers, []);
+    assert.strictEqual(setup.LCRP.discord.configured, false);
+    assert.ok(!res.text.includes('259387737331859466'), 'no House of Khans server id');
+    assert.ok(!res.text.includes('1376267243650023434'), 'no Monkey Business server id');
+    assert.ok(!res.text.includes('1190527980120850493'), 'no G00N server id');
 
     const session = await request('/services/members/session', { headers: { Cookie: `goon.member=${adminToken}` } });
     assert.strictEqual(session.json.member.admin, true);

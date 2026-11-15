@@ -1520,6 +1520,11 @@
       <div id="admin-panel" hidden>
         <p id="admin-you" class="admin-note"></p>
         <section>
+          <h2>Organization setup</h2>
+          <p class="admin-note">Each PERMAFLEET org, its Discord, and the officers on record.</p>
+          <div id="admin-orgs"></div>
+        </section>
+        <section>
           <h2>Officers waiting for review</h2>
           <p id="admin-reviews-note" class="admin-note">Only officers on record wait here. Everyone else can claim an RSI handle on their own.</p>
           <p id="admin-review-status" class="admin-status" role="status"></p>
@@ -1916,7 +1921,7 @@
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener">View on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE/members" target="_blank" rel="noopener">Members</a>
-            
+            <a class="goon-button" href="https://discord.gg/GGMQYSf5S7" target="_blank" rel="noopener">Discord</a>
           </div>
           <details class="org-section" open>
             <summary>History</summary>
@@ -2024,7 +2029,7 @@
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener">View on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT/members" target="_blank" rel="noopener">Members</a>
-            
+            <a class="goon-button" href="https://discord.gg/4m-contractors" target="_blank" rel="noopener">Discord</a>
           </div>
           <details class="org-section" open>
             <summary>History</summary>
@@ -4118,7 +4123,7 @@ html[data-look=bright]{color-scheme:light}
     <script src="/scripts/rsi-claim.js?v=b9b9c626c500" defer></script>
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
-    <script src="/scripts/admin.js?v=600294821319" defer></script>
+    <script src="/scripts/admin.js?v=9e0b68b6f9b1" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
@@ -4853,7 +4858,7 @@ html[data-look=bright]{color-scheme:light}
         var page = document.getElementById('operation-permafleet');
         if (!page || page.style.display === 'none' || !page.style.display) return;
 
-        var GUILD_IDS = ["1190527980120850493","937681528790609970","1145511542637482114","1200935959961817088"];
+        var GUILD_IDS = ["1190527980120850493","937681528790609970","1145511542637482114","1200935959961817088","259387737331859466","1376267243650023434"];
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');

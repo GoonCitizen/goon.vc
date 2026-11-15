@@ -88,7 +88,7 @@ The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs
 facts from the G00N record) and our own Discord member list built from the
 guild's public `widget.json` (no iframe). The PERMAFLEET operation page
 lists people in voice the same way, one widget per unique member-org Discord
-in `contracts/alliance.json` (DOUBLEDOGZ shares G00N SQUAD, so once; a server
+in `contracts/alliance.json` (INFN and DOUBLEDOGZ share G00N SQUAD, so once; a server
 with its widget off contributes nobody), names and avatars only — never
 Discord ids. PERMAFLEET detail lives under
 `/operations/PERMAFLEET/*`; the overview keeps a short teaser.
@@ -328,8 +328,8 @@ from `contracts/organizations.json`, a plain-text snapshot of public RSI org
 pages refreshed by `npm run build:organizations` (never fetched at serve time).
 Each org card, profile, PERMAFLEET overview tile, onboarding list, and votes
 org row shows whether the bot is in that org's Discord (`guildId` on
-`contracts/alliance.json`; DOUBLEDOGZ shares the G00N SQUAD server; LCRP has
-none on record). Live status is `GET /services/organizations`
+`contracts/alliance.json`; INFN and DOUBLEDOGZ share the G00N SQUAD server; LCRP and Obsidia have
+none on record). House of Khans and Monkey Business are the servers behind `discord.gg/khans` and `discord.gg/SpaceMonkey`. Trans-Galactic, 4M Contractors, and Risky Business keep the invites they shared. Live status is `GET /services/organizations`
 (`{ symbol, name, path, discord: { linked, name } }`, names only — never guild
 ids), filled by `Organizations.client()` from `Events.list().guilds`. An org
 with no `guildId`, or one the bot is not in, shows as not linked. `guildId` is
@@ -1210,10 +1210,13 @@ account or by the Fabric identity of a linked Passport key (the compressed
 handle, and a one-time claim-link session do not. `GET /services/members/session`
 adds `admin: true` for them, and the footer and the login card show Admin.
 `GET /services/admin` is 401 signed out and 404 for everyone else, and the
-page is not framed. It lists every member and their linked accounts (Discord
-id, Fabric `id1` when the compressed key was stored, RSI handle), each
-campaign's status and counts (no server ids, no recipients), check-in and
-welcome status, and the officers waiting for review. Approve and Turn away
+page is not framed. It lists every PERMAFLEET org's setup (Discord on record,
+whether the bot is in that server, the invite, and the officers on record —
+names when that person has a profile, otherwise the account), every member
+and their linked accounts (Discord id, Fabric `id1` when the compressed key
+was stored, RSI handle), each campaign's status and counts (no server ids,
+no recipients), check-in and welcome status, and the officers waiting for
+review. Approve and Turn away
 there decide one officer (`POST /services/admin/reviews/<id> { decision }`)
 and leave the rest of the queue waiting. It does not send or schedule
 campaigns. Each member's profile is `/members/<member id>`

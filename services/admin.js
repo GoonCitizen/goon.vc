@@ -4,12 +4,15 @@
  * Operator panel (`GET /services/admin`). Signed out is 401. Anyone who is
  * not an admin, including a one-time RSI claim-link session, is 404. The
  * body lists members and their linked accounts, campaign status, check-ins,
- * welcome DMs, and officers waiting for review. Approve and turn away act on
- * one officer at a time. It does not send campaigns.
+ * welcome DMs, each org's setup, and officers waiting for review. Approve
+ * and turn away act on one officer at a time. It does not send campaigns.
  */
 
 const home = require('../contracts/goon-squad.json');
+const alliance = require('../contracts/alliance.json');
+const organizations = require('../contracts/organizations.json');
 const rsiCitizen = require('../functions/rsiCitizen');
+const { setupRows } = require('../functions/orgSetup');
 const { memberIsAdmin, fabricIdentityId } = require('../functions/siteAdmin');
 const { linkedAccounts, signedInMember } = require('./members');
 
@@ -155,6 +158,9 @@ class Admin {
    * @param {Object} [settings.reviews]
    * @param {Function} [settings.officerOf] `(member) => string[]` org symbols.
    * @param {Array} [settings.admins] Defaults to `contracts/goon-squad.json`.
+   * @param {Object} [settings.events] Events service. Its guild list says which servers the bot is in.
+   * @param {Object} [settings.alliance] Roster. Defaults to `contracts/alliance.json`.
+   * @param {Object} [settings.organizations] Public org records. Defaults to `contracts/organizations.json`.
    */
   constructor (settings = {}) {
     this.members = settings.members || null;
@@ -162,6 +168,9 @@ class Admin {
     this.checkins = settings.checkins || null;
     this.welcome = settings.welcome || null;
     this.reviews = settings.reviews || null;
+    this.events = settings.events || null;
+    this.alliance = settings.alliance === undefined ? alliance : settings.alliance;
+    this.organizations = settings.organizations === undefined ? organizations : settings.organizations;
     this.officerOf = typeof settings.officerOf === 'function' ? settings.officerOf : () => [];
     this.admins = settings.admins === undefined ? home.admins : settings.admins;
   }
@@ -215,7 +224,19 @@ class Admin {
       pending
     };
 
-    return { members, campaigns, checkins, welcome, reviews };
+    let guilds = null;
+    if (this.events && typeof this.events.list === 'function') {
+      const snap = await Promise.resolve(this.events.list()).catch(() => null);
+      if (snap && Array.isArray(snap.guilds)) guilds = snap.guilds;
+    }
+    const organizationSetup = setupRows({
+      alliance: this.alliance,
+      organizations: this.organizations,
+      guilds,
+      members: records
+    });
+
+    return { members, campaigns, checkins, welcome, reviews, organizations: organizationSetup };
   }
 
   async decide (memberId, decision, by) {

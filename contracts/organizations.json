@@ -97,11 +97,16 @@
       "intro": [
         "The Galaxy on time.™"
       ],
-      "links": [],
       "history": [
         "After a dazzling and distinguished military career, two brothers looked toward the future and wondered how best to put their piloting abilities to use in their post-service lives. One a cargo pilot with a legendary reputation for successfully completing the most difficult and dangerous logistical resupply runs the command had to offer; the other a fighter jockey and Ace many times over, notorious for taking on insurmountable odds with reckless abandon and the uncanny ability to always come out on top.",
         "Civilian life offered them only one option which would provide the thrill and challenge their former occupations possessed; running the most sensitive freight to and through the most dangerous parts of the Galaxy. Gathering an elite group around them composed of former military personnel they had served with and mutual acquaintances from the piloting community they formed the core of Trans-Galactic. The rest, as they say, is history.",
         "Join us on the Trans-Galactic Discord Server"
+      ],
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/GGMQYSf5S7"
+        }
       ],
       "manifesto": [
         "Here at Trans-Galactic™ we aspire to provide the highest level of professionalism and performance while transporting cargo to and from any location our customers require. As a subsidiary of Extensive Enterprises™ and with an elite force of both personnel and equipment, no destination is too dangerous and no cargo beyond our ability to deliver safely and swiftly. By employing our own fighter core we save not only time, but cost as well since expensive and complicated contracts with mercenary groups are unnecessary. At Trans-Galactic we deliver the Galaxy on time, every time."
@@ -208,11 +213,16 @@
         "secondary": "Trading"
       },
       "recruiting": true,
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/4m-contractors"
+        }
+      ],
       "intro": [
         "Welcome Citizen",
         "Built by friends and driven by purpose, 4M-CONTRACTORS unites combat pilots, industrial crews, medics, merchants, and outlaws into one unstoppable organization. Through loyalty, strategy, and controlled chaos, we forge our legacy across every corner of the ‘verse."
       ],
-      "links": [],
       "history": [
         "History of 4M-CONTRACTORS",
         "In the sprawling universe of Star Citizen, where danger and opportunity collide among the stars, a group of like-minded individuals found themselves drawn together by a shared passion for adventure, camaraderie, and the thrill of the unknown. From this common ground, the organization known as 4M-CONTRACTORS emerged, carving a unique niche in the vast cosmos.",

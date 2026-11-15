@@ -45,11 +45,13 @@ describe('G00N SQUAD home Discord', function () {
     const bySymbol = Object.fromEntries(alliance.organizations.map((org) => [org.symbol, org.guildId]));
     assert.strictEqual(bySymbol.G00N, home.guildId);
     assert.strictEqual(bySymbol.DOUBLEDOGZ, home.guildId, 'DOUBLEDOGZ shares the G00N SQUAD server');
+    assert.strictEqual(bySymbol.INFN, home.guildId, 'INFN shares the G00N SQUAD server');
     assert.strictEqual(bySymbol.TRDE, '937681528790609970');
     assert.strictEqual(bySymbol['4MCONTRACT'], '1145511542637482114');
     assert.strictEqual(bySymbol.IDBC, '1200935959961817088');
+    assert.strictEqual(bySymbol.H0K, '259387737331859466', 'House of Khans, discord.gg/khans');
+    assert.strictEqual(bySymbol.MB, '1376267243650023434', 'Monkey Business, discord.gg/SpaceMonkey');
     assert.ok(!('AIMOS' in bySymbol), 'AIMOS is evicted');
-    assert.strictEqual(bySymbol.INFN, undefined);
     assert.strictEqual(bySymbol.LCRP, undefined);
   });
 

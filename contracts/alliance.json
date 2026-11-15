@@ -8,19 +8,19 @@
       "discord:191401936245882880",
       "discord:355141171095404554"
     ] },
-    { "symbol": "INFN", "officers": ["discord:214804563826311169"] },
+    { "symbol": "INFN", "guildId": "1190527980120850493", "officers": ["discord:214804563826311169"] },
     { "symbol": "TRDE", "guildId": "937681528790609970", "officers": [] },
     { "symbol": "LCRP", "officers": [] },
     { "symbol": "DOUBLEDOGZ", "guildId": "1190527980120850493", "officers": ["discord:1300310404538437664"] },
     { "symbol": "4MCONTRACT", "guildId": "1145511542637482114", "officers": [] },
     { "symbol": "IDBC", "guildId": "1200935959961817088", "officers": [] },
-    { "symbol": "H0K", "officers": ["discord:991362165586018324"] },
+    { "symbol": "H0K", "guildId": "259387737331859466", "officers": ["discord:991362165586018324"] },
     { "symbol": "OBSX", "officers": [
       "discord:1508231561454026993",
       "discord:123863917909901315",
       "discord:342965730779856896"
     ] },
-    { "symbol": "MB", "officers": [
+    { "symbol": "MB", "guildId": "1376267243650023434", "officers": [
       "discord:511146587515256832",
       "discord:813203402543988757"
     ] }

@@ -565,6 +565,7 @@ class GoonVC {
       checkins: this.checkins,
       welcome: this.welcome,
       reviews: this.reviews,
+      events: this.events,
       officerOf: (member) => reviewOfficers.officerSymbols(member),
       admins: homeDiscord.admins
     });
