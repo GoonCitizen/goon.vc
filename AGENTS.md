@@ -353,7 +353,9 @@ The G00N Discord role RED ARMY is pinned in `contracts/goon-squad.json`. The
 path, after the member tiles) teaser it.
 `/resources` indexes guides and tools. One-off tools are pages under that
 index, inside the site shell. The breakdown planner is
-`/resources/breakdown-tool`. Add a tool by listing it on `tools` in `GoonSPA`
+`/resources/breakdown-tool`. The PDC Dashboard (`/resources/pdc-dashboard`)
+is the PDC Loadout Lab: Perseus and Polaris point-defense planning numbers,
+labeled unverified. Add a tool by listing it on `tools` in `GoonSPA`
 (`id`, `name`, `html`, `css`, `script`) and keeping its stylesheet scoped to
 `.tool-sheet`. `/resources/gooncitizen` describes the
 GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder

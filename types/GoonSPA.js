@@ -128,6 +128,15 @@ const DEFAULTS = {
     html: path.join(__dirname, '../components/tools/breakdown-planner.html'),
     css: path.join(__dirname, '../components/tools/breakdown-planner.css'),
     script: '/tool-scripts/breakdown-planner.js'
+  }, {
+    id: 'pdc-dashboard',
+    name: 'PDC Dashboard',
+    tagline: 'Compare point-defense turrets and set the mounts on a Perseus or Polaris.',
+    summary: 'Planning numbers only. Unverified, and they change with the patch.',
+    openLabel: 'Open the dashboard',
+    html: path.join(__dirname, '../components/tools/pdc-dashboard.html'),
+    css: path.join(__dirname, '../components/tools/pdc-dashboard.css'),
+    script: '/tool-scripts/pdc-dashboard.js'
   }],
   // Flight-training drills: /drills index + one page per drill hosting its Web Component.
   drillsPath: '/drills',
@@ -579,6 +588,12 @@ class GoonSPA extends FabricSPA {
         tagline: 'The cheapest shop items to break down for the materials you want to craft.',
         summary: 'Prices and recipes for the current Star Citizen build.',
         openLabel: 'Open the planner'
+      }, {
+        name: 'PDC Dashboard',
+        path: ToolsPage.toolPath({ id: 'pdc-dashboard' }, resourcesPath),
+        tagline: 'Compare point-defense turrets and set the mounts on a Perseus or Polaris.',
+        summary: 'Planning numbers only. Unverified, and they change with the patch.',
+        openLabel: 'Open the dashboard'
       }, {
         name: 'Tournaments',
         path: tournamentsPath,

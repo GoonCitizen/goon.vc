@@ -1099,6 +1099,7 @@ describe('goon.vc HTTP', function () {
     const start = page.body.indexOf('id="resources-page"');
     const resources = page.body.slice(start, page.body.indexOf('</main>', start));
     assert.ok(resources.includes('href="/resources/breakdown-tool">Breakdown planner</a>'));
+    assert.ok(resources.includes('href="/resources/pdc-dashboard">PDC Dashboard</a>'));
     const tool = await fetchJson('/resources/breakdown-tool', { headers: { Accept: 'text/html' } });
     assert.strictEqual(tool.status, 200);
     assert.ok(tool.body.includes('id="site-header"'));
@@ -1120,6 +1121,14 @@ describe('goon.vc HTTP', function () {
     const oldTool = await fetchJson('/tools/breakdown-planner', { headers: { Accept: 'text/html' } });
     assert.strictEqual(oldTool.status, 302);
     assert.strictEqual(oldTool.headers.location, '/resources/breakdown-tool');
+    const pdc = await fetchJson('/resources/pdc-dashboard', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(pdc.status, 200);
+    assert.ok(pdc.body.includes('id="tool-pdc-dashboard"'));
+    assert.ok(pdc.body.includes('<h1>PDC Loadout Lab</h1>'));
+    assert.ok(pdc.body.includes('data-script="/tool-scripts/pdc-dashboard.js"'));
+    const pdcScript = await fetchJson('/tool-scripts/pdc-dashboard.js');
+    assert.strictEqual(pdcScript.status, 200);
+    assert.ok(pdcScript.body.includes('pdc-loadout-v1'));
   });
 
   it('serves /resources with a dedicated GoonCitizen page', async function () {
@@ -1549,7 +1558,7 @@ describe('goon.vc page paths', function () {
   }
 
   it('serves a page even when assets has a directory of the same name', async function () {
-    for (const pathname of ['/drills', '/drills/melee-rotation', '/resources/breakdown-tool', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/resources/breakdown-tool', '/resources/pdc-dashboard', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
       assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
     }
   });

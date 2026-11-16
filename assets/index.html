@@ -2258,6 +2258,13 @@
           <div class="operation-links"><a class="goon-button" href="/resources/breakdown-tool">Open the planner</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/pdc-dashboard">PDC Dashboard</a></h2>
+          <p class="operation-tagline">Compare point-defense turrets and set the mounts on a Perseus or Polaris.</p>
+          <p class="operation-summary">Planning numbers only. Unverified, and they change with the patch.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/pdc-dashboard">Open the dashboard</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/tournaments">Tournaments</a></h2>
           <p class="operation-tagline">Single and double elimination brackets, best of n, with every result on record.</p>
           <p class="operation-summary">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
@@ -2740,6 +2747,180 @@ html[data-look=bright]{color-scheme:light}
   <p>In the mining lists, the percentage is how often that rock shows up among rocks of the same mining type at that place.</p>
   <p>Unofficial fan-made tool. Star Citizen is a trademark of Cloud Imperium Games.</p>
 </footer>
+</div>
+
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="tool-page" id="tool-pdc-dashboard" data-path="/resources/pdc-dashboard" data-title="PDC Dashboard — GOON SQUAD" data-script="/tool-scripts/pdc-dashboard.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { .pdc {
+  --bg: transparent;
+  --panel: #101827e8;
+  --panel2: #151f31;
+  --text: #edf5ff;
+  --muted: #9cafc7;
+  --line: #26354b;
+  --cyan: #4ee3ff;
+  --orange: #ffae57;
+  --green: #61e6a4;
+  --red: #ff6f7d;
+  --purple: #b695ff;
+  --shadow: 0 18px 55px #0008;
+  color: var(--text);
+  font: 15px/1.5 Inter, Segoe UI, system-ui, sans-serif;
+  min-height: 70vh;
+}
+.pdc button, .pdc select, .pdc input { font: inherit; }
+.pdc .top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 20px; }
+.pdc .eyebrow { color: var(--cyan); letter-spacing: .16em; text-transform: uppercase; font-size: 12px; font-weight: 700; }
+.pdc h1 { font-size: clamp(27px, 4vw, 44px); line-height: 1.05; margin: 7px 0; }
+.pdc .sub { color: var(--muted); max-width: 760px; }
+.pdc .pill-row { margin-top: 10px; }
+.pdc .pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #ffae5770; color: #ffd6aa; background: #ffae5712; padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+.pdc .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 12px var(--orange); }
+.pdc .toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.pdc .btn { border: 1px solid var(--line); background: var(--panel2); color: var(--text); padding: 9px 12px; border-radius: 8px; cursor: pointer; }
+.pdc .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.pdc .btn.primary { background: var(--cyan); color: #041018; border-color: var(--cyan); font-weight: 700; }
+.pdc .btn.primary:hover { color: #041018; }
+.pdc .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 16px; }
+.pdc .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.pdc .panel-head { padding: 17px 18px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.pdc .panel-head h2 { margin: 0; font-size: 17px; }
+.pdc .panel-body { padding: 18px; }
+.pdc .table-wrap { padding-top: 8px; overflow-x: auto; }
+.pdc .ship-switch { display: flex; gap: 7px; }
+.pdc .ship-switch button { border: 1px solid var(--line); background: #0a111d; color: var(--muted); padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+.pdc .ship-switch button.active { background: #19344b; color: var(--cyan); border-color: #3c91ad; }
+.pdc .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+.pdc .metric { background: #0b1220; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.pdc .metric label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.pdc .metric strong { display: block; font-size: 22px; margin-top: 3px; }
+.pdc .metric small { color: var(--muted); }
+.pdc .slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pdc .slot { border: 1px solid var(--line); background: #0b1220; border-radius: 10px; padding: 12px; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; }
+.pdc .slot-num { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; background: #172539; color: var(--cyan); font-weight: 700; }
+.pdc .slot label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.pdc .slot select, .pdc .form-select { width: 100%; background: #101a29; color: var(--text); border: 1px solid #34455d; border-radius: 7px; padding: 8px; }
+.pdc .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.pdc .chart { background: #0b1220; border: 1px solid var(--line); border-radius: 10px; padding: 13px; }
+.pdc .chart h3 { font-size: 13px; margin: 0 0 12px; }
+.pdc .bar-row { display: grid; grid-template-columns: 82px 1fr 64px; gap: 9px; align-items: center; margin: 9px 0; font-size: 12px; }
+.pdc .track { height: 9px; background: #1a2638; border-radius: 9px; overflow: hidden; }
+.pdc .bar { height: 100%; border-radius: 9px; transition: width .25s; }
+.pdc .bar.laser { background: var(--cyan); }
+.pdc .bar.ballistic { background: var(--orange); }
+.pdc .bar.salvage { background: var(--purple); }
+.pdc .compare { width: 100%; border-collapse: collapse; }
+.pdc .compare th, .pdc .compare td { text-align: left; padding: 11px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.pdc .compare th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+.pdc .compare tr.selectable { cursor: pointer; }
+.pdc .compare tr.selectable:hover { background: #172238; }
+.pdc .compare tr.selected { background: #142b38; }
+.pdc .tag { display: inline-block; border-radius: 999px; padding: 3px 7px; font-size: 11px; border: 1px solid var(--line); white-space: nowrap; }
+.pdc .tag.laser { color: var(--cyan); border-color: #4ee3ff55; }
+.pdc .tag.ballistic { color: var(--orange); border-color: #ffae5755; }
+.pdc .tag.salvage { color: #d7c5ff; border-color: #b695ff55; }
+.pdc .warn { color: #ffd39e; }
+.pdc .verified { color: var(--green); }
+.pdc .detail { margin-top: 13px; padding: 14px; border-left: 3px solid var(--cyan); background: #0b1220; }
+.pdc .detail h3 { margin: 0 0 5px; }
+.pdc .detail p { margin: 5px 0; color: var(--muted); }
+.pdc .note { margin-top: 16px; color: var(--muted); font-size: 12px; }
+.pdc .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 12px; }
+.pdc .sw { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.pdc .sw.laser { background: var(--cyan); }
+.pdc .sw.ballistic { background: var(--orange); }
+.pdc .sw.salvage { background: var(--purple); }
+.pdc .full { grid-column: 1 / -1; }
+.pdc .assumption { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 10px 0; }
+.pdc .assumption b { color: var(--orange); }
+.pdc .footer { color: var(--muted); font-size: 12px; text-align: center; margin: 18px; }
+.pdc .toast { position: fixed; right: 20px; bottom: 20px; background: #172539; color: var(--text); border: 1px solid #3b526e; padding: 10px 14px; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; }
+.pdc .toast.show { opacity: 1; transform: none; }
+.pdc .page-back { margin: 0 0 8px; }
+@media (max-width: 900px) {
+  .pdc .grid { grid-template-columns: 1fr; }
+  .pdc .top { flex-direction: column; }
+  .pdc .toolbar { justify-content: flex-start; }
+  .pdc .metrics { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 580px) {
+  .pdc .slots, .pdc .charts { grid-template-columns: 1fr; }
+  .pdc .bar-row { grid-template-columns: 70px 1fr 55px; }
+  .pdc .compare { font-size: 12px; }
+  .pdc .compare th:nth-child(4), .pdc .compare td:nth-child(4) { display: none; }
+}
+ }</style>
+        <div class="pdc">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <div class="eyebrow">Fleet engineering // alpha data</div>
+      <h1>PDC Loadout Lab</h1>
+      <div class="sub">Compare candidate point-defense turrets and configure all 6 Perseus or 7 Polaris mounts. Values are planning aids—not authoritative live-game data.</div>
+      <div class="pill-row"><span class="pill"><span class="dot"></span> Unverified &amp; patch-sensitive dataset</span></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="pdc-reset" type="button">Reset</button>
+      <button class="btn" id="pdc-save" type="button">Save locally</button>
+      <button class="btn primary" id="pdc-export" type="button">Export loadout</button>
+    </div>
+  </header>
+  <section class="grid">
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Ship configuration</h2>
+        <div class="ship-switch" role="group" aria-label="Select ship">
+          <button type="button" data-ship="Perseus" class="active">Perseus · 6</button>
+          <button type="button" data-ship="Polaris">Polaris · 7</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="metrics">
+          <div class="metric"><label>Mounted</label><strong id="pdc-mounted">6 / 6</strong><small>active turrets</small></div>
+          <div class="metric"><label>Est. DPS</label><strong id="pdc-dps">1,002</strong><small>all PDCs combined</small></div>
+          <div class="metric"><label>Energy share</label><strong id="pdc-energy">100%</strong><small>laser-fed mounts</small></div>
+          <div class="metric"><label>Confidence</label><strong id="pdc-confidence">Low</strong><small>configuration validity</small></div>
+        </div>
+        <div class="slots" id="pdc-slots" aria-live="polite"></div>
+        <div class="charts">
+          <div class="chart"><h3>Estimated damage mix</h3><div id="pdc-damage"></div></div>
+          <div class="chart"><h3>Loadout composition</h3><div id="pdc-mix"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel-head">
+        <h2>PDC comparison</h2>
+        <div class="legend"><span><i class="sw laser"></i>Laser</span><span><i class="sw ballistic"></i>Ballistic</span><span><i class="sw salvage"></i>Salvaged</span></div>
+      </div>
+      <div class="panel-body table-wrap">
+        <table class="compare">
+          <thead><tr><th>Type</th><th>Class</th><th>Est. DPS</th><th>Supply</th><th>Status</th></tr></thead>
+          <tbody id="pdc-comparison"></tbody>
+        </table>
+        <div class="detail" id="pdc-detail" aria-live="polite"></div>
+        <div class="note">Select a row for notes. DPS is nominal sustained weapon output only; it does not model tracking, convergence, missile interception logic, capacitors, ammunition, server performance, or firing arcs.</div>
+      </div>
+    </article>
+    <article class="panel full">
+      <div class="panel-head"><h2>Compatibility &amp; evidence guardrails</h2><span class="tag salvage">Planning assumptions</span></div>
+      <div class="panel-body">
+        <div class="assumption"><b>◆</b><div><strong>Slot counts are user-specified.</strong> This dashboard uses 6 mounts for Perseus and 7 for Polaris because those counts were requested. Verify against your current ship build and patch.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Cross-ship fitting is speculative.</strong> A PDC being detachable, lootable, or visually mountable does not prove persistence, insurance survival, power compatibility, targeting behavior, or intended support.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Mauler PDC identity is unresolved.</strong> Community/game-file reports describe it as a distinct Mauler turret that may reuse M2C “Swarm” localization or behavior. The dashboard therefore separates the two while assigning the same provisional performance.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Alpha values change.</strong> Re-check after patches, wipes, component rebalances, or insurance/claim changes. “Est.” means unverified in this file.</div></div>
+      </div>
+    </article>
+  </section>
+  <div class="footer">Offline dashboard · No network calls · Configuration is stored only in this browser when you choose Save locally.</div>
+  <div class="toast" id="pdc-toast" role="status"></div>
 </div>
 
       </div>
