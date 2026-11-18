@@ -546,7 +546,7 @@ describe('goon.vc HTTP', function () {
     assert.ok(bravoMain.includes('<dt>Leads to</dt><dd><a href="/operations/PERMAFLEET/squadrons/alpha-squadron">ALPHA SQUADRON, for the top 5%</a></dd>'));
     assert.ok(bravoMain.includes('<a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a>'));
     assert.ok(bravoMain.includes('Not in PERMAFLEET yet?'));
-    assert.ok(index.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
+    assert.ok(index.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOperate || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
     const ids = [...index.body.matchAll(/\sid="([^"$]+)"/g)].map((m) => m[1]);
     assert.deepStrictEqual(ids.filter((id, i) => ids.indexOf(id) !== i), [], 'element ids are unique');
   });
@@ -579,6 +579,14 @@ describe('goon.vc HTTP', function () {
     assert.ok(calendar[0].includes('storage-key="goon.events.timeZone"'), 'shares the zone picked on /events');
     assert.ok(!page.includes('<img'), 'no static poster');
     assert.match(res.body, /<script src="\/scripts\/fabric-calendar\.js\?v=[0-9a-f]{12}" defer><\/script>/);
+    assert.deepStrictEqual(site.events.allianceServers(), [
+      '1190527980120850493',
+      '937681528790609970',
+      '1145511542637482114',
+      '1200935959961817088',
+      '259387737331859466',
+      '1376267243650023434'
+    ], 'home, then every member org Discord on the roster');
   });
 
   it('serves the /operations index listing PERMAFLEET', async function () {
@@ -971,7 +979,34 @@ describe('goon.vc HTTP', function () {
       'Join https://discord.gg/permafleet'
     ]);
     assert.ok(!res.body.includes('class="op-nav"') && !res.body.includes('class="schedule-nav"'), 'replaces the per-page crumbs');
-    assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
+    assert.ok(res.body.includes("document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOperate || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);"));
+    const teaserStart = res.body.indexOf('id="how-we-operate"');
+    assert.ok(teaserStart > 0, 'megaparty teaser on the operation page');
+    const teaser = res.body.slice(teaserStart, res.body.indexOf('</section>', teaserStart));
+    assert.ok(teaser.includes('The megaparty'));
+    assert.ok(teaser.includes('href="/operations/PERMAFLEET/how-we-operate">How we operate &raquo;</a>'));
+    assert.ok(!header.includes('How we operate'), 'not in the PERMAFLEET menu');
+  });
+
+  it('serves the PERMAFLEET how-we-operate page for pilots', async function () {
+    const res = await fetchJson('/operations/PERMAFLEET/how-we-operate', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.includes('<meta property="og:title" content="How we operate — PERMAFLEET — GOON SQUAD">'));
+    assert.ok(res.body.includes('<meta property="og:url" content="https://goon.vc/operations/PERMAFLEET/how-we-operate">'));
+    const start = res.body.indexOf('<main id="operate-page"');
+    assert.ok(start > 0, 'operate page');
+    const page = res.body.slice(start, res.body.indexOf('</main>', start));
+    assert.ok(page.includes('megaparty'));
+    assert.ok(page.includes('24/7'));
+    assert.ok(page.includes('public PERMAFLEET voice channel on any member org'));
+    assert.ok(page.includes('#beacon'));
+    assert.ok(page.includes('<code>[PERMAFLEET]</code>'));
+    assert.ok(page.includes('href="/operations/PERMAFLEET/schedule">Weekly ops schedule'));
+    assert.ok(page.includes('href="/operations/PERMAFLEET/onboarding">Bring your org into the Protectorate'));
+    assert.ok(page.includes('href="https://discord.com/channels/1190527980120850493/1205022843402977310"'), '#embassy');
+    assert.ok(!page.includes('AIMOS'));
+    assert.ok(!/\d{17,}/.test(page.replace(/https:\/\/discord\.com\/[^"]+/g, '')), 'no Discord ids outside Discord links');
+    assert.ok(res.body.includes('var isOperate = path.toLowerCase() === "/operations/permafleet/how-we-operate";'));
   });
 
   it('serves the PERMAFLEET onboarding page for new member organizations', async function () {
@@ -1570,6 +1605,7 @@ describe('goon.vc page paths', function () {
     assert.deepStrictEqual(await get('/tournaments/saturday-1v1/2026-10-17/'), { status: 301, location: '/tournaments/saturday-1v1/2026-10-17' });
     assert.deepStrictEqual(await get('/operations/PERMAFLEET/squadrons/'), { status: 301, location: '/operations/PERMAFLEET/squadrons' });
     assert.deepStrictEqual(await get('/operations/PERMAFLEET/onboarding/'), { status: 301, location: '/operations/PERMAFLEET/onboarding' });
+    assert.deepStrictEqual(await get('/operations/PERMAFLEET/how-we-operate/'), { status: 301, location: '/operations/PERMAFLEET/how-we-operate' });
     assert.deepStrictEqual(await get('/leagues/'), { status: 301, location: '/leagues' });
     assert.deepStrictEqual(await get('/leagues/gladius-ladder/?season=2'), { status: 301, location: '/leagues/gladius-ladder?season=2' });
     assert.deepStrictEqual(await get('/clips/'), { status: 301, location: '/clips' });

@@ -30,6 +30,8 @@ const CampaignDesk = require('./campaignDesk');
 const { memberIsAdmin } = require('../functions/siteAdmin');
 const reviewOfficers = require('../functions/reviewOfficers');
 const homeDiscord = require('../contracts/goon-squad.json');
+const allianceRoster = require('../contracts/alliance.json');
+const orgDiscord = require('../functions/orgDiscord');
 const FabricRelay = require('./fabricRelay');
 const Alliance = require('./alliance');
 const RedArmy = require('./redArmy');
@@ -435,7 +437,10 @@ class GoonVC {
         ? path.resolve(discord.schedule.snapshot)
         : undefined,
       scheduleBrand: discord.schedule && discord.schedule.brand,
-      scheduleServers: discord.schedule && discord.schedule.servers,
+      scheduleServers: orgDiscord.scheduleGuildIds(
+        allianceRoster,
+        discord.schedule && discord.schedule.servers
+      ),
       fetch: eventSettings.fetch,
       resolveToken: eventSettings.resolveToken
     });

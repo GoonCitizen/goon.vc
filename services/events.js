@@ -159,7 +159,7 @@ class Events {
    * @param {boolean} [settings.refreshOnStart] Poll Discord as soon as the service starts.
    * @param {string} [settings.snapshot] Single-guild schedule snapshot used before the first fetch.
    * @param {string} [settings.scheduleBrand] Brand of the alliance week board (`server=permafleet`).
-   * @param {string[]} [settings.scheduleServers] Discord servers whose events join the home server's on the alliance board (the bot must be in each).
+   * @param {string[]} [settings.scheduleServers] Discord servers whose events join the home server's on the alliance board (the bot must be in each). GoonVC fills this from member-org `guildId`s plus `discord.schedule.servers`.
    * @param {Function} [settings.fetch] Injected for tests; defaults to global fetch.
    * @param {Function} [settings.resolveToken] Injected for tests; defaults to resolveDiscordToken.
    */

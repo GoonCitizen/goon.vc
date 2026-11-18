@@ -50,10 +50,12 @@ control live on the board: the title picks the server, the zone label picks the
 zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
 the element's contract. `/operations/PERMAFLEET/schedule` is the same element
-pinned to `server=permafleet`: the home server's events plus those of the member
-orgs' and squadrons' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
-4M-CONTRACTORS, TRDE, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
-in it; DOUBLEDOGZ points at the G00N SQUAD server), home server first so its day themes win, PERMAFLEET brand, no server
+pinned to `server=permafleet`: the home server's events plus those of every member
+org Discord on the roster (`contracts/alliance.json` `guildId`; today TRDE, 4M-CONTRACTORS,
+Risky Business (IDBC), House of Khans (H0K), and Monkey Business (MB) — INFN and DOUBLEDOGZ
+share G00N SQUAD) and extras in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
+SC Shellback (SHELLBACK)) — a listed server's events show once the bot is
+in it, home server first so its day themes win, PERMAFLEET brand, no server
 picker; a single server id draws just that server under its own name; every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
 hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
@@ -195,10 +197,10 @@ Settings: `presence.{path,tickMs,luck,channels,sources,gateway,prefix}` (`GOON_P
 link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`; with a
 linked `idlerpg`, run its own `npm run link:rpg` to use `../rpg`.
 The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule`,
-`/squadrons[/<id>]`, `/onboarding`, and `/votes[/<id>]`, `/organizations`, and
+`/squadrons[/<id>]`, `/how-we-operate`, `/onboarding`, and `/votes[/<id>]`, `/organizations`, and
 `/federations[/<id>]`) swaps the site header for its own menu bar
 (`components/PermafleetHeader.js`: Overview, Schedule, Squadrons,
-Organizations, Join), shown while the router sets `body.pf-section`. Votes and
+Organizations, Join), shown while the router sets `body.pf-section`. How we operate, votes, and
 federations are deliberately not in the menu; they are reached by link.
 `/operations/PERMAFLEET/votes` is **alliance votes**: one vote per member org,
 composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
@@ -314,6 +316,12 @@ the vote pages link to them. Public JSON carries officer display names and count
 never Discord ids, account keys, or member ids; federation pages list officers by
 name only (the descriptor still lists their keys so anyone can check a vote). A broken roster leaves
 votes off (503) without failing the site. Tests: `tests/alliance.js`.
+`/operations/PERMAFLEET/how-we-operate` (`components/PermafleetOperate.js`) is
+how the fleet flies: a standing 24/7 megaparty drawn from every member org,
+typically two or three things at once on G00N SQUAD or a member org's Discord.
+It is not in the menu bar; the overview's "The megaparty" teaser links to it.
+Copy follows the pinned #getting-started, #alliance, #embassy, #permafleet,
+#beacon, and #logistics posts (and the public megaparty talk in #alliance).
 `/operations/PERMAFLEET/onboarding` (`components/PermafleetOnboarding.js`) is
 for leaders of orgs joining the Protectorate: open an embassy in #embassy, name
 their officers, set up their Discord; then

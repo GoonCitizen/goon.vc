@@ -50,6 +50,27 @@ function guildIds (roster) {
 }
 
 /**
+ * Discord servers whose events join the home server's on the alliance calendar:
+ * unique member-org ids, then extras (squadron / RED ARMY servers) not already
+ * listed. Events#allianceServers prepends the home server.
+ * @param {Object} roster `{ organizations: Array<{ guildId? }> }`
+ * @param {string[]} [extras]
+ * @returns {string[]}
+ */
+function scheduleGuildIds (roster, extras) {
+  const ids = [];
+  const seen = new Set();
+  const extraIds = Array.isArray(extras) ? extras : [];
+  for (const value of guildIds(roster).concat(extraIds)) {
+    const id = parseGuildId(value);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+/**
  * Public Discord status for one roster org.
  * @param {Object} org `{ guildId? }`
  * @param {Array<{ id: string, name?: string }>} [guilds] Servers the bot is in.
@@ -76,4 +97,4 @@ function report (roster, guilds) {
   }));
 }
 
-module.exports = { parseGuildId, guildName, guildIds, view, report };
+module.exports = { parseGuildId, guildName, guildIds, scheduleGuildIds, view, report };

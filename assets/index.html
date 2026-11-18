@@ -772,6 +772,14 @@
         .pf-path { grid-template-columns: 1fr; }
       }
 
+      .pf-operate .pf-facts { margin-top: 0; }
+      .pf-operate .pf-facts dd { font-weight: 500; color: var(--pf-muted); }
+      .pf-operate .pf-facts dd strong { color: var(--pf-text); }
+      .pf-operate .pf-facts dd a { font-weight: 700; color: var(--pf-signal); text-decoration: none; }
+      .pf-operate .pf-facts dd a:hover { text-decoration: underline; }
+      .pf-operate code { color: var(--pf-text); }
+      .pf-operate > .pf-links { margin-top: 2rem; text-align: center; }
+
       .pf-onboarding .pf-facts { margin-top: 0; }
       .pf-onboarding .pf-facts dd { font-weight: 500; color: var(--pf-muted); }
       .pf-onboarding .pf-facts dd strong { color: var(--pf-text); }
@@ -3324,6 +3332,12 @@ html[data-look=bright]{color-scheme:light}
             <article class="op-pillar"><h2>Industry &amp; Logistics</h2><p>With dedicated industry and logistics, PERMAFLEET keeps its members supplied with the highest-quality goods and materials. Help with fleet orders by mining, salvaging, and more. Steady workload!</p></article>
             <article class="op-pillar"><h2>Weekly Events</h2><p>Join us on weekly adventures during our scheduled events, from <strong>Boxing Night on the 890</strong> to <strong>spicy PvP fighter training</strong>.</p></article>
           </section>
+          <section class="op-squadrons" id="how-we-operate" aria-labelledby="permafleet-operate">
+            <p class="op-squadrons-eyebrow">Always online</p>
+            <h2 id="permafleet-operate">The megaparty</h2>
+            <p class="op-squadrons-intro">PERMAFLEET keeps a public party up around the clock, drawn from every member org. At any hour you’ll usually find two or three things going — on G00N SQUAD or on a member org’s own Discord. Jump in.</p>
+            <p class="op-resource-link"><a href="/operations/PERMAFLEET/how-we-operate">How we operate &raquo;</a></p>
+          </section>
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>The PERMAFLEET Protectorate consists of member organizations participating in an alliance, each expected to contribute resources towards the collective good. Cross-organization squadrons such as <strong>BRAVO SQUADRON</strong> and <strong>RAT SQUADRON</strong> each focus on a specific type of gameplay.</p>
@@ -3580,6 +3594,39 @@ html[data-look=bright]{color-scheme:light}
       </dl>
       <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.gg/permafleet" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
     </main>
+    <main id="operate-page" class="pf-page pf-operate">
+      <p class="pf-eyebrow">How we fly</p>
+      <h1>How we operate</h1>
+      <p class="pf-intro">PERMAFLEET is 24/7 friends to fly with. The megaparty is the standing public party — not a calendar slot — drawn from every member org, and it stays up around the clock.</p>
+      <h2 id="operate-drop-in">Drop in</h2>
+      <p class="pf-intro">You do not wait for a call. You join the party that is already running.</p>
+      <dl class="pf-facts">
+        <div><dt>Voice</dt><dd>Join <strong>PERMAFLEET</strong> voice on the G00N SQUAD Discord, or the public PERMAFLEET voice channel on any member org’s server. Both are open to the alliance — drop in and fly.</dd></div>
+        <div><dt>In-game chat</dt><dd>Stay in the <code>PERMAFLEET</code> and <code>ALLIANCE</code> groups. That is how the quick reaction force finds you, and how you find them.</dd></div>
+        <div><dt>The tag</dt><dd>Wear the <code>[PERMAFLEET]</code> tag whenever you expect safety.</dd></div>
+      </dl>
+      <h2 id="operate-concurrent">Several things at once</h2>
+      <p class="pf-intro">At any hour you will usually find two or three jobs going — on G00N SQUAD or on a member org’s own Discord. Hop. Do not wait for a single voice channel to fill.</p>
+      <dl class="pf-facts">
+        <div><dt>Industry</dt><dd>Mining, salvage, hauling, and crafting — often on a member org’s Discord as well as G00N.</dd></div>
+        <div><dt>Training and PvP</dt><dd>Friday Night Fights, 1v1s, and squadron practice. Hop into BRAVO or the training rooms when that is the night’s work.</dd></div>
+        <div><dt>Security</dt><dd>The quick reaction force answers in the in-game <code>PERMAFLEET</code> group and in <strong>#beacon</strong>. Medical beacons get taken.</dd></div>
+        <div><dt>Prospect rooms</dt><dd>Newer pilots gather in the Prospect lounges and <strong>[PG] LFG</strong> on G00N. Listen in and take a seat.</dd></div>
+      </dl>
+      <h2 id="operate-help">Need help</h2>
+      <dl class="pf-facts">
+        <div><dt>#beacon</dt><dd>Sound the alarm on G00N SQUAD. Member-org Discords <strong>Follow</strong> <strong>#beacon</strong> so a call reaches the alliance, not just one server.</dd></div>
+        <div><dt>Quick reaction</dt><dd>Special Operators and the QRF answer in the in-game <code>PERMAFLEET</code> chat group. Report trouble right away, with as much detail as you can gather.</dd></div>
+        <div><dt>Escorts</dt><dd>If you are hauling valuable cargo, ask for an escort <strong>before</strong> you leave. Emergency response is first-come, first-served with the ships that are up.</dd></div>
+      </dl>
+      <h2 id="operate-schedule">Scheduled ops</h2>
+      <p class="pf-intro">The weekly board is extra: day themes, training, and named events. The megaparty does not wait for it. Show up on a regular basis and you will find a role.</p>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/schedule">Weekly ops schedule &raquo;</a> · <a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a></p>
+      <h2 id="operate-orgs">For org leaders</h2>
+      <p class="pf-intro">Member orgs keep a public PERMAFLEET voice channel so anyone in the alliance can drop in. How an organization joins, and what we expect, is on onboarding.</p>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/onboarding">Bring your org into the Protectorate &raquo;</a> · <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Talk to us in #embassy &raquo;</a></p>
+      <p class="pf-links"><a href="https://discord.gg/permafleet" target="_blank" rel="noopener noreferrer">Join the Discord &raquo;</a> · <a href="/operations/PERMAFLEET">PERMAFLEET overview &raquo;</a></p>
+    </main>
     <main id="onboarding-page" class="pf-page pf-onboarding">
       <p class="pf-eyebrow">For organization leaders</p>
       <h1>Bring your org into the Protectorate</h1>
@@ -3756,6 +3803,7 @@ html[data-look=bright]{color-scheme:light}
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var isOperate = path.toLowerCase() === "/operations/permafleet/how-we-operate";
         var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";
         var isVotes = path.toLowerCase() === "/operations/permafleet/votes";
         var voteEl = path.toLowerCase().indexOf("/operations/permafleet/votes/") === 0
@@ -3777,7 +3825,7 @@ html[data-look=bright]{color-scheme:light}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOperate && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -3858,6 +3906,8 @@ html[data-look=bright]{color-scheme:light}
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           el.style.display = el === squadronEl ? 'block' : 'none';
         });
+        var operateEl = document.getElementById('operate-page');
+        if (operateEl) operateEl.style.display = isOperate ? 'block' : 'none';
         var onboardingEl = document.getElementById('onboarding-page');
         if (onboardingEl) onboardingEl.style.display = isOnboarding ? 'block' : 'none';
         var votesEl = document.getElementById('pf-votes-page');
@@ -3868,7 +3918,7 @@ html[data-look=bright]{color-scheme:light}
         if (federationsEl) federationsEl.style.display = isFederations ? 'block' : 'none';
         var federationPageEl = document.getElementById('federation-page');
         if (federationPageEl) federationPageEl.style.display = federationEl ? 'block' : 'none';
-        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOperate || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = "Login — GOON SQUAD";
         else if (isRsiClaim) document.title = "Claim your RSI profile — GOON SQUAD";
@@ -3900,6 +3950,7 @@ html[data-look=bright]{color-scheme:light}
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
         else if (isSquadrons) document.title = "PERMAFLEET Squadrons — GOON SQUAD";
         else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
+        else if (isOperate) document.title = "How we operate — PERMAFLEET — GOON SQUAD";
         else if (isOnboarding) document.title = "PERMAFLEET Onboarding — GOON SQUAD";
         else if (isVotes || voteEl) document.title = "PERMAFLEET Votes — GOON SQUAD";
         else if (isFederations || federationEl) document.title = "Federations — GOON SQUAD";

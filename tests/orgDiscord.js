@@ -46,4 +46,17 @@ describe('org Discord status', function () {
       ]
     }), [GOON, TRDE]);
   });
+
+  it('puts member Discords on the calendar ahead of extras', function () {
+    const roster = {
+      organizations: [
+        { symbol: 'G00N', guildId: GOON },
+        { symbol: 'TRDE', guildId: TRDE },
+        { symbol: 'DOUBLEDOGZ', guildId: GOON }
+      ]
+    };
+    const extra = '635948860459450400';
+    assert.deepStrictEqual(orgDiscord.scheduleGuildIds(roster, [TRDE, extra, 'not-an-id']), [GOON, TRDE, extra]);
+    assert.deepStrictEqual(orgDiscord.scheduleGuildIds(roster), [GOON, TRDE]);
+  });
 });

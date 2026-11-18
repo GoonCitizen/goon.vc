@@ -34,6 +34,16 @@ const CHARTER = 'The PERMAFLEET Protectorate consists of member organizations pa
 
 const PermafleetSquadrons = require('./PermafleetSquadrons');
 
+function renderOperateHtml (opts) {
+  if (!opts.operatePath) return '';
+  return `<section class="op-squadrons" id="how-we-operate" aria-labelledby="permafleet-operate">
+            <p class="op-squadrons-eyebrow">Always online</p>
+            <h2 id="permafleet-operate">The megaparty</h2>
+            <p class="op-squadrons-intro">PERMAFLEET keeps a public party up around the clock, drawn from every member org. At any hour you’ll usually find two or three things going — on G00N SQUAD or on a member org’s own Discord. Jump in.</p>
+            <p class="op-resource-link"><a href="${escapeHtml(opts.operatePath)}">How we operate &raquo;</a></p>
+          </section>`;
+}
+
 function renderSquadronsHtml (opts) {
   const basePath = opts.squadronsPath;
   return `<section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
@@ -562,6 +572,7 @@ function renderPermafleetMainHtml (opts) {
           <section class="op-pillars" aria-label="What PERMAFLEET offers">
 ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2><p>${p.body}</p></article>`).join('\n')}
           </section>
+          ${renderOperateHtml(opts)}
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>${CHARTER}</p>

@@ -13,6 +13,7 @@ const PermafleetSchedule = require('../components/PermafleetSchedule');
 const PermafleetHeader = require('../components/PermafleetHeader');
 const PermafleetSquadrons = require('../components/PermafleetSquadrons');
 const PermafleetOnboarding = require('../components/PermafleetOnboarding');
+const PermafleetOperate = require('../components/PermafleetOperate');
 const PermafleetVotes = require('../components/PermafleetVotes');
 const Federations = require('../components/Federations');
 const Login = require('../components/Login');
@@ -218,6 +219,10 @@ const DEFAULTS = {
   permafleetSquadronsDescription: 'Your path to PERMAFLEET membership: join, fly with the fleet, and get selected for a cross-org squadron.',
   permafleetSchedulePath: '/operations/PERMAFLEET/schedule',
   permafleetScheduleDocumentTitle: 'PERMAFLEET Weekly Ops — GOON SQUAD',
+  // How PERMAFLEET flies: the standing 24/7 megaparty (components/PermafleetOperate.js). Not in the menu.
+  permafleetOperatePath: '/operations/PERMAFLEET/how-we-operate',
+  permafleetOperateDocumentTitle: 'How we operate — PERMAFLEET — GOON SQUAD',
+  permafleetOperateDescription: 'PERMAFLEET is 24/7 friends to fly with: a standing megaparty drawn from every member org, usually two or three things at once on G00N SQUAD or a member org’s Discord.',
   // How an organization joins the Protectorate (components/PermafleetOnboarding.js).
   permafleetOnboardingPath: '/operations/PERMAFLEET/onboarding',
   permafleetOnboardingDocumentTitle: 'PERMAFLEET Onboarding — GOON SQUAD',
@@ -378,6 +383,7 @@ class GoonSPA extends FabricSPA {
       page(this._site('permafleetPath'), this._site('permafleetDocumentTitle'), `${this._site('permafleetTagline')} ${this._site('permafleetIntro')}`, permafleet),
       page(this._site('permafleetSchedulePath'), this._site('permafleetScheduleDocumentTitle'), 'The PERMAFLEET weekly schedule: day themes, training, and operations across the Protectorate.', permafleet),
       page(this._site('permafleetSquadronsPath'), this._site('permafleetSquadronsDocumentTitle'), this._site('permafleetSquadronsDescription'), permafleet),
+      page(this._site('permafleetOperatePath'), this._site('permafleetOperateDocumentTitle'), this._site('permafleetOperateDescription'), permafleet),
       page(this._site('permafleetOnboardingPath'), this._site('permafleetOnboardingDocumentTitle'), this._site('permafleetOnboardingDescription'), permafleet),
       page(this._site('permafleetVotesPath'), this._site('permafleetVotesDocumentTitle'), this._site('permafleetVotesDescription'), permafleet),
       page(this._site('federationsPath'), this._site('federationsDocumentTitle'), this._site('federationsDescription'), permafleet),
@@ -455,6 +461,8 @@ class GoonSPA extends FabricSPA {
     const scheduleTitleJson = JSON.stringify(this._site('permafleetScheduleDocumentTitle'));
     const squadronsPath = this._site('permafleetSquadronsPath');
     const squadronsTitleJson = JSON.stringify(this._site('permafleetSquadronsDocumentTitle'));
+    const operatePath = this._site('permafleetOperatePath');
+    const operateTitleJson = JSON.stringify(this._site('permafleetOperateDocumentTitle'));
     const onboardingPath = this._site('permafleetOnboardingPath');
     const onboardingTitleJson = JSON.stringify(this._site('permafleetOnboardingDocumentTitle'));
     const votesPath = this._site('permafleetVotesPath');
@@ -800,6 +808,14 @@ class GoonSPA extends FabricSPA {
     const squadronMainsHtml = PermafleetSquadrons.SQUADRONS
       .map((squadron) => PermafleetSquadrons.renderSquadron(squadron, squadronProps))
       .join('\n');
+    const operateMainHtml = PermafleetOperate.render({
+      joinUrl: permafleetInviteUrl,
+      embassyUrl: this._site('embassyUrl'),
+      permafleetPath,
+      schedulePath,
+      squadronsPath,
+      onboardingPath
+    });
     const onboardingMainHtml = PermafleetOnboarding.render({
       joinUrl,
       embassyUrl: this._site('embassyUrl'),
@@ -821,6 +837,7 @@ class GoonSPA extends FabricSPA {
     const federationMainHtml = Federations.renderFederation(federationsProps);
     const permafleetMainHtml = PermafleetOperation.render({
       squadronsPath,
+      operatePath,
       onboardingPath,
       memberOrgs: orgData.organizations.length
         ? orgData.organizations.map((org) => ({
@@ -907,6 +924,7 @@ ${HomePage.styles()}
 ${PermafleetOperation.styles({ heroImage: this._site('permafleetHeroImage') })}
 ${PermafleetSchedule.styles()}
 ${PermafleetSquadrons.styles()}
+${PermafleetOperate.styles()}
 ${PermafleetOnboarding.styles()}
 ${PermafleetVotes.styles()}
 ${Federations.styles()}
@@ -972,6 +990,7 @@ ${tournamentMainsHtml}
     ${scheduleMainHtml}
     ${squadronsMainHtml}
 ${squadronMainsHtml}
+    ${operateMainHtml}
     ${onboardingMainHtml}
     ${votesMainHtml}
     ${voteMainHtml}
@@ -1050,6 +1069,7 @@ ${squadronMainsHtml}
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var isOperate = path.toLowerCase() === ${JSON.stringify(operatePath.toLowerCase())};
         var isOnboarding = path.toLowerCase() === ${JSON.stringify(onboardingPath.toLowerCase())};
         var isVotes = path.toLowerCase() === ${JSON.stringify(votesPath.toLowerCase())};
         var voteEl = path.toLowerCase().indexOf(${JSON.stringify(votesPath.toLowerCase() + '/')}) === 0
@@ -1071,7 +1091,7 @@ ${squadronMainsHtml}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOperate && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -1152,6 +1172,8 @@ ${squadronMainsHtml}
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           el.style.display = el === squadronEl ? 'block' : 'none';
         });
+        var operateEl = document.getElementById('operate-page');
+        if (operateEl) operateEl.style.display = isOperate ? 'block' : 'none';
         var onboardingEl = document.getElementById('onboarding-page');
         if (onboardingEl) onboardingEl.style.display = isOnboarding ? 'block' : 'none';
         var votesEl = document.getElementById('pf-votes-page');
@@ -1162,7 +1184,7 @@ ${squadronMainsHtml}
         if (federationsEl) federationsEl.style.display = isFederations ? 'block' : 'none';
         var federationPageEl = document.getElementById('federation-page');
         if (federationPageEl) federationPageEl.style.display = federationEl ? 'block' : 'none';
-        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOperate || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = ${loginTitleJson};
         else if (isRsiClaim) document.title = ${JSON.stringify(this._site('rsiClaimDocumentTitle'))};
@@ -1194,6 +1216,7 @@ ${squadronMainsHtml}
         else if (isSchedule) document.title = ${scheduleTitleJson};
         else if (isSquadrons) document.title = ${squadronsTitleJson};
         else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
+        else if (isOperate) document.title = ${operateTitleJson};
         else if (isOnboarding) document.title = ${onboardingTitleJson};
         else if (isVotes || voteEl) document.title = ${votesTitleJson};
         else if (isFederations || federationEl) document.title = ${federationsTitleJson};

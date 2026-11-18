@@ -46,14 +46,12 @@ module.exports = {
     redirectUri: process.env.DISCORD_REDIRECT_URI || null,
     schedule: {
       brand: process.env.DISCORD_SCHEDULE_BRAND || 'permafleet',
-      // Member orgs' and squadrons' Discord servers whose events join guildId's
-      // on the PERMAFLEET schedule. The bot must be in each to see their events.
+      // Extras on the PERMAFLEET schedule besides member-org Discords from
+      // contracts/alliance.json (GoonVC merges those automatically). The bot
+      // must be in each to see their events.
       servers: process.env.DISCORD_SCHEDULE_SERVERS
         ? process.env.DISCORD_SCHEDULE_SERVERS.split(',').map((id) => id.trim()).filter(Boolean)
         : [
-            '1145511542637482114', // 4M-CONTRACTORS (discord.gg/4m-contractors)
-            '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
-            '1200935959961817088', // Risky Business, IDBC (discord.gg/riskyb)
             '635948860459450400' // SC Shellback, SHELLBACKS org (RED ARMY; no public invite)
           ],
       // Last successful fetch; reused when Discord is unreachable.

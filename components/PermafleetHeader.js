@@ -57,7 +57,7 @@ function renderPermafleetHeaderCss () {
 /**
  * Menu bar for the PERMAFLEET part of the site (overview, schedule,
  * squadrons, organizations); the router shows it instead of the site header,
- * also on PERMAFLEET pages it doesn't list (onboarding, votes, federations).
+ * also on PERMAFLEET pages it doesn't list (how we operate, onboarding, votes, federations).
  * @param {Object} props
  * @param {string} props.heading Trusted HTML.
  * @param {string} props.homeLabel Trusted HTML.

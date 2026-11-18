@@ -6,6 +6,7 @@ const home = require('../contracts/goon-squad.json');
 const settings = require('../settings/local');
 const allianceChannels = require('../functions/allianceChannels');
 const allianceRoles = require('../functions/allianceRoles');
+const orgDiscord = require('../functions/orgDiscord');
 
 const REMAEUS = 'discord:420222636954615808';
 const KERSA = 'discord:191401936245882880';
@@ -53,6 +54,17 @@ describe('G00N SQUAD home Discord', function () {
     assert.strictEqual(bySymbol.MB, '1376267243650023434', 'Monkey Business, discord.gg/SpaceMonkey');
     assert.ok(!('AIMOS' in bySymbol), 'AIMOS is evicted');
     assert.strictEqual(bySymbol.LCRP, undefined);
+  });
+
+  it('puts every member org Discord on the PERMAFLEET calendar', function () {
+    const extras = settings.discord.schedule.servers;
+    const ids = orgDiscord.scheduleGuildIds(alliance, extras);
+    for (const id of orgDiscord.guildIds(alliance)) {
+      assert.ok(ids.includes(id), id);
+    }
+    assert.ok(ids.includes('259387737331859466'), 'House of Khans');
+    assert.ok(ids.includes('1376267243650023434'), 'Monkey Business');
+    assert.ok(ids.includes('635948860459450400'), 'SHELLBACK squadron / RED ARMY server');
   });
 
   it('records ADSVOLCANO as the INFN officer', function () {
