@@ -282,13 +282,27 @@ function candsFor(sc) {
 const candsAt = l => locItems[l].map(([i, p]) => ({ id: i, p, r: items[i].retU }));
 const rawFor = (m, sc) => (M[m].raw || []).find(r => sc === 'any' || sc === 'one' || D.locs[r[2]][2] === sc) || null;
 
-function oneStop(need, ms) {
+const rawOffers = m => M[m].raw || [];
+const rawAtLoc = (m, loc) => rawOffers(m).find(r => r[2] === loc) || null;
+function sharedRawLoc(rawMats) {
+  if (!rawMats.length) return null;
+  let locs = rawOffers(rawMats[0].m).map(r => r[2]);
+  rawMats.slice(1).forEach(x => { const have = new Set(rawOffers(x.m).map(r => r[2])); locs = locs.filter(l => have.has(l)); });
+  return locs.length ? locs[0] : null;
+}
+function onePlace(need, rawMats, ms) {
+  if (!need.length) {
+    if (!rawMats.length) return { cost: 0, picks: [], exact: true, floor: 0, loc: null };
+    const loc = sharedRawLoc(rawMats);
+    return loc == null ? null : { cost: 0, picks: [], exact: true, floor: 0, loc };
+  }
   let best = null;
   for (const l of shopPlaces) {
+    if (rawMats.some(x => !rawAtLoc(x.m, l))) continue;
     const c = candsAt(l), has = new Set(); c.forEach(x => x.r.forEach(y => has.add(y[0])));
     if (!need.every(x => has.has(x[0]))) continue;
     const r = Cover.solve(need, c, { cap: best ? best.cost : undefined, ms: ms || 120 });
-    if (r.cost < (best ? best.cost : Infinity)) best = Object.assign(r, { loc: l });
+    if (r && r.cost < (best ? best.cost : Infinity)) best = Object.assign(r, { loc: l });
   }
   return best;
 }
@@ -309,10 +323,13 @@ function buildPlan(scope) {
     return o;
   });
   const breakNeed = mats.filter(x => x.src === 'break').map(x => [x.m, toU(x.m, x.q)]);
+  const rawMats = mats.filter(x => x.src === 'raw');
   let r, loc = null, noOne = false;
   if (scope === 'one') {
-    r = breakNeed.length ? oneStop(breakNeed, 200) : { cost: 0, picks: [], exact: true, floor: 0 };
-    if (!r) { noOne = true; r = Cover.solve(breakNeed, cands); } else loc = r.loc;
+    r = onePlace(breakNeed, rawMats, 200);
+    if (!r) { noOne = true; r = Cover.solve(breakNeed, cands); }
+    else loc = r.loc;
+    if (loc != null) rawMats.forEach(x => { const offer = rawAtLoc(x.m, loc); x.raw = offer; x.rawCost = offer ? x.rawScu * offer[0] : 0; x.can.raw = !!offer; });
   } else r = Cover.solve(breakNeed, cands);
 
   // where to buy each pick: lowest price in scope, and on ties prefer places already on the trip
@@ -330,7 +347,7 @@ function buildPlan(scope) {
   }
   const stops = [...used].map(l => { const ps = picks.filter(pk => pk.loc === l).sort((a, b) => b.count * b.price - a.count * a.price); return { loc: l, picks: ps, sum: ps.reduce((s, pk) => s + pk.count * pk.price, 0) }; })
     .sort((a, b) => b.sum - a.sum);
-  const raws = mats.filter(x => x.src === 'raw');
+  const raws = mats.filter(x => x.src === 'raw' && x.raw);
   const get = new Map();
   picks.forEach(pk => pk.o.ret.forEach(([m, q]) => get.set(m, (get.get(m) || 0) + q * pk.count)));
   raws.forEach(x => get.set(x.m, (get.get(x.m) || 0) + x.rawScu));
@@ -439,11 +456,8 @@ function fillAlts() {            // price of the same list under each "where to 
   const R = planNow; if (!R) return;
   SCOPES.forEach(([k], n) => setTimeout(() => {
     const el = $('alt-' + k); if (!el || k === st.scope || planNow !== R) return;
-    let txt = 'not possible';
-    if (!R.breakNeed.length) txt = n0(R.rawCost);
-    else if (k === 'one') { const r = oneStop(R.breakNeed, 60); if (r) txt = n0(r.cost + R.rawCost); }
-    else { const r = Cover.solve(R.breakNeed, candsFor(k), { ms: 120 }); if (!r.missing.length) txt = n0(r.cost + R.rawCost); }
-    el.textContent = txt;
+    const plan = buildPlan(k);
+    el.textContent = plan.noOne ? 'not possible' : n0(plan.total);
   }, n * 15));
 }
 
@@ -512,7 +526,20 @@ function csv() {
   current.forEach(o => lines.push([o.name, o.mfr, o.cat, o.size || '', o.grade, o.armor, o.prices.length ? o.prices[0][1] : '', o.prices.length ? shopFull(o.prices[0][0]) : 'Not sold in shops',
     list(o.ret), list(o.inp), o.inp.filter(x => !o.retSet.has(x[0])).map(x => M[x[0]].n).join('; '), o.time]));
   const text = '\ufeff' + lines.map(r => r.map(cell).join(',')).join('\r\n');
-  claude.use('downloads').then(dl => dl ? dl.save({ filename: 'star-citizen-items.csv', data: text }) : null).catch(() => { });
+  const name = 'star-citizen-items.csv';
+  const host = window.claude && claude.use ? claude.use('downloads') : Promise.resolve(null);
+  host.then(dl => {
+    if (dl) return dl.save({ filename: name, data: text });
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }).catch(() => { });
 }
 
 /* ================= materials ================= */
@@ -567,7 +594,6 @@ $('sort').onchange = e => { st.sort = e.target.value; drawItems(); };
 const clearAll = () => { st.q = ''; $('q').value = ''; st.mats.clear(); st.cats.clear(); st.cls.clear(); st.sold = false; st.sort = 'name'; st.shown = 200; drawItems(); };
 $('clear').onclick = clearAll; $('clear2').onclick = clearAll;
 $('more').onclick = () => { st.shown = Infinity; drawItems(); };
-$('csv').hidden = true; (window.claude && claude.use ? claude.use('downloads') : Promise.resolve(null)).then(dl => { if (dl) $('csv').hidden = false; }).catch(() => { });
 $('csv').onclick = csv;
 
 facet($('fcat'), D.cats.slice().sort(), st.cats);

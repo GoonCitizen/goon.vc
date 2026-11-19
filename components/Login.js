@@ -128,16 +128,27 @@ function renderLoginScript (props) {
         }
 
         var siteFooter = document.getElementById('site-member-footer');
+        function adminHost () {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
+          });
+          for (var i = 0; i < pages.length; i++) {
+            var button = pages[i].querySelector('.footer-login-button');
+            if (button && button.parentElement) return button.parentElement;
+          }
+          return siteFooter;
+        }
         function setAdminLink (member) {
+          var host = adminHost();
           var link = document.getElementById('site-admin-link');
-          if (!link && siteFooter) {
+          if (!link && host) {
             link = document.createElement('a');
             link.id = 'site-admin-link';
             link.className = 'site-admin-link';
             link.href = adminPath;
             link.textContent = 'Admin';
-            siteFooter.appendChild(link);
-          }
+            host.appendChild(link);
+          } else if (link && host && link.parentElement !== host) host.appendChild(link);
           if (!link) return;
           link.hidden = !(member && member.admin);
           if (path.toLowerCase() === String(adminPath).toLowerCase()) link.setAttribute('aria-current', 'page');

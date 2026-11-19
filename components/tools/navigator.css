@@ -1,0 +1,58 @@
+.nav { color: var(--ink, #eee); }
+.nav h1 { font-family: "Bungee", sans-serif; font-weight: 400; font-size: clamp(28px, 4vw, 42px); letter-spacing: .04em; text-transform: uppercase; color: #fff; margin: 0; }
+.nav h2, .nav h3 { font-weight: 600; letter-spacing: .02em; }
+.nav h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
+.nav h3 { font-size: .95rem; margin: 1rem 0 .4rem; color: var(--mute, #aaa); font-weight: 600; }
+.nav p { margin: 0; }
+.nav .lede { max-width: 62ch; color: var(--mute, #aaa); margin-top: .6rem; }
+.nav .top { padding: 1.2rem 0 .4rem; }
+.nav .ends { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.nav section { min-width: 0; }
+.nav .ends > section, .nav .craft, .nav .result, .nav .notes { border: 1px solid var(--line, #5a5a5a); border-radius: 10px; padding: 1rem; }
+.nav .craft { display: grid; grid-template-columns: 1.4fr .8fr .6fr .6fr; gap: .8rem 1rem; align-items: end; margin-bottom: 1rem; }
+.nav .craft > label:first-child { grid-column: 1 / -1; }
+.nav label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; color: var(--mute, #aaa); }
+.nav input, .nav select, .nav button { font: inherit; color: inherit; }
+.nav input, .nav select { background: transparent; border: 1px solid var(--line, #5a5a5a); border-radius: 8px; padding: .45rem .6rem; width: 100%; }
+.nav button { cursor: pointer; }
+.nav .systems, .nav .picks { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.nav .systems button, .nav .picks button, .nav .scroll button, .nav .results button {
+  border: 1px solid var(--line, #5a5a5a); background: transparent; border-radius: 8px; padding: .35rem .6rem; text-align: left;
+}
+.nav .systems button[aria-pressed="true"], .nav .picks button[aria-pressed="true"], .nav .scroll button[aria-pressed="true"] {
+  background: var(--goon, #8f1d1d); border-color: var(--goon, #8f1d1d); color: #fff;
+}
+.nav .search { margin: .2rem 0 .4rem; }
+.nav .results { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.nav .results button, .nav .scroll button { display: flex; justify-content: space-between; gap: .6rem; width: 100%; }
+.nav .scroll { max-height: 16rem; overflow: auto; display: flex; flex-direction: column; gap: .3rem; }
+.nav small, .nav .hint, .nav .mute { color: var(--mute, #aaa); font-size: .8rem; }
+.nav .picked { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; min-height: 1.4em; margin: .2rem 0 .6rem; }
+.nav button.text { border: 0; background: none; padding: 0; color: var(--goon-hot, #b32626); text-decoration: underline; }
+.nav .stats { grid-column: 1 / -1; color: var(--mute, #aaa); font-variant-numeric: tabular-nums; }
+.nav .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin: .8rem 0; }
+.nav .metrics div { border-top: 2px solid var(--goon, #8f1d1d); padding-top: .35rem; }
+.nav .metrics dt { color: var(--mute, #aaa); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.nav .metrics dd { margin: .15rem 0 0; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.nav .legs, .nav .hops { margin: .6rem 0 0; padding-left: 1.1rem; }
+.nav .legs li { margin: .45rem 0; }
+.nav .legs .refuel { color: #fff; }
+.nav .legs .refuel::marker { color: var(--goon-hot, #b32626); }
+.nav .over { color: #e7a8a2; }
+.nav td.stop { color: #e6c98a; }
+.nav table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.nav th, .nav td { border-bottom: 1px solid var(--line, #5a5a5a); padding: .4rem .5rem; text-align: left; vertical-align: top; }
+.nav .grid th, .nav .grid td { text-align: right; }
+.nav .grid th:first-child, .nav .grid td:first-child { text-align: left; }
+.nav .scroll-x { overflow-x: auto; }
+.nav .notes { margin-top: 1rem; text-align: left; }
+.nav .notes h2, .nav .notes p { text-align: left; }
+.nav .notes p { color: var(--mute, #aaa); margin: .5rem 0; max-width: 70ch; }
+.nav .result { margin-bottom: 1rem; }
+@media (max-width: 800px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr 1fr; }
+  .nav .stats { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr; }
+}

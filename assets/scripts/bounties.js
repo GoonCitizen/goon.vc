@@ -13,12 +13,8 @@
 
   var STATUS = {
     open: 'Open',
-    claimed: 'Claimed, waiting for payment',
-    funded: 'Funded',
-    finished: 'Finished, waiting for the poster',
-    disputed: 'Disputed',
-    released: 'Paid',
-    refunded: 'Refunded'
+    claimed: 'Kill claimed',
+    paid: 'Paid'
   };
 
   function call (url, opts) {
@@ -44,7 +40,16 @@
     el.type = 'button';
     el.className = 'goon-button';
     el.textContent = label;
-    el.addEventListener('click', action);
+    el.addEventListener('click', function () {
+      call('/services/bounties/' + encodeURIComponent(bountyId) + '/' + action, { method: 'POST', body: {} }).then(function (res) {
+        if (res.status === 401) {
+          text('bounty-status', 'Sign in first.');
+          return;
+        }
+        if (!res.ok) text('bounty-status', (res.j && res.j.error) || 'That did not work.');
+        else window.location.reload();
+      });
+    });
     return el;
   }
 
@@ -57,17 +62,17 @@
         return;
       }
       var bounties = (r.j && r.j.bounties) || [];
-      if (!bounties.length) text('bounties-status', 'No open bounties yet.');
+      if (!bounties.length) text('bounties-status', 'No bounties yet.');
       bounties.forEach(function (bounty) {
         var li = document.createElement('li');
         var a = document.createElement('a');
         a.className = 'bounty-card';
         a.href = bounty.path;
         var strong = document.createElement('strong');
-        strong.textContent = bounty.title;
+        strong.textContent = bounty.target;
         a.appendChild(strong);
         var small = document.createElement('small');
-        small.textContent = (bounty.reward || '') + ' · ' + (STATUS[bounty.status] || bounty.status) + (bounty.posterName ? ' · ' + bounty.posterName : '');
+        small.textContent = (bounty.reward || '') + ' · ' + (STATUS[bounty.status] || bounty.status) + (bounty.posterHandle ? ' · posted by ' + bounty.posterHandle : '');
         a.appendChild(document.createElement('br'));
         a.appendChild(small);
         li.appendChild(a);
@@ -80,10 +85,11 @@
       var data = new window.FormData(event.target);
       call('/services/bounties', {
         method: 'POST',
-        body: { title: data.get('title'), details: data.get('details'), reward: data.get('reward'), refundAddress: data.get('refundAddress') }
+        body: { target: data.get('target'), reward: data.get('reward'), note: data.get('note') }
       }).then(function (r) {
         if (r.status === 401) {
           document.getElementById('bounties-signed-out').hidden = false;
+          text('bounties-status', '');
           return;
         }
         if (!r.ok) {
@@ -102,93 +108,28 @@
         return;
       }
       var bounty = r.j.bounty;
-      text('bounty-title', bounty.title);
-      document.title = bounty.title + ' — Bounties';
-      text('bounty-meta', [bounty.reward, STATUS[bounty.status] || bounty.status, bounty.posterName ? 'Posted by ' + bounty.posterName : '', bounty.claimantName ? 'Claimed by ' + bounty.claimantName : ''].filter(Boolean).join(' · '));
-      text('bounty-details', bounty.details || '');
-      var pay = document.getElementById('bounty-pay');
-      var claim = document.getElementById('bounty-claim');
-      var refund = document.getElementById('bounty-refund');
-      pay.hidden = !(bounty.you === 'poster' && bounty.invoice);
-      refund.hidden = !bounty.needsRefund;
-      claim.hidden = bounty.status !== 'open' || bounty.you === 'poster' || !bounty.ready;
-      if (bounty.status === 'open' && !bounty.ready && bounty.you !== 'poster') text('bounty-status', 'The poster still has to set a refund address.');
-      if (bounty.invoice) {
-        var box = document.getElementById('bounty-invoice');
-        box.textContent = '';
-        var address = document.createElement('p');
-        address.textContent = bounty.invoice.address + ' · ' + bounty.invoice.amountBtc + ' BTC';
-        box.appendChild(address);
+      var title = document.getElementById('bounty-title');
+      title.textContent = '';
+      if (bounty.targetUrl) {
         var link = document.createElement('a');
-        link.href = bounty.invoice.bitcoinUri;
-        link.textContent = 'Open in a wallet';
-        box.appendChild(link);
-        if (bounty.payUrl) {
-          box.appendChild(document.createTextNode(' · '));
-          var hub = document.createElement('a');
-          hub.href = bounty.payUrl;
-          hub.textContent = 'Pay on the Hub';
-          box.appendChild(hub);
-        }
-      }
+        link.href = bounty.targetUrl;
+        link.textContent = bounty.target;
+        title.appendChild(link);
+      } else title.textContent = bounty.target;
+      document.title = bounty.target + ' — Bounties';
+      text('bounty-meta', [bounty.reward, STATUS[bounty.status] || bounty.status, bounty.posterHandle ? 'Posted by ' + bounty.posterHandle : '', bounty.claimantHandle ? 'Claimed by ' + bounty.claimantHandle : ''].filter(Boolean).join(' · '));
+      text('bounty-note', bounty.note || '');
       var actions = document.getElementById('bounty-actions');
       actions.textContent = '';
-      function act (label, action, body) {
-        actions.appendChild(button(label, function () {
-          call('/services/bounties/' + encodeURIComponent(bounty.id) + '/' + action, { method: 'POST', body: body || {} }).then(function (res) {
-            if (!res.ok) text('bounty-status', (res.j && res.j.error) || 'That did not work.');
-            else window.location.reload();
-          });
-        }));
+      if (bounty.status === 'open' && bounty.you !== 'poster') actions.appendChild(button('I killed them', 'claim'));
+      if (bounty.you === 'poster' && bounty.status === 'open') actions.appendChild(button('Take it down', 'cancel'));
+      if (bounty.you === 'claimant' && bounty.status === 'claimed') actions.appendChild(button('Drop the claim', 'drop'));
+      if (bounty.you === 'poster' && bounty.status === 'claimed') {
+        actions.appendChild(button('Confirm and pay', 'confirm'));
+        actions.appendChild(button('Turn the claim away', 'reject'));
       }
-      if (bounty.you === 'claimant' && bounty.status === 'claimed') act('Drop claim', 'drop');
-      if (bounty.you === 'claimant' && bounty.status === 'funded') act('Mark finished', 'finish');
-      if (bounty.you === 'poster' && bounty.status === 'finished') act('Confirm and pay', 'confirm');
-      if ((bounty.you === 'poster' || bounty.you === 'claimant') && (bounty.status === 'funded' || bounty.status === 'finished')) act('Dispute', 'dispute');
-      var sign = document.getElementById('bounty-sign');
-      sign.hidden = !(bounty.you && bounty.payouts && bounty.payouts.length);
-      if (!sign.hidden) {
-        var payout = bounty.payouts.find(function (item) { return item.active; }) || bounty.payouts[0];
-        text('bounty-payout', (payout.kind === 'release' ? 'Pay the claimant' : 'Refund the poster') + ': ' + payout.amountSats + ' sats. ' + payout.signers + ' of 2 signatures.');
-      }
+      if (bounty.status === 'paid') text('bounty-status', 'The poster confirmed the kill. The reward is paid in game.');
     }).catch(function () { text('bounty-status', 'Could not load this bounty.'); });
-
-    document.getElementById('bounty-claim-form').addEventListener('submit', function (event) {
-      event.preventDefault();
-      var data = new window.FormData(event.target);
-      call('/services/bounties/' + encodeURIComponent(bountyId) + '/claim', { method: 'POST', body: { payoutAddress: data.get('payoutAddress') } }).then(function (r) {
-        if (r.status === 401) {
-          text('bounty-status', 'Sign in to claim this bounty.');
-          return;
-        }
-        if (!r.ok) text('bounty-status', (r.j && r.j.error) || 'Could not claim this bounty.');
-        else window.location.reload();
-      });
-    });
-    document.getElementById('bounty-refund-form').addEventListener('submit', function (event) {
-      event.preventDefault();
-      var data = new window.FormData(event.target);
-      call('/services/bounties/' + encodeURIComponent(bountyId) + '/refund', { method: 'POST', body: { refundAddress: data.get('refundAddress') } }).then(function (r) {
-        if (!r.ok) text('bounty-status', (r.j && r.j.error) || 'Could not save that address.');
-        else window.location.reload();
-      });
-    });
-    document.getElementById('bounty-sign-form').addEventListener('submit', function (event) {
-      event.preventDefault();
-      var data = new window.FormData(event.target);
-      call('/services/bounties/messages', { method: 'POST', body: { frame: data.get('frame') } }).then(function (r) {
-        if (!r.ok) text('bounty-status', (r.j && r.j.error) || 'That signature was not accepted.');
-        else window.location.reload();
-      });
-    });
-    document.getElementById('bounty-pay-form').addEventListener('submit', function (event) {
-      event.preventDefault();
-      var data = new window.FormData(event.target);
-      call('/services/bounties/' + encodeURIComponent(bountyId) + '/payments', { method: 'POST', body: { txid: data.get('txid') } }).then(function (r) {
-        if (!r.ok) text('bounty-status', (r.j && r.j.error) || 'That payment was not found.');
-        else window.location.reload();
-      });
-    });
   }
 
   if (onIndex) showIndex();

@@ -1086,7 +1086,8 @@ class Community {
       const fallback = cached.length ? cached : (remembered && remembered.members.length ? remembered.members : null);
       if (fallback) {
         this.emit('error', 'community campaigns', `could not refresh the members of ${guild.name}, using the list from earlier: ${errorMessage(error)}`);
-        this._memberLists.set(id, { at: now, members: fallback });
+        const at = remembered && fallback === remembered.members ? remembered.at : now;
+        this._memberLists.set(id, { at, members: fallback });
         return fallback;
       }
       this.emit('error', 'community campaigns', `could not list the members of ${guild.name}: ${errorMessage(error)}`);

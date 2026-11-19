@@ -363,7 +363,10 @@ path, after the member tiles) teaser it.
 index, inside the site shell. The breakdown planner is
 `/resources/breakdown-tool`. The PDC Dashboard (`/resources/pdc-dashboard`)
 is the PDC Loadout Lab: Perseus and Polaris point-defense planning numbers,
-labeled unverified. Add a tool by listing it on `tools` in `GoonSPA`
+labeled unverified. The Navigator (`/resources/navigator`) plans quantum
+travel from a Star Citizen Wiki starmap snapshot (`assets/tool-scripts/navigator.json`):
+system jump first, then a planet, moon, or point, with time and fuel for the
+drive and tank, and a refuel where the place has vehicle services. Add a tool by listing it on `tools` in `GoonSPA`
 (`id`, `name`, `html`, `css`, `script`) and keeping its stylesheet scoped to
 `.tool-sheet`. `/resources/gooncitizen` describes the
 GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder
@@ -583,7 +586,7 @@ must be on for the shared application in the Developer Portal. Settings:
 `market.{enabled,path,forum,tags,ttlMs,sync,webhook,network,allowMainnet,dibsHours,payHours,payGraceHours,deliveryDays,confirmDays,feeSats,arbiters,rateUrl}`;
 `GOON_MARKET=0` turns it off. Tests: `tests/marketPost.js`,
 `tests/marketEscrow.js`, `tests/market.service.js`.
-**Bounties** (`/bounties`, `services/bounties.js`, `functions/bountyEscrow.js`, page `components/BountiesPage.js`) are bitcoin rewards any signed-in member can post or claim. A bounty is listed first. Claiming it opens a Market-style 2-of-3 escrow — poster, claimant, goon.vc as arbiter — and the poster pays that vault. The arbiter key is goon.vc's Fabric key at `m/7777'/6'`, seeded by `bounty:<id>`, so it is never a Market order key. The claimant marks the work finished; the poster confirms, or `confirmDays` pass, and the escrow releases to the claimant. A claim that is never paid returns the bounty to the board. Public JSON is display names and bounty fields only. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) is servers only; claiming opens the page because a payout address is required. `GOON_BOUNTIES=0` turns the board off. Tests: `tests/bountyEscrow.js`, `tests/bounties.service.js`.
+**Bounties** (`/bounties`, `services/bounties.js`, page `components/BountiesPage.js`) are player bounties: a price in aUEC on an RSI handle. Kill that pilot and the poster pays the reward in game. The site keeps the record and does not move aUEC. Posting and claiming both require a linked RSI handle (`Members.rsiHandles`); the error points at `/rsi`. The poster confirms the kill (`paid`) or turns the claim away, which reopens it. Public JSON is handles, the reward, and the status — never member ids. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) runs in servers and in the bot’s DMs. `GOON_BOUNTIES=0` turns the board off. The old bitcoin escrow machine remains in `functions/bountyEscrow.js` and is not what the board runs. Tests: `tests/bounties.service.js`.
 The **Fabric relay** (`services/fabricRelay.js`, packs in
 `functions/discordFabricShare.js`) puts messages from the G00N SQUAD **public
 channels** (`discord.guildId` only; text and announcement channels @everyone
@@ -611,14 +614,17 @@ the newest 20 per channel are re-shared on connect and every 30 minutes for
 peers that joined later. A deletion only stops re-sharing — peers keep what they
 already have. `GOON_FABRIC_RELAY=0` turns it off.
 Discord **application commands** (`services/commands.js`) are answered on that
-same gateway client (interactions need no intents) and registered globally for
-servers only when it is ready (`/market` also installs on a member's own account
-and runs in DMs and group DMs). The application is shared (today "sensemaker"),
+same gateway client (interactions need no intents) and registered globally when
+it is ready. `/idlerpg`, `/1v1`, `/vote`, `/bounty`, `/rsi`, and `/hangar` also
+run in the bot’s DMs. `/goon`, `/schedule`, and `/clips` stay in servers, where
+they act on that server. `/market` also installs on a member's own account and
+runs in DMs and group DMs, and `/help` follows it. The application is shared (today "sensemaker"),
 so only these names are upserted, never `set()`, and unchanged ones are skipped.
 A command does not create a profile or link an account. Discord is linked when
 that person finishes Discord sign-in, and a Fabric key when they finish
 Passport sign-in. `/vote` from someone who has not signed in asks them to sign
-in, except an officer on record, who can still sign for their org.
+in, except an officer on record, who can still sign for their org. It runs in
+any server the bot is in, and in the bot’s DMs.
 `/idlerpg profile [pilot]` | `leaderboard` | `stats` reply from `Presence`
 (`discordPlayer`, `players`, `report`): public numbers and display names, with
 links to the player pages. `/1v1 winner loser score [league] [note]` is run by
@@ -626,7 +632,8 @@ one of the two players (the Open League unless `league`, which autocompletes;
 `score` is a choice from `1-0` to `5-4`, and best of n follows from the winner's
 games). It stores a private proposal (`Leagues#proposeDuel`, `/proposal/<id>` in the leagues Store,
 7 days to answer). It then posts a card with Confirm / Decline buttons
-(`1v1:confirm|decline:<proposal>`) pinging only the opponent. The opponent's
+(`1v1:confirm|decline:<proposal>`) pinging only the opponent. In the bot’s DMs
+the same card is sent to the opponent, and the caller is told they were asked. The opponent's
 Confirm (`Leagues#confirmDuel`) links them too and logs the duel, dated when it
 was proposed, with `by` the proposer and `confirmedBy` the opponent. Decline
 by the opponent, a withdrawal by the proposer, and expiry log nothing. The card
@@ -641,7 +648,7 @@ name equal to their server display name (nickname, then display name) or their
 handle, e.g. one typed into a tournament (logged `link`). Otherwise they join under it, or as
 `name (username)` when another member holds the name. Bots and self-duels are refused.
 Errors are ephemeral. Replies carry no Discord ids and ping no one except the
-opponent asked to confirm. `/vote proposal choice` (any member, any server; `proposal`
+opponent asked to confirm. `/vote proposal choice` (any member, in a server or the bot’s DMs; `proposal`
 autocompletes open alliance proposals by title or short id, `choice` is yes / no / abstain)
 casts the caller's advisory member vote through `Alliance#memberVote` with their
 `discord:<id>` account (Commands takes `alliance` lazily, since Alliance starts later);
@@ -663,7 +670,7 @@ or the listing page's `#buy` box (the order needs a refund address, so it opens
 on goon.vc), with a pointer to `/sessions` while they have no Fabric key.
 Replies are private (deferred: a sale posts to the forum first) and carry
 display names and links only.
-`/help [command]` (same install and contexts as `/market`; `command` offers the
+`/services/discord` is that same `/help`, expanded: how to add the bot and where commands run, then every command running right now with each argument. JSON clients get `{ commands }` at the same path. `/help [command]` (same install and contexts as `/market`; `command` offers the
 commands running right now as choices, built from `Commands#definitions`, so it
 never lists one that isn't registered) replies privately with every running
 command and its subcommands, or one command in detail: each subcommand's

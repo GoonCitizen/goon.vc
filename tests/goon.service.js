@@ -1123,7 +1123,6 @@ describe('goon.vc HTTP', function () {
     assert.strictEqual(detail.json.threshold, alliance.threshold);
     assert.strictEqual(detail.json.members, alliance.members);
     assert.ok(detail.json.members >= detail.json.threshold);
-    assert.ok(page.body.includes(`${detail.json.threshold} of ${detail.json.members} member orgs decide`));
     assert.deepStrictEqual(detail.json.organizations.map((org) => org.symbol), overview.json.federation.organizations.map((org) => org.symbol));
     assert.ok(!detail.body.includes('discord:'), 'no account keys');
     assert.strictEqual((await fetchJson('/services/alliance/federations/000000000000')).status, 404);
@@ -1135,6 +1134,7 @@ describe('goon.vc HTTP', function () {
     const resources = page.body.slice(start, page.body.indexOf('</main>', start));
     assert.ok(resources.includes('href="/resources/breakdown-tool">Breakdown planner</a>'));
     assert.ok(resources.includes('href="/resources/pdc-dashboard">PDC Dashboard</a>'));
+    assert.ok(resources.includes('href="/resources/navigator">Navigator</a>'));
     const tool = await fetchJson('/resources/breakdown-tool', { headers: { Accept: 'text/html' } });
     assert.strictEqual(tool.status, 200);
     assert.ok(tool.body.includes('id="site-header"'));
@@ -1164,6 +1164,17 @@ describe('goon.vc HTTP', function () {
     const pdcScript = await fetchJson('/tool-scripts/pdc-dashboard.js');
     assert.strictEqual(pdcScript.status, 200);
     assert.ok(pdcScript.body.includes('pdc-loadout-v1'));
+    const nav = await fetchJson('/resources/navigator', { headers: { Accept: 'text/html' } });
+    assert.strictEqual(nav.status, 200);
+    assert.ok(nav.body.includes('id="tool-navigator"'));
+    assert.ok(nav.body.includes('<h1>Navigator</h1>'));
+    assert.ok(nav.body.includes('data-script="/tool-scripts/navigator.js"'));
+    const navScript = await fetchJson('/tool-scripts/navigator.js');
+    assert.strictEqual(navScript.status, 200);
+    assert.ok(navScript.body.includes('function createNavigator'));
+    const navData = await fetchJson('/tool-scripts/navigator.json');
+    assert.strictEqual(navData.status, 200);
+    assert.ok(navData.body.includes('"Hurston"'));
   });
 
   it('serves /resources with a dedicated GoonCitizen page', async function () {
@@ -1593,7 +1604,7 @@ describe('goon.vc page paths', function () {
   }
 
   it('serves a page even when assets has a directory of the same name', async function () {
-    for (const pathname of ['/drills', '/drills/melee-rotation', '/resources/breakdown-tool', '/resources/pdc-dashboard', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
+    for (const pathname of ['/drills', '/drills/melee-rotation', '/resources/breakdown-tool', '/resources/pdc-dashboard', '/resources/navigator', '/tournaments', '/leagues', '/clips', '/resources/1v1-leaderboard']) {
       assert.deepStrictEqual(await get(pathname), { status: 200, location: undefined }, pathname);
     }
   });

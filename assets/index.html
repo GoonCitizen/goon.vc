@@ -1303,6 +1303,18 @@
       .bounty-actions { display: flex; flex-wrap: wrap; gap: 0.5em; }
       .bounty-actions .goon-button { margin: 0; }
       .bounty-status { min-height: 1.2em; text-align: center; }
+
+      .discord-page { display: none; margin: 3em auto; max-width: 42em; padding: 0 1em 3em; text-align: left; }
+      .discord-page h1, .discord-page .discord-lead { text-align: center; }
+      .discord-page [hidden] { display: none !important; }
+      .discord-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.25em 0; padding: 1em 1.1em; }
+      .discord-page h2 { font-size: 1.15em; margin: 0 0 0.4em; }
+      .discord-page code { font-size: 0.95em; overflow-wrap: anywhere; }
+      .discord-page .discord-meta { color: #999; }
+      .discord-page ul { margin: 0.4em 0 0; padding-left: 1.2em; }
+      .discord-page .discord-actions { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; margin: 1em 0; }
+      .discord-page .discord-actions .goon-button { margin: 0; }
+      .discord-status { min-height: 1.2em; text-align: center; }
     </style>
   </head>
   <body>
@@ -2273,6 +2285,13 @@
           <div class="operation-links"><a class="goon-button" href="/resources/pdc-dashboard">Open the dashboard</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/navigator">Navigator</a></h2>
+          <p class="operation-tagline">Quantum travel times from real starmap distances.</p>
+          <p class="operation-summary">Start with the jump between systems, then a planet, a moon, and a point. Time and fuel follow the drive and the tank.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/navigator">Open the navigator</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/tournaments">Tournaments</a></h2>
           <p class="operation-tagline">Single and double elimination brackets, best of n, with every result on record.</p>
           <p class="operation-summary">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
@@ -2302,10 +2321,17 @@
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/bounties">Bounties</a></h2>
-          <p class="operation-tagline">Bitcoin rewards held in escrow until the work is confirmed.</p>
-          <p class="operation-summary">Post a bitcoin reward. Someone claims it, you fund the escrow, and confirming the work pays them.</p>
+          <p class="operation-tagline">A price in aUEC on a pilot. Kill them and the poster pays you in game.</p>
+          <p class="operation-summary">A price on a pilot, in aUEC. Kill them and the poster pays you in game. Posting requires a linked RSI handle.</p>
           
           <div class="operation-links"><a class="goon-button" href="/bounties">Bounties</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/services/discord">Discord</a></h2>
+          <p class="operation-tagline">Slash commands for the goon.vc bot.</p>
+          <p class="operation-summary">How to use the goon.vc Discord bot, and every slash command it is running, with each argument written out.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/services/discord">Commands</a></div>
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
@@ -2938,6 +2964,115 @@ html[data-look=bright]{color-scheme:light}
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+<main class="tool-page" id="tool-navigator" data-path="/resources/navigator" data-title="Navigator — GOON SQUAD" data-script="/tool-scripts/navigator.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { .nav { color: var(--ink, #eee); }
+.nav h1 { font-family: "Bungee", sans-serif; font-weight: 400; font-size: clamp(28px, 4vw, 42px); letter-spacing: .04em; text-transform: uppercase; color: #fff; margin: 0; }
+.nav h2, .nav h3 { font-weight: 600; letter-spacing: .02em; }
+.nav h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
+.nav h3 { font-size: .95rem; margin: 1rem 0 .4rem; color: var(--mute, #aaa); font-weight: 600; }
+.nav p { margin: 0; }
+.nav .lede { max-width: 62ch; color: var(--mute, #aaa); margin-top: .6rem; }
+.nav .top { padding: 1.2rem 0 .4rem; }
+.nav .ends { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.nav section { min-width: 0; }
+.nav .ends > section, .nav .craft, .nav .result, .nav .notes { border: 1px solid var(--line, #5a5a5a); border-radius: 10px; padding: 1rem; }
+.nav .craft { display: grid; grid-template-columns: 1.4fr .8fr .6fr .6fr; gap: .8rem 1rem; align-items: end; margin-bottom: 1rem; }
+.nav .craft > label:first-child { grid-column: 1 / -1; }
+.nav label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; color: var(--mute, #aaa); }
+.nav input, .nav select, .nav button { font: inherit; color: inherit; }
+.nav input, .nav select { background: transparent; border: 1px solid var(--line, #5a5a5a); border-radius: 8px; padding: .45rem .6rem; width: 100%; }
+.nav button { cursor: pointer; }
+.nav .systems, .nav .picks { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.nav .systems button, .nav .picks button, .nav .scroll button, .nav .results button {
+  border: 1px solid var(--line, #5a5a5a); background: transparent; border-radius: 8px; padding: .35rem .6rem; text-align: left;
+}
+.nav .systems button[aria-pressed="true"], .nav .picks button[aria-pressed="true"], .nav .scroll button[aria-pressed="true"] {
+  background: var(--goon, #8f1d1d); border-color: var(--goon, #8f1d1d); color: #fff;
+}
+.nav .search { margin: .2rem 0 .4rem; }
+.nav .results { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.nav .results button, .nav .scroll button { display: flex; justify-content: space-between; gap: .6rem; width: 100%; }
+.nav .scroll { max-height: 16rem; overflow: auto; display: flex; flex-direction: column; gap: .3rem; }
+.nav small, .nav .hint, .nav .mute { color: var(--mute, #aaa); font-size: .8rem; }
+.nav .picked { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; min-height: 1.4em; margin: .2rem 0 .6rem; }
+.nav button.text { border: 0; background: none; padding: 0; color: var(--goon-hot, #b32626); text-decoration: underline; }
+.nav .stats { grid-column: 1 / -1; color: var(--mute, #aaa); font-variant-numeric: tabular-nums; }
+.nav .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin: .8rem 0; }
+.nav .metrics div { border-top: 2px solid var(--goon, #8f1d1d); padding-top: .35rem; }
+.nav .metrics dt { color: var(--mute, #aaa); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.nav .metrics dd { margin: .15rem 0 0; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.nav .legs, .nav .hops { margin: .6rem 0 0; padding-left: 1.1rem; }
+.nav .legs li { margin: .45rem 0; }
+.nav .legs .refuel { color: #fff; }
+.nav .legs .refuel::marker { color: var(--goon-hot, #b32626); }
+.nav .over { color: #e7a8a2; }
+.nav td.stop { color: #e6c98a; }
+.nav table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.nav th, .nav td { border-bottom: 1px solid var(--line, #5a5a5a); padding: .4rem .5rem; text-align: left; vertical-align: top; }
+.nav .grid th, .nav .grid td { text-align: right; }
+.nav .grid th:first-child, .nav .grid td:first-child { text-align: left; }
+.nav .scroll-x { overflow-x: auto; }
+.nav .notes { margin-top: 1rem; text-align: left; }
+.nav .notes h2, .nav .notes p { text-align: left; }
+.nav .notes p { color: var(--mute, #aaa); margin: .5rem 0; max-width: 70ch; }
+.nav .result { margin-bottom: 1rem; }
+@media (max-width: 800px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr 1fr; }
+  .nav .stats { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr; }
+}
+ }</style>
+        <div class="nav">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <h1>Navigator</h1>
+      <p class="lede">Real starmap distances. Start with the jump between systems, then open a planet, a moon, and a point. Time and fuel follow the quantum drive you fit and the fuel you have aboard. Snapshot <span id="nav-version"></span>.</p>
+    </div>
+  </header>
+  <p id="nav-status">Loading the starmap…</p>
+  <div id="nav-app" hidden>
+    <div class="ends">
+      <section id="nav-from" aria-label="Origin"></section>
+      <section id="nav-to" aria-label="Destination"></section>
+    </div>
+    <section class="craft" aria-label="Ship and drive">
+      <label>Quantum drive
+        <select id="nav-drive"></select>
+      </label>
+      <p class="stats" id="nav-drive-stats"></p>
+      <label>Ship <span class="hint">fills the tank</span>
+        <input id="nav-ship" list="nav-ships" placeholder="Gladius, Carrack…" autocomplete="off">
+        <datalist id="nav-ships"></datalist>
+      </label>
+      <label>Fuel aboard, SCU
+        <input id="nav-fuel" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+      <label>Tank, SCU
+        <input id="nav-tank" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+    </section>
+    <div id="nav-out"></div>
+    <footer class="notes">
+      <h2>How the numbers are made</h2>
+      <p>Positions are the Star Citizen Wiki starmap, in meters, for the game version named above. Planets move, so a later patch will not match. A point on a planet is the starmap marker, not the pad you touch down on.</p>
+      <p>The burn is the drive's standard jump. Spool, then calibration, then acceleration: constant until engage speed, then speeding up to cruise, then the same curve in reverse. You drop out at the drive's disconnect range, and that last stretch is not flown. Cooldown is counted between quantum legs. It is not counted across a jump.</p>
+      <p>Fuel in SCU is the drive's fuel rate times the meters flown, divided by 1,000. That is the rate that reproduces the ship ranges in the same data. A refuel is a place with vehicle services. The tank is filled there. The stop itself is not timed. Jump fuel is the starmap's figure for that tunnel. The tunnel's duration is not in the data, so it is not in the quantum time.</p>
+      <p>The drive's own 10 Gm stamp can sit a few seconds off this curve, and further off on a drive that is still accelerating at 10 Gm. Treat the time as a planning figure.</p>
+    </footer>
+  </div>
+</div>
+
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
     <main id="drills-page" class="drills-page">
       <h1>DRILLS</h1>
       <p class="operations-intro">Interactive flight-training drills. Run them on a second screen while you fly.</p>
@@ -3245,17 +3380,17 @@ html[data-look=bright]{color-scheme:light}
     </main>
     <main id="bounties-page" class="bounties-page" data-path="/bounties">
       <h1>Bounties</h1>
-      <p class="bounty-meta" style="text-align:center">Post a reward. Someone claims it, you pay the escrow, and confirming the work releases the bitcoin.</p>
+      <p class="bounty-meta" style="text-align:center">A price on a pilot. Kill them, and the poster pays you in game. Prices are aUEC. The game calls that UEC once it launches.</p>
       <p id="bounties-status" class="bounty-status" role="status"></p>
       <ul id="bounties-list" class="admin-list" style="list-style:none;padding:0"></ul>
       <section>
         <h2>Post a bounty</h2>
-        <p id="bounties-signed-out" hidden>Sign in to post or claim. <a href="/sessions">Sign in</a></p>
+        <p class="bounty-meta">Posting takes a linked RSI handle. <a href="/rsi">Link one</a>, or <a href="/sessions">sign in</a>.</p>
+        <p id="bounties-signed-out" hidden>Sign in, and link an RSI handle, before you post. <a href="/sessions">Sign in</a></p>
         <form id="bounty-post" class="bounty-form">
-          <input name="title" required maxlength="120" placeholder="Title" aria-label="Title">
-          <textarea name="details" maxlength="2000" rows="3" placeholder="What done looks like" aria-label="Details"></textarea>
-          <input name="reward" required placeholder="Reward, 0.005 BTC or 500k sats" aria-label="Reward">
-          <input name="refundAddress" required placeholder="Your refund address" aria-label="Refund address">
+          <input name="target" required maxlength="60" placeholder="Target RSI handle" aria-label="Target RSI handle" autocapitalize="off" spellcheck="false">
+          <input name="reward" required placeholder="Reward in aUEC, such as 150000 or 150k" aria-label="Reward in aUEC" inputmode="decimal">
+          <textarea name="note" maxlength="500" rows="3" placeholder="Where they fly, or why (optional)" aria-label="Note"></textarea>
           <button class="goon-button" type="submit">Post</button>
         </form>
       </section>
@@ -3265,39 +3400,28 @@ html[data-look=bright]{color-scheme:light}
       <h1 id="bounty-title">Bounty</h1>
       <p id="bounty-status" class="bounty-status" role="status"></p>
       <p id="bounty-meta" class="bounty-meta"></p>
-      <p id="bounty-details"></p>
-      <section id="bounty-refund" hidden>
-        <h2>Refund address</h2>
-        <p class="bounty-meta">Someone can claim this once you give the address a refund would return to.</p>
-        <form id="bounty-refund-form" class="bounty-form">
-          <input name="refundAddress" required placeholder="Your refund address" aria-label="Refund address">
-          <button class="goon-button" type="submit">Save</button>
-        </form>
-      </section>
-      <section id="bounty-pay" hidden>
-        <h2>Pay the escrow</h2>
-        <p id="bounty-invoice"></p>
-        <form id="bounty-pay-form" class="bounty-form">
-          <input name="txid" required placeholder="Transaction id, if you already paid" aria-label="Transaction id">
-          <button class="goon-button" type="submit">I’ve paid</button>
-        </form>
-      </section>
-      <section id="bounty-claim" hidden>
-        <h2>Claim</h2>
-        <form id="bounty-claim-form" class="bounty-form">
-          <input name="payoutAddress" required placeholder="Address the reward should be paid to" aria-label="Payout address">
-          <button class="goon-button" type="submit">Claim</button>
-        </form>
-      </section>
+      <p id="bounty-note"></p>
       <p id="bounty-actions" class="bounty-actions"></p>
-      <section id="bounty-sign" hidden>
-        <h2>Sign the payout</h2>
-        <p id="bounty-payout" class="bounty-meta"></p>
-        <form id="bounty-sign-form" class="bounty-form">
-          <textarea name="frame" required rows="3" placeholder="Paste the signed frame" aria-label="Signed frame"></textarea>
-          <button class="goon-button" type="submit">Submit signature</button>
-        </form>
+    </main>
+    <main id="discord-page" class="discord-page">
+      <h1>Discord</h1>
+      <p class="discord-lead">Slash commands for the goon.vc bot. This is the same help as <code>/help</code>, with every command and argument written out.</p>
+      <div class="discord-actions">
+        <a class="goon-button" href="/services/discord/invite">Add the bot to a server</a>
+        <a class="goon-button" href="/services/discord/install">Add /market to your account</a>
+      </div>
+      <section>
+        <h2>How to use it</h2>
+        <ul>
+          <li>In a server the bot is in, or in a DM with the bot, type <code>/</code> and the command.</li>
+          <li><code>/goon</code>, <code>/schedule</code>, and <code>/clips</code> only run in a server. The others here also run in a DM with the bot. <code>/market</code> and <code>/help</code> also run in any DM once you add the bot to your account.</li>
+          <li>A command does not sign you in. <code>/vote</code>, <code>/bounty</code>, <code>/market</code>, <code>/1v1</code>, <code>/rsi</code>, and <code>/hangar</code> act for the goon.vc member linked to your Discord account. <a href="/sessions">Sign in</a> first.</li>
+          <li>Replies are private. A <code>/1v1</code> in a server posts the confirm card in that channel. In a DM with the bot, the card is sent to your opponent.</li>
+          <li><code>/help</code> in Discord lists what is running right now, or explains one command. The commands below are that same list.</li>
+        </ul>
       </section>
+      <p id="discord-status" class="discord-status" role="status">Loading commands…</p>
+      <div id="discord-commands"></div>
     </main>
     <main id="operation-permafleet" class="op-page">
       <div class="op-shell">
@@ -3797,6 +3921,7 @@ html[data-look=bright]{color-scheme:light}
           : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
           : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
           : null;
+        var isDiscord = path.toLowerCase() === "/services/discord";
         var bountiesBase = "/bounties";
         var isBounties = path.toLowerCase() === bountiesBase;
         var bountyEl = path.toLowerCase().indexOf(bountiesBase + '/') === 0 ? document.getElementById('bounty-page') : null;
@@ -3825,7 +3950,7 @@ html[data-look=bright]{color-scheme:light}
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOperate && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isDiscord && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOperate && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -3893,6 +4018,8 @@ html[data-look=bright]{color-scheme:light}
         document.querySelectorAll('.market-page').forEach(function (el) {
           el.style.display = el === marketEl ? 'block' : 'none';
         });
+        var discordEl = document.getElementById('discord-page');
+        if (discordEl) discordEl.style.display = isDiscord ? 'block' : 'none';
         var bountiesEl = document.getElementById('bounties-page');
         if (bountiesEl) bountiesEl.style.display = isBounties ? 'block' : 'none';
         var bountyPageEl = document.getElementById('bounty-page');
@@ -3944,6 +4071,7 @@ html[data-look=bright]{color-scheme:light}
         else if (isClipTimeline) document.title = "CLIP TIMELINE — GOON SQUAD";
         else if (isClips || clipProjectEl) document.title = "CLIPS — GOON SQUAD";
         else if (marketEl) document.title = "MARKET — GOON SQUAD";
+        else if (isDiscord) document.title = "DISCORD — GOON SQUAD";
         else if (isBounties || bountyEl) document.title = "BOUNTIES — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
@@ -4023,16 +4151,27 @@ html[data-look=bright]{color-scheme:light}
         }
 
         var siteFooter = document.getElementById('site-member-footer');
+        function adminHost () {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
+          });
+          for (var i = 0; i < pages.length; i++) {
+            var button = pages[i].querySelector('.footer-login-button');
+            if (button && button.parentElement) return button.parentElement;
+          }
+          return siteFooter;
+        }
         function setAdminLink (member) {
+          var host = adminHost();
           var link = document.getElementById('site-admin-link');
-          if (!link && siteFooter) {
+          if (!link && host) {
             link = document.createElement('a');
             link.id = 'site-admin-link';
             link.className = 'site-admin-link';
             link.href = adminPath;
             link.textContent = 'Admin';
-            siteFooter.appendChild(link);
-          }
+            host.appendChild(link);
+          } else if (link && host && link.parentElement !== host) host.appendChild(link);
           if (!link) return;
           link.hidden = !(member && member.admin);
           if (path.toLowerCase() === String(adminPath).toLowerCase()) link.setAttribute('aria-current', 'page');
@@ -5117,7 +5256,8 @@ html[data-look=bright]{color-scheme:light}
       })();
     </script>
     <script src="/scripts/market.js?v=344ce1e3179b" defer></script>
-    <script src="/scripts/bounties.js?v=f7833958dfe9" defer></script>
+    <script src="/scripts/bounties.js?v=642fd52b5d74" defer></script>
+    <script src="/scripts/discord.js?v=bde5e17f9355" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');
@@ -5132,18 +5272,18 @@ html[data-look=bright]{color-scheme:light}
         var serverEl = document.getElementById('permafleet-online');
 
         function membersInVoiceFromWidgets (widgets) {
-  var seen = {};
   var members = [];
   var list = Array.isArray(widgets) ? widgets : [];
   for (var i = 0; i < list.length; i++) {
     var data = list[i];
     if (!data || !Array.isArray(data.members)) continue;
+    var seen = {};
     for (var j = 0; j < data.members.length; j++) {
       var member = data.members[j];
       if (!member || member.channel_id == null) continue;
       var key = member.id != null && String(member.id) !== ''
         ? 'id:' + String(member.id)
-        : 'name:' + String(member.username || '');
+        : 'name:' + String(member.username || '') + ':' + j;
       if (seen[key]) continue;
       seen[key] = 1;
       members.push({
@@ -5155,8 +5295,9 @@ html[data-look=bright]{color-scheme:light}
   return members;
 }
 
-        function renderPanel (members) {
-          voiceN.textContent = String(members.length);
+        function renderPanel (members, partial) {
+          voiceN.textContent = partial ? String(members.length) + '+' : String(members.length);
+          voiceN.title = partial ? 'One or more Discords did not answer, so this count is short.' : '';
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
           members.slice(0, MAX_ROWS).forEach(function (m) {
@@ -5197,7 +5338,9 @@ html[data-look=bright]{color-scheme:light}
         }
 
         Promise.all(GUILD_IDS.map(fetchWidget))
-          .then(function (widgets) { renderPanel(membersInVoiceFromWidgets(widgets)); })
+          .then(function (widgets) {
+            renderPanel(membersInVoiceFromWidgets(widgets), widgets.some(function (widget) { return !widget; }));
+          })
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause

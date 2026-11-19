@@ -1,0 +1,40 @@
+<div class="nav">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <h1>Navigator</h1>
+      <p class="lede">Real starmap distances. Start with the jump between systems, then open a planet, a moon, and a point. Time and fuel follow the quantum drive you fit and the fuel you have aboard. Snapshot <span id="nav-version"></span>.</p>
+    </div>
+  </header>
+  <p id="nav-status">Loading the starmap…</p>
+  <div id="nav-app" hidden>
+    <div class="ends">
+      <section id="nav-from" aria-label="Origin"></section>
+      <section id="nav-to" aria-label="Destination"></section>
+    </div>
+    <section class="craft" aria-label="Ship and drive">
+      <label>Quantum drive
+        <select id="nav-drive"></select>
+      </label>
+      <p class="stats" id="nav-drive-stats"></p>
+      <label>Ship <span class="hint">fills the tank</span>
+        <input id="nav-ship" list="nav-ships" placeholder="Gladius, Carrack…" autocomplete="off">
+        <datalist id="nav-ships"></datalist>
+      </label>
+      <label>Fuel aboard, SCU
+        <input id="nav-fuel" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+      <label>Tank, SCU
+        <input id="nav-tank" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+    </section>
+    <div id="nav-out"></div>
+    <footer class="notes">
+      <h2>How the numbers are made</h2>
+      <p>Positions are the Star Citizen Wiki starmap, in meters, for the game version named above. Planets move, so a later patch will not match. A point on a planet is the starmap marker, not the pad you touch down on.</p>
+      <p>The burn is the drive's standard jump. Spool, then calibration, then acceleration: constant until engage speed, then speeding up to cruise, then the same curve in reverse. You drop out at the drive's disconnect range, and that last stretch is not flown. Cooldown is counted between quantum legs. It is not counted across a jump.</p>
+      <p>Fuel in SCU is the drive's fuel rate times the meters flown, divided by 1,000. That is the rate that reproduces the ship ranges in the same data. A refuel is a place with vehicle services. The tank is filled there. The stop itself is not timed. Jump fuel is the starmap's figure for that tunnel. The tunnel's duration is not in the data, so it is not in the quantum time.</p>
+      <p>The drive's own 10 Gm stamp can sit a few seconds off this curve, and further off on a drive that is still accelerating at 10 Gm. Treat the time as a planning figure.</p>
+    </footer>
+  </div>
+</div>

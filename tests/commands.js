@@ -185,9 +185,10 @@ describe('Discord application commands', function () {
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepStrictEqual(discord.created.map((command) => command.name), ['1v1', 'vote', 'help']);
     assert.strictEqual(discord.client.listenerCount('interactionCreate'), 1);
+    const inBotDms = new Set(['rsi', 'hangar', 'idlerpg', '1v1', 'vote', 'bounty']);
     for (const definition of Commands.DEFINITIONS) {
-      if (definition.name === 'rsi' || definition.name === 'hangar') assert.deepStrictEqual(definition.contexts, [0, 1], `/${definition.name} also runs in the bot’s DMs`);
-      else if (definition.name === 'market' || definition.name === 'help') assert.deepStrictEqual(definition.contexts, [0, 1, 2], `/${definition.name} runs anywhere`);
+      if (definition.name === 'market' || definition.name === 'help') assert.deepStrictEqual(definition.contexts, [0, 1, 2], `/${definition.name} runs anywhere`);
+      else if (inBotDms.has(definition.name)) assert.deepStrictEqual(definition.contexts, [0, 1], `/${definition.name} also runs in the bot’s DMs`);
       else assert.deepStrictEqual(definition.contexts, [0], `/${definition.name} is for servers only`);
       assert.ok(definition.description.length <= 100);
     }
@@ -229,12 +230,12 @@ describe('Discord application commands', function () {
     assert.ok(lines.includes('**/goon** setup · council · embassy · permafleet · voice · roles (server managers) — Connect this server to goon.vc.'), all);
     assert.ok(lines.some((line) => line.startsWith('**/1v1** — Report a 1v1 duel')), all);
     assert.ok(!/\/market|\/hangar|\*\*\/help/.test(all), 'nothing that isn’t running, and not itself');
-    assert.ok(lines[lines.length - 1].includes('<https://goon.vc/>'));
+    assert.ok(lines[lines.length - 1].includes('<https://goon.vc/services/discord>'));
 
     const duel = await ask({ command: '1v1' });
     assert.ok(duel.includes('`/1v1 winner loser score [league] [note]`'), duel);
     assert.ok(duel.includes('<https://goon.vc/leagues/open-league>'), duel);
-    assert.ok(duel.endsWith('In servers with the goon.vc bot.'), duel);
+    assert.ok(duel.endsWith('In servers with the goon.vc bot, or in its DMs.'), duel);
     const goon = await ask({ command: '/goon' });
     assert.ok(goon.includes('`/goon setup` — Walk through connecting this server to goon.vc, in your DMs.'), goon);
     assert.ok(goon.endsWith('Needs Manage Server.'), goon);
@@ -242,6 +243,33 @@ describe('Discord application commands', function () {
     assert.ok(vote.includes('<https://goon.vc/operations/PERMAFLEET/votes>') && !/key/i.test(vote), vote);
     assert.strictEqual(await ask({ command: 'market' }), '`/market` isn’t running right now. Run `/help` for the commands that are.');
     assert.strictEqual(await members.getMember(`discord:${KERSA.id}`), null, 'asking for help makes no profile');
+
+    const guide = commands.guide();
+    const duelGuide = guide.find((command) => command.name === '1v1');
+    assert.strictEqual(duelGuide.usage, '/1v1 winner loser score [league] [note]');
+    assert.ok(duelGuide.options.find((option) => option.name === 'winner' && option.required && option.description));
+    assert.ok(duelGuide.options.find((option) => option.name === 'score').choices.length > 1);
+    assert.ok(duelGuide.about.includes('https://goon.vc/leagues/open-league'));
+    const goonGuide = guide.find((command) => command.name === 'goon');
+    assert.strictEqual(goonGuide.permission, 'Manage Server');
+    assert.strictEqual(goonGuide.where, 'In servers with the goon.vc bot.');
+    assert.ok(goonGuide.subcommands.find((option) => option.name === 'setup' && option.usage === '/goon setup'));
+    assert.ok(!guide.some((command) => command.name === 'help'));
+
+    const body = await new Promise((resolve) => {
+      const res = {
+        statusCode: 200,
+        setHeader () {},
+        end (payload) { resolve({ status: this.statusCode, json: JSON.parse(payload) }); }
+      };
+      commands.middleware()({ method: 'GET', path: '/services/discord' }, res, () => resolve({ status: 'next' }));
+    });
+    assert.strictEqual(body.status, 200);
+    assert.ok(body.json.commands.some((command) => command.name === 'vote'));
+    const skipped = await new Promise((resolve) => {
+      commands.middleware()({ method: 'GET', path: '/services/discord/invite' }, { setHeader () {}, end () {} }, () => resolve('next'));
+    });
+    assert.strictEqual(skipped, 'next');
   });
 
   it('/goon council, embassy, permafleet, voice, and roles start their scripts in the caller’s DMs', async function () {
@@ -555,7 +583,11 @@ describe('Discord application commands', function () {
       const rem = await run(commands, { user: REMAEUS, member: { displayName: 'remaeus' }, strings: { message: 'From remaeus' }, roles: { role: PILOTS } });
       const [send] = buttons(rem.replies[0]);
       assert.strictEqual(send.label, 'Send');
-      const sent = await press(commands, send.custom_id, REMAEUS);
+      const draftId = send.custom_id.split(':')[2];
+      const stored = campaigns.content.campaigns[draftId];
+      stored.preview.id = '01234567';
+      campaigns.content.approvals[draftId].preview = '01234567';
+      const sent = await press(commands, `campaign:send:${draftId}:01234567`, REMAEUS);
       assert.ok(sent.replies[0].content.startsWith('Sending to'), sent.replies[0].content);
     });
 
@@ -947,9 +979,38 @@ describe('Discord application commands', function () {
       assert.strictEqual(call.replies[0].content, message);
       assert.strictEqual(call.replies[0].flags, 64);
     }
+    const delivered = [];
+    const fromDm = new Commands({
+      leagues,
+      members,
+      register: false,
+      deliver: async (user, message) => { delivered.push({ id: user.id, message }); }
+    });
     const outside = interaction({ name: '1v1', user: KERSA, users: { winner: KERSA, loser: RATGROT }, strings: { score: '1-0' }, guildId: null });
-    await commands.handle(outside);
-    assert.strictEqual(outside.replies[0].content, 'Use this in a server.');
+    await fromDm.handle(outside);
+    assert.strictEqual(delivered.length, 1);
+    assert.strictEqual(delivered[0].id, RATGROT.id);
+    assert.ok(delivered[0].message.content.startsWith('**Kersa** says they beat you 1–0 (best of 1)'), delivered[0].message.content);
+    assert.ok(!delivered[0].message.content.includes(`<@${RATGROT.id}>`), 'the card is already in their DMs');
+    assert.ok(outside.replies[0].content.includes('Asked **Rat** to confirm in their DMs.'), outside.replies[0].content);
+    const asked = delivered[0].message.components[0].components[0].custom_id.split(':')[2];
+    const pending = await leagues.getProposal(asked);
+    assert.strictEqual(pending.status, 'pending');
+    const inDm = interaction({ user: RATGROT, customId: `1v1:confirm:${asked}`, guildId: null });
+    await fromDm.handle(inDm);
+    const confirmed = inDm.updates[0] || inDm.replies[0];
+    assert.ok(confirmed.content.startsWith('**Kersa** beat **Rat** 1–0'), confirmed.content);
+
+    const closed = new Commands({
+      leagues,
+      members,
+      register: false,
+      deliver: async () => { const error = new Error('Cannot send messages to this user'); error.code = 50007; throw error; }
+    });
+    const blocked = interaction({ name: '1v1', user: KERSA, users: { winner: KERSA, loser: RATGROT }, strings: { score: '1-0' }, guildId: null });
+    await closed.handle(blocked);
+    assert.ok(blocked.replies[0].content.includes('I couldn’t DM **Rat**.'), blocked.replies[0].content);
+    assert.strictEqual((await leagues.getLeague(Leagues.OPEN_LEAGUE_ID)).duels.length, 1, 'a duel nobody was asked to confirm is not logged');
     assert.strictEqual(await members.getMember(`discord:${REF.id}`), null, 'running a command does not create a profile');
     assert.strictEqual(await members.getMember(`discord:${RATGROT.id}`), null, 'naming someone does not');
   });
@@ -1059,6 +1120,15 @@ describe('Discord application commands', function () {
     const call = interaction({ name: 'idlerpg', subcommand: 'stats', user: KERSA, member: { displayName: 'Kersa | PF' } });
     await commands.handle(call);
     assert.strictEqual(call.replies[0].content, 'IdleRPG is not running right now.');
+    const fromDm = interaction({ name: 'idlerpg', subcommand: 'stats', user: KERSA, guildId: null });
+    await commands.handle(fromDm);
+    assert.strictEqual(fromDm.replies[0].content, 'IdleRPG is not running right now.');
+    const vote = interaction({ name: 'vote', user: KERSA, guildId: null, strings: { proposal: 'abc', choice: 'yes' } });
+    await commands.handle(vote);
+    assert.strictEqual(vote.replies[0].content, 'Alliance votes are not set up right now.');
+    const bounty = interaction({ name: 'bounty', subcommand: 'list', user: KERSA, guildId: null });
+    await new Commands({ members, bounties: () => null, register: false }).handle(bounty);
+    assert.strictEqual(bounty.replies[0].content, 'The bounty board is not running right now.');
     assert.strictEqual(await members.getMember(`discord:${KERSA.id}`), null, 'checking IdleRPG does not link a profile');
   });
 
@@ -1483,21 +1553,22 @@ describe('Discord application commands', function () {
       const bounties = {
         base: '/bounties',
         list () {
-          return [{ id: 'abc123', title: 'Paint the Idris', reward: '0.001 BTC', status: 'open', path: '/bounties/abc123', posterName: 'Poster' }];
+          return [{ id: 'abc123', target: 'BadGuy', reward: '150,000 aUEC', status: 'open', path: '/bounties/abc123', posterHandle: 'Poster' }];
         },
         async create (input, member) {
           posted.push({ input, memberId: member.id });
-          return { id: 'abc123', title: input.title, reward: '0.001 BTC', path: '/bounties/abc123' };
+          return { id: 'abc123', target: input.target, reward: '150,000 aUEC', path: '/bounties/abc123' };
         }
       };
       const commands = new Commands({ members, bounties: () => bounties, siteUrl: 'https://goon.vc', register: false });
       await members.memberFor(`discord:${KERSA.id}`, { create: true, via: 'oauth', displayName: 'Kersa', profile: { username: 'kersa' } });
       assert.ok(commands.definitions.some((definition) => definition.name === 'bounty'));
       assert.ok(!new Commands({ register: false }).definitions.some((definition) => definition.name === 'bounty'));
-      const post = interaction({ name: 'bounty', subcommand: 'post', user: KERSA, strings: { title: 'Paint the Idris', reward: '0.001 BTC', details: 'Two coats.' } });
+      const post = interaction({ name: 'bounty', subcommand: 'post', user: KERSA, strings: { target: 'BadGuy', reward: '150k', note: 'Gladius' } });
       await commands.handle(post);
       assert.strictEqual(posted.length, 1);
-      assert.strictEqual(posted[0].input.reward, '0.001 BTC');
+      assert.strictEqual(posted[0].input.target, 'BadGuy');
+      assert.strictEqual(posted[0].input.reward, '150k');
       assert.ok(post.replies[0].content.includes('<https://goon.vc/bounties/abc123>'), post.replies[0].content);
       assert.ok(!post.replies[0].content.includes(KERSA.id));
       const list = interaction({ name: 'bounty', subcommand: 'list', user: RATGROT, strings: { query: 'idris' } });

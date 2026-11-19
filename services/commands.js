@@ -22,7 +22,29 @@ const ACTION_ROW = 1;
 const BUTTON_COMPONENT = 2;
 const BUTTON_STYLE = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
 const BUTTON = /^1v1:(confirm|decline):([0-9a-f]{12})$/;
-const CAMPAIGN_BUTTON = /^campaign:(send|schedule|cancel):([0-9a-f]{12})(?::(\d{1,12}))?(?::([0-9a-f]{8}))?$/;
+/**
+ * A campaign card button. Send is `campaign:send:<id>:<preview>`, schedule is
+ * `campaign:schedule:<id>:<unix>:<preview>`, cancel is `campaign:cancel:<id>`.
+ * The preview is 8 hex, so it cannot share a slot with the unix time: an
+ * all-digit preview would otherwise be read as a time and the send refused.
+ * @param {string} customId
+ * @returns {Array|null} `[match, action, id, sendAt, previewId]`
+ */
+function campaignButtonOf (customId) {
+  const parts = String(customId || '').split(':');
+  if (parts[0] !== 'campaign' || !/^[0-9a-f]{12}$/.test(parts[2] || '')) return null;
+  if (parts[1] === 'cancel' && parts.length === 3) return [customId, 'cancel', parts[2], undefined, undefined];
+  if (parts[1] === 'send' && (parts.length === 3 || parts.length === 4)) {
+    if (parts[3] && !/^[0-9a-f]{8}$/.test(parts[3])) return null;
+    return [customId, 'send', parts[2], undefined, parts[3]];
+  }
+  if (parts[1] === 'schedule' && parts.length >= 3 && parts.length <= 5) {
+    if (parts[3] && !/^\d{1,12}$/.test(parts[3])) return null;
+    if (parts[4] && !/^[0-9a-f]{8}$/.test(parts[4])) return null;
+    return [customId, 'schedule', parts[2], parts[3], parts[4]];
+  }
+  return null;
+}
 const SWITCH_BUTTON = /^(checkins|welcome):(send|stop|cancel)(?::([0-9a-f]{8}))?$/;
 const MARKET_BUTTON = new RegExp(`^${marketPost.BUY_PREFIX}([0-9a-f]{12})$`);
 const SCHED_VOTE = /^sched:vote:([0-9a-f]{12})$/;
@@ -65,7 +87,7 @@ const DEFINITIONS = [
     name: 'idlerpg',
     description: 'The alliance idle game: time in voice earns XP.',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       {
@@ -82,7 +104,7 @@ const DEFINITIONS = [
     name: '1v1',
     description: 'Report a 1v1 duel you fought; your opponent confirms it (Open League by default).',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       { type: OPTION.user, name: 'winner', description: 'Who won the set', required: true },
@@ -133,7 +155,7 @@ const DEFINITIONS = [
     name: 'vote',
     description: 'Have your say on a PERMAFLEET alliance proposal (advisory; member orgs decide).',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       { type: OPTION.string, name: 'proposal', description: 'Which proposal', required: true, autocomplete: true },
@@ -232,37 +254,37 @@ const DEFINITIONS = [
   },
   {
     name: 'bounty',
-    description: 'The bounty board: post a bitcoin reward, or claim one.',
+    description: 'Player bounties: a price in aUEC on an RSI handle.',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       {
         type: OPTION.subcommand,
         name: 'list',
         description: 'Open bounties.',
-        options: [{ type: OPTION.string, name: 'query', description: 'Title or detail', max_length: 100 }]
+        options: [{ type: OPTION.string, name: 'query', description: 'RSI handle', max_length: 60 }]
       },
       {
         type: OPTION.subcommand,
         name: 'post',
-        description: 'Post a bounty. You fund the escrow after someone claims it.',
+        description: 'Put a price on a pilot. Requires your linked RSI handle.',
         options: [
-          { type: OPTION.string, name: 'title', description: 'What the bounty is called', required: true, max_length: 120 },
-          { type: OPTION.string, name: 'reward', description: 'In BTC (0.005 BTC) or sats (500k sats)', required: true, max_length: 40 },
-          { type: OPTION.string, name: 'details', description: 'What done looks like', max_length: 500 }
+          { type: OPTION.string, name: 'target', description: 'Their RSI handle', required: true, max_length: 60 },
+          { type: OPTION.string, name: 'reward', description: 'aUEC, such as 150000 or 150k', required: true, max_length: 20 },
+          { type: OPTION.string, name: 'note', description: 'Where they fly, or why', max_length: 500 }
         ]
       },
       {
         type: OPTION.subcommand,
         name: 'claim',
-        description: 'Open a bounty’s claim step. A payout address is required.',
+        description: 'Say you killed the target. Requires your linked RSI handle.',
         options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
       },
       {
         type: OPTION.subcommand,
         name: 'done',
-        description: 'Mark your claim finished, or confirm a bounty you posted.',
+        description: 'Confirm a kill you posted, and that you paid the aUEC.',
         options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
       },
       { type: OPTION.subcommand, name: 'mine', description: 'Bounties you posted or claimed.' }
@@ -334,7 +356,7 @@ const HELP = {
   bounty: (commands) => {
     const bounties = commands._bounties();
     const board = bounties && bounties.base ? ` Board: <${commands._url(bounties.base)}>` : '';
-    return `Post a reward, then fund the escrow after someone claims it. Confirming the work pays them.${board}`;
+    return `A price on a pilot, in aUEC. Kill them and the poster pays you in game. Posting and claiming need a linked RSI handle.${board}`;
   },
   rsi: (commands) => `You prove the handle is yours by putting a short code in your RSI bio for a minute. <${commands._url(commands.settings.rsiPath)}>`,
   hangar: (commands) => `Export your pledges with the Hangar Export add-on for Firefox, then import the .json file. Only fleet totals are public, never who owns what: <${commands._url(commands.settings.rsiPath)}>`,
@@ -348,10 +370,18 @@ const WHERE = {
   anywhere: 'In servers, DMs, and group DMs once you add it to your account.'
 };
 
-/** `/name required [optional]` for a command or subcommand. */
+/** `/name required [optional]` for a command or subcommand, without Discord backticks. */
 function usage (name, options = []) {
-  const args = options.filter((option) => option.type !== OPTION.subcommand).map((option) => (option.required ? option.name : `[${option.name}]`));
-  return `\`/${[name, ...args].join(' ')}\``;
+  const args = (options || []).filter((option) => option.type !== OPTION.subcommand).map((option) => (option.required ? option.name : `[${option.name}]`));
+  return `/${[name, ...args].join(' ')}`;
+}
+
+/** Where a command can be run, in the same words `/help` uses. */
+function whereText (definition) {
+  const contexts = (definition && definition.contexts) || [];
+  if (contexts.includes(PRIVATE_CHANNEL_CONTEXT)) return WHERE.anywhere;
+  if (contexts.includes(BOT_DM_CONTEXT)) return WHERE.dm;
+  return WHERE.guild;
 }
 
 /**
@@ -504,8 +534,11 @@ function hasPermission (permissions, bit) {
  * (a DM walkthrough for exporting a hangar, and the import of that export
  * for a claimed handle, through {@link Hangar}). They ride the one gateway client {@link Operations}
  * runs; interactions need no intents. The application is shared with other
- * services, so only these commands are registered (upserted by name, global;
- * all but `/market` servers only) and nothing else is touched. Players are found by their
+ * services, so only these commands are registered (upserted by name, global)
+ * and nothing else is touched. `/idlerpg`, `/1v1`, `/vote`, `/bounty`, `/rsi`,
+ * and `/hangar` also run in the bot’s DMs. `/goon`, `/schedule`, and `/clips`
+ * stay in servers, where they act on that server. `/market` and `/help` also
+ * install on a member’s own account. Players are found by their
  * Discord account (its goon.vc member), not by name. Replies carry display
  * names only and ping no one but the player asked to confirm.
  */
@@ -697,7 +730,7 @@ class Commands {
     const isButton = typeof interaction.isButton === 'function' && interaction.isButton();
     const isSelect = typeof interaction.isStringSelectMenu === 'function' && interaction.isStringSelectMenu();
     const button = isButton ? BUTTON.exec(String(interaction.customId || '')) : null;
-    const campaignButton = isButton ? CAMPAIGN_BUTTON.exec(String(interaction.customId || '')) : null;
+    const campaignButton = isButton ? campaignButtonOf(interaction.customId) : null;
     const switchButton = isButton ? SWITCH_BUTTON.exec(String(interaction.customId || '')) : null;
     const marketButton = isButton ? MARKET_BUTTON.exec(String(interaction.customId || '')) : null;
     const schedVote = isSelect ? SCHED_VOTE.exec(String(interaction.customId || '')) : null;
@@ -737,9 +770,12 @@ class Commands {
         }
       } else if (clipsConsent) {
         out = await this.clipsConsent(interaction, clipsConsent[1] === '1');
+      } else if (button) {
+        // A `/1v1` card can arrive in the opponent’s DMs, where there is no guild.
+        out = await this.answer(interaction, button[1], button[2]);
       }
       // `/market` is also installed on members' own accounts, so it runs in DMs and servers without the bot.
-      // `/rsi` and `/hangar` also run in the bot's DMs.
+      // `/rsi`, `/hangar`, `/idlerpg`, `/1v1`, `/vote`, and `/bounty` also run in the bot's DMs.
       else if (command === 'market' || marketButton || command === 'rsi' || command === 'hangar') {
         if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
         const signed = await this._signedInMember(interaction.user);
@@ -747,9 +783,9 @@ class Commands {
         if (command === 'rsi') out = await this.rsi(known || await this._claimMember(interaction));
         else if (command === 'hangar') out = await this.hangar(interaction, known);
         else out = marketButton ? await this.marketBuy(marketButton[1], signed) : await this.market(interaction, signed);
-      } else if (!interaction.guildId) out = this._private('Use this in a server.');
-      else if (button) out = await this.answer(interaction, button[1], button[2]);
-      else if (campaignButton || switchButton) {
+      } else if (!interaction.guildId && command !== 'idlerpg' && command !== 'vote' && command !== 'bounty' && command !== '1v1') {
+        out = this._private('Use this in a server.');
+      } else if (campaignButton || switchButton) {
         if (typeof interaction.deferUpdate === 'function') {
           await interaction.deferUpdate();
           updating = true;
@@ -761,6 +797,10 @@ class Commands {
         // Setup reads permissions from Discord and sends a DM, and a campaign
         // preview lists the server's members: both can outlast the 3 s reply window.
         if (command === 'goon' && typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
+        // Asking the opponent in a DM can outlast the 3 s reply window.
+        if (command === '1v1' && !interaction.guildId && typeof interaction.deferReply === 'function' && !interaction.deferred) {
+          await interaction.deferReply({ flags: EPHEMERAL });
+        }
         const member = await this._signedInMember(interaction.user);
         const memberId = await this._actorId(interaction.user);
         if (command === 'idlerpg') out = await this.idlerpg(interaction);
@@ -1231,16 +1271,81 @@ class Commands {
     return !community || typeof community.maySendCampaign !== 'function' || community.maySendCampaign(userId) === true;
   }
 
-  _permissionLabel (definition) {
-    if (!definition || !definition.default_member_permissions) return '';
-    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return ' (who can mute members)';
-    return ' (server managers)';
+  _permission (definition) {
+    if (!definition || !definition.default_member_permissions) return null;
+    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return 'Mute Members';
+    return 'Manage Server';
   }
 
-  _permissionTail (definition, where) {
-    if (!definition || !definition.default_member_permissions) return where;
-    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return `${where} Needs Mute Members.`;
-    return `${where} Needs Manage Server.`;
+  _permissionLabel (definition) {
+    const permission = this._permission(definition);
+    if (permission === 'Mute Members') return ' (who can mute members)';
+    if (permission === 'Manage Server') return ' (server managers)';
+    return '';
+  }
+
+  /**
+   * One running command the way `/help command` explains it, plus each
+   * argument. `/services/discord` shows every one of these; Discord’s `/help`
+   * is the same text, shortened to a message.
+   * @param {Object} definition
+   * @returns {Object}
+   */
+  _guideEntry (definition) {
+    const argument = (option) => ({
+      name: option.name,
+      description: option.description || '',
+      required: !!option.required,
+      choices: (option.choices || []).map((choice) => choice.name)
+    });
+    const subcommands = (definition.options || []).filter((option) => option.type === OPTION.subcommand);
+    const args = (definition.options || []).filter((option) => option.type !== OPTION.subcommand);
+    const permission = this._permission(definition);
+    return {
+      name: definition.name,
+      description: definition.description,
+      about: HELP[definition.name] ? HELP[definition.name](this) : '',
+      where: whereText(definition),
+      permission,
+      usage: subcommands.length ? null : usage(definition.name, args),
+      options: subcommands.length ? [] : args.map(argument),
+      subcommands: subcommands.map((option) => ({
+        name: option.name,
+        description: option.description,
+        usage: usage(`${definition.name} ${option.name}`, option.options),
+        options: (option.options || []).map(argument)
+      }))
+    };
+  }
+
+  /**
+   * Every command running right now, except `/help` itself.
+   * @returns {Array<Object>}
+   */
+  guide () {
+    return this.definitions.filter((definition) => definition.name !== 'help').map((definition) => this._guideEntry(definition));
+  }
+
+  /**
+   * `GET /services/discord` for clients that are not asking for the HTML page.
+   * @returns {Function}
+   */
+  middleware () {
+    return (req, res, next) => {
+      const pathname = String(req.path || '').replace(/\/+$/, '') || '/';
+      if (pathname !== '/services/discord') return next();
+      const method = String(req.method || 'GET').toUpperCase();
+      res.setHeader('Cache-Control', 'no-store');
+      if (method !== 'GET') {
+        res.statusCode = 405;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
+        return;
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ ok: true, commands: this.guide() }));
+    };
   }
 
   _private (content) {
@@ -1536,9 +1641,35 @@ class Commands {
     const claim = proposer === 'winner'
       ? `**${escapeMarkdown(winnerName)}** says they beat you`
       : `**${escapeMarkdown(loserName)}** says you beat them`;
-    const lines = [
-      `<@${other.id}>, ${claim} ${score[0]}–${score[1]} (best of ${proposal.bestOf}) in the ${this._leagueLink(league)}.`
-    ];
+    const card = this._duelCard(proposal, league, claim, other, !!interaction.guildId);
+    if (interaction.guildId) return card;
+    const asked = displayName(null, other) || 'them';
+    try {
+      await this._deliver(other, { content: card.content, components: card.components });
+    } catch (error) {
+      await leagues.declineDuel(proposal.id, member).catch(() => {});
+      if (error && error.code === 50007) {
+        return this._private(`I couldn’t DM **${escapeMarkdown(asked)}**. They need to allow DMs from server members, or run \`/1v1\` in a server you’re both in.`);
+      }
+      throw error;
+    }
+    return this._private(`Asked **${escapeMarkdown(asked)}** to confirm in their DMs. The duel counts once they do.`);
+  }
+
+  /**
+   * The Confirm / Decline card for a proposed duel. In a server it pings the
+   * opponent in that channel. In the bot’s DMs the same card is sent to them,
+   * so the mention is left off.
+   * @param {Object} proposal
+   * @param {Object} league
+   * @param {string} claim
+   * @param {Object} other
+   * @param {boolean} mention
+   * @returns {Object} Discord message
+   */
+  _duelCard (proposal, league, claim, other, mention) {
+    const line = `${claim} ${proposal.score[0]}–${proposal.score[1]} (best of ${proposal.bestOf}) in the ${this._leagueLink(league)}.`;
+    const lines = [mention ? `<@${other.id}>, ${line}` : line];
     if (proposal.note) lines.push(`> ${escapeMarkdown(proposal.note)}`);
     lines.push(`Confirm to log it. This expires <t:${Math.floor(Date.parse(proposal.expiresAt) / 1000)}:R>.`);
     return {
@@ -1550,8 +1681,30 @@ class Commands {
           { type: BUTTON_COMPONENT, style: BUTTON_STYLE.danger, label: 'Decline', custom_id: `1v1:decline:${proposal.id}` }
         ]
       }],
-      allowedMentions: { users: [other.id] }
+      allowedMentions: mention ? { users: [other.id] } : { parse: [] }
     };
+  }
+
+  /**
+   * A direct message from the bot. Tests pass `settings.deliver`; otherwise
+   * the user object or the gateway client sends it.
+   * @param {Object} user
+   * @param {Object} message
+   * @returns {Promise<void>}
+   */
+  async _deliver (user, message) {
+    const payload = Object.assign({ allowedMentions: { parse: [] } }, message);
+    if (typeof this.settings.deliver === 'function') return this.settings.deliver(user, payload);
+    if (user && typeof user.send === 'function') return user.send(payload);
+    const client = this.client;
+    if (!client || !client.users || typeof client.users.fetch !== 'function') {
+      const error = new Error('Discord is not connected.');
+      error.status = 503;
+      throw error;
+    }
+    const cached = client.users.cache && typeof client.users.cache.get === 'function' ? client.users.cache.get(String(user.id)) : null;
+    const fetched = cached || await client.users.fetch(String(user.id));
+    return fetched.send(payload);
   }
 
   /**
@@ -1618,8 +1771,7 @@ class Commands {
 
   /**
    * `/bounty`: list, post, claim, done, and mine. Replies are private and
-   * carry names and links only. Claiming needs a payout address, so it opens
-   * the bounty page.
+   * carry handles and links only. Posting and claiming need a linked RSI handle.
    * @param {Object} interaction
    * @param {Object} member
    * @returns {Promise<Object>}
@@ -1631,7 +1783,7 @@ class Commands {
     const subcommand = this._subcommand(interaction);
     const options = interaction.options;
     const base = bounties.base;
-    if (subcommand === 'mine' || subcommand === 'post' || subcommand === 'done') {
+    if (subcommand === 'mine' || subcommand === 'post' || subcommand === 'claim' || subcommand === 'done') {
       if (!member) return this._private('Sign in on goon.vc first. A command does not link your account.');
     }
     if (subcommand === 'list' || subcommand === 'mine') {
@@ -1639,34 +1791,27 @@ class Commands {
       const rows = bounties.list(subcommand === 'mine' ? { status: 'all', mine: member } : { q: query });
       const all = this._url(base);
       if (!rows.length) return this._private(subcommand === 'mine' ? `You have no bounties. [The board](<${all}>)` : `No open bounties${query ? ` match “${escapeMarkdown(query)}”` : ''}. [The board](<${all}>)`);
-      const lines = rows.slice(0, 10).map((bounty) => `**${escapeMarkdown(bounty.title)}** · ${escapeMarkdown(bounty.reward)} · ${bounty.status} · [open](<${this._url(bounty.path)}>)`);
-      return this._private([subcommand === 'mine' ? '**Your bounties**' : '**Bounties**', ...lines, `[The board](<${all}>)`].join('\n'));
+      const head = subcommand === 'mine' ? '**Your bounties**' : '**Bounties**';
+      const lines = rows.slice(0, 10).map((bounty) => `**${escapeMarkdown(bounty.target)}** · ${escapeMarkdown(bounty.reward)} · ${bounty.status} · [open](<${this._url(bounty.path)}>)`);
+      return this._private(this._fit(head, lines, `[The board](<${all}>)`));
     }
     if (subcommand === 'post') {
       const created = await bounties.create({
-        title: options.getString('title'),
+        target: options.getString('target'),
         reward: options.getString('reward'),
-        details: options.getString('details')
+        note: options.getString('note')
       }, member);
-      return this._private(`Posted **${escapeMarkdown(created.title)}** · ${escapeMarkdown(created.reward)}. Add your refund address on the page before someone can claim it: <${this._url(created.path)}>`);
+      return this._private(`Posted **${escapeMarkdown(created.reward)}** on **${escapeMarkdown(created.target)}**. <${this._url(created.path)}>`);
     }
     const id = String(options.getString('bounty') || '').trim().toLowerCase();
     const page = this._url(`${base}/${id}`);
-    if (subcommand === 'claim') return this._private(`Claim it on goon.vc. You’ll give the address the reward should be paid to: <${page}>`);
+    if (subcommand === 'claim') {
+      const claimed = await bounties.claim(id, member);
+      return this._private(`You claimed the bounty on **${escapeMarkdown(claimed.target)}**. The poster confirms the kill and pays you in game. <${page}>`);
+    }
     if (subcommand === 'done') {
-      let bounty;
-      try { bounty = bounties.view(bounties._get(id), member); } catch (error) {
-        return this._private(error.status && error.status < 500 ? error.message : 'No such bounty.');
-      }
-      if (bounty.you === 'claimant' && bounty.status === 'funded') {
-        const updated = await bounties.finish(id, member);
-        return this._private(`Marked **${escapeMarkdown(updated.title)}** finished. The poster confirms it to release the reward. <${page}>`);
-      }
-      if (bounty.you === 'poster' && bounty.status === 'finished') {
-        const updated = await bounties.confirm(id, member);
-        return this._private(`Confirmed **${escapeMarkdown(updated.title)}**. The escrow releases to the claimant. <${page}>`);
-      }
-      return this._private(`Nothing for you to mark done on that bounty. <${page}>`);
+      const updated = await bounties.confirm(id, member);
+      return this._private(`Confirmed the kill on **${escapeMarkdown(updated.target)}**. Pay **${escapeMarkdown(updated.claimantHandle)}** ${escapeMarkdown(updated.reward)} in game. <${page}>`);
     }
     return this._private(`Bounties: <${this._url(base)}>`);
   }
@@ -1857,27 +2002,24 @@ class Commands {
   help (interaction) {
     const options = interaction.options;
     const asked = options && typeof options.getString === 'function' ? options.getString('command') : null;
-    const live = this.definitions.filter((definition) => definition.name !== 'help');
+    const live = this.guide();
     if (!asked) {
-      const lines = live.map((definition) => {
-        const parts = (definition.options || []).filter((option) => option.type === OPTION.subcommand).map((option) => option.name);
-        const manage = this._permissionLabel(definition);
-        return `**/${definition.name}**${parts.length ? ` ${parts.join(' · ')}` : ''}${manage} — ${definition.description}`;
+      const lines = live.map((command) => {
+        const parts = command.subcommands.map((option) => option.name);
+        const manage = command.permission === 'Mute Members' ? ' (who can mute members)' : command.permission ? ' (server managers)' : '';
+        return `**/${command.name}**${parts.length ? ` ${parts.join(' · ')}` : ''}${manage} — ${command.description}`;
       });
-      return this._private(this._fit('**goon.vc commands**', lines, `Run \`/help command\` for one in detail, or visit <${this._url('/')}>.`));
+      return this._private(this._fit('**goon.vc commands**', lines, `Run \`/help command\` for one in detail, or read every command at <${this._url('/services/discord')}>.`));
     }
     const name = String(asked).replace(/^\//, '').trim().toLowerCase();
-    const definition = live.find((entry) => entry.name === name);
-    if (!definition) return this._private(`\`/${name}\` isn’t running right now. Run \`/help\` for the commands that are.`);
-    const head = [`**/${definition.name}** — ${definition.description}`];
-    if (HELP[definition.name]) head.push(HELP[definition.name](this));
-    const subcommands = (definition.options || []).filter((option) => option.type === OPTION.subcommand);
-    const lines = subcommands.length
-      ? subcommands.map((option) => `${usage(`${definition.name} ${option.name}`, option.options)} — ${option.description}`)
-      : [usage(definition.name, definition.options)];
-    const contexts = definition.contexts || [];
-    const where = contexts.includes(PRIVATE_CHANNEL_CONTEXT) ? WHERE.anywhere : contexts.includes(BOT_DM_CONTEXT) ? WHERE.dm : WHERE.guild;
-    const tail = this._permissionTail(definition, where);
+    const command = live.find((entry) => entry.name === name);
+    if (!command) return this._private(`\`/${name}\` isn’t running right now. Run \`/help\` for the commands that are.`);
+    const head = [`**/${command.name}** — ${command.description}`];
+    if (command.about) head.push(command.about);
+    const lines = command.subcommands.length
+      ? command.subcommands.map((option) => `\`${option.usage}\` — ${option.description}`)
+      : [`\`${command.usage}\``];
+    const tail = command.permission ? `${command.where} Needs ${command.permission}.` : command.where;
     return this._private(this._fit(head.join('\n'), lines, tail));
   }
 

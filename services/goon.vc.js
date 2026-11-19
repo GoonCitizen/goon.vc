@@ -766,16 +766,15 @@ class GoonVC {
         path: bountySettings.path || './stores/bounties',
         basePath: spa._site('bountiesPath'),
         siteUrl: spa._site('siteUrl'),
-        network: bountySettings.network || (marketSettings && marketSettings.network) || null,
-        allowMainnet: bountySettings.allowMainnet != null ? bountySettings.allowMainnet : !!(marketSettings && marketSettings.allowMainnet),
-        arbiters: bountySettings.arbiters || (marketSettings && marketSettings.arbiters) || [],
-        hubs,
-        xprv: () => this.fabric.xprv,
         members: this.members
       }));
       this.bounties.on('log', (...parts) => this.emit('log', ...parts));
       this.bounties.on('error', (...parts) => this.emit('error', ...parts));
       await this.bounties.start();
+      // Commands may have registered while this.bounties was still unset.
+      if (this.commands && this.commands.client) {
+        this.commands.register().catch((error) => this.emit('error', 'GOON.VC', `could not register commands after bounties started: ${error.message}`));
+      }
     }
 
     this.http = new HTTPServer({
@@ -821,7 +820,8 @@ class GoonVC {
         alliance: this.alliance.middleware(),
         redArmy: this.redArmy.middleware(),
         market: this.market ? this.market.middleware() : (req, res, next) => next(),
-        bounties: this.bounties ? this.bounties.middleware() : (req, res, next) => next()
+        bounties: this.bounties ? this.bounties.middleware() : (req, res, next) => next(),
+        commands: this.commands.middleware()
       }
     });
 

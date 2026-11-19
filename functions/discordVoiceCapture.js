@@ -71,6 +71,7 @@ class VoiceMixer {
     this.startedAt = null;
     this.lastPcmAt = null;
     this.pcm = null;
+    this.used = 0;
     this.speakers = new Map();
   }
 
@@ -85,17 +86,18 @@ class VoiceMixer {
     const aligned = offset - (offset % (CHANNELS * BYTES_PER_SAMPLE));
     const need = aligned + pcm.length;
     if (need > this.pcm.length) {
-      const next = Buffer.alloc(need);
-      this.pcm.copy(next);
+      const next = Buffer.alloc(Math.max(need, this.pcm.length * 2, BYTES_PER_SECOND));
+      if (this.used) this.pcm.copy(next, 0, 0, this.used);
       this.pcm = next;
     }
     mixInto(this.pcm, pcm, aligned);
+    if (need > this.used) this.used = need;
     this.lastPcmAt = when;
     if (userId) this.speakers.set(String(userId), name || 'Unknown pilot');
   }
 
   hasAudio () {
-    return Boolean(this.pcm && this.pcm.length);
+    return this.used > 0;
   }
 
   silentFor (ms, at) {
@@ -116,9 +118,9 @@ class VoiceMixer {
       this.reset();
       return null;
     }
-    const durationMs = Math.max(1, Math.round((this.pcm.length / BYTES_PER_SECOND) * 1000));
+    const durationMs = Math.max(1, Math.round((this.used / BYTES_PER_SECOND) * 1000));
     const speakers = Array.from(this.speakers.entries()).map(([id, name]) => ({ id, name }));
-    const chunk = { pcm: this.pcm, startedAt: this.startedAt, durationMs, speakers };
+    const chunk = { pcm: this.pcm.subarray(0, this.used), startedAt: this.startedAt, durationMs, speakers };
     this.reset();
     return chunk;
   }
@@ -246,17 +248,20 @@ class DiscordVoiceCapture {
       this._tick = null;
     }
     this._stopSpeaking();
-    await this._emitChunk(this.mixer.flush());
     try {
-      this._leave(this._connection);
-    } catch (_) { /* destroy is best-effort */ }
-    this._connection = null;
-    this._allowed = new Set();
-    this.client = null;
-    this.guildId = null;
-    this.channelId = null;
-    this.channelName = null;
-    this.occupancy = 0;
+      await this._emitChunk(this.mixer.flush());
+    } finally {
+      try {
+        this._leave(this._connection);
+      } catch (_) { /* destroy is best-effort */ }
+      this._connection = null;
+      this._allowed = new Set();
+      this.client = null;
+      this.guildId = null;
+      this.channelId = null;
+      this.channelName = null;
+      this.occupancy = 0;
+    }
     return status;
   }
 

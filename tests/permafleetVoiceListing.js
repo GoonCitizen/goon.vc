@@ -4,11 +4,12 @@ const assert = require('assert');
 const { membersInVoiceFromWidgets } = require('../functions/permafleetVoiceListing');
 
 describe('PERMAFLEET public voice listing', function () {
-  it('keeps anyone in voice on any member Discord, once', function () {
+  it('keeps each guild widget’s voice list, and drops a repeated id inside one widget', function () {
     const members = membersInVoiceFromWidgets([
       {
         members: [
           { id: '1', username: 'Ace', avatar_url: 'a', channel_id: 'voice-a' },
+          { id: '1', username: 'Ace again', avatar_url: 'a2', channel_id: 'voice-a' },
           { id: '2', username: 'Idle', avatar_url: 'b' }
         ]
       },
@@ -22,6 +23,7 @@ describe('PERMAFLEET public voice listing', function () {
     ]);
     assert.deepStrictEqual(members, [
       { username: 'Ace', avatar_url: 'a' },
+      { username: 'Ace', avatar_url: 'a-other' },
       { username: 'Bomber', avatar_url: 'c' }
     ]);
     assert.ok(!JSON.stringify(members).includes('"id"'));

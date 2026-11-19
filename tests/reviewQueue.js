@@ -14,7 +14,7 @@ describe('review queue', function () {
   this.timeout(20000);
 
   it('treats alliance and RED ARMY officers as the people who need approval', function () {
-    assert.deepStrictEqual(officerSymbols({ accounts: [{ platform: 'discord', id: REMAEUS }] }), ['G00N']);
+    assert.deepStrictEqual(officerSymbols({ accounts: [{ platform: 'discord', id: REMAEUS }] }), ['G00N', 'DOUBLEDOGZ']);
     assert.deepStrictEqual(officerSymbols({ accounts: [{ platform: 'discord', id: MEANER }] }), ['RR']);
     assert.deepStrictEqual(officerSymbols({ accounts: [{ platform: 'discord', id: '111111111111111111' }] }), []);
     assert.strictEqual(memberNeedsReview({ accounts: [{ platform: 'discord', id: REMAEUS }] }), true);

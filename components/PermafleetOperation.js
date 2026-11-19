@@ -619,8 +619,9 @@ function renderPermafleetScript (opts) {
 
         ${membersInVoiceFromWidgets.toString()}
 
-        function renderPanel (members) {
-          voiceN.textContent = String(members.length);
+        function renderPanel (members, partial) {
+          voiceN.textContent = partial ? String(members.length) + '+' : String(members.length);
+          voiceN.title = partial ? 'One or more Discords did not answer, so this count is short.' : '';
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
           members.slice(0, MAX_ROWS).forEach(function (m) {
@@ -661,7 +662,9 @@ function renderPermafleetScript (opts) {
         }
 
         Promise.all(GUILD_IDS.map(fetchWidget))
-          .then(function (widgets) { renderPanel(membersInVoiceFromWidgets(widgets)); })
+          .then(function (widgets) {
+            renderPanel(membersInVoiceFromWidgets(widgets), widgets.some(function (widget) { return !widget; }));
+          })
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause

@@ -138,6 +138,7 @@ function publicMember (member, via, review, admin) {
 function provenLink (account, member) {
   if (!account) return false;
   if (account.via === 'oauth' || account.via === 'passport' || account.via === 'bio') return true;
+  if (account.via === 'legacy' && member && member.lastLoginAt) return true;
   return !!(member && member.lastLoginAt && account.via === 'command' && account.platform === 'discord');
 }
 
@@ -474,7 +475,7 @@ class Members extends EventEmitter {
       }
       // A command or a typed @handle is not a login. Discord, Passport, or an
       // RSI claim replaces that placeholder once the person actually signs in.
-      if ((existing.via === 'command' || existing.via === 'directory') && (via === 'oauth' || via === 'passport' || via === 'bio')) {
+      if ((existing.via === 'command' || existing.via === 'directory' || existing.via === 'legacy') && (via === 'oauth' || via === 'passport' || via === 'bio')) {
         existing.via = via;
         existing.linkedAt = now;
       }
@@ -833,7 +834,9 @@ class Members extends EventEmitter {
       let member = await this._resolve(memberId);
       if (!member) return null;
       member = await this._autoApprove(member);
-      if (!this.needsReview(member) || this.reviewOf(member)) return member;
+      if (!this.needsReview(member)) return member;
+      const automatic = !!(member.review && member.review.auto === true && member.review.status === 'approved');
+      if (this.reviewOf(member) && !automatic) return member;
       const at = new Date().toISOString();
       member.review = { status: 'pending', requestedAt: at };
       member.log.push({ type: 'review', status: 'pending', at });
