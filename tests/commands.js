@@ -1342,7 +1342,7 @@ describe('Discord application commands', function () {
       assert.match(reply.content, /works once, and expires in 30 minutes/);
       const button = claimButton(reply);
       assert.deepStrictEqual([button.type, button.style, button.label], [2, 5, 'Claim on goon.vc']);
-      assert.match(button.url, /\/rsi\/claim\?t=[0-9a-f]{64}$/);
+      assert.match(button.url, /\/services\/rsi\/claim\?t=[0-9a-f]{64}$/);
       const member = await members.getMember(`discord:${KERSA.id}`);
       assert.ok(member, 'running it links the caller’s Discord');
 
@@ -1404,7 +1404,7 @@ describe('Discord application commands', function () {
       await members.link(member.id, 'rsi:Kersa', { via: 'bio' });
       const synced = await run(attachment());
       assert.strictEqual(synced.content.split('\n')[0], 'Synced 1 ship (1 model) for **Kersa**.');
-      assert.ok(synced.content.includes('<https://goon.vc/rsi>'), synced.content);
+      assert.ok(synced.content.includes('<https://goon.vc/services/rsi>'), synced.content);
       assert.deepStrictEqual((await hangar.report()).models, [{ model: 'Gladius', manufacturer: 'Aegis Dynamics', count: 1, owners: 1 }]);
 
       files.set(HANGAR_FILE, JSON.stringify(exportFor('SomeoneElse')));

@@ -586,7 +586,7 @@ must be on for the shared application in the Developer Portal. Settings:
 `market.{enabled,path,forum,tags,ttlMs,sync,webhook,network,allowMainnet,dibsHours,payHours,payGraceHours,deliveryDays,confirmDays,feeSats,arbiters,rateUrl}`;
 `GOON_MARKET=0` turns it off. Tests: `tests/marketPost.js`,
 `tests/marketEscrow.js`, `tests/market.service.js`.
-**Bounties** (`/bounties`, `services/bounties.js`, page `components/BountiesPage.js`) are player bounties: a price in aUEC on an RSI handle. Kill that pilot and the poster pays the reward in game. The site keeps the record and does not move aUEC. Posting and claiming both require a linked RSI handle (`Members.rsiHandles`); the error points at `/rsi`. The poster confirms the kill (`paid`) or turns the claim away, which reopens it. Public JSON is handles, the reward, and the status — never member ids. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) runs in servers and in the bot’s DMs. `GOON_BOUNTIES=0` turns the board off. The old bitcoin escrow machine remains in `functions/bountyEscrow.js` and is not what the board runs. Tests: `tests/bounties.service.js`.
+**Bounties** (`/bounties`, `services/bounties.js`, page `components/BountiesPage.js`) are player bounties: a price in aUEC on an RSI handle. Kill that pilot and the poster pays the reward in game. The site keeps the record and does not move aUEC. Posting and claiming both require a linked RSI handle (`Members.rsiHandles`); the error points at `/services/rsi`. The poster confirms the kill (`paid`) or turns the claim away, which reopens it. Public JSON is handles, the reward, and the status — never member ids. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) runs in servers and in the bot’s DMs. `GOON_BOUNTIES=0` turns the board off. The old bitcoin escrow machine remains in `functions/bountyEscrow.js` and is not what the board runs. Tests: `tests/bounties.service.js`.
 The **Fabric relay** (`services/fabricRelay.js`, packs in
 `functions/discordFabricShare.js`) puts messages from the G00N SQUAD **public
 channels** (`discord.guildId` only; text and announcement channels @everyone
@@ -743,7 +743,7 @@ vote for the org. Anyone else gets a refusal saying to ask in #embassy to be
 put on record; nobody is taken for an officer because of a role name or a
 typed answer. PERMAFLEET scripts make, match, and hand out **no steward-type
 role** (G00N SQUAD's ORG STEWARDS role is for non-alliance org leaders and is
-never touched). `goon-setup` asks for the
+never touched). `goon-setup` is one panel: each step rewrites that same DM instead of sending another. It asks for the
 features wanted (schedule calendar, clips, IdleRPG announcements, and PERMAFLEET
 membership — offered only to an org's officers on record; others
 are told why), then only the matching steps (PERMAFLEET schedule or own calendar,
@@ -1308,15 +1308,15 @@ one officer per button. Session JSON carries `review { status,
 requestedAt, reviewedAt }` (or null) while reviews are on, never the
 reviewer; `GET /services/members` adds `review: true|false`. Tests:
 `tests/memberReviews.js`, `tests/reviews.js`, `tests/reviewQueue.js`.
-**RSI profile claim** (`/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
+**RSI profile claim** (`/services/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
 `functions/rsiCitizen.js`, codes `functions/rsiClaim.js`) links an `rsi:<Handle>`
-account (the handle as RSI writes it) to a member. `/rsi claim` (servers and
+account (the handle as RSI writes it) to a member. The page is `/services/rsi`. JSON clients at that path get GoonCitizen's RSI interface (`@rsi/star-citizen/rsi`: the index, `/orgs/:sid`, `/citizens/:handle`, `/citizens/:handle/verify`, and `/claim`). `/rsi` and `/rsi/claim?t=` redirect to the page; a claim link without `t` is left for that interface. `/rsi claim` (servers and
 the bot's DMs) links the caller's Discord and replies privately with a
-**one-time sign-in link** (`Members#claimLink`: `<siteUrl>/rsi/claim?t=<64 hex>`,
+**one-time sign-in link** (`Members#claimLink`: `<siteUrl>/services/rsi/claim?t=<64 hex>`,
 kept as `/claim-links/<sha256>`, single use, 30 minutes); opening it starts a
 session (`provider: 'rsi-link'`, at most an hour, and never allowed to unlink
-an account: 403) and lands on `/rsi`, and a used, expired, or
-forged link lands on `/rsi?error=link`. The link is a login, so it only ever
+an account: 403) and lands on `/services/rsi`, and a used, expired, or
+forged link lands on `/services/rsi?error=link`. An older `/rsi/claim` link still redeems. The link is a login, so it only ever
 goes out ephemerally. Signed in any way, the page asks for the handle (`POST
 /services/members/rsi/claims { handle }` → a `g00n:` + 7 hex code, kept 24 h at
 `/rsi-claims/<member>`, the same code while the handle is the same), the member
@@ -1354,7 +1354,7 @@ import `history`); a hangar counts only while its member still holds that
 handle, and a member merge moves hangars to the survivor. `/hangar status`
 shows the caller's last import. `GET /services/hangar` is fleet totals only
 (`members`, `ships`, `models [{ model, manufacturer, count, owners }]`,
-`updatedAt`; no names, handles, or ids), shown on `/rsi`;
+`updatedAt`; no names, handles, or ids), shown on `/services/rsi`;
 `GET /services/hangar/members` (per member: display name, handle, ships,
 import time) needs `Authorization: Bearer $GOON_SCRIPTS_TOKEN` (404 without
 it). Settings: `hangar.{enabled,path}`. Tests: `tests/rsiClaim.js`,

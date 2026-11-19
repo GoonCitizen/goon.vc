@@ -62,7 +62,7 @@ describe('bounty board service', function () {
       body: { target: 'BadGuy', reward: '150k' }
     });
     assert.strictEqual(refused.status, 409);
-    assert.match(refused.body.error, /RSI handle/);
+    assert.match(refused.body.error, /\/services\/rsi/);
 
     const posted = await route(board, 'POST', '/services/bounties', {
       as: poster,

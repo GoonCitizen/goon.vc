@@ -1394,7 +1394,7 @@
       <div id="login-session" class="login-session"></div>
       <p><small>Not in the Squad yet? <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Discord &raquo;</a></small></p>
     </main>
-    <main id="rsi-page" class="rsi-page" data-path="/rsi" data-api="/services/members/rsi" data-fleet="/services/hangar">
+    <main id="rsi-page" class="rsi-page" data-path="/services/rsi" data-api="/services/members/rsi" data-fleet="/services/hangar">
       <h1>Claim your RSI profile</h1>
       <p class="rsi-intro">Link your Star Citizen handle to your G00N SQUAD profile. You prove it’s yours by putting a short code in your public RSI bio for a minute; then you can sync your hangar with <code>/hangar</code> on Discord.</p>
       <p id="rsi-status" class="rsi-status" role="status"></p>
@@ -1447,7 +1447,7 @@
       <section id="waiting-approved" hidden>
         <h2>You’re approved</h2>
         <p>Welcome to G00N SQUAD. You can claim your Star Citizen handle next.</p>
-        <p class="waiting-links"><a class="goon-button" href="/rsi">Claim your RSI profile</a> <a href="/events">Events</a> <a href="/">Home</a></p>
+        <p class="waiting-links"><a class="goon-button" href="/services/rsi">Claim your RSI profile</a> <a href="/events">Events</a> <a href="/">Home</a></p>
       </section>
       <section id="waiting-denied" hidden>
         <h2>Not approved</h2>
@@ -1501,13 +1501,13 @@
             <select id="member-rename-choice" aria-label="Display name"></select>
             <button type="button" id="member-rename-save" class="goon-button" disabled>Save</button>
           </p>
-          <p id="member-rename-none" hidden>Link your Discord account or <a href="/rsi">claim your RSI handle</a> to choose a display name.</p>
+          <p id="member-rename-none" hidden>Link your Discord account or <a href="/services/rsi">claim your RSI handle</a> to choose a display name.</p>
           <p id="member-rename-status" class="members-status" role="status"></p>
         </section>
         <section>
           <h2>Linked accounts</h2>
           <ul id="member-accounts" class="member-accounts"></ul>
-          <p id="member-rsi-none" hidden>No RSI handle yet. <a href="/rsi">Claim your RSI profile »</a></p>
+          <p id="member-rsi-none" hidden>No RSI handle yet. <a href="/services/rsi">Claim your RSI profile »</a></p>
         </section>
         <section id="member-add">
           <h2>Add an account</h2>
@@ -1516,13 +1516,13 @@
           <p class="members-links">
             <button type="button" id="member-add-discord" class="goon-button" disabled>Link Discord</button>
             <button type="button" id="member-add-passport" class="goon-button" disabled>Link a Passport identity</button>
-            <a class="goon-button" href="/rsi">Claim an RSI handle</a>
+            <a class="goon-button" href="/services/rsi">Claim an RSI handle</a>
           </p>
           <p id="member-discord-held" class="members-note" hidden><small></small></p>
         </section>
         <p class="members-links">
           <a class="goon-button" href="/sessions">Sign-in page</a>
-          <a class="goon-button" href="/rsi">RSI profile and hangar</a>
+          <a class="goon-button" href="/services/rsi">RSI profile and hangar</a>
         </p>
         <p class="members-note"><small>Only you can see this page.</small></p>
       </div>
@@ -3385,7 +3385,7 @@ html[data-look=bright]{color-scheme:light}
       <ul id="bounties-list" class="admin-list" style="list-style:none;padding:0"></ul>
       <section>
         <h2>Post a bounty</h2>
-        <p class="bounty-meta">Posting takes a linked RSI handle. <a href="/rsi">Link one</a>, or <a href="/sessions">sign in</a>.</p>
+        <p class="bounty-meta">Posting takes a linked RSI handle. <a href="/services/rsi">Link one</a>, or <a href="/sessions">sign in</a>.</p>
         <p id="bounties-signed-out" hidden>Sign in, and link an RSI handle, before you post. <a href="/sessions">Sign in</a></p>
         <form id="bounty-post" class="bounty-form">
           <input name="target" required maxlength="60" placeholder="Target RSI handle" aria-label="Target RSI handle" autocapitalize="off" spellcheck="false">
@@ -3870,7 +3870,7 @@ html[data-look=bright]{color-scheme:light}
           }
         }
         var isLogin = path === loginPath;
-        var isRsiClaim = path.toLowerCase() === "/rsi";
+        var isRsiClaim = path.toLowerCase() === "/services/rsi";
         var isWaiting = path.toLowerCase() === "/waiting";
         var isMembers = path.toLowerCase() === "/members";
         var isMember = path.toLowerCase().indexOf("/members/") === 0;

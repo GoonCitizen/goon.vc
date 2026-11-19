@@ -78,8 +78,12 @@ class FakeDiscord extends EventEmitter {
       fetch: async (id) => ({
         send: async (payload) => {
           if (this.closed) throw Object.assign(new Error('Cannot send messages to this user'), { code: 50007 });
-          this.dms.push({ id, payload });
-          return { id: `dm-${this.dms.length}` };
+          const record = { id, payload };
+          this.dms.push(record);
+          return {
+            id: `dm-${this.dms.length}`,
+            edit: async (next) => { record.payload = next; return record; }
+          };
         }
       })
     };
@@ -231,6 +235,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
 
     const press = async (customId, extra = {}) => {
       const before = discord.dms.length;
+      const beforeContent = last().content;
       discord.client.emit('interactionCreate', Object.assign({
         customId,
         user: { id: ADMIN },
@@ -239,7 +244,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         editReply: async () => {},
         followUp: async (payload) => { throw new Error(`refused: ${payload.content}`); }
       }, extra));
-      await until(() => discord.dms.length > before);
+      await until(() => discord.dms.length > before || last().content !== beforeContent);
     };
 
     await press(ids()[0]);
@@ -295,6 +300,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       ['embassy', false], ['voice', false], ['prospects', false], ['council', false], ['permafleet', false]
     ], 'the checklist the admin saw is recorded with the answers');
     assert.ok(guild.fetched.filter((entry) => entry.user === ADMIN).length >= 2, 'checked at start and again before recording');
+    assert.strictEqual(discord.dms.length, 1, 'setup rewrites one DM instead of sending a message per step');
 
     const report = JSON.stringify(await service.report());
     assert.ok(!report.includes(ADMIN), 'the report carries no user ids');

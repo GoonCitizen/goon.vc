@@ -586,7 +586,7 @@ class Commands {
       siteUrl: 'https://goon.vc',
       idlerpgPath: '/services/idlerpg',
       leaguesPath: '/leagues',
-      rsiPath: '/rsi',
+      rsiPath: '/services/rsi',
       clipsPath: '/clips',
       votesPath: '/operations/PERMAFLEET/votes',
       register: true,

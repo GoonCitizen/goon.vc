@@ -37,6 +37,7 @@ const Alliance = require('./alliance');
 const RedArmy = require('./redArmy');
 const Market = require('./market');
 const Bounties = require('./bounties');
+const RsiService = require('./rsi');
 const Hangar = require('./hangar');
 const Schedule = require('./schedule');
 const GoonSite = require('../types/GoonSite');
@@ -318,6 +319,10 @@ class GoonVC {
       if (redArmy === '/red-army') {
         const query = req.url.slice(req.path.length);
         return res.redirect(301, '/operations/red-army' + query);
+      }
+      if (redArmy === '/rsi' || redArmy === '/rsi/claim') {
+        const query = req.url.slice(req.path.length);
+        return res.redirect(301, `/services${redArmy}` + query);
       }
       if (Object.prototype.hasOwnProperty.call(this.settings.redirects || {}, req.path)) return next();
       const query = req.url.slice(req.path.length);
@@ -821,7 +826,8 @@ class GoonVC {
         redArmy: this.redArmy.middleware(),
         market: this.market ? this.market.middleware() : (req, res, next) => next(),
         bounties: this.bounties ? this.bounties.middleware() : (req, res, next) => next(),
-        commands: this.commands.middleware()
+        commands: this.commands.middleware(),
+        rsi: new RsiService().middleware()
       }
     });
 

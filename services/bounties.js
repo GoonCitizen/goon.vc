@@ -83,7 +83,7 @@ class Bounties extends EventEmitter {
 
   _handle (member) {
     const handles = Members.rsiHandles(member);
-    if (!handles.length) throw fail(409, `Link an RSI handle first. A bounty is between citizens: ${String(this.settings.siteUrl || '').replace(/\/$/, '')}/rsi`);
+    if (!handles.length) throw fail(409, `Link an RSI handle first. A bounty is between citizens: ${String(this.settings.siteUrl || '').replace(/\/$/, '')}/services/rsi`);
     return handles[0];
   }
 

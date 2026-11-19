@@ -28,7 +28,7 @@ function renderStyles () {
  * @returns {string}
  */
 function renderHtml (props) {
-  const rsiPath = props.rsiPath || '/rsi';
+  const rsiPath = props.rsiPath || '/services/rsi';
   return `<main id="bounties-page" class="bounties-page" data-path="${escapeHtml(props.path)}">
       <h1>Bounties</h1>
       <p class="bounty-meta" style="text-align:center">A price on a pilot. Kill them, and the poster pays you in game. Prices are aUEC. The game calls that UEC once it launches.</p>

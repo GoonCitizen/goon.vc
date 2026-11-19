@@ -40,7 +40,9 @@ const LOGIN_STARTS = { limit: 60, windowMs: 60 * 1000 };
 const LOGIN_STARTS_TRACKED = 10000;
 const MEMBER_ID_RE = /^[0-9a-f]{16}$/;
 const MAX_HOPS = 8;
-const CLAIM_LINK_PATH = '/rsi/claim';
+const CLAIM_PAGE = '/services/rsi';
+const CLAIM_LINK_PATH = '/services/rsi/claim';
+const LEGACY_CLAIM_LINK_PATH = '/rsi/claim';
 const CLAIM_LINK_TTL_MS = 30 * 60 * 1000;
 // A session a claim link starts is for claiming a handle, not a standing login.
 const CLAIM_LINK_SESSION_TTL_MS = 60 * 60 * 1000;
@@ -265,7 +267,7 @@ class Members extends EventEmitter {
    *   escrow runs on, for "Link your escrow key" challenges.
    * @param {string} [settings.loginPath] SPA page to return to after login.
    * @param {string} [settings.siteUrl] Origin for one-time claim links (e.g. `https://goon.vc`).
-   * @param {string} [settings.claimPath] SPA page for RSI claims (default `/rsi`).
+   * @param {string} [settings.claimPath] SPA page for RSI claims (default `/services/rsi`).
    * @param {boolean} [settings.review] Discord sign-ins wait for a reviewer (default false).
    *   Members from before reviews were first turned on count as approved.
    * @param {string} [settings.waitingPath] SPA page for members awaiting review (default `/waiting`).
@@ -1510,7 +1512,7 @@ class Members extends EventEmitter {
 
   _claimResult (query) {
     const qs = new URLSearchParams(query || {}).toString();
-    return `${this.settings.claimPath || '/rsi'}${qs ? `?${qs}` : ''}`;
+    return `${this.settings.claimPath || CLAIM_PAGE}${qs ? `?${qs}` : ''}`;
   }
 
   async _redeemClaimLink (req, res) {
@@ -1613,7 +1615,10 @@ class Members extends EventEmitter {
     return (req, res, next) => {
       const pathname = (req.path || new URL(req.url, 'http://localhost').pathname).replace(/\/+$/, '');
       const method = String(req.method || 'GET').toUpperCase();
-      if (pathname === CLAIM_LINK_PATH && method === 'GET') {
+      if ((pathname === CLAIM_LINK_PATH || pathname === LEGACY_CLAIM_LINK_PATH) && method === 'GET') {
+        const token = String(this._query(req).t || '');
+        // A bare /services/rsi/claim is GoonCitizen's ownership-claim interface.
+        if (pathname === CLAIM_LINK_PATH && !token) return next();
         return Promise.resolve(this._redeemClaimLink(req, res)).catch(() => {
           if (!res.headersSent) redirect(res, this._claimResult({ error: 'link' }));
         });

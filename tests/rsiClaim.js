@@ -168,7 +168,7 @@ describe('RSI profile claims', function () {
     const link = new URL(url);
     const res = await request(`${link.pathname}${link.search}`);
     assert.strictEqual(res.status, 302);
-    assert.strictEqual(res.headers.location, '/rsi');
+    assert.strictEqual(res.headers.location, '/services/rsi');
     const cookie = [].concat(res.headers['set-cookie'] || []).find((raw) => raw.startsWith('goon.member='));
     assert.ok(cookie, 'the link signs its holder in');
     return cookie.split(';')[0];
@@ -176,7 +176,7 @@ describe('RSI profile claims', function () {
 
   before(async function () {
     storePath = fs.mkdtempSync(path.join(os.tmpdir(), 'goonvc-rsi-claim-'));
-    members = new Members({ path: storePath, fetch: stubFetch, siteUrl: 'https://goon.vc/', claimPath: '/rsi' });
+    members = new Members({ path: storePath, fetch: stubFetch, siteUrl: 'https://goon.vc/', claimPath: '/services/rsi' });
     await members.start();
     const mw = members.middleware();
     server = http.createServer((req, res) => {
@@ -200,13 +200,13 @@ describe('RSI profile claims', function () {
   it('sends a one-time link that signs in once, and never after it expires', async function () {
     const member = await members.linkDiscord({ id: '700000000000000001', username: 'kersa' }, 'Kersa');
     const { url, expiresAt } = await members.claimLink(member.id);
-    assert.match(url, /^https:\/\/goon\.vc\/rsi\/claim\?t=[0-9a-f]{64}$/);
+    assert.match(url, /^https:\/\/goon\.vc\/services\/rsi\/claim\?t=[0-9a-f]{64}$/);
     assert.ok(expiresAt > Date.now() + 29 * 60 * 1000 && expiresAt <= Date.now() + 30 * 60 * 1000);
     const link = new URL(url);
 
     const first = await request(`${link.pathname}${link.search}`);
     assert.strictEqual(first.status, 302);
-    assert.strictEqual(first.headers.location, '/rsi');
+    assert.strictEqual(first.headers.location, '/services/rsi');
     const cookie = [].concat(first.headers['set-cookie']).find((raw) => raw.startsWith('goon.member=')).split(';')[0];
     const session = await request('/services/members/session', { cookie });
     assert.strictEqual(session.json.member.id, member.id);
@@ -214,18 +214,20 @@ describe('RSI profile claims', function () {
 
     const again = await request(`${link.pathname}${link.search}`);
     assert.strictEqual(again.status, 302);
-    assert.strictEqual(again.headers.location, '/rsi?error=link', 'used once');
+    assert.strictEqual(again.headers.location, '/services/rsi?error=link', 'used once');
     assert.ok(!again.headers['set-cookie']);
 
     const stale = new URL((await members.claimLink(member.id)).url);
     const key = `/claim-links/${crypto.createHash('sha256').update(stale.searchParams.get('t')).digest('hex')}`;
     await members.store.set(key, Object.assign({}, await members.store.get(key), { expiresAt: Date.now() - 1 }));
     const expired = await request(`${stale.pathname}${stale.search}`);
-    assert.strictEqual(expired.headers.location, '/rsi?error=link');
+    assert.strictEqual(expired.headers.location, '/services/rsi?error=link');
     assert.ok(!expired.headers['set-cookie']);
 
     const forged = await request('/rsi/claim?t=nope');
-    assert.strictEqual(forged.headers.location, '/rsi?error=link');
+    assert.strictEqual(forged.headers.location, '/services/rsi?error=link');
+    const legacy = await request('/rsi/claim?t=nope');
+    assert.strictEqual(legacy.headers.location, '/services/rsi?error=link', 'an older /rsi/claim link still lands on the page');
   });
 
   it('signs in once when a link is redeemed twice at the same time', async function () {
@@ -235,7 +237,7 @@ describe('RSI profile claims', function () {
     const both = await Promise.all([request(path), request(path)]);
     const cookies = both.filter((res) => [].concat(res.headers['set-cookie'] || []).some((raw) => raw.startsWith('goon.member=')));
     assert.strictEqual(cookies.length, 1, 'exactly one session');
-    assert.deepStrictEqual(both.map((res) => res.headers.location).sort(), ['/rsi', '/rsi?error=link']);
+    assert.deepStrictEqual(both.map((res) => res.headers.location).sort(), ['/services/rsi', '/services/rsi?error=link']);
   });
 
   it('keeps a link session short, and never lets it unlink an account', async function () {

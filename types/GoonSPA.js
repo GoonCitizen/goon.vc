@@ -62,8 +62,9 @@ const DEFAULTS = {
   loginLabel: '&gt; LOGIN &lt;',
   loginPath: '/sessions',
   loginDocumentTitle: 'Login — GOON SQUAD',
-  // RSI profile claims (components/RsiClaimPage.js); `/rsi claim` on Discord links here.
-  rsiClaimPath: '/rsi',
+  // RSI profile claims (components/RsiClaimPage.js). `/rsi claim` on Discord links here.
+  // The page is `/services/rsi`, the same path GoonCitizen publishes for RSI.
+  rsiClaimPath: '/services/rsi',
   rsiClaimDocumentTitle: 'Claim your RSI profile — GOON SQUAD',
   rsiClaimDescription: 'Link your Star Citizen handle to your G00N SQUAD profile with a one-time code in your RSI bio, then sync your hangar.',
   // Waiting area for Discord sign-ins awaiting review (components/WaitingPage.js).

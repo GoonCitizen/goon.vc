@@ -22,7 +22,8 @@
     "link:http": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_HTTP||path.resolve(__dirname,'../fabric-http');const dest=path.join('node_modules','@fabric','http');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/http ->',target)\"",
     "link:discord": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_DISCORD||path.resolve(__dirname,'../fabric-discord');const dest=path.join('node_modules','@fabric','discord');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/discord ->',target)\"",
     "link:doorman": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.FABRIC_DOORMAN||path.resolve(__dirname,'../doorman');const dest=path.join('node_modules','@fabric','doorman');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @fabric/doorman ->',target)\"",
-    "link:idlerpg": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.IDLERPG||path.resolve(__dirname,'../idlerpg');const dest=path.join('node_modules','idlerpg');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked idlerpg ->',target)\""
+    "link:idlerpg": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.IDLERPG||path.resolve(__dirname,'../idlerpg');const dest=path.join('node_modules','idlerpg');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked idlerpg ->',target)\"",
+    "link:gooncitizen": "node -e \"const fs=require('fs'),path=require('path');const target=process.env.GOONCITIZEN||path.resolve(__dirname,'../star-citizen-live');const dest=path.join('node_modules','@rsi','star-citizen');fs.mkdirSync(path.dirname(dest),{recursive:true});try{fs.rmSync(dest,{recursive:true,force:true})}catch(e){};fs.symlinkSync(target,dest,'dir');console.log('linked @rsi/star-citizen ->',target)\""
   },
   "repository": {
     "type": "git",
@@ -42,7 +43,8 @@
     "@fabric/discord": "FabricLabs/fabric-discord#feature/passport",
     "@fabric/doorman": "FabricLabs/doorman#feature/passport",
     "@fabric/http": "FabricLabs/fabric-http#feature/passport",
-    "idlerpg": "FabricLabs/idlerpg#feature/passport"
+    "idlerpg": "FabricLabs/idlerpg#feature/passport",
+    "@rsi/star-citizen": "GoonCitizen/star-citizen-live#feature/passport"
   },
   "devDependencies": {
     "c8": "=10.1.3",
