@@ -1086,7 +1086,11 @@ class Community {
       const fallback = cached.length ? cached : (remembered && remembered.members.length ? remembered.members : null);
       if (fallback) {
         this.emit('error', 'community campaigns', `could not refresh the members of ${guild.name}, using the list from earlier: ${errorMessage(error)}`);
-        const at = remembered && fallback === remembered.members ? remembered.at : now;
+        // A failed refresh is not a fresh roster. Keep the previous age so the
+        // next call tries Discord again, and retry a cache-only list shortly.
+        const at = remembered
+          ? remembered.at
+          : now - MEMBER_CACHE_MS + Math.min(30 * 1000, MEMBER_CACHE_MS);
         this._memberLists.set(id, { at, members: fallback });
         return fallback;
       }
