@@ -1,6 +1,7 @@
 'use strict';
 
 const escapeHtml = require('../functions/escapeHtml');
+const { membersInVoiceFromWidgets } = require('../functions/permafleetVoiceListing');
 const Organizations = require('./Organizations');
 const RedArmyPage = require('./RedArmyPage');
 
@@ -33,6 +34,16 @@ const CHARTER = 'The PERMAFLEET Protectorate consists of member organizations pa
 
 const PermafleetSquadrons = require('./PermafleetSquadrons');
 
+function renderOperateHtml (opts) {
+  if (!opts.operatePath) return '';
+  return `<section class="op-squadrons" id="how-we-operate" aria-labelledby="permafleet-operate">
+            <p class="op-squadrons-eyebrow">Always online</p>
+            <h2 id="permafleet-operate">The megaparty</h2>
+            <p class="op-squadrons-intro">PERMAFLEET keeps a public party up around the clock, drawn from every member org. At any hour you’ll usually find two or three things going — on G00N SQUAD or on a member org’s own Discord. Jump in.</p>
+            <p class="op-resource-link"><a href="${escapeHtml(opts.operatePath)}">How we operate &raquo;</a></p>
+          </section>`;
+}
+
 function renderSquadronsHtml (opts) {
   const basePath = opts.squadronsPath;
   return `<section class="op-squadrons" id="squadrons" aria-labelledby="permafleet-squadrons">
@@ -51,7 +62,7 @@ const MEMBER_ORGS = Object.freeze([
   'Trans-Galactic Trade',
   'DoubleDog Delivery, Inc.',
   '4M Contractors',
-  'A.I.M.O.S.'
+  'Risky Business'
 ]);
 
 function renderMemberOrgsHtml (orgs, organizationsPath, onboardingPath) {
@@ -561,6 +572,7 @@ function renderPermafleetMainHtml (opts) {
           <section class="op-pillars" aria-label="What PERMAFLEET offers">
 ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2><p>${p.body}</p></article>`).join('\n')}
           </section>
+          ${renderOperateHtml(opts)}
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
             <p>${CHARTER}</p>
@@ -584,18 +596,20 @@ ${PILLARS.map((p) => `            <article class="op-pillar"><h2>${p.title}</h2>
 }
 
 /**
- * Live voice roster (Discord guild widget) + quantum-travel particle canvas.
- * Only started when the PERMAFLEET operation page is the active route.
+ * Live voice roster (Discord guild widgets for every member-org Discord) +
+ * quantum-travel particle canvas. Only started when the PERMAFLEET operation
+ * page is the active route.
  */
 function renderPermafleetScript (opts) {
+  const guildIds = Array.isArray(opts.guildIds) && opts.guildIds.length
+    ? opts.guildIds.map((id) => String(id))
+    : (opts.guildId ? [String(opts.guildId)] : []);
   return `<script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');
         if (!page || page.style.display === 'none' || !page.style.display) return;
 
-        var GUILD_ID = ${JSON.stringify(String(opts.guildId))};
-        var PERMAFLEET_ID = ${JSON.stringify(String(opts.channelId))};
-        var PERMAFLEET_NAME = ${JSON.stringify(String(opts.channelName).toLowerCase())};
+        var GUILD_IDS = ${JSON.stringify(guildIds)};
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');
@@ -603,20 +617,11 @@ function renderPermafleetScript (opts) {
         var emptyEl = document.getElementById('permafleet-empty');
         var serverEl = document.getElementById('permafleet-online');
 
-        function resolveChannelId (channels) {
-          if (!channels || !channels.length) return PERMAFLEET_ID;
-          for (var i = 0; i < channels.length; i++) {
-            if ((channels[i].name || '').toLowerCase() === PERMAFLEET_NAME) return String(channels[i].id);
-          }
-          return PERMAFLEET_ID;
-        }
+        ${membersInVoiceFromWidgets.toString()}
 
-        function renderPanel (data) {
-          var channelId = resolveChannelId(data.channels);
-          var members = (data.members || []).filter(function (m) {
-            return m.channel_id != null && String(m.channel_id) === channelId;
-          });
-          voiceN.textContent = String(members.length);
+        function renderPanel (members, partial) {
+          voiceN.textContent = partial ? String(members.length) + '+' : String(members.length);
+          voiceN.title = partial ? 'One or more Discords did not answer, so this count is short.' : '';
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
           members.slice(0, MAX_ROWS).forEach(function (m) {
@@ -637,9 +642,7 @@ function renderPermafleetScript (opts) {
             li.appendChild(name);
             listEl.appendChild(li);
           });
-          if (typeof data.presence_count === 'number') {
-            serverEl.textContent = data.presence_count + ' online on server';
-          }
+          serverEl.textContent = '';
         }
 
         function renderFallback () {
@@ -649,12 +652,19 @@ function renderPermafleetScript (opts) {
           serverEl.textContent = '';
         }
 
-        window.fetch('https://discord.com/api/guilds/' + GUILD_ID + '/widget.json')
-          .then(function (res) {
-            if (!res.ok) throw new Error('widget ' + res.status);
-            return res.json();
+        function fetchWidget (guildId) {
+          return window.fetch('https://discord.com/api/guilds/' + guildId + '/widget.json')
+            .then(function (res) {
+              if (!res.ok) throw new Error('widget ' + res.status);
+              return res.json();
+            })
+            .catch(function () { return null; });
+        }
+
+        Promise.all(GUILD_IDS.map(fetchWidget))
+          .then(function (widgets) {
+            renderPanel(membersInVoiceFromWidgets(widgets), widgets.some(function (widget) { return !widget; }));
           })
-          .then(renderPanel)
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause

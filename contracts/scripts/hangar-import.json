@@ -64,7 +64,7 @@
     }
   },
   "complete": {
-    "say": "You're set. Run `/hangar import` (here or in the server), attach the **.json** file, and send it. Re-import whenever your hangar changes; the new file replaces the old one. `/hangar status` shows what's synced, and the fleet totals are at {{context.siteUrl|https://goon.vc}}/rsi"
+    "say": "You're set. Run `/hangar import` (here or in the server), attach the **.json** file, and send it. Re-import whenever your hangar changes; the new file replaces the old one. `/hangar status` shows what's synced, and the fleet totals are at {{context.siteUrl|https://goon.vc}}/services/rsi"
   },
   "cancelled": {
     "say": "No problem. Whenever you're ready, run `/hangar guide` again, or `/hangar import` if you already have the .json file."

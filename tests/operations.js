@@ -165,4 +165,49 @@ describe('Operations metrics service', function () {
     assert.deepStrictEqual(report.operations.map((op) => op.id), ['permafleet'], 'the published contract lists only PERMAFLEET');
     await ops.stop();
   });
+
+  it('counts PERMAFLEET voice on every member-org Discord', async function () {
+    const TRDE = '937681528790609970';
+    const OTHER = '111111111111111111';
+    const file = path.join(dir, 'operations.json');
+    const allianceFile = path.join(dir, 'alliance.json');
+    fs.writeFileSync(file, JSON.stringify({
+      guildId: GUILD,
+      operations: [{
+        id: 'permafleet',
+        name: 'PERMAFLEET',
+        path: '/operations/PERMAFLEET',
+        metrics: [{ plugin: 'voice', channels: ['/./'], guilds: 'alliance' }]
+      }]
+    }));
+    fs.writeFileSync(allianceFile, JSON.stringify({
+      organizations: [
+        { symbol: 'G00N', guildId: GUILD },
+        { symbol: 'TRDE', guildId: TRDE },
+        { symbol: 'DOUBLEDOGZ', guildId: GUILD }
+      ]
+    }));
+    const ops = new Operations({
+      path: path.join(dir, 'store'),
+      file,
+      allianceFile,
+      Discord: FakeDiscord,
+      resolveToken: () => ({ token: 'test-token', source: 'test' }),
+      tickMs: 0,
+      flushMs: 10
+    });
+    await ops.start();
+    await ops._gatewayStarting;
+    const discord = FakeDiscord.last;
+    await new Promise((resolve) => discord.once('ready', resolve));
+    discord.emit('voice', { guildId: GUILD, userId: '1', oldChannelId: null, newChannelId: '10', channelName: 'hangar' });
+    discord.emit('voice', { guildId: TRDE, userId: '2', oldChannelId: null, newChannelId: '20', channelName: 'PERMAFLEET' });
+    discord.emit('voice', { guildId: OTHER, userId: '3', oldChannelId: null, newChannelId: '30', channelName: 'ops' });
+    await new Promise((resolve) => setImmediate(resolve));
+    const report = await ops.report();
+    assert.strictEqual(report.operations[0].metrics.voice.live, 2);
+    const dumped = JSON.stringify(report);
+    assert.ok(!dumped.includes('"1"') && !dumped.includes(OTHER), dumped);
+    await ops.stop();
+  });
 });

@@ -36,13 +36,59 @@ function isStill (clip) {
   return Boolean(clip && clip.media === 'image');
 }
 
+function isAudio (clip) {
+  return Boolean(clip && clip.media === 'audio');
+}
+
+function rangeOf (segment, clip, index, maxStillMs) {
+  if (isStill(clip)) {
+    const hold = Number(segment.out) - (Number(segment.in) || 0);
+    if (!Number.isFinite(hold)) throw fail(400, `Segment ${index + 1}: out must be a number of seconds.`);
+    if (hold < MIN_SEGMENT_S) throw fail(400, `Segment ${index + 1}: a screenshot shows for at least ${MIN_SEGMENT_S}s.`);
+    if (hold * 1000 > maxStillMs) throw fail(400, `Segment ${index + 1}: a screenshot shows for at most ${Math.round(maxStillMs / 1000)}s.`);
+    return { in: 0, out: seconds(hold) };
+  }
+  const length = (Number(clip.durationMs) || 0) / 1000;
+  const start = Number(segment.in);
+  let end = Number(segment.out);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) throw fail(400, `Segment ${index + 1}: in and out must be numbers of seconds.`);
+  if (length > 0 && end > length + END_TOLERANCE_S) throw fail(400, `Segment ${index + 1}: out is past the end of the clip.`);
+  if (length > 0) end = Math.min(end, length);
+  if (start < 0 || end - start < MIN_SEGMENT_S) throw fail(400, `Segment ${index + 1}: out must come after in.`);
+  return { in: seconds(start), out: seconds(end) };
+}
+
+/**
+ * Picture-concat length, or the last overlay's end when the project is voice-only.
+ * Overlay segments (`at`) sit on the film timeline and do not add to the concat.
+ * @param {Array<Object>} segments normalized segments
+ * @returns {number} seconds
+ */
+function programDurationSeconds (segments) {
+  let picture = 0;
+  let overlayEnd = 0;
+  let hasPicture = false;
+  for (const segment of segments || []) {
+    const duration = seconds(segment.out - segment.in);
+    if (segment.at !== undefined && segment.at !== null) {
+      overlayEnd = Math.max(overlayEnd, Number(segment.at) + duration);
+    } else {
+      hasPicture = true;
+      picture += duration;
+    }
+  }
+  return hasPicture ? picture : overlayEnd;
+}
+
 /**
  * Check and normalize a project's segments against the clips they use. A
  * screenshot's segment always starts at 0 and its out is how long it shows.
- * @param {Array<Object>} segments `{ clipId, in, out, audio?, volume? }` (seconds into the clip)
- * @param {Object<string, Object>} clipsById Clip records with `durationMs` (or `media: 'image'`).
+ * Audio clips (`media: 'audio'`) are overlays: `at` is seconds on the film
+ * timeline (default 0) and they do not add picture to the concat.
+ * @param {Array<Object>} segments `{ clipId, in, out, audio?, volume?, at? }` (seconds into the clip)
+ * @param {Object<string, Object>} clipsById Clip records with `durationMs` (or `media: 'image'` / `'audio'`).
  * @param {Object} [limits] `{ maxSegments, maxDurationMs, maxStillMs }`
- * @returns {Array<{ clipId: string, in: number, out: number, audio: string, volume: number }>}
+ * @returns {Array<{ clipId: string, in: number, out: number, audio: string, volume: number, at?: number }>}
  */
 function normalizeSegments (segments, clipsById, limits = {}) {
   const maxSegments = limits.maxSegments || DEFAULTS.maxSegments;
@@ -50,37 +96,29 @@ function normalizeSegments (segments, clipsById, limits = {}) {
   const maxStillMs = limits.maxStillMs || DEFAULTS.maxStillMs;
   if (!Array.isArray(segments)) throw fail(400, 'segments must be a list.');
   if (segments.length > maxSegments) throw fail(400, `A project holds at most ${maxSegments} segments.`);
-  let totalMs = 0;
   const out = segments.map((segment, index) => {
     const clipId = String((segment && segment.clipId) || '');
     const clip = clipsById[clipId];
     if (!clip) throw fail(400, `Segment ${index + 1}: no such clip.`);
-    if (isStill(clip)) {
-      const hold = Number(segment.out) - (Number(segment.in) || 0);
-      if (!Number.isFinite(hold)) throw fail(400, `Segment ${index + 1}: out must be a number of seconds.`);
-      if (hold < MIN_SEGMENT_S) throw fail(400, `Segment ${index + 1}: a screenshot shows for at least ${MIN_SEGMENT_S}s.`);
-      if (hold * 1000 > maxStillMs) throw fail(400, `Segment ${index + 1}: a screenshot shows for at most ${Math.round(maxStillMs / 1000)}s.`);
-      totalMs += hold * 1000;
-      return { clipId, in: 0, out: seconds(hold), audio: 'on', volume: 1 };
-    }
-    const length = (Number(clip.durationMs) || 0) / 1000;
-    const start = Number(segment.in);
-    let end = Number(segment.out);
-    if (!Number.isFinite(start) || !Number.isFinite(end)) throw fail(400, `Segment ${index + 1}: in and out must be numbers of seconds.`);
-    if (length > 0 && end > length + END_TOLERANCE_S) throw fail(400, `Segment ${index + 1}: out is past the end of the clip.`);
-    if (length > 0) end = Math.min(end, length);
-    if (start < 0 || end - start < MIN_SEGMENT_S) throw fail(400, `Segment ${index + 1}: out must come after in.`);
-    totalMs += (end - start) * 1000;
+    const range = rangeOf(segment, clip, index, maxStillMs);
+    if (isStill(clip)) return { clipId, in: range.in, out: range.out, audio: 'on', volume: 1 };
     const volume = segment.volume === undefined || segment.volume === null ? 1 : Number(segment.volume);
     if (!Number.isFinite(volume) || volume < 0 || volume > 4) throw fail(400, `Segment ${index + 1}: volume must be between 0 and 4.`);
-    return {
+    const row = {
       clipId,
-      in: seconds(start),
-      out: seconds(end),
+      in: range.in,
+      out: range.out,
       audio: segment.audio === 'mute' ? 'mute' : 'on',
       volume: seconds(volume)
     };
+    if (isAudio(clip)) {
+      const at = segment.at === undefined || segment.at === null ? 0 : Number(segment.at);
+      if (!Number.isFinite(at) || at < 0) throw fail(400, `Segment ${index + 1}: at must be a number of seconds.`);
+      row.at = seconds(at);
+    }
+    return row;
   });
+  const totalMs = programDurationSeconds(out) * 1000;
   if (totalMs > maxDurationMs) throw fail(400, `The cut is ${Math.round(totalMs / 1000)}s; the limit is ${Math.round(maxDurationMs / 1000)}s.`);
   return out;
 }
@@ -99,26 +137,35 @@ function clipStartIso (clip) {
  * @param {Object<string, Object>} clipsById
  * @returns {Object}
  */
+function clipMedia (clip) {
+  if (isStill(clip)) return 'image';
+  if (isAudio(clip)) return 'audio';
+  return 'video';
+}
+
 function sourcesManifest (project, segments, clipsById) {
-  let at = 0;
+  let pictureAt = 0;
   const rows = segments.map((segment, index) => {
     const clip = clipsById[segment.clipId];
     const still = isStill(clip);
+    const overlay = isAudio(clip);
     const duration = seconds(segment.out - segment.in);
     const start = clipStartIso(clip);
     const shift = (s) => (start ? new Date(Date.parse(start) + s * 1000).toISOString() : null);
+    const at = overlay ? seconds(Number(segment.at) || 0) : seconds(pictureAt);
     const row = {
       index,
-      at: seconds(at),
+      at,
       duration,
       in: segment.in,
       out: segment.out,
       audio: segment.audio,
+      overlay: overlay || undefined,
       recordedFrom: shift(segment.in),
       recordedTo: still ? shift(0) : shift(segment.out),
       clip: {
         id: clip.id,
-        media: still ? 'image' : 'video',
+        media: clipMedia(clip),
         author: clip.author || null,
         guild: clip.guildName || null,
         channel: clip.channelName || null,
@@ -130,12 +177,12 @@ function sourcesManifest (project, segments, clipsById) {
         confidence: clip.override && clip.override.recordedAt ? 'manual' : (clip.recording && clip.recording.confidence) || null
       }
     };
-    at += duration;
+    if (!overlay) pictureAt += duration;
     return row;
   });
   return {
     project: { id: project.id, name: project.name, revision: project.revision || 0 },
-    duration: seconds(at),
+    duration: seconds(programDurationSeconds(segments)),
     authors: Array.from(new Set(rows.map((row) => row.clip.author).filter(Boolean))),
     segments: rows
   };
@@ -177,12 +224,23 @@ function buildRenderPlan (project, segments, clipsById, opts = {}) {
   const W = Math.round(o.width / 2) * 2;
   const H = Math.round(o.height / 2) * 2;
   const manifest = sourcesManifest(project, segments, clipsById);
+  const pictures = [];
+  const overlays = [];
+  segments.forEach((segment) => {
+    const clip = clipsById[segment.clipId];
+    if (!clip.path) throw fail(500, `Clip ${clip.id} has no local file.`);
+    if (isAudio(clip)) overlays.push({ segment, clip });
+    else pictures.push({ segment, clip });
+  });
+  const film = seconds(programDurationSeconds(segments));
   const args = ['-y', '-hide_banner', '-nostdin', '-nostats', '-progress', 'pipe:1'];
   const graph = [];
   const pairs = [];
-  segments.forEach((segment, k) => {
-    const clip = clipsById[segment.clipId];
-    if (!clip.path) throw fail(500, `Clip ${clip.id} has no local file.`);
+  let input = 0;
+  pictures.forEach((row) => {
+    const k = input++;
+    const segment = row.segment;
+    const clip = row.clip;
     const d = seconds(segment.out - segment.in);
     if (isStill(clip)) args.push('-loop', '1', '-framerate', String(o.fps), '-t', String(d), '-i', clip.path);
     else args.push('-ss', String(segment.in), '-t', String(d), '-i', clip.path);
@@ -197,11 +255,35 @@ function buildRenderPlan (project, segments, clipsById, opts = {}) {
     }
     pairs.push(`[v${k}][a${k}]`);
   });
-  graph.push(`${pairs.join('')}concat=n=${segments.length}:v=1:a=1[vout][aout]`);
+  const overlayInputs = overlays.map((row) => {
+    const k = input++;
+    const d = seconds(row.segment.out - row.segment.in);
+    args.push('-ss', String(row.segment.in), '-t', String(d), '-i', row.clip.path);
+    return { k, segment: row.segment, clip: row.clip, d };
+  });
+  if (!pictures.length) {
+    graph.push(`color=c=black:s=${W}x${H}:r=${o.fps}:d=${film},format=yuv420p,setsar=1[vout]`);
+    graph.push(`anullsrc=r=48000:cl=stereo,aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${film},asetpts=PTS-STARTPTS[aout]`);
+  } else {
+    graph.push(`${pairs.join('')}concat=n=${pictures.length}:v=1:a=1[vout][aout]`);
+  }
+  const mix = ['[aout]'];
+  overlayInputs.forEach((entry, i) => {
+    if (entry.segment.audio === 'mute') return;
+    const delay = Math.max(0, Math.round((Number(entry.segment.at) || 0) * 1000));
+    const gain = entry.segment.volume !== 1 ? `,volume=${entry.segment.volume}` : '';
+    graph.push(`[${entry.k}:a]asetpts=PTS-STARTPTS,aresample=48000${gain},adelay=${delay}:all=1,` +
+      `aformat=sample_fmts=fltp:channel_layouts=stereo[ov${i}]`);
+    mix.push(`[ov${i}]`);
+  });
+  if (mix.length > 1) {
+    graph.push(`${mix.join('')}amix=inputs=${mix.length}:duration=first:dropout_transition=0[amixed]`);
+  }
+  const audioMap = mix.length > 1 ? '[amixed]' : '[aout]';
   const srt = o.srtPath ? creditsSrt(manifest) : null;
   if (o.srtPath) args.push('-i', o.srtPath);
-  args.push('-filter_complex', graph.join(';'), '-map', '[vout]', '-map', '[aout]');
-  if (o.srtPath) args.push('-map', `${segments.length}:s`, '-c:s', 'mov_text', '-metadata:s:s:0', 'language=eng', '-metadata:s:s:0', 'title=Sources');
+  args.push('-filter_complex', graph.join(';'), '-map', '[vout]', '-map', audioMap);
+  if (o.srtPath) args.push('-map', `${input}:s`, '-c:s', 'mov_text', '-metadata:s:s:0', 'language=eng', '-metadata:s:s:0', 'title=Sources');
   const comment = ('Sources: ' + manifest.segments.map((row) => [row.clip.author, row.clip.messageUrl].filter(Boolean).join(' ')).join('; ')).slice(0, 2000);
   args.push(
     '-c:v', 'libx264', '-preset', o.preset, '-crf', String(o.crf), '-pix_fmt', 'yuv420p', '-r', String(o.fps),
@@ -216,7 +298,9 @@ function buildRenderPlan (project, segments, clipsById, opts = {}) {
 
 module.exports = {
   DEFAULTS,
+  isAudio,
   normalizeSegments,
+  programDurationSeconds,
   sourcesManifest,
   creditsSrt,
   buildRenderPlan

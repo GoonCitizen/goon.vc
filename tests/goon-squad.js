@@ -6,6 +6,7 @@ const home = require('../contracts/goon-squad.json');
 const settings = require('../settings/local');
 const allianceChannels = require('../functions/allianceChannels');
 const allianceRoles = require('../functions/allianceRoles');
+const orgDiscord = require('../functions/orgDiscord');
 
 const REMAEUS = 'discord:420222636954615808';
 const KERSA = 'discord:191401936245882880';
@@ -33,6 +34,9 @@ describe('G00N SQUAD home Discord', function () {
     assert.ok(settings.clips.streams.channels.includes(home.channels.streams.id));
     assert.deepStrictEqual(home.campaignSenders, ['420222636954615808']);
     assert.deepStrictEqual(settings.community.campaigns.senders, ['420222636954615808']);
+    assert.deepStrictEqual(home.admins.map((admin) => admin.discord), ['420222636954615808']);
+    assert.deepStrictEqual(home.admins[0].also, ['ChairmanPoW']);
+    assert.strictEqual(home.admins[0].fabric, 'id1yqr9kjh0h3mxrjnrhermxnetkpgsk2zgcj9es5hlqr5ft75hv9zq6s7hsu');
     assert.strictEqual(allianceChannels.homeChannelId('embassy', home.guildId), home.channels.embassy.id);
     assert.strictEqual(allianceChannels.homeChannelId('voice', home.guildId), home.channels.voice.id);
     assert.strictEqual(allianceChannels.homeChannelId('embassy', '99'), null);
@@ -42,17 +46,40 @@ describe('G00N SQUAD home Discord', function () {
     const bySymbol = Object.fromEntries(alliance.organizations.map((org) => [org.symbol, org.guildId]));
     assert.strictEqual(bySymbol.G00N, home.guildId);
     assert.strictEqual(bySymbol.DOUBLEDOGZ, home.guildId, 'DOUBLEDOGZ shares the G00N SQUAD server');
+    assert.strictEqual(bySymbol.INFN, home.guildId, 'INFN shares the G00N SQUAD server');
     assert.strictEqual(bySymbol.TRDE, '937681528790609970');
     assert.strictEqual(bySymbol['4MCONTRACT'], '1145511542637482114');
-    assert.strictEqual(bySymbol.AIMOS, '1439226629867044976');
     assert.strictEqual(bySymbol.IDBC, '1200935959961817088');
-    assert.strictEqual(bySymbol.INFN, undefined);
+    assert.strictEqual(bySymbol.H0K, '259387737331859466', 'House of Khans, discord.gg/khans');
+    assert.strictEqual(bySymbol.MB, '1376267243650023434', 'Monkey Business, discord.gg/SpaceMonkey');
+    assert.ok(!('AIMOS' in bySymbol), 'AIMOS is evicted');
     assert.strictEqual(bySymbol.LCRP, undefined);
+  });
+
+  it('puts every member org Discord on the PERMAFLEET calendar', function () {
+    const extras = settings.discord.schedule.servers;
+    const ids = orgDiscord.scheduleGuildIds(alliance, extras);
+    for (const id of orgDiscord.guildIds(alliance)) {
+      assert.ok(ids.includes(id), id);
+    }
+    assert.ok(ids.includes('259387737331859466'), 'House of Khans');
+    assert.ok(ids.includes('1376267243650023434'), 'Monkey Business');
+    assert.ok(ids.includes('635948860459450400'), 'SHELLBACK squadron / RED ARMY server');
   });
 
   it('records ADSVOLCANO as the INFN officer', function () {
     const infn = alliance.organizations.find((org) => org.symbol === 'INFN');
-    assert.deepStrictEqual(infn.officers, ['discord:214804563826311169']);
+    assert.strictEqual(infn.officers[0], 'discord:214804563826311169');
+    assert.deepStrictEqual(infn.officers, [
+      'discord:214804563826311169',
+      'discord:269881157250842624',
+      'discord:176007351046897664',
+      'discord:415278784414089216',
+      'discord:133880061643325441',
+      'discord:736430819513598034',
+      'discord:355141171095404554',
+      'discord:643156333104988162'
+    ]);
   });
 
   it('counts G00N Prospect ranks by the pinned ids even when renamed', function () {

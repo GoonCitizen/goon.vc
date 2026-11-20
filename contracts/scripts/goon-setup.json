@@ -1,5 +1,6 @@
 {
   "id": "goon-setup",
+  "panel": true,
   "title": "Connect your server to goon.vc",
   "description": "Walks a server admin through what goon.vc should do for their Discord server. PERMAFLEET membership is offered only to an org's officers on record, and sets up the channels and Prospect ranks every member org keeps. The answers are recorded per server for alliance leadership.",
   "start": "welcome",

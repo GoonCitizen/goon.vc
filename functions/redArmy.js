@@ -99,13 +99,8 @@ function parseRoster (raw = {}) {
 }
 
 function allianceGuildIds (alliance) {
-  const ids = new Set();
   const roster = alliance && alliance.organizations ? alliance : alliance && alliance.roster;
-  for (const org of (roster && roster.organizations) || []) {
-    const id = orgDiscord.parseGuildId(org.guildId);
-    if (id) ids.add(id);
-  }
-  return ids;
+  return new Set(orgDiscord.guildIds(roster));
 }
 
 function slug (name, used) {

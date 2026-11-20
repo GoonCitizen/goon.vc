@@ -82,6 +82,8 @@ class Presence {
    * @param {Array<string>} [settings.announcements] Discord text channel ids that receive game
    *   announcements. The only thing the game posts; its `!` commands are never answered
    *   (`/idlerpg` is services/commands.js).
+   * @param {string} [settings.prefix] Text prepended to every announcement, so a
+   *   local bot's posts are distinct from production. Empty posts the game text as written.
    * @param {Object} [settings.operations] Operations service (or any emitter with `gateway` / `discord`).
    * @param {Object} [settings.community] services/community.js: plug the game into its shared
    *   Doorman and Discord adapter instead of running our own (`operations` then only reports
@@ -100,6 +102,7 @@ class Presence {
       sources: DEFAULT_SOURCES,
       channels: [],
       announcements: [],
+      prefix: '',
       operations: null,
       gateway: true,
       guildId: null
@@ -189,6 +192,19 @@ class Presence {
   }
 
   /**
+   * Announcement body as it will be posted. A configured prefix is prepended
+   * so this instance's posts can be told apart from production.
+   * @param {string} text Game text.
+   * @returns {string}
+   */
+  announcementText (text) {
+    const body = String(text == null ? '' : text);
+    const prefix = String(this.settings.prefix || '').replace(/[\r\n]/g, ' ').trim();
+    if (!prefix) return body;
+    return `${prefix} ${body}`;
+  }
+
+  /**
    * Post a game announcement when it targets a configured announcement channel.
    * @param {Object} message `{ object, target }` from the game
    * @returns {Promise<Object|null>}
@@ -198,7 +214,7 @@ class Presence {
     const discord = this.discord;
     if (!discord || typeof discord.postToChannel !== 'function') return null;
     if (discord.client && typeof discord.client.isReady === 'function' && !discord.client.isReady()) return null;
-    return discord.postToChannel(message.target.split('/').pop(), String(message.object));
+    return discord.postToChannel(message.target.split('/').pop(), this.announcementText(message.object));
   }
 
   /**

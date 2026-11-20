@@ -39,18 +39,13 @@ function ago (iso, now) {
   return `${Math.round(hours / 24)} days`;
 }
 
-function ids (value) {
-  return [].concat(value == null ? [] : value).map(String);
-}
-
 /**
  * The waiting area's reviewers. Nothing is sent on its own: a reviewer runs
- * `/goon review` and gets the `member-review` DM script listing everyone
- * waiting (a sign-in only logs that someone is waiting). The script's
- * `members.review` action approves or denies the members picked; a member
- * someone else already reviewed is left as they are. Reviewers are Discord
- * user ids; the script `requires` "goon.vc reviewer", checked at start and
- * again before anything changes.
+ * `/goon review` and gets the `member-review` DM script. It shows one waiting
+ * officer at a time, with Approve, Turn away, and Leave waiting. Approving
+ * one does not decide the others. Reviewers are Discord user ids; the script
+ * `requires` "goon.vc reviewer", checked at start and again before anything
+ * changes.
  */
 class Reviews {
   /**
@@ -67,7 +62,8 @@ class Reviews {
       community: null,
       reviewers: [],
       waitingPath: '/waiting',
-      now: () => Date.now()
+      now: () => Date.now(),
+      officerOf: () => []
     }, Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)));
     this.reviewers = Array.from(new Set([].concat(this.settings.reviewers || [])
       .map((id) => String(id).trim())
@@ -144,7 +140,18 @@ class Reviews {
     return community.beginScript(SCRIPT, {
       user: `discord/users/${reviewerId}`,
       name: displayName,
-      context: { waiting: people(pending.length), waitingUrl: `${siteUrl}${this.settings.waitingPath}` }
+      context: {
+        reviewer: String(reviewerId),
+        waiting: people(pending.length),
+        waitingUrl: `${siteUrl}${this.settings.waitingPath}`,
+        card: '',
+        result: '',
+        done: 'no',
+        handled: [],
+        showing: null,
+        awaiting: 'no',
+        lines: []
+      }
     });
   }
 
@@ -172,58 +179,126 @@ class Reviews {
     return profile.username && profile.username !== name ? `${name} (@${profile.username})` : name;
   }
 
-  _describe (member) {
-    const rsi = (member.accounts || []).filter((account) => account.platform === 'rsi').map((account) => `RSI ${account.id}`);
-    return [
-      `Waiting ${ago(member.review.requestedAt, this.settings.now())}`,
-      member.inGuild ? 'in G00N SQUAD' : 'not in the G00N SQUAD Discord',
-      ...rsi
-    ].join(' · ');
+  officerOf (member) {
+    const listed = this.settings.officerOf(member);
+    return Array.isArray(listed) ? listed.map(String) : [];
+  }
+
+  _card (member, waiting) {
+    const discord = (member.accounts || []).find((account) => account.platform === 'discord');
+    const profile = (discord && discord.profile) || {};
+    const orgs = this.officerOf(member);
+    const rsi = (member.accounts || []).filter((account) => account.platform === 'rsi').map((account) => account.id);
+    const lines = [
+      `**${waiting}** ${waiting === 1 ? 'officer is' : 'officers are'} waiting. This is the one who has waited longest.`,
+      '',
+      this.name(member),
+      discord ? `Discord @${profile.username || 'unknown'} (${discord.id})` : 'No Discord account on the profile',
+      orgs.length ? `Officer of ${orgs.join(', ')}` : 'Officer on record',
+      member.inGuild ? 'In the G00N SQUAD Discord' : 'Not in the G00N SQUAD Discord',
+      rsi.length ? `RSI ${rsi.join(', ')}` : null,
+      `Waiting ${ago(member.review && member.review.requestedAt, this.settings.now())}`,
+      '',
+      'Approve lets them claim an RSI handle. Turn away refuses this sign-in. Leave waiting keeps them in line and shows the next officer. Nobody else is changed.'
+    ];
+    return lines.filter((line) => line !== null).join('\n');
   }
 
   /**
-   * `goon.members.pending` choices: everyone waiting, minus those the
-   * reviewer already approved when asking whom to turn away.
-   * @param {Object} scope Script scope.
-   * @param {Object} step Normalized step.
+   * One decision from a button: `approve-<memberId>`, `deny-<memberId>`, or
+   * `skip-<memberId>`. Skip leaves that officer waiting.
+   * @param {string} action
+   * @param {string} id
+   * @param {string} reviewer Discord user id.
+   * @param {Object} context Live script context.
+   * @returns {Promise<void>}
+   */
+  async _decide (action, id, reviewer, context) {
+    if (action === 'skip') {
+      context.handled.push(id);
+      const member = await this.members.resolve(id);
+      context.lines.push(`${member ? this.name(member) : 'This officer'} left waiting.`);
+      return;
+    }
+    const status = action === 'approve' ? 'approved' : 'denied';
+    const result = await this.members.decideReview(id, status, { by: `discord:${reviewer}` }).catch(() => null);
+    const name = result && result.member ? this.name(result.member) : 'This officer';
+    if (!result) context.lines.push(`Could not update ${name}.`);
+    else if (!result.changed) context.lines.push(`${name} was already ${result.status}.`);
+    else context.lines.push(status === 'approved' ? `Approved ${name}.` : `Turned away ${name}.`);
+  }
+
+  /**
+   * `goon.members.pending` choices: Approve, Turn away, and Leave waiting for
+   * the officer who has waited longest. The previous button is applied here,
+   * before the next officer is shown, so one decision cannot include the rest.
+   * An empty list ends the script.
+   * @param {Object} scope Script scope. `context` and `answers` are the live session.
    * @returns {Promise<Array<Object>>}
    */
-  async choices (scope, step) {
-    const approved = step && step.saveAs === 'deny' ? ids(scope && scope.answers && scope.answers.approve) : [];
-    const pending = await this.members.pendingReviews();
-    return pending
-      .filter((member) => !approved.includes(member.id))
-      .map((member) => ({ id: member.id, label: this.name(member), description: this._describe(member) }));
+  async choices (scope) {
+    const context = (scope && scope.context) || {};
+    const answers = (scope && scope.answers) || {};
+    if (!Array.isArray(context.handled)) context.handled = [];
+    if (!Array.isArray(context.lines)) context.lines = [];
+    const reviewer = String(context.reviewer || '');
+    if (!this.isReviewer(reviewer)) {
+      context.done = 'yes';
+      context.awaiting = 'no';
+      context.result = 'Only goon.vc’s sign-in reviewers can review sign-ins.';
+      context.card = context.result;
+      return [];
+    }
+    const matched = /^(approve|deny|skip)-([0-9a-f]{16})$/.exec(String(answers.decide || ''));
+    if (matched) {
+      await this._decide(matched[1], matched[2], reviewer, context);
+      answers.decide = null;
+    } else if (context.awaiting === 'yes' && context.showing) {
+      await this._decide('skip', context.showing, reviewer, context);
+    }
+    const pending = (await this.members.pendingReviews()).filter((member) => !context.handled.includes(member.id));
+    if (!pending.length) {
+      context.done = 'yes';
+      context.showing = null;
+      context.awaiting = 'no';
+      const left = (await this.members.pendingReviews()).length;
+      const summary = context.lines.length ? context.lines.join('\n') : 'Nobody was waiting.';
+      const noun = `${left} ${left === 1 ? 'officer' : 'officers'}`;
+      context.result = left
+        ? `${summary}\n${noun} still waiting. Run \`/goon review\` for the next.`
+        : `${summary}\nNobody else is waiting.`;
+      context.card = context.result;
+      return [];
+    }
+    const member = pending[0];
+    context.done = 'no';
+    context.showing = member.id;
+    context.awaiting = 'yes';
+    context.card = this._card(member, pending.length);
+    return [
+      { id: `approve-${member.id}`, label: 'Approve' },
+      { id: `deny-${member.id}`, label: 'Turn away' },
+      { id: `skip-${member.id}`, label: 'Leave waiting' }
+    ];
   }
 
   /**
-   * `members.review`: approve and deny the members picked.
+   * `members.review`: the buttons were already applied one officer at a time.
+   * A decision still sitting on the session (the script ended without showing
+   * another officer) is applied here, and only that one.
    * @param {Object} session Script session view.
    * @returns {Promise<{ labels: { result: string } }>}
    */
   async apply (session) {
-    const reviewer = userOf(session);
+    const reviewer = userOf(session) || String(session && session.context && session.context.reviewer || '');
     if (!this.isReviewer(reviewer)) throw exposed('Only goon.vc’s sign-in reviewers can review sign-ins.');
-    const answers = session.answers || {};
-    const approve = ids(answers.approve);
-    const deny = ids(answers.deny).filter((id) => !approve.includes(id));
-    const done = { approved: [], denied: [], already: [] };
-    for (const [list, status] of [[approve, 'approved'], [deny, 'denied']]) {
-      for (const id of list) {
-        const result = await this.members.decideReview(id, status, { by: `discord:${reviewer}` }).catch(() => null);
-        if (!result) continue;
-        done[result.changed ? status : 'already'].push(this.name(result.member));
-      }
+    const answers = (session && session.answers) || {};
+    const matched = /^(approve|deny|skip)-([0-9a-f]{16})$/.exec(String(answers.decide || ''));
+    if (matched && matched[1] !== 'skip') {
+      await this.members.decideReview(matched[2], matched[1] === 'approve' ? 'approved' : 'denied', { by: `discord:${reviewer}` });
     }
-    const left = (await this.members.pendingReviews()).length;
-    this.emit('log', 'GOON.VC', `reviews: ${done.approved.length} approved, ${done.denied.length} turned away, ${left} still waiting`);
-    const lines = [];
-    if (done.approved.length) lines.push(`Approved: ${done.approved.join(', ')}.`);
-    if (done.denied.length) lines.push(`Turned away: ${done.denied.join(', ')}.`);
-    if (done.already.length) lines.push(`Already reviewed by someone else: ${done.already.join(', ')}.`);
-    if (!lines.length) lines.push('Nothing changed.');
-    lines.push(left ? `${people(left)} still waiting; run \`/goon review\` to see them.` : 'Nobody else is waiting.');
-    return { labels: { result: lines.join('\n') } };
+    const result = (session && session.context && session.context.result) || 'Nobody else is waiting.';
+    return { labels: { result } };
   }
 
   /**

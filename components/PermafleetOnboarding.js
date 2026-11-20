@@ -3,8 +3,6 @@
 const escapeHtml = require('../functions/escapeHtml');
 const Organizations = require('./Organizations');
 
-const PERMAFLEET_RSI_URL = 'https://robertsspaceindustries.com/orgs/PERMAFLEET';
-
 // Drawn from the pinned #getting-started, #alliance, #embassy, and #rules posts on the G00N SQUAD Discord.
 const BENEFITS = Object.freeze([
   ['A seat on the Council', 'Your org joins PERMAFLEET’s Council of 12 and gets a profile on our Organizations page, linked to your RSI page.'],
@@ -89,9 +87,9 @@ function renderHtml (props) {
           <p class="pf-links">${external(props.joinUrl, 'Join the Discord &raquo;')} · ${external(props.embassyUrl, 'Open #embassy &raquo;')}</p>
         </li>
         <li>
-          <h3>Tag your pilots</h3>
-          <p>Every pilot joins the <code>[PERMAFLEET]</code> org on RSI before undocking. Many of our operators shoot first and ask questions later; the tag is how they know you’re ours.</p>
-          <p class="pf-links">${external(PERMAFLEET_RSI_URL, 'Apply on RSI &raquo;', 'Opens the RSI org page; choose “Join us now!” there')}</p>
+          <h3>No org yet?</h3>
+          <p>Members of a PERMAFLEET member organization do not join the PERMAFLEET org. Apply to one of our member orgs to receive permissions.</p>
+          <p class="pf-links"><a href="${escapeHtml(props.organizationsPath)}">Member organizations &raquo;</a></p>
         </li>
         <li>
           <h3>Name your officers</h3>

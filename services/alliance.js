@@ -980,6 +980,25 @@ class Alliance {
     const members = await this._memberCounts(proposal);
     const mine = memberId ? members.latest.get(memberId) : null;
     const counts = Array.from(members.latest.values());
+    const memberVotes = [];
+    for (const vote of counts) {
+      const row = {
+        choice: vote.choice,
+        castAt: vote.castAt,
+        platform: vote.platform,
+        signer: vote.signer,
+        bridge: vote.bridge,
+        id: vote.frameId,
+        frame: vote.frame
+      };
+      const voter = vote.member ? await this._member(vote.member) : null;
+      const orgs = this._representing(new Set(((voter && voter.accounts) || []).map((account) => account.key)));
+      if (voter && voter.displayName && orgs.length) {
+        row.name = voter.displayName;
+        row.orgs = orgs.map((org) => ({ symbol: org.symbol, name: org.name }));
+      }
+      memberVotes.push(row);
+    }
     const bridges = [];
     for (const bid of new Set(counts.map((vote) => vote.bridge).filter((bid) => bid && (!this.bridge || bid !== this.bridge.id)))) {
       const descriptor = await this.store.get(`/bridge/${bid}`);
@@ -1007,6 +1026,10 @@ class Alliance {
             Object.assign(view.officers, { yes: officers.yes, no: officers.no, abstain: officers.abstain, waiting: officers.waiting });
           }
         }
+        const advisors = memberVotes
+          .filter((vote) => (vote.orgs || []).some((named) => named.symbol === org.symbol))
+          .map((vote) => ({ name: vote.name, choice: vote.choice, castAt: vote.castAt }));
+        if (advisors.length) view.advisors = advisors;
         return view;
       }),
       votes: proposal.votes.map((vote) => {
@@ -1031,15 +1054,7 @@ class Alliance {
         id: vote.frameId,
         frame: vote.frame
       })),
-      memberVotes: counts.map((vote) => ({
-        choice: vote.choice,
-        castAt: vote.castAt,
-        platform: vote.platform,
-        signer: vote.signer,
-        bridge: vote.bridge,
-        id: vote.frameId,
-        frame: vote.frame
-      })),
+      memberVotes,
       bridge: this._bridgeView(),
       bridges,
       you: {

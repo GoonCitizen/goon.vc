@@ -772,6 +772,14 @@
         .pf-path { grid-template-columns: 1fr; }
       }
 
+      .pf-operate .pf-facts { margin-top: 0; }
+      .pf-operate .pf-facts dd { font-weight: 500; color: var(--pf-muted); }
+      .pf-operate .pf-facts dd strong { color: var(--pf-text); }
+      .pf-operate .pf-facts dd a { font-weight: 700; color: var(--pf-signal); text-decoration: none; }
+      .pf-operate .pf-facts dd a:hover { text-decoration: underline; }
+      .pf-operate code { color: var(--pf-text); }
+      .pf-operate > .pf-links { margin-top: 2rem; text-align: center; }
+
       .pf-onboarding .pf-facts { margin-top: 0; }
       .pf-onboarding .pf-facts dd { font-weight: 500; color: var(--pf-muted); }
       .pf-onboarding .pf-facts dd strong { color: var(--pf-text); }
@@ -919,6 +927,28 @@
       .member-rename-form select { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; color: #fff; font: inherit; max-width: 100%; padding: 0.45em 0.6em; }
       .member-rename-form .goon-button { margin: 0; }
       .members-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
+
+      .admin-page { display: none; margin: 3em auto; max-width: 46em; padding: 0 1em; text-align: left; }
+      .admin-page h1 { text-align: center; }
+      .admin-page [hidden] { display: none !important; }
+      .admin-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.5em 0; padding: 1em; }
+      .admin-page h2 { font-size: 1.2em; margin-top: 0; }
+      .admin-status { min-height: 1.2em; overflow-wrap: anywhere; text-align: center; }
+      .admin-note { color: #999; }
+      .admin-page input[type="search"] { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; box-sizing: border-box; color: #fff; font: inherit; margin: 0.5em 0 1em; padding: 0.45em 0.6em; width: 100%; }
+      .admin-list, .admin-accounts { list-style: none; margin: 0; padding: 0; }
+      .admin-list > li { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.55em 0; }
+      .admin-list > li:first-child { border-top: 0; }
+      .admin-review { border-top: 1px solid rgba(255, 255, 255, 0.12); padding: 0.75em 0; }
+      .admin-review:first-child { border-top: 0; }
+      .admin-review p { margin: 0.25em 0; }
+      .admin-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
+      .admin-actions .goon-button { font-size: 0.85em; margin: 0; }
+      .admin-page small, .admin-meta { color: #999; }
+      .admin-accounts li { padding: 0.25em 0 0.25em 0.5em; }
+      .admin-links { display: flex; flex-wrap: wrap; gap: 0.75em; justify-content: center; margin-top: 1em; }
+      .site-admin-link { display: block; margin-top: 0.4em; text-align: center; }
+      .site-admin-link[hidden] { display: none !important; }
 
       .events-page { display: none; margin: 0 auto; max-width: 1920px; padding: 1.5em 1em 3em; }
       .events-add-bot { padding-top: 2em; text-align: center; }
@@ -1090,6 +1120,16 @@
       #idlerpg-card { border-color: #4C1D95; border-style: dashed; }
       #idlerpg-card .operation-name a { color: #c4b5fd; }
 
+      .tools-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
+      .tools-page > h1, .tools-page > .operations-intro { text-align: center; }
+      .tool-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 1em 3em; text-align: left; background: transparent; overflow: visible; }
+      .tool-page .page-back { text-align: left; }
+      .tool-sheet {
+        --line: #5a5a5a; --ink: #eee; --mute: #aaa; --acc: #fff; --acc-ink: #222;
+        --goon: #8f1d1d; --goon-hot: #b32626;
+        background: transparent; color: #ddd; overflow: visible;
+      }
+
       .drills-page { display: none; margin: 0 auto; max-width: 38em; padding: 0 1em 3em; text-align: left; }
       .drills-page > h1, .drills-page > .operations-intro { text-align: center; }
       .drill-page { display: none; margin: 0 auto; max-width: 1180px; padding: 0 0 3em; }
@@ -1250,6 +1290,31 @@
       .market-section h2 { font-size: 1.1em; letter-spacing: 0.06em; margin: 0 0 0.75em; }
       .market-muted { color: #aaa; }
       .market-page [hidden] { display: none !important; }
+
+      .bounties-page, .bounty-page { display: none; margin: 3em auto; max-width: 40em; padding: 0 1em 3em; text-align: left; }
+      .bounties-page h1, .bounty-page h1 { text-align: center; }
+      .bounties-page [hidden], .bounty-page [hidden] { display: none !important; }
+      .bounties-page section, .bounty-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.25em 0; padding: 1em; }
+      .bounty-card { color: inherit; display: block; text-decoration: none; }
+      .bounty-card:hover { background: rgba(255, 255, 255, 0.06); }
+      .bounty-card small, .bounty-meta { color: #999; }
+      .bounty-form { display: flex; flex-direction: column; gap: 0.6em; }
+      .bounty-form input, .bounty-form textarea { background: #111; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 4px; color: #fff; font: inherit; padding: 0.45em 0.6em; }
+      .bounty-actions { display: flex; flex-wrap: wrap; gap: 0.5em; }
+      .bounty-actions .goon-button { margin: 0; }
+      .bounty-status { min-height: 1.2em; text-align: center; }
+
+      .discord-page { display: none; margin: 3em auto; max-width: 42em; padding: 0 1em 3em; text-align: left; }
+      .discord-page h1, .discord-page .discord-lead { text-align: center; }
+      .discord-page [hidden] { display: none !important; }
+      .discord-page section { border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; line-height: 1.45; margin: 1.25em 0; padding: 1em 1.1em; }
+      .discord-page h2 { font-size: 1.15em; margin: 0 0 0.4em; }
+      .discord-page code { font-size: 0.95em; overflow-wrap: anywhere; }
+      .discord-page .discord-meta { color: #999; }
+      .discord-page ul { margin: 0.4em 0 0; padding-left: 1.2em; }
+      .discord-page .discord-actions { display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: center; margin: 1em 0; }
+      .discord-page .discord-actions .goon-button { margin: 0; }
+      .discord-status { min-height: 1.2em; text-align: center; }
     </style>
   </head>
   <body>
@@ -1329,7 +1394,7 @@
       <div id="login-session" class="login-session"></div>
       <p><small>Not in the Squad yet? <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the Discord &raquo;</a></small></p>
     </main>
-    <main id="rsi-page" class="rsi-page" data-path="/rsi" data-api="/services/members/rsi" data-fleet="/services/hangar">
+    <main id="rsi-page" class="rsi-page" data-path="/services/rsi" data-api="/services/members/rsi" data-fleet="/services/hangar">
       <h1>Claim your RSI profile</h1>
       <p class="rsi-intro">Link your Star Citizen handle to your G00N SQUAD profile. You prove it’s yours by putting a short code in your public RSI bio for a minute; then you can sync your hangar with <code>/hangar</code> on Discord.</p>
       <p id="rsi-status" class="rsi-status" role="status"></p>
@@ -1369,12 +1434,12 @@
       <h1>Waiting area</h1>
       <p id="waiting-status" class="waiting-status" role="status"></p>
       <section id="waiting-signed-out" hidden>
-        <p>New members sign in with Discord, then wait here while an alliance administrator looks them over.</p>
+        <p>New members sign in with Discord. Officers on record wait here while an administrator approves them. Everyone else can claim an RSI handle without waiting.</p>
         <p class="waiting-links"><a class="goon-button" href="/sessions">Sign in</a></p>
       </section>
       <section id="waiting-pending" hidden>
         <h2>You’re in line</h2>
-        <p>Thanks for signing in<span id="waiting-name"></span>. An alliance administrator reviews every new Discord sign-in and has been told you’re here. There’s nothing else to do: come back to this page to see the result.</p>
+        <p>Thanks for signing in<span id="waiting-name"></span>. An administrator reviews officer sign-ins. There’s nothing else to do: come back to this page to see the result.</p>
         <p class="waiting-since" id="waiting-since"></p>
         <p id="waiting-join" hidden>You’re not in our Discord yet; joining it helps. <a href="https://discord.com/servers/g00n-squad-1190527980120850493">Join the G00N SQUAD Discord &raquo;</a></p>
         <p class="waiting-links"><a href="/events">Events</a> <a href="/operations/PERMAFLEET/squadrons">PERMAFLEET squadrons</a></p>
@@ -1382,7 +1447,7 @@
       <section id="waiting-approved" hidden>
         <h2>You’re approved</h2>
         <p>Welcome to G00N SQUAD. You can claim your Star Citizen handle next.</p>
-        <p class="waiting-links"><a class="goon-button" href="/rsi">Claim your RSI profile</a> <a href="/events">Events</a> <a href="/">Home</a></p>
+        <p class="waiting-links"><a class="goon-button" href="/services/rsi">Claim your RSI profile</a> <a href="/events">Events</a> <a href="/">Home</a></p>
       </section>
       <section id="waiting-denied" hidden>
         <h2>Not approved</h2>
@@ -1436,13 +1501,13 @@
             <select id="member-rename-choice" aria-label="Display name"></select>
             <button type="button" id="member-rename-save" class="goon-button" disabled>Save</button>
           </p>
-          <p id="member-rename-none" hidden>Link your Discord account or <a href="/rsi">claim your RSI handle</a> to choose a display name.</p>
+          <p id="member-rename-none" hidden>Link your Discord account or <a href="/services/rsi">claim your RSI handle</a> to choose a display name.</p>
           <p id="member-rename-status" class="members-status" role="status"></p>
         </section>
         <section>
           <h2>Linked accounts</h2>
           <ul id="member-accounts" class="member-accounts"></ul>
-          <p id="member-rsi-none" hidden>No RSI handle yet. <a href="/rsi">Claim your RSI profile »</a></p>
+          <p id="member-rsi-none" hidden>No RSI handle yet. <a href="/services/rsi">Claim your RSI profile »</a></p>
         </section>
         <section id="member-add">
           <h2>Add an account</h2>
@@ -1451,15 +1516,88 @@
           <p class="members-links">
             <button type="button" id="member-add-discord" class="goon-button" disabled>Link Discord</button>
             <button type="button" id="member-add-passport" class="goon-button" disabled>Link a Passport identity</button>
-            <a class="goon-button" href="/rsi">Claim an RSI handle</a>
+            <a class="goon-button" href="/services/rsi">Claim an RSI handle</a>
           </p>
           <p id="member-discord-held" class="members-note" hidden><small></small></p>
         </section>
         <p class="members-links">
           <a class="goon-button" href="/sessions">Sign-in page</a>
-          <a class="goon-button" href="/rsi">RSI profile and hangar</a>
+          <a class="goon-button" href="/services/rsi">RSI profile and hangar</a>
         </p>
         <p class="members-note"><small>Only you can see this page.</small></p>
+      </div>
+    </main>
+    <main id="admin-page" class="admin-page" data-path="/admin">
+      <h1>Admin</h1>
+      <p id="admin-status" class="admin-status" role="status"></p>
+      <section id="admin-signed-out" hidden>
+        <p>Sign in to open the operator panel.</p>
+        <p class="admin-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="admin-denied" hidden>
+        <p>This page isn’t available.</p>
+      </section>
+      <div id="admin-panel" hidden>
+        <p id="admin-you" class="admin-note"></p>
+        <section>
+          <h2>Organization setup</h2>
+          <p class="admin-note">Each PERMAFLEET org, its Discord, and the officers on record.</p>
+          <div id="admin-orgs"></div>
+        </section>
+        <section>
+          <h2>Officers waiting for review</h2>
+          <p id="admin-reviews-note" class="admin-note">Only officers on record wait here. Everyone else can claim an RSI handle on their own.</p>
+          <p id="admin-review-status" class="admin-status" role="status"></p>
+          <div id="admin-reviews"></div>
+        </section>
+        <section>
+          <h2>Campaigns</h2>
+          <p class="admin-links"><a href="/campaigns">Inspect and send &raquo;</a></p>
+          <p id="admin-campaigns-note" class="admin-note" hidden></p>
+          <ul id="admin-campaigns" class="admin-list"></ul>
+        </section>
+        <section>
+          <h2>Check-ins</h2>
+          <p id="admin-checkins" class="admin-note"></p>
+        </section>
+        <section>
+          <h2>Welcome</h2>
+          <p id="admin-welcome" class="admin-note"></p>
+        </section>
+        <section>
+          <h2>Linked accounts</h2>
+          <p class="admin-note">Every member and the accounts linked to them.</p>
+          <input id="admin-filter" type="search" placeholder="Search name, handle, or id" aria-label="Search members">
+          <p id="admin-count" class="admin-note"></p>
+          <ul id="admin-members" class="admin-list"></ul>
+        </section>
+      </div>
+    </main>
+    <main id="campaigns-page" class="campaigns-page" data-path="/campaigns">
+      <h1>Campaigns</h1>
+      <p id="campaigns-status" class="campaigns-status" role="status"></p>
+      <section id="campaigns-signed-out" hidden>
+        <p>Sign in to inspect campaigns.</p>
+        <p class="campaigns-links"><a class="goon-button" href="/sessions">Sign in</a></p>
+      </section>
+      <section id="campaigns-denied" hidden>
+        <p>This page isn’t available.</p>
+      </section>
+      <div id="campaigns-panel" hidden>
+        <section id="campaigns-new">
+          <h2>New campaign</h2>
+          <form id="campaigns-create">
+            <label>Script
+              <select id="campaigns-script" required></select>
+            </label>
+            <label>Message
+              <textarea id="campaigns-message" maxlength="1800" placeholder="Optional. The script carries the conversation when this is empty."></textarea>
+            </label>
+            <p class="campaigns-actions"><button class="goon-button" type="submit">Create draft</button></p>
+          </form>
+        </section>
+        <p id="campaigns-note" class="campaigns-note"></p>
+        <ul id="campaigns-list" class="campaigns-list"></ul>
       </div>
     </main>
     <main id="events-page" class="events-page">
@@ -1670,17 +1808,6 @@
           </div>
         </article>
 <article class="org-card">
-          <img class="org-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="A.I.M.O.S. logo" loading="lazy">
-          <div class="org-card-body">
-            <h2 class="org-name"><a href="/organizations/AIMOS">A.I.M.O.S.</a></h2>
-            <p class="org-meta"><span class="org-symbol">[AIMOS]</span> · 149 members · Syndicate · Hardcore · Role play</p>
-            <span class="org-discord" data-org-discord="AIMOS" hidden></span>
-            <p class="org-focus">Focus: Resources / Security</p>
-            <p class="org-summary">Armored Interstellar Mercenary Operations Syndicate</p>
-            <div class="org-links"><a class="goon-button" href="/organizations/AIMOS">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
-          </div>
-        </article>
-<article class="org-card">
           <img class="org-logo" src="https://theverse.robertsspaceindustries.com/r1dtzznb1edd4/logo.png" alt="Risky Business logo" loading="lazy">
           <div class="org-card-body">
             <h2 class="org-name"><a href="/organizations/IDBC">Risky Business</a></h2>
@@ -1691,12 +1818,45 @@
             <div class="org-links"><a class="goon-button" href="/organizations/IDBC">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/IDBC" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/IDBC" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
           </div>
         </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/zlkpobg5law9kr/logo/H0K-Logo.png" alt="House of Khans logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/H0K">House of Khans</a></h2>
+            <p class="org-meta"><span class="org-symbol">[H0K]</span> · 36 members · Corporation · Regular · Role play</p>
+            <span class="org-discord" data-org-discord="H0K" hidden></span>
+            <p class="org-focus">Focus: Security / Engineering</p>
+            <p class="org-summary">House of Khans is a Community that strives to bring a good fight and fun anywhere we go! Our goal is to maintain a mature a fun loving culture in our group. If you think you’re a good fit you’re welcome to join us!</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/H0K">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/H0K" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/H0K" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/nlf8nubibgbjnr/logo/OBSX-Logo.png" alt="Obsidia logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/OBSX">Obsidia</a></h2>
+            <p class="org-meta"><span class="org-symbol">[OBSX]</span> · 9 members · Syndicate · Regular</p>
+            <span class="org-discord" data-org-discord="OBSX" hidden></span>
+            <p class="org-focus">Focus: Bounty Hunting / Piracy</p>
+            <p class="org-summary">Obsidia does not accept all who seek entry. We are a covert directive — a sovereign force forged from discipline, precision, and resolve. Every operative is hand-selected, trained, and trusted with missions beyond ordinary reach.</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/OBSX">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/OBSX" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/OBSX" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
+<article class="org-card">
+          <img class="org-logo" src="https://theverse.robertsspaceindustries.com/99wqffbzqko9v/logo.png" alt="Monkey Business logo" loading="lazy">
+          <div class="org-card-body">
+            <h2 class="org-name"><a href="/organizations/MB">Monkey Business</a></h2>
+            <p class="org-meta"><span class="org-symbol">[MB]</span> · 12 members · Organization · Casual</p>
+            <span class="org-discord" data-org-discord="MB" hidden></span>
+            <p class="org-focus">Focus: Social / Security</p>
+            <p class="org-summary">Welcome to Space Monkey Universal Services. We’re a lawful, casual Star Citizen org built around industry, security, trade, and dependable teamwork. Casual community. Serious capability. Apes Together Strong!</p>
+            <div class="org-links"><a class="goon-button" href="/organizations/MB">Profile</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/SMUS" target="_blank" rel="noopener">RSI page</a><a class="goon-button" href="https://robertsspaceindustries.com/orgs/SMUS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply</a></div>
+          </div>
+        </article>
       </div>
       <section class="red-army-block" id="red-army" aria-labelledby="red-army-teaser-title">
         <h2 id="red-army-teaser-title">RED ARMY</h2>
         <p>Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.</p>
         <div data-red-army="teaser" hidden></div>
-        <p class="red-army-more"><a href="/red-army">RED ARMY roster &raquo;</a></p>
+        <p class="red-army-more"><a href="/operations/red-army">RED ARMY roster &raquo;</a></p>
       </section>
       <section class="org-roster-cta" id="add-your-organization" aria-labelledby="org-roster-cta-title">
         <h2 id="org-roster-cta-title">Want to add your organization to the roster?</h2>
@@ -1809,7 +1969,7 @@
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE" target="_blank" rel="noopener">View on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/TRDE/members" target="_blank" rel="noopener">Members</a>
-            
+            <a class="goon-button" href="https://discord.gg/GGMQYSf5S7" target="_blank" rel="noopener">Discord</a>
           </div>
           <details class="org-section" open>
             <summary>History</summary>
@@ -1917,7 +2077,7 @@
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT" target="_blank" rel="noopener">View on RSI</a>
             <a class="goon-button" href="https://robertsspaceindustries.com/orgs/4MCONTRACT/members" target="_blank" rel="noopener">Members</a>
-            
+            <a class="goon-button" href="https://discord.gg/4m-contractors" target="_blank" rel="noopener">Discord</a>
           </div>
           <details class="org-section" open>
             <summary>History</summary>
@@ -1928,46 +2088,6 @@
           </details><details class="org-section">
             <summary>Charter</summary>
             <p>4M-CONTRACTORS STAR CITIZEN ORGANIZATION CHARTER</p><p>Article I: Name and Purpose</p><p>The name of this organization shall be “4M-CONTRACTORS,” hereinafter referred to as “the Organization.”</p><p>The primary purpose of the Organization is to engage in activities that provide its members with opportunities for camaraderie, exploration, and mutual support within the Star Citizen universe. While embracing the lawful aspects of the verse, the Organization acknowledges the pursuit of activities with a thematic focus on exploration, trade, and defense, including a distinct bent toward piracy when deemed necessary or strategic.</p><p>Article II: Membership</p><p>Membership in the Organization is open to all individuals who share a genuine interest in participating in the verse of Star Citizen and subscribe to the Organization’s principles, regardless of their chosen career paths.</p><p>Potential members shall submit an application through the Organization’s designated channels, including a brief statement of intent and gameplay preferences.</p><p>Membership may be revoked if a member’s actions are deemed in violation of the Organization’s Code of Conduct or are contrary to the spirit of the Organization’s thematic focus.</p><p>Article III: Code of Conduct</p><p>All members shall conduct themselves in a manner that upholds the reputation of the Organization.</p><p>Members shall refrain from targeting or exploiting new players, intentionally causing grief, or engaging in actions that harm the experience of others outside the bounds of the Organization’s thematic focus.</p><p>In pursuit of piracy activities, members shall follow a strict “no unnecessary harm” policy, avoiding excessive violence or undue hardship on other players or NPCs.</p><p>Article IV: Leadership</p><p>The Organization shall be led by a Council, consisting of Bosses, Captains and select Lieutenants, responsible for different aspects of the Organization’s activities, including exploration, trade, defense, and piracy.</p><p>The Council shall make decisions through open discussion and majority vote, ensuring that all members have a voice in the direction of the Organization. Bosses oversee the council in their duties and activities and have final say during disputes.</p><p>Article V: Activities and Operations</p><p>The Organization shall engage in various activities, including but not limited to exploration of uncharted regions, legitimate trading ventures, providing defense for its members, and targeted piracy operations.</p><p>Piracy operations shall be executed strategically, targeting specific opportunities while minimizing collateral damage and adhering to the Organization’s “no unnecessary harm” policy.</p><p>Article VI: Disputes and Conflict Resolution</p><p>Internal disputes shall be resolved through open communication and, if necessary, mediated discussions led by the Bosses of the Organization.</p><p>In-game conflicts arising from piracy activities shall be dealt with in adherence to the Organization’s principles, striving to maintain a balance between immersion and ethical considerations.</p><p>We, the undersigned, hereby adopt and enact this Charter.</p><p>Signed,</p><p>The Bosses</p><p>Founders, 4M-CONTRACTORS</p>
-          </details>
-        </div>
-      </article>
-      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-27.</p>
-      <footer>
-        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
-        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
-        <div><small>&copy; big lol</small></div>
-      </footer>
-    </main>
-<main id="org-AIMOS" class="organization-page" data-symbol="AIMOS">
-      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
-      <article class="org-profile">
-        <img class="org-banner" src="https://robertsspaceindustries.com/media/vsb1jh3jn8rqwr/banner/AIMOS-Banner.png" alt="" loading="lazy">
-        <header class="org-profile-head">
-          <img class="org-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="A.I.M.O.S. logo" loading="lazy">
-          <h1>A.I.M.O.S.</h1>
-        </header>
-        <div class="org-profile-body">
-          <p class="org-meta"><span class="org-symbol">[AIMOS]</span> · 149 members · Syndicate · Hardcore · Role play</p>
-          <p class="org-meta">Listed on RSI as <strong>A.I.M.O.S</strong></p>
-          <p class="org-focus">Focus: Resources / Security</p>
-          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
-          <span class="org-discord" data-org-discord="AIMOS" hidden></span>
-          <p>Armored Interstellar Mercenary Operations Syndicate</p>
-          <div class="org-actions">
-            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
-            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS" target="_blank" rel="noopener">View on RSI</a>
-            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/AIMOS/members" target="_blank" rel="noopener">Members</a>
-            <a class="goon-button" href="http://discord.gg/aimos" target="_blank" rel="noopener">Comms</a>
-          </div>
-          <details class="org-section" open>
-            <summary>History</summary>
-            <p>Currently in the making.</p>
-          </details><details class="org-section">
-            <summary>Manifesto</summary>
-            <p>Through dedication, perseverance, and unbreakable will, we will overcome any obstacle before us.</p>
-          </details><details class="org-section">
-            <summary>Charter</summary>
-            <p>A.I.M.O.S.</p><p>ORGANIZATIONAL CHARTER</p><p>Armored Interstellar Mercenary Operations Syndicate</p><p>Founding Principles | Organizational Philosophy | Member Rights | Leadership Doctrine | Alliance Framework</p><p>PREAMBLE — WHY WE EXIST</p><p>A.I.M.O.S. was established on the belief that an organization is only as strong as the people who comprise it.</p><p>We recognize that Star Citizen is a game meant to be enjoyed, explored, and experienced together. An organization should enhance that experience, not restrict it.</p><p>We reject the idea that effective leadership requires blind obedience, that rank determines someone’s worth, or that personal circumstances should prevent someone from participating in meaningful organizational activities.</p><p>Our purpose is to create a sustainable, active, and capable community where individuals can develop their abilities, build lasting friendships, pursue their ambitions, and participate in operations at every level.</p><p>We believe in structure without oppression, discipline without disrespect, leadership without ego, and success without sacrificing enjoyment.</p><p>We are not here to own our members. We are here to empower them.</p><p>ARTICLE I — FOUNDATIONAL PRINCIPLES</p><p>All organizational decisions, policies, and leadership actions shall be guided by five foundational principles.</p><p>1. Loyalty</p><p>Loyalty is earned through mutual trust, consistency, and shared commitment. We stand behind our members, support one another through difficulties, and recognize the importance of protecting the community we’ve built.</p><p>2. Respect</p><p>Every member deserves to be treated with dignity, regardless of rank, experience, ability, background, or contribution. Authority does not excuse disrespect, intimidation, or abuse.</p><p>3. Friendship</p><p>We are a gaming community before we are a military-style organization. Building friendships, enjoying one another’s company, and creating memorable experiences are fundamental to our identity.</p><p>4. Opportunity</p><p>Every member should have the opportunity to learn, develop, lead, participate, and succeed. We invest in people rather than simply extracting value from their participation.</p><p>5. Enjoyment</p><p>The enjoyment of our members takes priority over organizational statistics, artificial activity requirements, and unnecessary competition. Success is meaningful only when the people achieving it enjoy the experience.</p><p>ARTICLE II — MEMBER AUTONOMY AND INDIVIDUAL FREEDOM</p><p>A.I.M.O.S. recognizes the individual independence of its members.</p><p>Membership does not constitute ownership of a person’s time, gameplay, personal decisions, or individual ambitions.</p><p>Members retain the freedom to:</p><p>Pursue personal objectives and independent gameplay.</p><p>Participate in activities according to their availability and interests.</p><p>Develop individual skills and professional specialties.</p><p>Express constructive opinions, disagreements, and recommendations.</p><p>Pursue leadership opportunities and personal advancement.</p><p>Maintain outside friendships and relationships with other organizations, subject to reasonable operational and security requirements.</p><p>No member should feel obligated to sacrifice their enjoyment of the game to satisfy another member’s ego, personal ambitions, or unnecessary demands.</p><p>Leadership exists to provide direction, resources, and opportunity, not to dictate how someone must enjoy their game.</p><p>ARTICLE III — ACCESSIBILITY AND INCLUSIVE PARTICIPATION</p><p>A.I.M.O.S. is committed to making organizational participation as accessible as reasonably possible.</p><p>We recognize that members have different schedules, abilities, communication preferences, experience levels, and real-life circumstances.</p><p>These differences should never automatically disqualify someone from meaningful participation.</p><p>The organization shall continuously pursue improved methods of:</p><p>Communication and operational coordination.</p><p>Training and knowledge distribution.</p><p>Alternative participation methods.</p><p>Accessible organizational systems.</p><p>Flexible role assignments.</p><p>New-player integration and mentorship.</p><p>Operational planning that accommodates different capabilities.</p><p>Where traditional methods create unnecessary barriers, we seek alternative solutions.</p><p>A member’s ability to contribute should be evaluated by what they can reasonably accomplish with the appropriate support, not simply by whether they meet a conventional standard.</p><p>We don’t look for reasons someone cannot participate. We look for ways to make participation possible.</p><p>ARTICLE IV — LEADERSHIP AND ACCOUNTABILITY</p><p>A.I.M.O.S. recognizes organizational hierarchy as a practical necessity for coordinating complex operations, managing resources, and maintaining accountability.</p><p>However, rank is a responsibility, not a privilege of superiority.</p><p>Leadership is expected to:</p><p>Lead by example.</p><p>Treat members with consistency and respect.</p><p>Provide guidance, mentorship, and opportunities for development.</p><p>Communicate expectations clearly.</p><p>Remain accountable for decisions and organizational conduct.</p><p>Recognize individual contributions.</p><p>Resolve disagreements professionally.</p><p>Prioritize organizational health over personal ego.</p><p>Members are encouraged to offer constructive criticism and communicate concerns through appropriate channels.</p><p>No leadership position grants immunity from accountability.</p><p>A good leader creates capable people, not dependent followers.</p><p>ARTICLE V — OPERATIONAL DOCTRINE</p><p>A.I.M.O.S. maintains an organized operational structure capable of conducting coordinated activities across Star Citizen.</p><p>We pursue excellence in combat, security, logistics, industry, intelligence, training, and other organizational disciplines.</p><p>Operational participation shall be based on preparation, communication, role awareness, and mutual cooperation.</p><p>During organized operations:</p><p>Members are expected to respect designated operational leadership.</p><p>Communications should remain clear, concise, and relevant.</p><p>Assigned responsibilities should be understood before execution.</p><p>Members should respect operational security and organizational procedures.</p><p>Constructive feedback and after-action reviews are encouraged.</p><p>Training and mistakes should be treated as opportunities for improvement.</p><p>Operational discipline is important because it protects the effectiveness and enjoyment of everyone involved.</p><p>However, operational structure does not extend into unnecessary control of personal gameplay outside designated activities.</p><p>We demand professionalism when it matters, not obedience for its own sake.</p><p>ARTICLE VI — KNOWLEDGE, DEVELOPMENT AND SHARED SUCCESS</p><p>A.I.M.O.S. believes knowledge should circulate throughout the organization rather than remain concentrated in positions of authority.</p><p>Experience should be shared. Opportunities should be developed. Success should create additional opportunities for others.</p><p>Members are encouraged to:</p><p>Teach and mentor less experienced players.</p><p>Share useful information and operational knowledge.</p><p>Develop new strategies and organizational solutions.</p><p>Pursue leadership and specialist positions.</p><p>Help establish sustainable income and gameplay opportunities.</p><p>Contribute to the development of organizational capabilities.</p><p>We do not measure someone’s worth solely by their current experience or resources.</p><p>We measure the strength of our organization by how effectively we help people grow.</p><p>Take the knowledge. Build your success. Bring that success back to the community.</p><p>ARTICLE VII — COMMUNITY STANDARDS</p><p>Every member shares responsibility for maintaining a welcoming, respectful, and functional community.</p><p>A.I.M.O.S. does not tolerate:</p><p>Harassment, intimidation, or targeted abuse.</p><p>Discrimination or deliberate exclusion.</p><p>Abuse of rank or organizational authority.</p><p>Deliberate disruption of organizational activities.</p><p>Knowingly compromising organizational security.</p><p>Repeated disrespect toward fellow members.</p><p>Disagreements are expected in any functioning community. They should be addressed through communication, reason, and appropriate leadership channels.</p><p>Our community should remain a place where members can relax, socialize, learn, and enjoy the game without unnecessary hostility.</p><p>ARTICLE VIII — ALLIANCE AND INTERORGANIZATIONAL RELATIONS</p><p>A.I.M.O.S. recognizes that cooperation between independent organizations creates opportunities that individual groups may not achieve alone.</p><p>We therefore establish an official alliance framework.</p><p>A.I.M.O.S. welcomes applications from organizations that share compatible values and demonstrate a willingness to cooperate respectfully.</p><p>Alliance relationships may include:</p><p>Joint operational planning and execution.</p><p>Mutual support and security cooperation.</p><p>Shared training and development.</p><p>Industry and logistical partnerships.</p><p>Intelligence and information exchange.</p><p>Recruitment and community development initiatives.</p><p>Coordinated events and organizational activities.</p><p>Alliance membership does not automatically dissolve an organization’s independence, leadership, identity, or internal structure.</p><p>Each alliance partner retains its organizational sovereignty unless otherwise agreed upon through mutual arrangements.</p><p>Cooperation must be founded on mutual benefit, respect, transparency, and clearly established expectations.</p><p>We believe independent organizations can remain independent while accomplishing more together.</p><p>ARTICLE IX — ORGANIZATIONAL ACTIVITY AND PARTICIPATION</p><p>A.I.M.O.S. strives to maintain an active community with opportunities available throughout the week.</p><p>We encourage consistent participation, communication, and community involvement.</p><p>However, real-life responsibilities, personal circumstances, and individual availability are respected.</p><p>Members are not expected to treat Star Citizen as an obligation or second occupation.</p><p>The organization shall prioritize maintaining opportunities for participation rather than imposing artificial activity requirements.</p><p>We want members to log in because they want to be here, because their friends are here, and because there is something worthwhile to experience.</p><p>ARTICLE X — GOVERNANCE AND AMENDMENTS</p><p>This charter establishes the foundational principles governing A.I.M.O.S.</p><p>Organizational policies, operational procedures, rank structures, and administrative guidelines shall remain consistent with its principles.</p><p>Leadership may establish additional procedures when necessary for organizational effectiveness, provided those procedures do not contradict the foundational rights and commitments established herein.</p><p>Members may propose amendments and improvements through appropriate organizational channels.</p><p>Significant amendments should receive leadership review and meaningful consideration of member feedback.</p><p>The charter exists to protect the organization and its people, not to become an instrument of unnecessary restriction.</p><p>THE A.I.M.O.S. DECLARATION</p><p>We are not defined by our ships, our weapons, our wealth, or our ranks.</p><p>We are defined by the people who stand beside us.</p><p>We believe loyalty is earned. Respect is mutual. Friendship is invaluable. Knowledge is meant to be shared. Leadership is a responsibility. And enjoyment is the reason we play.</p><p>We will adapt when circumstances demand it.</p><p>We will find solutions when others see obstacles.</p><p>We will create opportunities where none previously existed.</p><p>We will support our members, develop our capabilities, and build relationships that extend beyond individual operations.</p><p>We will never confuse organizational success with the personal subordination of our members.</p><p>We are here to build something people want to be part of, not something they feel obligated to serve.</p><p>A.I.M.O.S.</p><p>BREAK THE CHAINS. BUILD THE BROTHERHOOD. OWN YOUR SUCCESS.</p><p>Armored Interstellar Mercenary Operations Syndicate</p>
           </details>
         </div>
       </article>
@@ -2009,6 +2129,120 @@
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+<main id="org-H0K" class="organization-page" data-symbol="H0K">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/corp.jpg" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/zlkpobg5law9kr/logo/H0K-Logo.png" alt="House of Khans logo" loading="lazy">
+          <h1>House of Khans</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[H0K]</span> · 36 members · Corporation · Regular · Role play</p>
+          
+          <p class="org-focus">Focus: Security / Engineering</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="H0K" hidden></span>
+          <p>House of Khans is a Community that strives to bring a good fight and fun anywhere we go! Our goal is to maintain a mature a fun loving culture in our group. If you think you’re a good fit you’re welcome to join us!</p><p>Visit us on Discord – https://discord.gg/khans</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/H0K" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/H0K" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/H0K/members" target="_blank" rel="noopener">Members</a>
+            <a class="goon-button" href="https://discord.gg/khans" target="_blank" rel="noopener">Discord</a>
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>“There’s something special about getting together to kick someone’s ass.” – Patriarch</p><p>Established over a decade ago among the current Leadership cadre as a response to encroaching threats, House of Khans was officially formed and has grown ever since. HoK has had a historical presence in games such as EvE Online, Archeage, Life is Feudal, Rust, War Thunder, Arma III, and many more.</p><p>The Star Citizen Chapter of HoK specializes in boutique solutions that leverage Subject Matter Experts, networking, and our knowledge as advisors to help pilots traverse the universe better. Our members are rugged generalists that are capable and willing to complete their assigned mission.</p><p>Interested in joining? To be a Khan, ask a Khan!</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-27.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="org-OBSX" class="organization-page" data-symbol="OBSX">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://robertsspaceindustries.com/media/8x0k6pgqnr0mir/banner/OBSX-Banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://robertsspaceindustries.com/media/nlf8nubibgbjnr/logo/OBSX-Logo.png" alt="Obsidia logo" loading="lazy">
+          <h1>Obsidia</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[OBSX]</span> · 9 members · Syndicate · Regular</p>
+          
+          <p class="org-focus">Focus: Bounty Hunting / Piracy</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="OBSX" hidden></span>
+          <p>Obsidia does not accept all who seek entry. We are a covert directive — a sovereign force forged from discipline, precision, and resolve. Every operative is hand-selected, trained, and trusted with missions beyond ordinary reach.</p><p>Your future or exclusion of The Directive will be decided here.</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/OBSX" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/OBSX" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/OBSX/members" target="_blank" rel="noopener">Members</a>
+            
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>“From shadow, order.”</p><p>Obsidia did not arise from ambition, but from abandonment. It was never meant to exist beyond a black file buried in the UEE’s intelligence archives — Project Obsidia, a classified initiative designed to house and train precision units capable of surgical interdiction, counter-insurgency, and asset recovery. It was a quiet tool in a violent age: autonomous, deniable, and loyal only to those who held the keys. When the Messer regime fell, the Empire scrambled to erase its own sins. Countless shadow programs were dissolved, scattered, or “lost.” But Project Obsidia didn’t disappear — it fractured and evolved. A cadre of its surviving architects, tacticians, and operatives refused to be cast aside with the broken empire. Disillusioned by both imperial authoritarianism and the chaotic rise of outlaw factions, they severed ties to their past and went dark — taking with them valuable ships, sealed doctrines, and the core code of the Directive. What they built in the void was not a rebellion, nor a rogue fleet, nor a self-righteous militia.</p><p>They built Obsidia — a sovereign directive with its own doctrine, its own structure, and its own vision of order.</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>Modern-day Obsidia operates across Stanton, Pyro, Nyx, and soon beyond. It functions as a semi-public, high-discipline force, moving with minimal footprint but maximal impact. Unlike loud mercenary groups or bloated alliances, Obsidia functions through precision, cohesion, and intent. It doesn’t seek domination through noise. It doesn’t chase popularity or numbers. It selects. Its ranks are filled with those who understand the value of discipline over disorder, loyalty over fame, and quiet efficiency over empty spectacle. Its agents are trained to work as one — whether piloting through asteroid fields, breaching derelict hulls, stabilizing forward installations, or protecting economic networks under fire.</p><p>Obsidia is not a name you hear often. But when it arrives, it is already too late.</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>Obsidia’s Core Values</p><p>• Fidelitas – Loyalty to the Directive and the operator beside you. Trust is earned and guarded.</p><p>• Silentium – Speak with action. Let presence be quiet, and precision be final.</p><p>• Exactus – Every deployment, every movement, every strike must be measured. No waste. No hesitation.</p><p>These values guide every member, from new recruit to Council leadership.</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-27.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main id="org-MB" class="organization-page" data-symbol="MB">
+      <p class="page-back"><a href="/organizations">&larr; Organizations</a></p>
+      <article class="org-profile">
+        <img class="org-banner" src="https://theverse.robertsspaceindustries.com/k6v3syowy6rf8/banner.png" alt="" loading="lazy">
+        <header class="org-profile-head">
+          <img class="org-logo" src="https://theverse.robertsspaceindustries.com/99wqffbzqko9v/logo.png" alt="Monkey Business logo" loading="lazy">
+          <h1>Monkey Business</h1>
+        </header>
+        <div class="org-profile-body">
+          <p class="org-meta"><span class="org-symbol">[MB]</span> · 12 members · Organization · Casual</p>
+          <p class="org-meta">Listed on RSI as <strong>Space Monkey Universal Services</strong></p>
+          <p class="org-focus">Focus: Social / Security</p>
+          <p class="org-meta">Member of the <a href="/operations/PERMAFLEET">PERMAFLEET</a> alliance.</p>
+          <span class="org-discord" data-org-discord="MB" hidden></span>
+          <p>Welcome to Space Monkey Universal Services. We’re a lawful, casual Star Citizen org built around industry, security, trade, and dependable teamwork. Casual community. Serious capability. Apes Together Strong!</p>
+          <div class="org-actions">
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/SMUS" target="_blank" rel="noopener" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/SMUS" target="_blank" rel="noopener">View on RSI</a>
+            <a class="goon-button" href="https://robertsspaceindustries.com/orgs/SMUS/members" target="_blank" rel="noopener">Members</a>
+            <a class="goon-button" href="https://discord.gg/SpaceMonkey" target="_blank" rel="noopener">Discord</a>
+          </div>
+          <details class="org-section" open>
+            <summary>History</summary>
+            <p>OUR HISTORY</p><p>Space Monkey Universal Services grew from a simple idea: good people working together can accomplish more than they can alone.</p><p>The Monkey Wrench Fleet began as an industrial group focused on mining, hauling, salvage, and keeping its members moving. As the scale of those activities grew, the need for dependable security led to the formation of the Space Monkey Marine Corps. The Space Monkey Supply Syndicate later expanded our capabilities into procurement, trade, sourcing, and commercial coordination.</p><p>These complementary branches came together as Space Monkey Universal Services—a unified organization built around industry, security, and supply, without losing the welcoming community that made it possible.</p><p>Today, SMUS combines casual participation with the ability to coordinate serious operations. Our ambitions may grow, but our purpose remains the same: help one another succeed and build a crew people can depend on.</p><p>Apes Together Strong!</p><p>Join Now! discord.gg/SpaceMonkey</p>
+          </details><details class="org-section">
+            <summary>Manifesto</summary>
+            <p>OUR MANIFESTO</p><p>CASUAL COMMUNITY. SERIOUS CAPABILITY.</p><p>Space Monkey Universal Services exists to help people enjoy more of the Star Citizen universe together. We believe organized teamwork should open opportunities, not turn a game into a second job. New pilots and veterans alike deserve a place where they can contribute, learn, and count on their crew.</p><p>Our operational identity is straightforward: BUILD. SUPPLY. PROTECT. Our branches specialize in different work, but none is secondary to the others. Every successful expedition, trade, and security operation contributes to the strength of the whole organization.</p><p>THREE BRANCHES. ONE TROOP.</p><p>MONKEY WRENCH FLEET (MWF)</p><p>The fleet behind the fleet.</p><p>MWF is our industrial strength: mining, salvage, hauling, engineering, recovery, maintenance, transport, and large-scale logistics. Industrial work is an achievement in its own right, not merely preparation for someone else’s victory. MWF has the people, ships, and expertise to move operations forward.</p><p>SPACE MONKEY MARINE CORPS (SMMC)</p><p>You pay. We deploy. They fall.</p><p>SMMC is our lawful combat and security arm. Its crews undertake mercenary contracts, escorts, fleet defense, tactical operations, anti-piracy work, and the protection of people, cargo, and objectives. We fight to accomplish a mission or defend what matters—not to harass other players.</p><p>SPACE MONKEY SUPPLY SYNDICATE (SMSS)</p><p>Markets move. We move faster.</p><p>SMSS is our commercial and procurement arm. Its members navigate markets, trade goods, source rare equipment, acquire materials, coordinate contracts, and connect the organization with the resources it needs. It focuses on opportunity and acquisition rather than duplicating the industrial work of MWF.</p><p>THE WAY WE OPERATE</p><p>We value community over ego, competence over rank, and reliability over promises. Members are welcome to explore all three branches, help when they can, and play at their own pace. Attendance and roleplay are never compulsory. When we commit to a joint operation, we communicate, cooperate, and respect one another’s time.</p><p>We are a lawful organization. Piracy, scams, griefing, and violence without a legitimate objective have no place under our banner. We defend our members, fulfill legitimate contracts, and respect the wider community.</p><p>THE BENEFITS OF BELONGING</p><p>SMUS offers dependable teammates, organized industrial, commercial, and tactical activities, shared experience, recognition through earned ranks, and exclusive member pricing through the SMSS marketplace. Every member begins with a 10% store discount, increasing by 10 percentage points per earned rank to 60% at Rank 5.</p><p>One Organization. Three Divisions. Unlimited Opportunities.</p><p>APES TOGETHER STRONG.</p>
+          </details><details class="org-section">
+            <summary>Charter</summary>
+            <p>ARTICLE I — MEMBERSHIP</p><p>Space Monkey Universal Services (SMUS) welcomes Star Citizen players of all experience levels who support our values and lawful operating standards. No specific ship, profession, or prior experience is required for general membership.</p><p>Participation is voluntary. There are no mandatory weekly playtimes, deployments, or roleplay obligations. Members may work within any of the three branches and are encouraged to share knowledge and assist other players.</p><p>ARTICLE II — LEADERSHIP</p><p>Organization — Leader — Master Title</p><p>SMUS — TheyCallMeHero — Grand Simian</p><p>SMMC — ConvergedGaming — Ape-X Commander</p><p>SMSS — CurseofJericho — Magnate of Monkey Business</p><p>MWF — Milinko01 — Kong of Industry</p><p>ARTICLE III — RANKS &amp; MEMBER DISCOUNTS</p><p>All new members join as Rank 0: Space Monkey. Ranks 1–5 are earned through participation and contribution. Rank recognizes activity and service; it does not replace practical experience or make every senior member an automatic mission commander.</p><p>Rank — Title — SMSS Store Discount</p><p>5 — Prime Ape — 60%</p><p>4 — Branch Commander — 50%</p><p>3 — Senior Simian — 40%</p><p>2 — Monkey Major — 30%</p><p>1 — Monkey First Class — 20%</p><p>0 — Space Monkey — 10%</p><p>The discount starts at 10% upon joining and increases by 10 percentage points for each rank earned. It applies to all items listed for sale on the official SMSS UEX storefront:</p><p>https://uexcorp.space/marketplace/orgs/@JERICHOSC</p><p>ARTICLE IV — CODE OF CONDUCT</p><p>Respect. Treat fellow members and other players with courtesy. Harassment, discrimination, bullying, targeted abuse, and personal attacks are not tolerated.</p><p>Integrity. Do not scam, steal from fellow members, deliberately mislead teammates, or exploit the trust of the organization.</p><p>Cooperation. Follow the agreed plan when participating in an organized mission. Communicate honestly about your availability and ability to fulfill an assigned role.</p><p>Reputation. When representing SMUS, conduct yourself in a way that reflects our values of reliability, professionalism, and fair play.</p><p>No mandatory roleplay. Our ranks and branding are part of our identity, not an expectation of in-character conduct, military formalities, or blind obedience.</p><p>ARTICLE V — RULES OF ENGAGEMENT</p><p>SMUS is a lawful organization. Members may engage in legitimate security and mercenary contracts, self-defense, defense of fellow members, protection of assets or cargo, escort operations, anti-piracy actions, and the defense of operational objectives.</p><p>We do not engage in piracy or griefing under the SMUS banner. Attacking uninvolved players solely for entertainment at their expense, repeated malicious targeting, scams, and violence without a legitimate gameplay objective are prohibited.</p><p>Members may defend themselves, their crew, and their property against aggression. They are not expected to surrender ships or cargo to hostile players.</p><p>We fight for a reason, not simply because we can.</p><p>ARTICLE VI — ORGANIZED OPERATIONS</p><p>SMUS may organize mining expeditions, salvage missions, trade initiatives, freight convoys, escort contracts, fleet operations, tactical deployments, and community activities.</p><p>Joining an operation is optional. Once a member accepts a role, they should coordinate with the appointed operation leader, communicate changes in availability, and make a reasonable effort to fulfill their commitment.</p><p>Operational leaders coordinate the mission and assign responsibilities according to capability and the needs of the activity. Leadership exists to help the crew succeed, not to establish unnecessary authority.</p><p>ARTICLE VII — OUR COMMITMENT</p><p>SMUS strives to offer a welcoming community, dependable teammates, shared knowledge, worthwhile activities across all three branches, recognition of contributions, and exclusive SMSS member discounts—without compulsory attendance or roleplay.</p><p>We ask members to respect each other, contribute when they can, and remember that the organization is only as strong as the people who stand together.</p><p>CASUAL COMMUNITY. SERIOUS CAPABILITY.</p><p>APES TOGETHER STRONG.</p>
+          </details>
+        </div>
+      </article>
+      <p class="org-source">Organization details from the public RSI org pages, fetched 2026-10-27.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
     <main id="red-army-page" class="red-army-page">
       <h1>RED ARMY</h1>
       <p class="red-army-intro">Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god. Not a vote, and not a Fabric federation. <a href="/organizations">PERMAFLEET organizations</a>. <a href="/operations/PERMAFLEET/onboarding">How an organization joins</a>.</p>
@@ -2037,6 +2271,27 @@
           <div class="operation-links"><a class="goon-button" href="/drills">Open</a></div>
         </article>
 <article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/breakdown-tool">Breakdown planner</a></h2>
+          <p class="operation-tagline">The cheapest shop items to break down for the materials you want to craft.</p>
+          <p class="operation-summary">Prices and recipes for the current Star Citizen build.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/breakdown-tool">Open the planner</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/pdc-dashboard">PDC Dashboard</a></h2>
+          <p class="operation-tagline">Compare point-defense turrets and set the mounts on a Perseus or Polaris.</p>
+          <p class="operation-summary">Planning numbers only. Unverified, and they change with the patch.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/pdc-dashboard">Open the dashboard</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/resources/navigator">Navigator</a></h2>
+          <p class="operation-tagline">Quantum travel times from real starmap distances.</p>
+          <p class="operation-summary">Start with the jump between systems, then a planet, a moon, and a point. Time and fuel follow the drive and the tank.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/resources/navigator">Open the navigator</a></div>
+        </article>
+<article class="operation-card">
           <h2 class="operation-name"><a href="/tournaments">Tournaments</a></h2>
           <p class="operation-tagline">Single and double elimination brackets, best of n, with every result on record.</p>
           <p class="operation-summary">Squad tournaments, on record. Create one, score each game, and the winners are kept for posterity.</p>
@@ -2063,6 +2318,20 @@
           <p class="operation-summary">The G00N SQUAD Market forum on the web: every thread is a listing here, and every listing here is a thread there. Prices are in BTC; buy with 2-of-3 escrow between you, the seller, and goon.vc.</p>
           
           <div class="operation-links"><a class="goon-button" href="/services/market">Market</a><a class="goon-button" href="/services/discord/install">Add /market to your Discord</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/bounties">Bounties</a></h2>
+          <p class="operation-tagline">A price in aUEC on a pilot. Kill them and the poster pays you in game.</p>
+          <p class="operation-summary">A price on a pilot, in aUEC. Kill them and the poster pays you in game. Posting requires a linked RSI handle.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/bounties">Bounties</a></div>
+        </article>
+<article class="operation-card">
+          <h2 class="operation-name"><a href="/services/discord">Discord</a></h2>
+          <p class="operation-tagline">Slash commands for the goon.vc bot.</p>
+          <p class="operation-summary">How to use the goon.vc Discord bot, and every slash command it is running, with each argument written out.</p>
+          
+          <div class="operation-links"><a class="goon-button" href="/services/discord">Commands</a></div>
         </article>
 <article class="operation-card">
           <h2 class="operation-name"><a href="/resources/1v1-leaderboard">1v1 Leaderboard</a></h2>
@@ -2142,6 +2411,662 @@
         <ol class="duel-rules" data-duel-rules></ol>
       </section>
       <p class="duel-meta">Synced from the pinned message in #1v1-challenges. Looking for a bracket instead? See <a href="/tournaments">Tournaments</a>.</p>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="tool-page" id="tool-breakdown-tool" data-path="/resources/breakdown-tool" data-title="Breakdown planner — GOON SQUAD" data-script="/tool-scripts/breakdown-planner.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { /* ---------- themes ---------- */
+html[data-look=steel]{
+  --bg:#18212c; --panel:#212c3a; --raise:#2a3748; --line:#374657; --ink:#e8edf3; --mute:#97a5b6;
+  --acc:#e3b55a; --acc-ink:#1d1608; --ret:#7fd1c2; --lost:#eb9382; --warn:#f0cf7a; --focus:#9cc7ff;
+  --r:4px; --pill:999px; --glow:none; --num:var(--disp); --case:none; --track:0; --labsize:13px; --h1w:600;
+}
+html[data-look=bright]{
+  --bg:#f3f6fa; --panel:#ffffff; --raise:#eef2f8; --line:#d9e0ea; --ink:#121a26; --mute:#566173;
+  --acc:#2457e6; --acc-ink:#ffffff; --ret:#087a5e; --lost:#b93a25; --warn:#8a5b00; --focus:#2457e6;
+  --r:12px; --pill:999px; --shadow:0 1px 2px rgba(18,26,38,.06),0 8px 24px rgba(18,26,38,.06); --glow:none;
+  --disp:var(--body); --num:var(--body); --case:none; --track:0; --labsize:13px; --h1w:700;
+}
+.tool-sheet{
+  color-scheme:dark;
+  --bg:transparent; --panel:transparent; --raise:transparent; --line:#5a5a5a; --ink:#eee; --mute:#aaa;
+  --acc:#fff; --acc-ink:#222; --ret:#fff; --lost:#e7a8a2; --warn:#e6c98a; --focus:#fff;
+  --goon:#8f1d1d; --goon-hot:#b32626;
+  --r:10px; --pill:8px; --shadow:none; --glow:none;
+  --body:"Rajdhani",sans-serif;
+  --disp:"Bungee","Rajdhani",sans-serif;
+  --num:"Rajdhani",sans-serif;
+  --case:none; --track:.04em; --labsize:13px; --h1w:400;
+  background:transparent;
+  color:#ddd;
+  font:500 17px/1.4 "Rajdhani",sans-serif;
+  overflow:visible;
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 17px/1.4 var(--body);min-height:100vh;text-align:left}
+.tool-sheet{font-size:17px;font-weight:500;line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--acc)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:none;width:100%;margin:0 auto;padding-block:0 70px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));position:relative;overflow:visible;box-sizing:border-box}
+h1,h2,h3,p{margin:0}
+.lab{font-size:var(--labsize);text-transform:var(--case);letter-spacing:var(--track);color:var(--mute)}
+.mute{color:var(--mute)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+/* backdrops */
+html[data-look=console] body{
+  background:
+    linear-gradient(rgba(255,157,46,.04) 1px,transparent 1px) 0 0/100% 34px,
+    linear-gradient(90deg,rgba(255,157,46,.04) 1px,transparent 1px) 0 0/34px 100%,
+    radial-gradient(1100px 520px at 78% -8%,#35200a 0,transparent 62%),var(--bg);
+  background-attachment:fixed}
+.scan{display:none}
+html[data-look=console] .scan{display:block;position:fixed;inset:0;pointer-events:none;z-index:9;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);opacity:.28}
+
+/* ---------- header ---------- */
+.top{display:grid;grid-template-columns:1fr auto;gap:18px 28px;align-items:start;padding:30px 0 16px}
+h1{font:var(--h1w) clamp(32px,5.4vw,56px)/1 var(--disp);letter-spacing:-.01em;font-stretch:condensed}
+html[data-look=console] h1{text-transform:uppercase;letter-spacing:.02em;color:var(--acc);text-shadow:var(--glow)}
+h1{font-family:"Bungee",sans-serif;font-weight:400;font-size:clamp(28px,4vw,42px);letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:none}
+.lede{max-width:58ch;color:var(--mute);margin-top:10px}
+.themes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.themes button{border:1px solid var(--line);background:none;border-radius:var(--pill);padding:5px 12px;font-size:13.5px;color:var(--mute)}
+.themes button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.side{display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 22px;overflow:visible}
+.tabs button{border:0;background:none;padding:12px 18px;font:600 16px/1 var(--disp);font-stretch:condensed;color:var(--mute);
+  border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;text-transform:var(--case);letter-spacing:calc(var(--track) * .6)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc)}
+html[data-look=console] .tabs button[aria-selected=true]{color:var(--acc)}
+
+/* ---------- panels ---------- */
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin:0 0 16px;box-shadow:var(--shadow)}
+html[data-look=console] .panel{border-top:2px solid var(--acc);background:linear-gradient(180deg,rgba(255,157,46,.06),transparent 90px),var(--panel)}
+.panel::before,.panel::after{content:none}
+h2{font:600 20px/1.2 var(--disp);font-stretch:condensed;margin:0 0 12px;text-transform:var(--case);letter-spacing:calc(var(--track) * .5)}
+html[data-look=console] h2{color:var(--acc);font-size:17px;display:flex;align-items:center;gap:12px}
+html[data-look=console] h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+h2,h3{font-family:"Bungee",sans-serif;font-weight:400;color:#fff;letter-spacing:.04em;text-transform:none}
+.note{color:var(--mute);font-size:13.5px}
+.warn{color:var(--warn);font-size:13.5px}
+.none{color:var(--mute);font-style:italic}
+
+/* ---------- controls ---------- */
+.field{width:100%;background:var(--raise);border:1px solid var(--line);border-radius:var(--r);padding:13px 16px;font-size:18px}
+.field::placeholder{color:var(--mute)}
+.btn{border:1px solid var(--line);background:none;border-radius:var(--r);padding:7px 14px;font-size:14px}
+.btn:hover{background:var(--raise)}
+.btn.go{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.btn.go{background:transparent;color:#fff;border:2px solid #fff;border-radius:8px;font-family:"Bungee",sans-serif;letter-spacing:.08em;font-weight:400}
+.btn.go:hover{background:rgba(255,255,255,.1)}
+.link{background:none;border:0;padding:0;color:var(--acc);text-decoration:underline;text-underline-offset:3px;font-size:inherit}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:visible;background:transparent}
+.seg button{border:0;background:none;padding:8px 14px;color:var(--mute);font-size:14px;line-height:1.25;text-align:center;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button small{display:block;font-size:12px;opacity:.85;font-family:var(--num)}
+.seg button[aria-pressed=true]{background:var(--acc);color:var(--acc-ink);font-weight:600}
+.seg button:disabled{opacity:.42;cursor:not-allowed;text-decoration:line-through}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--raise);border-radius:calc(var(--r) * .5 + 2px);padding:2px 8px;display:inline-flex;gap:7px;align-items:baseline;font-size:13.5px;white-space:nowrap}
+button.chip:hover{border-color:var(--acc)}
+.chip b{font-variant-numeric:tabular-nums;font-weight:600}
+.chip.r b{color:var(--ret)}
+.chip.x{border-style:dashed}
+.chip.x b,.chip.x span{color:var(--lost)}
+.chip.x span{text-decoration:line-through;text-decoration-thickness:1px}
+.chip.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.pick{border:1px solid var(--line);background:none;border-radius:var(--pill);padding:4px 12px;font-size:13.5px}
+.pick:hover{background:var(--raise)}
+.pick.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---------- plan: picker ---------- */
+.ask{display:block;font:600 20px/1.2 var(--disp);font-stretch:condensed;margin-bottom:10px;text-transform:var(--case);letter-spacing:calc(var(--track) * .5)}
+.results{border:1px solid var(--line);border-top:0;background:var(--raise);max-height:340px;overflow:auto}
+.results button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:9px 16px}
+.results button:hover,.results button:focus-visible{background:var(--panel)}
+.results b{font:600 16px/1.2 var(--disp);font-stretch:condensed;display:block}
+.results span{color:var(--mute);font-size:13px}
+.chosen{display:grid;gap:8px;margin-top:14px}
+.chosen .row{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;background:var(--raise)}
+.chosen .nm{flex:1;min-width:0}
+.chosen .nm b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.chosen .nm span{color:var(--mute);font-size:13px}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r);overflow:visible}
+.qty button{border:0;background:none;width:34px;height:34px;font-size:18px;line-height:1}
+.qty button:hover{background:var(--panel)}
+.qty output{min-width:34px;text-align:center;font-family:var(--num);font-weight:600}
+.x{border:0;background:none;color:var(--mute);font-size:20px;line-height:1;padding:4px 6px}
+.x:hover{color:var(--lost)}
+.try{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:14px}
+
+/* ---------- plan: the readout (the one loud thing) ---------- */
+.total{display:grid;grid-template-columns:1fr auto;gap:18px 28px;align-items:end}
+.big{display:block;font:700 clamp(46px,9vw,92px)/.95 var(--num);letter-spacing:-.02em;color:var(--acc);text-shadow:var(--glow);margin:6px 0 8px;font-variant-numeric:tabular-nums}
+.big small{font-size:.3em;letter-spacing:.04em;color:var(--mute);text-shadow:none;margin-left:.3em;font-weight:600}
+html[data-look=steel] .big,html[data-look=bright] .big{font-family:var(--disp);font-stretch:condensed}
+html[data-look=bright] .big{color:var(--ink)}
+.big{color:#fff;font-weight:700;text-shadow:none}
+.facts{color:var(--ink);font-size:15px}
+.proof{color:var(--mute);font-size:13.5px;margin-top:4px}
+.scope{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+
+/* ---------- plan: tables ---------- */
+table{width:100%;border-collapse:collapse}
+th{font-weight:400;text-align:left;padding:0 12px 8px 0;border-bottom:1px solid var(--line)}
+td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;padding-right:0}
+.mname{font:600 17px/1.2 var(--disp);font-stretch:condensed;background:none;border:0;padding:0;color:var(--ink);text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+.mname:hover{text-decoration-color:var(--acc)}
+.stop{border:1px solid var(--line);border-radius:var(--r);margin-top:12px;overflow:visible}
+.stop>header{display:flex;gap:12px;align-items:baseline;justify-content:space-between;padding:10px 14px;background:var(--raise);flex-wrap:wrap}
+.stop>header b{font:600 18px/1.2 var(--disp);font-stretch:condensed}
+.buy{display:grid;grid-template-columns:64px 1fr auto;gap:4px 14px;padding:12px 14px;border-top:1px solid var(--line);align-items:start}
+.buy .n{font:700 24px/1 var(--num);color:var(--acc);font-variant-numeric:tabular-nums}
+.buy .nm b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.buy .cost{text-align:right;white-space:nowrap}
+.buy .cost b{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:16px;display:block}
+.buy details{grid-column:2/4;font-size:13.5px}
+.buy summary{color:var(--acc);cursor:pointer;width:fit-content}
+.buy details ul{margin:6px 0 0;padding-left:18px;color:var(--mute)}
+.places{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.places li{display:flex;gap:2px 14px;flex-wrap:wrap;align-items:baseline;break-inside:avoid}
+.places.cols{display:block;columns:2 380px;column-gap:36px}
+.places.cols li{padding:3px 0}
+.places b{font-weight:600}
+.places a{font-size:13.5px;white-space:nowrap}
+.how{margin-top:10px}
+.how h3{font:600 14px/1.3 var(--body);color:var(--mute);margin:10px 0 2px}
+.selfmat{border-top:1px solid var(--line);padding:14px 0}
+.selfmat:first-of-type{border-top:0;padding-top:0}
+.selfmat>b{font:600 18px/1.2 var(--disp);font-stretch:condensed}
+.empty{padding:40px 0;text-align:center;color:var(--mute)}
+.empty p{font-size:17px;color:var(--ink);margin-bottom:8px}
+
+/* ---------- items tab ---------- */
+.find{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.find .field{flex:1 1 300px;width:auto}
+.check{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;white-space:nowrap}
+.check input{width:18px;height:18px;accent-color:var(--acc)}
+details.filt{margin:0 0 10px}
+details.filt>summary{cursor:pointer;color:var(--acc);width:fit-content;margin-bottom:8px}
+.rack{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;margin:8px 0 6px}
+.tile{position:relative;text-align:left;border:1px solid var(--line);background:var(--panel);padding:8px 10px 7px;border-radius:calc(var(--r) * .5);min-height:54px;display:flex;flex-direction:column;justify-content:space-between;gap:5px}
+.tile.gem{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+.tile .nm{font:600 15px/1.1 var(--disp);font-stretch:condensed}
+.tile .ct{font-size:12px;line-height:1;color:var(--mute);font-variant-numeric:tabular-nums}
+.tile:hover{background:var(--raise)}
+.tile.zero{opacity:.4}
+.tile.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.tile.on .ct{color:inherit;opacity:.8}
+.facets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.facets .lab{align-self:center;margin-right:4px;min-width:42px}
+.bar{position:static;z-index:auto;background:transparent;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);margin-top:8px}
+.bar .n{font:600 20px/1 var(--disp);font-stretch:condensed}
+.bar .sp{flex:1}
+.bar select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+.it b{font:600 17px/1.2 var(--disp);font-stretch:condensed;display:block}
+.sub{color:var(--mute);font-size:13px;display:block}
+td.it{width:22%} td.ty{width:12%} td.pr{width:17%} td.gb{width:21%}
+td.act .btn{white-space:nowrap}
+.price{font-family:var(--num);font-variant-numeric:tabular-nums;font-weight:600}
+.more{display:block;margin:18px auto;padding:10px 22px}
+
+/* ---------- materials tab ---------- */
+.mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start}
+#mrack{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.mhead{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin:18px 0 14px}
+.mhead h2{font-size:30px;margin:0}
+html[data-look=console] .mhead h2::after{display:none}
+.tag{border:1px solid var(--line);border-radius:var(--pill);padding:2px 10px;font-size:13px;color:var(--mute)}
+.src{list-style:none;margin:0;padding:0}
+.src li{padding:9px 0;border-bottom:1px solid var(--line)}
+.src li:last-child{border-bottom:0}
+.src b{font:600 16px/1.2 var(--disp);font-stretch:condensed;display:block}
+.src .rate{color:var(--ret);font-family:var(--num);font-variant-numeric:tabular-nums}
+
+footer{color:var(--mute);font-size:13.5px;padding:26px 0 0;max-width:86ch}
+footer h2{font-size:15px;color:var(--ink);margin:14px 0 4px}
+html[data-look=console] footer h2::after{display:none}
+footer p{margin:0 0 6px}
+footer a{color:inherit}
+
+@media (max-width:860px){
+  .top{grid-template-columns:1fr}
+  .total{grid-template-columns:1fr}
+  .scope{align-items:flex-start}
+  .mgrid{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .panel{padding:16px 14px}
+  table.cards thead{display:none}
+  table.cards,table.cards tbody,table.cards tr,table.cards td{display:block;width:auto!important}
+  table.cards tr{padding:12px 0;border-bottom:1px solid var(--line)}
+  table.cards tr:last-child{border-bottom:0}
+  table.cards td{border:0;padding:0 0 8px;text-align:left}
+  table.cards td[data-l]::before{content:attr(data-l);display:block;color:var(--mute);font-size:12.5px;margin-bottom:3px}
+  .buy{grid-template-columns:48px 1fr}
+  .buy .cost{grid-column:2;text-align:left}
+  .buy details{grid-column:2}
+  .seg{display:flex}
+  .seg button{flex:1 1 auto}
+  .rack{grid-template-columns:repeat(3,1fr)} .tile{min-height:46px;padding:6px 8px} .tile .nm{font-size:13.5px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .seg button,.pick,.tile,.btn,.tabs button{transition:background-color .12s,color .12s,border-color .12s}
+}
+
+/* Goon pages: charcoal cards, a red top edge, filled primary actions. */
+.panel,.stop{
+  background:transparent;
+  border:1px solid #4e4e4e;
+  border-top:3px solid #c81e1e;
+  border-radius:10px;
+  box-shadow:none;
+  overflow:visible;
+}
+.panel::before,.panel::after{content:none}
+h1{font-family:"Bungee",sans-serif;font-weight:400;font-size:clamp(28px,4vw,44px);letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:none}
+h2,h3{font-family:"Bungee",sans-serif;font-weight:400;color:#fff;letter-spacing:.04em}
+.tabs{border-bottom-color:#3a3a3a}
+.tabs button[aria-selected=true]{color:#fff;border-bottom:3px solid #c81e1e}
+.field,.seg,.qty,select{border-color:#666}
+.btn.go{
+  background:#8f1d1d;color:#fff;border:1px solid #b32626;border-radius:8px;
+  font-family:"Bungee",sans-serif;font-weight:400;letter-spacing:.06em;text-transform:none;
+  box-shadow:none;
+}
+.btn.go:hover{background:#b32626;filter:none}
+.big{color:#fff;text-shadow:none}
+.bar{background:transparent;border-bottom-color:#3f3f3f}
+.stop>header{background:transparent}
+.page-back{margin:0 0 12px;text-align:left}
+html[data-look=bright]{color-scheme:light}
+ }</style>
+        <div class="scan" aria-hidden="true"></div>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+    <h1>Breakdown planner</h1>
+    <p class="lede">Pick what you want to craft in Star Citizen. This finds the cheapest shop items to buy and break down for the materials. Prices and recipes are for <span data-fill="version"></span>.</p>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="true" aria-controls="tab-plan">Plan a build</button>
+  <button type="button" role="tab" id="t-items" data-tab="items" aria-selected="false" aria-controls="tab-items">All items</button>
+  <button type="button" role="tab" id="t-mats" data-tab="mats" aria-selected="false" aria-controls="tab-mats">Materials</button>
+</nav>
+
+<div class="tool-body">
+<section id="tab-plan" role="tabpanel" aria-labelledby="t-plan">
+  <div class="panel">
+    <label class="ask" for="bpq">What do you want to make?</label>
+    <input class="field" id="bpq" type="search" placeholder="Type a name, like Greatsword" autocomplete="off" spellcheck="false">
+    <div class="results" id="bpres" hidden></div>
+    <div class="chosen" id="chosen"></div>
+    <p class="try" id="try">Try one:</p>
+  </div>
+  <div id="planout"></div>
+</section>
+
+<section id="tab-items" role="tabpanel" aria-labelledby="t-items" hidden>
+  <div class="find">
+    <input class="field" id="q" type="search" placeholder="Search items, makers, materials" aria-label="Search items, makers and materials" autocomplete="off" spellcheck="false">
+    <label class="check"><input type="checkbox" id="sold"> Sold in shops only</label>
+  </div>
+  <details class="filt">
+    <summary>Filter by material</summary>
+    <div class="seg" role="group" aria-label="What the material filter looks at">
+      <button type="button" id="mRet" aria-pressed="true">Gives it back</button>
+      <button type="button" id="mInp" aria-pressed="false">Needs it to craft</button>
+    </div>
+    <div class="rack" id="rack" role="group" aria-label="Materials"></div>
+    <p class="note">Pick more than one to find items with all of them. Notched tiles are counted in pieces; the rest are measured in cSCU.</p>
+  </details>
+  <div class="facets" id="fcat"><span class="lab">Type</span></div>
+  <div class="facets" id="fcls"><span class="lab">Class</span></div>
+  <div class="bar">
+    <span class="n" id="count"></span>
+    <button type="button" class="link" id="clear" hidden>Clear filters</button>
+    <span class="sp"></span>
+    <label for="sort" class="note">Sort by</label>
+    <select id="sort">
+      <option value="name">Name</option>
+      <option value="price">Lowest price</option>
+      <option value="type">Type, then size</option>
+      <option value="qty">Most of the picked material</option>
+    </select>
+    <button type="button" class="link" id="csv">Download these rows (CSV)</button>
+  </div>
+  <p class="note" style="margin:10px 0">A material shown <span class="chip x" style="font-size:12px"><span>dashed</span></span> never comes back when you break the item down. Tap any material to see where to get it.</p>
+  <table class="cards">
+    <thead><tr><th class="lab">Item</th><th class="lab">Type</th><th class="lab">Shop price</th><th class="lab">You get back</th>
+    <th class="lab">Costs to craft</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden><p>Nothing matches those filters.</p><button type="button" class="link" id="clear2">Clear filters</button></div>
+  <button type="button" class="btn more" id="more" hidden></button>
+</section>
+
+<section id="tab-mats" role="tabpanel" aria-labelledby="t-mats" hidden>
+  <div class="rack" id="mrack" role="group" aria-label="Materials"></div>
+  <div id="mdetail"></div>
+</section>
+</div>
+
+<footer>
+  <h2>Good to know</h2>
+  <p>Breaking an item down gives back half of each material that can be recovered. Some materials never come back.</p>
+  <p>Only gear and ship parts can be broken down in a fabricator. Whole ships cannot, and neither can items bought with real money.</p>
+  <p>Materials from broken-down shop items come out at quality 500, according to the community wiki. Raw materials at trade terminals are listed at quality 0. Ship-part blueprints ask for quality 1 or better; armor and hand weapons accept 0. None of this was tested at a fabricator in game.</p>
+  <h2>Where the numbers come from</h2>
+  <p>Recipes, break-down returns and mining spots come from the game files for <span data-fill="vfull"></span>, unpacked by the Star Citizen Wiki (github.com/StarCitizenWiki/scunpacked-data). <span data-fill="nbuy"></span> of <span data-fill="nitems"></span> items are sold in shops.</p>
+  <p>Shop prices come from UEX (uexcorp.space), where players report them. They were pulled on <span data-fill="pulled"></span>; the reports date from <span data-fill="pold"></span> to <span data-fill="pnew"></span>. Prices and stock change, so check before a big shopping trip.</p>
+  <p>In the mining lists, the percentage is how often that rock shows up among rocks of the same mining type at that place.</p>
+  <p>Unofficial fan-made tool. Star Citizen is a trademark of Cloud Imperium Games.</p>
+</footer>
+</div>
+
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="tool-page" id="tool-pdc-dashboard" data-path="/resources/pdc-dashboard" data-title="PDC Dashboard — GOON SQUAD" data-script="/tool-scripts/pdc-dashboard.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { .pdc {
+  --bg: transparent;
+  --panel: #101827e8;
+  --panel2: #151f31;
+  --text: #edf5ff;
+  --muted: #9cafc7;
+  --line: #26354b;
+  --cyan: #4ee3ff;
+  --orange: #ffae57;
+  --green: #61e6a4;
+  --red: #ff6f7d;
+  --purple: #b695ff;
+  --shadow: 0 18px 55px #0008;
+  color: var(--text);
+  font: 15px/1.5 Inter, Segoe UI, system-ui, sans-serif;
+  min-height: 70vh;
+}
+.pdc button, .pdc select, .pdc input { font: inherit; }
+.pdc .top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 20px; }
+.pdc .eyebrow { color: var(--cyan); letter-spacing: .16em; text-transform: uppercase; font-size: 12px; font-weight: 700; }
+.pdc h1 { font-size: clamp(27px, 4vw, 44px); line-height: 1.05; margin: 7px 0; }
+.pdc .sub { color: var(--muted); max-width: 760px; }
+.pdc .pill-row { margin-top: 10px; }
+.pdc .pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #ffae5770; color: #ffd6aa; background: #ffae5712; padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+.pdc .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 12px var(--orange); }
+.pdc .toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.pdc .btn { border: 1px solid var(--line); background: var(--panel2); color: var(--text); padding: 9px 12px; border-radius: 8px; cursor: pointer; }
+.pdc .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.pdc .btn.primary { background: var(--cyan); color: #041018; border-color: var(--cyan); font-weight: 700; }
+.pdc .btn.primary:hover { color: #041018; }
+.pdc .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 16px; }
+.pdc .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.pdc .panel-head { padding: 17px 18px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.pdc .panel-head h2 { margin: 0; font-size: 17px; }
+.pdc .panel-body { padding: 18px; }
+.pdc .table-wrap { padding-top: 8px; overflow-x: auto; }
+.pdc .ship-switch { display: flex; gap: 7px; }
+.pdc .ship-switch button { border: 1px solid var(--line); background: #0a111d; color: var(--muted); padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+.pdc .ship-switch button.active { background: #19344b; color: var(--cyan); border-color: #3c91ad; }
+.pdc .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+.pdc .metric { background: #0b1220; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.pdc .metric label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.pdc .metric strong { display: block; font-size: 22px; margin-top: 3px; }
+.pdc .metric small { color: var(--muted); }
+.pdc .slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pdc .slot { border: 1px solid var(--line); background: #0b1220; border-radius: 10px; padding: 12px; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; }
+.pdc .slot-num { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; background: #172539; color: var(--cyan); font-weight: 700; }
+.pdc .slot label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.pdc .slot select, .pdc .form-select { width: 100%; background: #101a29; color: var(--text); border: 1px solid #34455d; border-radius: 7px; padding: 8px; }
+.pdc .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.pdc .chart { background: #0b1220; border: 1px solid var(--line); border-radius: 10px; padding: 13px; }
+.pdc .chart h3 { font-size: 13px; margin: 0 0 12px; }
+.pdc .bar-row { display: grid; grid-template-columns: 82px 1fr 64px; gap: 9px; align-items: center; margin: 9px 0; font-size: 12px; }
+.pdc .track { height: 9px; background: #1a2638; border-radius: 9px; overflow: hidden; }
+.pdc .bar { height: 100%; border-radius: 9px; transition: width .25s; }
+.pdc .bar.laser { background: var(--cyan); }
+.pdc .bar.ballistic { background: var(--orange); }
+.pdc .bar.salvage { background: var(--purple); }
+.pdc .compare { width: 100%; border-collapse: collapse; }
+.pdc .compare th, .pdc .compare td { text-align: left; padding: 11px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.pdc .compare th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+.pdc .compare tr.selectable { cursor: pointer; }
+.pdc .compare tr.selectable:hover { background: #172238; }
+.pdc .compare tr.selected { background: #142b38; }
+.pdc .tag { display: inline-block; border-radius: 999px; padding: 3px 7px; font-size: 11px; border: 1px solid var(--line); white-space: nowrap; }
+.pdc .tag.laser { color: var(--cyan); border-color: #4ee3ff55; }
+.pdc .tag.ballistic { color: var(--orange); border-color: #ffae5755; }
+.pdc .tag.salvage { color: #d7c5ff; border-color: #b695ff55; }
+.pdc .warn { color: #ffd39e; }
+.pdc .verified { color: var(--green); }
+.pdc .detail { margin-top: 13px; padding: 14px; border-left: 3px solid var(--cyan); background: #0b1220; }
+.pdc .detail h3 { margin: 0 0 5px; }
+.pdc .detail p { margin: 5px 0; color: var(--muted); }
+.pdc .note { margin-top: 16px; color: var(--muted); font-size: 12px; }
+.pdc .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 12px; }
+.pdc .sw { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.pdc .sw.laser { background: var(--cyan); }
+.pdc .sw.ballistic { background: var(--orange); }
+.pdc .sw.salvage { background: var(--purple); }
+.pdc .full { grid-column: 1 / -1; }
+.pdc .assumption { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 10px 0; }
+.pdc .assumption b { color: var(--orange); }
+.pdc .footer { color: var(--muted); font-size: 12px; text-align: center; margin: 18px; }
+.pdc .toast { position: fixed; right: 20px; bottom: 20px; background: #172539; color: var(--text); border: 1px solid #3b526e; padding: 10px 14px; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; }
+.pdc .toast.show { opacity: 1; transform: none; }
+.pdc .page-back { margin: 0 0 8px; }
+@media (max-width: 900px) {
+  .pdc .grid { grid-template-columns: 1fr; }
+  .pdc .top { flex-direction: column; }
+  .pdc .toolbar { justify-content: flex-start; }
+  .pdc .metrics { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 580px) {
+  .pdc .slots, .pdc .charts { grid-template-columns: 1fr; }
+  .pdc .bar-row { grid-template-columns: 70px 1fr 55px; }
+  .pdc .compare { font-size: 12px; }
+  .pdc .compare th:nth-child(4), .pdc .compare td:nth-child(4) { display: none; }
+}
+ }</style>
+        <div class="pdc">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <div class="eyebrow">Fleet engineering // alpha data</div>
+      <h1>PDC Loadout Lab</h1>
+      <div class="sub">Compare candidate point-defense turrets and configure all 6 Perseus or 7 Polaris mounts. Values are planning aids—not authoritative live-game data.</div>
+      <div class="pill-row"><span class="pill"><span class="dot"></span> Unverified &amp; patch-sensitive dataset</span></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="pdc-reset" type="button">Reset</button>
+      <button class="btn" id="pdc-save" type="button">Save locally</button>
+      <button class="btn primary" id="pdc-export" type="button">Export loadout</button>
+    </div>
+  </header>
+  <section class="grid">
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Ship configuration</h2>
+        <div class="ship-switch" role="group" aria-label="Select ship">
+          <button type="button" data-ship="Perseus" class="active">Perseus · 6</button>
+          <button type="button" data-ship="Polaris">Polaris · 7</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="metrics">
+          <div class="metric"><label>Mounted</label><strong id="pdc-mounted">6 / 6</strong><small>active turrets</small></div>
+          <div class="metric"><label>Est. DPS</label><strong id="pdc-dps">1,002</strong><small>all PDCs combined</small></div>
+          <div class="metric"><label>Energy share</label><strong id="pdc-energy">100%</strong><small>laser-fed mounts</small></div>
+          <div class="metric"><label>Confidence</label><strong id="pdc-confidence">Low</strong><small>configuration validity</small></div>
+        </div>
+        <div class="slots" id="pdc-slots" aria-live="polite"></div>
+        <div class="charts">
+          <div class="chart"><h3>Estimated damage mix</h3><div id="pdc-damage"></div></div>
+          <div class="chart"><h3>Loadout composition</h3><div id="pdc-mix"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel-head">
+        <h2>PDC comparison</h2>
+        <div class="legend"><span><i class="sw laser"></i>Laser</span><span><i class="sw ballistic"></i>Ballistic</span><span><i class="sw salvage"></i>Salvaged</span></div>
+      </div>
+      <div class="panel-body table-wrap">
+        <table class="compare">
+          <thead><tr><th>Type</th><th>Class</th><th>Est. DPS</th><th>Supply</th><th>Status</th></tr></thead>
+          <tbody id="pdc-comparison"></tbody>
+        </table>
+        <div class="detail" id="pdc-detail" aria-live="polite"></div>
+        <div class="note">Select a row for notes. DPS is nominal sustained weapon output only; it does not model tracking, convergence, missile interception logic, capacitors, ammunition, server performance, or firing arcs.</div>
+      </div>
+    </article>
+    <article class="panel full">
+      <div class="panel-head"><h2>Compatibility &amp; evidence guardrails</h2><span class="tag salvage">Planning assumptions</span></div>
+      <div class="panel-body">
+        <div class="assumption"><b>◆</b><div><strong>Slot counts are user-specified.</strong> This dashboard uses 6 mounts for Perseus and 7 for Polaris because those counts were requested. Verify against your current ship build and patch.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Cross-ship fitting is speculative.</strong> A PDC being detachable, lootable, or visually mountable does not prove persistence, insurance survival, power compatibility, targeting behavior, or intended support.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Mauler PDC identity is unresolved.</strong> Community/game-file reports describe it as a distinct Mauler turret that may reuse M2C “Swarm” localization or behavior. The dashboard therefore separates the two while assigning the same provisional performance.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Alpha values change.</strong> Re-check after patches, wipes, component rebalances, or insurance/claim changes. “Est.” means unverified in this file.</div></div>
+      </div>
+    </article>
+  </section>
+  <div class="footer">Offline dashboard · No network calls · Configuration is stored only in this browser when you choose Save locally.</div>
+  <div class="toast" id="pdc-toast" role="status"></div>
+</div>
+
+      </div>
+      <footer>
+        <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
+        <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
+        <div><small>&copy; big lol</small></div>
+      </footer>
+    </main>
+<main class="tool-page" id="tool-navigator" data-path="/resources/navigator" data-title="Navigator — GOON SQUAD" data-script="/tool-scripts/navigator.js">
+      <div class="tool-sheet">
+        <style>@scope (.tool-sheet) { .nav { color: var(--ink, #eee); }
+.nav h1 { font-family: "Bungee", sans-serif; font-weight: 400; font-size: clamp(28px, 4vw, 42px); letter-spacing: .04em; text-transform: uppercase; color: #fff; margin: 0; }
+.nav h2, .nav h3 { font-weight: 600; letter-spacing: .02em; }
+.nav h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
+.nav h3 { font-size: .95rem; margin: 1rem 0 .4rem; color: var(--mute, #aaa); font-weight: 600; }
+.nav p { margin: 0; }
+.nav .lede { max-width: 62ch; color: var(--mute, #aaa); margin-top: .6rem; }
+.nav .top { padding: 1.2rem 0 .4rem; }
+.nav .ends { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.nav section { min-width: 0; }
+.nav .ends > section, .nav .craft, .nav .result, .nav .notes { border: 1px solid var(--line, #5a5a5a); border-radius: 10px; padding: 1rem; }
+.nav .craft { display: grid; grid-template-columns: 1.4fr .8fr .6fr .6fr; gap: .8rem 1rem; align-items: end; margin-bottom: 1rem; }
+.nav .craft > label:first-child { grid-column: 1 / -1; }
+.nav label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; color: var(--mute, #aaa); }
+.nav input, .nav select, .nav button { font: inherit; color: inherit; }
+.nav input, .nav select { background: transparent; border: 1px solid var(--line, #5a5a5a); border-radius: 8px; padding: .45rem .6rem; width: 100%; }
+.nav button { cursor: pointer; }
+.nav .systems, .nav .picks { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.nav .systems button, .nav .picks button, .nav .scroll button, .nav .results button {
+  border: 1px solid var(--line, #5a5a5a); background: transparent; border-radius: 8px; padding: .35rem .6rem; text-align: left;
+}
+.nav .systems button[aria-pressed="true"], .nav .picks button[aria-pressed="true"], .nav .scroll button[aria-pressed="true"] {
+  background: var(--goon, #8f1d1d); border-color: var(--goon, #8f1d1d); color: #fff;
+}
+.nav .search { margin: .2rem 0 .4rem; }
+.nav .results { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.nav .results button, .nav .scroll button { display: flex; justify-content: space-between; gap: .6rem; width: 100%; }
+.nav .scroll { max-height: 16rem; overflow: auto; display: flex; flex-direction: column; gap: .3rem; }
+.nav small, .nav .hint, .nav .mute { color: var(--mute, #aaa); font-size: .8rem; }
+.nav .picked { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; min-height: 1.4em; margin: .2rem 0 .6rem; }
+.nav button.text { border: 0; background: none; padding: 0; color: var(--goon-hot, #b32626); text-decoration: underline; }
+.nav .stats { grid-column: 1 / -1; color: var(--mute, #aaa); font-variant-numeric: tabular-nums; }
+.nav .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin: .8rem 0; }
+.nav .metrics div { border-top: 2px solid var(--goon, #8f1d1d); padding-top: .35rem; }
+.nav .metrics dt { color: var(--mute, #aaa); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.nav .metrics dd { margin: .15rem 0 0; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.nav .legs, .nav .hops { margin: .6rem 0 0; padding-left: 1.1rem; }
+.nav .legs li { margin: .45rem 0; }
+.nav .legs .refuel { color: #fff; }
+.nav .legs .refuel::marker { color: var(--goon-hot, #b32626); }
+.nav .over { color: #e7a8a2; }
+.nav td.stop { color: #e6c98a; }
+.nav table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.nav th, .nav td { border-bottom: 1px solid var(--line, #5a5a5a); padding: .4rem .5rem; text-align: left; vertical-align: top; }
+.nav .grid th, .nav .grid td { text-align: right; }
+.nav .grid th:first-child, .nav .grid td:first-child { text-align: left; }
+.nav .scroll-x { overflow-x: auto; }
+.nav .notes { margin-top: 1rem; text-align: left; }
+.nav .notes h2, .nav .notes p { text-align: left; }
+.nav .notes p { color: var(--mute, #aaa); margin: .5rem 0; max-width: 70ch; }
+.nav .result { margin-bottom: 1rem; }
+@media (max-width: 800px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr 1fr; }
+  .nav .stats { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .nav .ends, .nav .craft, .nav .metrics { grid-template-columns: 1fr; }
+}
+ }</style>
+        <div class="nav">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <h1>Navigator</h1>
+      <p class="lede">Real starmap distances. Start with the jump between systems, then open a planet, a moon, and a point. Time and fuel follow the quantum drive you fit and the fuel you have aboard. Snapshot <span id="nav-version"></span>.</p>
+    </div>
+  </header>
+  <p id="nav-status">Loading the starmap…</p>
+  <div id="nav-app" hidden>
+    <div class="ends">
+      <section id="nav-from" aria-label="Origin"></section>
+      <section id="nav-to" aria-label="Destination"></section>
+    </div>
+    <section class="craft" aria-label="Ship and drive">
+      <label>Quantum drive
+        <select id="nav-drive"></select>
+      </label>
+      <p class="stats" id="nav-drive-stats"></p>
+      <label>Ship <span class="hint">fills the tank</span>
+        <input id="nav-ship" list="nav-ships" placeholder="Gladius, Carrack…" autocomplete="off">
+        <datalist id="nav-ships"></datalist>
+      </label>
+      <label>Fuel aboard, SCU
+        <input id="nav-fuel" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+      <label>Tank, SCU
+        <input id="nav-tank" type="number" min="0" step="0.1" inputmode="decimal">
+      </label>
+    </section>
+    <div id="nav-out"></div>
+    <footer class="notes">
+      <h2>How the numbers are made</h2>
+      <p>Positions are the Star Citizen Wiki starmap, in meters, for the game version named above. Planets move, so a later patch will not match. A point on a planet is the starmap marker, not the pad you touch down on.</p>
+      <p>The burn is the drive's standard jump. Spool, then calibration, then acceleration: constant until engage speed, then speeding up to cruise, then the same curve in reverse. You drop out at the drive's disconnect range, and that last stretch is not flown. Cooldown is counted between quantum legs. It is not counted across a jump.</p>
+      <p>Fuel in SCU is the drive's fuel rate times the meters flown, divided by 1,000. That is the rate that reproduces the ship ranges in the same data. A refuel is a place with vehicle services. The tank is filled there. The stop itself is not timed. Jump fuel is the starmap's figure for that tunnel. The tunnel's duration is not in the data, so it is not in the quantum time.</p>
+      <p>The drive's own 10 Gm stamp can sit a few seconds off this curve, and further off on a drive that is still accelerating at 10 Gm. Treat the time as a planning figure.</p>
+    </footer>
+  </div>
+</div>
+
+      </div>
       <footer>
         <div style="padding-top: 2em;"><a class="footer-login-button" href="/sessions">&gt; LOGIN &lt;</a></div>
         <div class="site-alliance"><small>Member of THE <a href="/operations/PERMAFLEET">PERMAFLEET PROTECTORATE</a></small></div>
@@ -2453,6 +3378,51 @@
         <div><small>&copy; big lol</small></div>
       </footer>
     </main>
+    <main id="bounties-page" class="bounties-page" data-path="/bounties">
+      <h1>Bounties</h1>
+      <p class="bounty-meta" style="text-align:center">A price on a pilot. Kill them, and the poster pays you in game. Prices are aUEC. The game calls that UEC once it launches.</p>
+      <p id="bounties-status" class="bounty-status" role="status"></p>
+      <ul id="bounties-list" class="admin-list" style="list-style:none;padding:0"></ul>
+      <section>
+        <h2>Post a bounty</h2>
+        <p class="bounty-meta">Posting takes a linked RSI handle. <a href="/services/rsi">Link one</a>, or <a href="/sessions">sign in</a>.</p>
+        <p id="bounties-signed-out" hidden>Sign in, and link an RSI handle, before you post. <a href="/sessions">Sign in</a></p>
+        <form id="bounty-post" class="bounty-form">
+          <input name="target" required maxlength="60" placeholder="Target RSI handle" aria-label="Target RSI handle" autocapitalize="off" spellcheck="false">
+          <input name="reward" required placeholder="Reward in aUEC, such as 150000 or 150k" aria-label="Reward in aUEC" inputmode="decimal">
+          <textarea name="note" maxlength="500" rows="3" placeholder="Where they fly, or why (optional)" aria-label="Note"></textarea>
+          <button class="goon-button" type="submit">Post</button>
+        </form>
+      </section>
+    </main>
+    <main id="bounty-page" class="bounty-page" data-base="/bounties">
+      <p><a href="/bounties">← Bounties</a></p>
+      <h1 id="bounty-title">Bounty</h1>
+      <p id="bounty-status" class="bounty-status" role="status"></p>
+      <p id="bounty-meta" class="bounty-meta"></p>
+      <p id="bounty-note"></p>
+      <p id="bounty-actions" class="bounty-actions"></p>
+    </main>
+    <main id="discord-page" class="discord-page">
+      <h1>Discord</h1>
+      <p class="discord-lead">Slash commands for the goon.vc bot. This is the same help as <code>/help</code>, with every command and argument written out.</p>
+      <div class="discord-actions">
+        <a class="goon-button" href="/services/discord/invite">Add the bot to a server</a>
+        <a class="goon-button" href="/services/discord/install">Add /market to your account</a>
+      </div>
+      <section>
+        <h2>How to use it</h2>
+        <ul>
+          <li>In a server the bot is in, or in a DM with the bot, type <code>/</code> and the command.</li>
+          <li><code>/goon</code>, <code>/schedule</code>, and <code>/clips</code> only run in a server. The others here also run in a DM with the bot. <code>/market</code> and <code>/help</code> also run in any DM once you add the bot to your account.</li>
+          <li>A command does not sign you in. <code>/vote</code>, <code>/bounty</code>, <code>/market</code>, <code>/1v1</code>, <code>/rsi</code>, and <code>/hangar</code> act for the goon.vc member linked to your Discord account. <a href="/sessions">Sign in</a> first.</li>
+          <li>Replies are private. A <code>/1v1</code> in a server posts the confirm card in that channel. In a DM with the bot, the card is sent to your opponent.</li>
+          <li><code>/help</code> in Discord lists what is running right now, or explains one command. The commands below are that same list.</li>
+        </ul>
+      </section>
+      <p id="discord-status" class="discord-status" role="status">Loading commands…</p>
+      <div id="discord-commands"></div>
+    </main>
     <main id="operation-permafleet" class="op-page">
       <div class="op-shell">
         <div class="op-hero-bg" aria-hidden="true"></div>
@@ -2485,6 +3455,12 @@
             <article class="op-pillar"><h2>Alliance Security</h2><p>Membership in PERMAFLEET grants you protection by our partner orgs, including the infamous <span class="op-goon">GOON SQUAD</span>. Explore the ’verse with safety &amp; security by playing the game under our vigilant watch.</p></article>
             <article class="op-pillar"><h2>Industry &amp; Logistics</h2><p>With dedicated industry and logistics, PERMAFLEET keeps its members supplied with the highest-quality goods and materials. Help with fleet orders by mining, salvaging, and more. Steady workload!</p></article>
             <article class="op-pillar"><h2>Weekly Events</h2><p>Join us on weekly adventures during our scheduled events, from <strong>Boxing Night on the 890</strong> to <strong>spicy PvP fighter training</strong>.</p></article>
+          </section>
+          <section class="op-squadrons" id="how-we-operate" aria-labelledby="permafleet-operate">
+            <p class="op-squadrons-eyebrow">Always online</p>
+            <h2 id="permafleet-operate">The megaparty</h2>
+            <p class="op-squadrons-intro">PERMAFLEET keeps a public party up around the clock, drawn from every member org. At any hour you’ll usually find two or three things going — on G00N SQUAD or on a member org’s own Discord. Jump in.</p>
+            <p class="op-resource-link"><a href="/operations/PERMAFLEET/how-we-operate">How we operate &raquo;</a></p>
           </section>
           <section class="op-charter" aria-labelledby="permafleet-charter">
             <h2 id="permafleet-charter">Charter</h2>
@@ -2526,17 +3502,29 @@
               <span class="op-member-name">4M Contractors</span>
               <span class="op-member-meta">[4MCONTRACT] · 84 members</span><span class="org-discord" data-org-discord="4MCONTRACT" hidden></span>
             </a></li>
-            <li><a class="op-member" href="/organizations/AIMOS">
-              <span class="op-member-tag" aria-hidden="true">Member</span>
-              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png" alt="" width="64" height="64" loading="lazy">
-              <span class="op-member-name">A.I.M.O.S.</span>
-              <span class="op-member-meta">[AIMOS] · 149 members</span><span class="org-discord" data-org-discord="AIMOS" hidden></span>
-            </a></li>
             <li><a class="op-member" href="/organizations/IDBC">
               <span class="op-member-tag" aria-hidden="true">Member</span>
               <img class="op-member-logo" src="https://theverse.robertsspaceindustries.com/r1dtzznb1edd4/logo.png" alt="" width="64" height="64" loading="lazy">
               <span class="op-member-name">Risky Business</span>
               <span class="op-member-meta">[IDBC] · 98 members</span><span class="org-discord" data-org-discord="IDBC" hidden></span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/H0K">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/zlkpobg5law9kr/logo/H0K-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">House of Khans</span>
+              <span class="op-member-meta">[H0K] · 36 members</span><span class="org-discord" data-org-discord="H0K" hidden></span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/OBSX">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://robertsspaceindustries.com/media/nlf8nubibgbjnr/logo/OBSX-Logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">Obsidia</span>
+              <span class="op-member-meta">[OBSX] · 9 members</span><span class="org-discord" data-org-discord="OBSX" hidden></span>
+            </a></li>
+            <li><a class="op-member" href="/organizations/MB">
+              <span class="op-member-tag" aria-hidden="true">Member</span>
+              <img class="op-member-logo" src="https://theverse.robertsspaceindustries.com/99wqffbzqko9v/logo.png" alt="" width="64" height="64" loading="lazy">
+              <span class="op-member-name">Monkey Business</span>
+              <span class="op-member-meta">[MB] · 12 members</span><span class="org-discord" data-org-discord="MB" hidden></span>
             </a></li>
             <li><a class="op-member op-member-add" href="/operations/PERMAFLEET/onboarding">
               <span class="op-member-logo op-member-initial" aria-hidden="true">+</span>
@@ -2558,7 +3546,7 @@
         <h2 id="permafleet-red-army-title">RED ARMY</h2>
         <p>Friends of the alliance. Not yet members, but those who enjoy the fight. Blood for the blood god.</p>
         <div data-red-army="teaser" hidden></div>
-        <p class="red-army-more"><a href="/red-army">RED ARMY roster &raquo;</a></p>
+        <p class="red-army-more"><a href="/operations/red-army">RED ARMY roster &raquo;</a></p>
       </section>
         </div>
         <footer class="op-footer">
@@ -2730,6 +3718,39 @@
       </dl>
       <p class="pf-links"><a href="/operations/PERMAFLEET/squadrons#squadron-apply">Apply for a squadron &raquo;</a> · Not in PERMAFLEET yet? <a href="https://discord.gg/permafleet" target="_blank" rel="noopener noreferrer">Join on Discord &raquo;</a></p>
     </main>
+    <main id="operate-page" class="pf-page pf-operate">
+      <p class="pf-eyebrow">How we fly</p>
+      <h1>How we operate</h1>
+      <p class="pf-intro">PERMAFLEET is 24/7 friends to fly with. The megaparty is the standing public party — not a calendar slot — drawn from every member org, and it stays up around the clock.</p>
+      <h2 id="operate-drop-in">Drop in</h2>
+      <p class="pf-intro">You do not wait for a call. You join the party that is already running.</p>
+      <dl class="pf-facts">
+        <div><dt>Voice</dt><dd>Join <strong>PERMAFLEET</strong> voice on the G00N SQUAD Discord, or the public PERMAFLEET voice channel on any member org’s server. Both are open to the alliance — drop in and fly.</dd></div>
+        <div><dt>In-game chat</dt><dd>Stay in the <code>PERMAFLEET</code> and <code>ALLIANCE</code> groups. That is how the quick reaction force finds you, and how you find them.</dd></div>
+        <div><dt>The tag</dt><dd>Wear the <code>[PERMAFLEET]</code> tag whenever you expect safety.</dd></div>
+      </dl>
+      <h2 id="operate-concurrent">Several things at once</h2>
+      <p class="pf-intro">At any hour you will usually find two or three jobs going — on G00N SQUAD or on a member org’s own Discord. Hop. Do not wait for a single voice channel to fill.</p>
+      <dl class="pf-facts">
+        <div><dt>Industry</dt><dd>Mining, salvage, hauling, and crafting — often on a member org’s Discord as well as G00N.</dd></div>
+        <div><dt>Training and PvP</dt><dd>Friday Night Fights, 1v1s, and squadron practice. Hop into BRAVO or the training rooms when that is the night’s work.</dd></div>
+        <div><dt>Security</dt><dd>The quick reaction force answers in the in-game <code>PERMAFLEET</code> group and in <strong>#beacon</strong>. Medical beacons get taken.</dd></div>
+        <div><dt>Prospect rooms</dt><dd>Newer pilots gather in the Prospect lounges and <strong>[PG] LFG</strong> on G00N. Listen in and take a seat.</dd></div>
+      </dl>
+      <h2 id="operate-help">Need help</h2>
+      <dl class="pf-facts">
+        <div><dt>#beacon</dt><dd>Sound the alarm on G00N SQUAD. Member-org Discords <strong>Follow</strong> <strong>#beacon</strong> so a call reaches the alliance, not just one server.</dd></div>
+        <div><dt>Quick reaction</dt><dd>Special Operators and the QRF answer in the in-game <code>PERMAFLEET</code> chat group. Report trouble right away, with as much detail as you can gather.</dd></div>
+        <div><dt>Escorts</dt><dd>If you are hauling valuable cargo, ask for an escort <strong>before</strong> you leave. Emergency response is first-come, first-served with the ships that are up.</dd></div>
+      </dl>
+      <h2 id="operate-schedule">Scheduled ops</h2>
+      <p class="pf-intro">The weekly board is extra: day themes, training, and named events. The megaparty does not wait for it. Show up on a regular basis and you will find a role.</p>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/schedule">Weekly ops schedule &raquo;</a> · <a href="/operations/PERMAFLEET/squadrons">Your path to membership &raquo;</a></p>
+      <h2 id="operate-orgs">For org leaders</h2>
+      <p class="pf-intro">Member orgs keep a public PERMAFLEET voice channel so anyone in the alliance can drop in. How an organization joins, and what we expect, is on onboarding.</p>
+      <p class="pf-links"><a href="/operations/PERMAFLEET/onboarding">Bring your org into the Protectorate &raquo;</a> · <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Talk to us in #embassy &raquo;</a></p>
+      <p class="pf-links"><a href="https://discord.gg/permafleet" target="_blank" rel="noopener noreferrer">Join the Discord &raquo;</a> · <a href="/operations/PERMAFLEET">PERMAFLEET overview &raquo;</a></p>
+    </main>
     <main id="onboarding-page" class="pf-page pf-onboarding">
       <p class="pf-eyebrow">For organization leaders</p>
       <h1>Bring your org into the Protectorate</h1>
@@ -2741,9 +3762,9 @@
           <p class="pf-links"><a href="https://discord.com/servers/g00n-squad-1190527980120850493" target="_blank" rel="noopener noreferrer">Join the Discord &raquo;</a> · <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Open #embassy &raquo;</a></p>
         </li>
         <li>
-          <h3>Tag your pilots</h3>
-          <p>Every pilot joins the <code>[PERMAFLEET]</code> org on RSI before undocking. Many of our operators shoot first and ask questions later; the tag is how they know you’re ours.</p>
-          <p class="pf-links"><a href="https://robertsspaceindustries.com/orgs/PERMAFLEET" target="_blank" rel="noopener noreferrer" title="Opens the RSI org page; choose “Join us now!” there">Apply on RSI &raquo;</a></p>
+          <h3>No org yet?</h3>
+          <p>Members of a PERMAFLEET member organization do not join the PERMAFLEET org. Apply to one of our member orgs to receive permissions.</p>
+          <p class="pf-links"><a href="/organizations">Member organizations &raquo;</a></p>
         </li>
         <li>
           <h3>Name your officers</h3>
@@ -2790,8 +3811,10 @@
         <li><a href="/organizations/LCRP">[LCRP] Legacy Corporation</a><span class="org-discord" data-org-discord="LCRP" hidden></span></li>
         <li><a href="/organizations/DOUBLEDOGZ">[DOUBLEDOGZ] DoubleDog Delivery, Inc.</a><span class="org-discord" data-org-discord="DOUBLEDOGZ" hidden></span></li>
         <li><a href="/organizations/4MCONTRACT">[4MCONTRACT] 4M Contractors</a><span class="org-discord" data-org-discord="4MCONTRACT" hidden></span></li>
-        <li><a href="/organizations/AIMOS">[AIMOS] A.I.M.O.S.</a><span class="org-discord" data-org-discord="AIMOS" hidden></span></li>
         <li><a href="/organizations/IDBC">[IDBC] Risky Business</a><span class="org-discord" data-org-discord="IDBC" hidden></span></li>
+        <li><a href="/organizations/H0K">[H0K] House of Khans</a><span class="org-discord" data-org-discord="H0K" hidden></span></li>
+        <li><a href="/organizations/OBSX">[OBSX] Obsidia</a><span class="org-discord" data-org-discord="OBSX" hidden></span></li>
+        <li><a href="/organizations/MB">[MB] Monkey Business</a><span class="org-discord" data-org-discord="MB" hidden></span></li>
       </ul>
       <p class="pf-links">Ready? <a href="https://discord.com/channels/1190527980120850493/1205022843402977310" target="_blank" rel="noopener noreferrer">Talk to us in #embassy &raquo;</a> · <a href="/organizations">Member organizations &raquo;</a></p>
     </main>
@@ -2847,10 +3870,12 @@
           }
         }
         var isLogin = path === loginPath;
-        var isRsiClaim = path.toLowerCase() === "/rsi";
+        var isRsiClaim = path.toLowerCase() === "/services/rsi";
         var isWaiting = path.toLowerCase() === "/waiting";
         var isMembers = path.toLowerCase() === "/members";
         var isMember = path.toLowerCase().indexOf("/members/") === 0;
+        var isAdmin = path.toLowerCase() === "/admin";
+        var isCampaigns = path.toLowerCase() === "/campaigns";
         var isEvents = path.toLowerCase() === "/events";
         var isOperations = path.toLowerCase() === "/operations";
         var isIdleRPG = path.toLowerCase() === "/services/idlerpg";
@@ -2858,12 +3883,16 @@
           ? document.getElementById('idlerpg-player-page')
           : null;
         var isOrganizations = path.toLowerCase() === "/organizations";
-        var isRedArmy = path.toLowerCase() === "/red-army";
+        var isRedArmy = path.toLowerCase() === "/operations/red-army";
         var orgMatch = new RegExp("^/organizations/([^/]+)$", 'i').exec(path);
         var orgEl = orgMatch ? document.getElementById('org-' + decodeURIComponent(orgMatch[1]).toUpperCase()) : null;
         var isResources = path.toLowerCase() === "/resources";
         var isGoonCitizen = path.toLowerCase() === "/resources/gooncitizen";
         var isLeaderboard = path.toLowerCase() === "/resources/1v1-leaderboard";
+        var toolEl = null;
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          if (el.getAttribute('data-path') === path.toLowerCase()) toolEl = el;
+        });
         var isDrills = path.toLowerCase() === "/drills";
         var drillEl = null;
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -2892,9 +3921,14 @@
           : marketRest.length === 2 && marketRest[0] === 'sellers' ? document.getElementById('market-seller-page')
           : marketRest.length === 2 && marketRest[0] === 'orders' ? document.getElementById('market-order-page')
           : null;
+        var isDiscord = path.toLowerCase() === "/services/discord";
+        var bountiesBase = "/bounties";
+        var isBounties = path.toLowerCase() === bountiesBase;
+        var bountyEl = path.toLowerCase().indexOf(bountiesBase + '/') === 0 ? document.getElementById('bounty-page') : null;
         var isPermafleet = path.toLowerCase() === permafleetPath.toLowerCase();
         var isSchedule = path.toLowerCase() === schedulePath.toLowerCase();
         var isSquadrons = path.toLowerCase() === squadronsPath.toLowerCase();
+        var isOperate = path.toLowerCase() === "/operations/permafleet/how-we-operate";
         var isOnboarding = path.toLowerCase() === "/operations/permafleet/onboarding";
         var isVotes = path.toLowerCase() === "/operations/permafleet/votes";
         var voteEl = path.toLowerCase().indexOf("/operations/permafleet/votes/") === 0
@@ -2916,7 +3950,7 @@
         var scheduleEl = document.getElementById('permafleet-schedule');
 
         if (home) {
-          home.style.display = (!isLogin && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
+          home.style.display = (!isLogin && !isDiscord && !isRsiClaim && !isWaiting && !isMembers && !isMember && !isAdmin && !isCampaigns && !isEvents && !isOperations && !isIdleRPG && !idlerpgPlayerEl && !isOrganizations && !orgEl && !isRedArmy && !isResources && !isGoonCitizen && !isLeaderboard && !toolEl && !isDrills && !drillEl && !isTournaments && !tournamentEl && !isLeagues && !leagueEl && !isClips && !isClipTimeline && !clipProjectEl && !marketEl && !isBounties && !bountyEl && !isPermafleet && !isSchedule && !isSquadrons && !squadronEl && !isOperate && !isOnboarding && !isVotes && !voteEl && !isFederations && !federationEl) ? 'block' : 'none';
         }
         if (login) login.style.display = isLogin ? 'block' : 'none';
         var rsiClaimEl = document.getElementById('rsi-page');
@@ -2927,6 +3961,10 @@
         if (membersEl) membersEl.style.display = isMembers ? 'block' : 'none';
         var memberEl = document.getElementById('member-page');
         if (memberEl) memberEl.style.display = isMember ? 'block' : 'none';
+        var adminEl = document.getElementById('admin-page');
+        if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
+        var campaignsEl = document.getElementById('campaigns-page');
+        if (campaignsEl) campaignsEl.style.display = isCampaigns ? 'block' : 'none';
         if (eventsEl) eventsEl.style.display = isEvents ? 'block' : 'none';
         if (operationsEl) operationsEl.style.display = isOperations ? 'block' : 'none';
         var idlerpgEl = document.getElementById('idlerpg-page');
@@ -2946,6 +3984,18 @@
         if (gooncitizenEl) gooncitizenEl.style.display = isGoonCitizen ? 'block' : 'none';
         var leaderboardEl = document.getElementById('leaderboard-page');
         if (leaderboardEl) leaderboardEl.style.display = isLeaderboard ? 'block' : 'none';
+        document.querySelectorAll('.tool-page').forEach(function (el) {
+          el.style.display = el === toolEl ? 'block' : 'none';
+        });
+        if (toolEl && !toolEl.getAttribute('data-script-loaded')) {
+          var toolScript = toolEl.getAttribute('data-script');
+          if (toolScript) {
+            toolEl.setAttribute('data-script-loaded', '1');
+            var toolTag = document.createElement('script');
+            toolTag.src = toolScript;
+            document.body.appendChild(toolTag);
+          }
+        }
         var drillsEl = document.getElementById('drills-page');
         if (drillsEl) drillsEl.style.display = isDrills ? 'block' : 'none';
         document.querySelectorAll('.drill-page').forEach(function (el) {
@@ -2968,6 +4018,12 @@
         document.querySelectorAll('.market-page').forEach(function (el) {
           el.style.display = el === marketEl ? 'block' : 'none';
         });
+        var discordEl = document.getElementById('discord-page');
+        if (discordEl) discordEl.style.display = isDiscord ? 'block' : 'none';
+        var bountiesEl = document.getElementById('bounties-page');
+        if (bountiesEl) bountiesEl.style.display = isBounties ? 'block' : 'none';
+        var bountyPageEl = document.getElementById('bounty-page');
+        if (bountyPageEl) bountyPageEl.style.display = bountyEl ? 'block' : 'none';
         if (permafleetEl) permafleetEl.style.display = isPermafleet ? 'block' : 'none';
         document.body.classList.toggle('op-active', isPermafleet);
         if (scheduleEl) scheduleEl.style.display = isSchedule ? 'block' : 'none';
@@ -2977,6 +4033,8 @@
         document.querySelectorAll('.pf-squadron-page').forEach(function (el) {
           el.style.display = el === squadronEl ? 'block' : 'none';
         });
+        var operateEl = document.getElementById('operate-page');
+        if (operateEl) operateEl.style.display = isOperate ? 'block' : 'none';
         var onboardingEl = document.getElementById('onboarding-page');
         if (onboardingEl) onboardingEl.style.display = isOnboarding ? 'block' : 'none';
         var votesEl = document.getElementById('pf-votes-page');
@@ -2987,13 +4045,15 @@
         if (federationsEl) federationsEl.style.display = isFederations ? 'block' : 'none';
         var federationPageEl = document.getElementById('federation-page');
         if (federationPageEl) federationPageEl.style.display = federationEl ? 'block' : 'none';
-        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
+        document.body.classList.toggle('pf-section', isPermafleet || isSchedule || isSquadrons || !!squadronEl || isOperate || isOnboarding || isVotes || !!voteEl || isFederations || !!federationEl || isOrganizations || !!orgEl);
 
         if (isLogin) document.title = "Login — GOON SQUAD";
         else if (isRsiClaim) document.title = "Claim your RSI profile — GOON SQUAD";
         else if (isWaiting) document.title = "Waiting area — GOON SQUAD";
         else if (isMembers) document.title = "Members — GOON SQUAD";
         else if (isMember) document.title = 'Member profile — ' + "GOON SQUAD";
+        else if (isAdmin) document.title = "Admin — GOON SQUAD";
+        else if (isCampaigns) document.title = "Campaigns — GOON SQUAD";
         else if (isEvents) document.title = "EVENTS — GOON SQUAD";
         else if (isOperations) document.title = "OPERATIONS — GOON SQUAD";
         else if (isIdleRPG || idlerpgPlayerEl) document.title = "IDLERPG — GOON SQUAD";
@@ -3002,6 +4062,7 @@
         else if (isResources) document.title = "RESOURCES — GOON SQUAD";
         else if (isGoonCitizen) document.title = "GoonCitizen — GOON SQUAD";
         else if (isLeaderboard) document.title = "1v1 Leaderboard — GOON SQUAD";
+        else if (toolEl) document.title = toolEl.getAttribute('data-title');
         else if (isDrills) document.title = "DRILLS — GOON SQUAD";
         else if (drillEl) document.title = drillEl.getAttribute('data-title');
         else if (isTournaments) document.title = "TOURNAMENTS — GOON SQUAD";
@@ -3010,11 +4071,14 @@
         else if (isClipTimeline) document.title = "CLIP TIMELINE — GOON SQUAD";
         else if (isClips || clipProjectEl) document.title = "CLIPS — GOON SQUAD";
         else if (marketEl) document.title = "MARKET — GOON SQUAD";
+        else if (isDiscord) document.title = "DISCORD — GOON SQUAD";
+        else if (isBounties || bountyEl) document.title = "BOUNTIES — GOON SQUAD";
         else if (orgEl) document.title = (orgEl.querySelector('h1') || {}).textContent + ' — GOON SQUAD';
         else if (isPermafleet) document.title = "PERMAFLEET — GOON SQUAD";
         else if (isSchedule) document.title = "PERMAFLEET Weekly Ops — GOON SQUAD";
         else if (isSquadrons) document.title = "PERMAFLEET Squadrons — GOON SQUAD";
         else if (squadronEl) document.title = squadronEl.getAttribute('data-title');
+        else if (isOperate) document.title = "How we operate — PERMAFLEET — GOON SQUAD";
         else if (isOnboarding) document.title = "PERMAFLEET Onboarding — GOON SQUAD";
         else if (isVotes || voteEl) document.title = "PERMAFLEET Votes — GOON SQUAD";
         else if (isFederations || federationEl) document.title = "Federations — GOON SQUAD";
@@ -3045,6 +4109,7 @@
         var loginPath = "/sessions";
         var waitingPath = "/waiting";
         var membersPath = "/members";
+        var adminPath = "/admin";
         var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
         var onLoginPage = path === loginPath;
 
@@ -3086,6 +4151,32 @@
         }
 
         var siteFooter = document.getElementById('site-member-footer');
+        function adminHost () {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
+          });
+          for (var i = 0; i < pages.length; i++) {
+            var button = pages[i].querySelector('.footer-login-button');
+            if (button && button.parentElement) return button.parentElement;
+          }
+          return siteFooter;
+        }
+        function setAdminLink (member) {
+          var host = adminHost();
+          var link = document.getElementById('site-admin-link');
+          if (!link && host) {
+            link = document.createElement('a');
+            link.id = 'site-admin-link';
+            link.className = 'site-admin-link';
+            link.href = adminPath;
+            link.textContent = 'Admin';
+            host.appendChild(link);
+          } else if (link && host && link.parentElement !== host) host.appendChild(link);
+          if (!link) return;
+          link.hidden = !(member && member.admin);
+          if (path.toLowerCase() === String(adminPath).toLowerCase()) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        }
         if (siteFooter) {
           var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
             return window.getComputedStyle(el).display !== 'none';
@@ -3129,6 +4220,7 @@
             text.appendChild(small);
             el.appendChild(text);
           });
+          setAdminLink(member);
         }
 
         window.goonMember = markMember;
@@ -3354,6 +4446,14 @@
           profileLink.textContent = 'View your profile »';
           profileLine.appendChild(profileLink);
           sessionBox.appendChild(profileLine);
+          if (member.admin) {
+            var adminLine = document.createElement('p');
+            var adminA = document.createElement('a');
+            adminA.href = adminPath;
+            adminA.textContent = 'Admin »';
+            adminLine.appendChild(adminA);
+            sessionBox.appendChild(adminLine);
+          }
           if (member.review && member.review.status !== 'approved') {
             var reviewLine = document.createElement('p');
             var reviewLink = document.createElement('a');
@@ -3426,6 +4526,8 @@
     <script src="/scripts/rsi-claim.js?v=b9b9c626c500" defer></script>
     <script src="/scripts/waiting.js?v=2bcda6fc14fb" defer></script>
     <script src="/scripts/members.js?v=b0d7925899d8" defer></script>
+    <script src="/scripts/admin.js?v=9e0b68b6f9b1" defer></script>
+    <script src="/scripts/campaigns.js?v=fb6d8adca268" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById("home-page");
@@ -4097,8 +5199,8 @@
     <script src="/scripts/tournament-bracket.js?v=479a824db60a" defer></script>
     <script src="/scripts/tournaments.js?v=aa472dec7d92" defer></script>
     <script src="/scripts/leagues.js?v=01d42380da36" defer></script>
-    <script src="/scripts/clip-library.js?v=b2fa7fc99070" defer></script>
-    <script src="/scripts/clip-timeline-editor.js?v=3ac154ff6a0a" defer></script>
+    <script src="/scripts/clip-library.js?v=5ff7d073bb53" defer></script>
+    <script src="/scripts/clip-timeline-editor.js?v=c9a9af7dfad0" defer></script>
     <script type="text/javascript">
       (function () {
         var base = "/clips";
@@ -4154,14 +5256,14 @@
       })();
     </script>
     <script src="/scripts/market.js?v=344ce1e3179b" defer></script>
+    <script src="/scripts/bounties.js?v=642fd52b5d74" defer></script>
+    <script src="/scripts/discord.js?v=bde5e17f9355" defer></script>
     <script type="text/javascript">
       (function () {
         var page = document.getElementById('operation-permafleet');
         if (!page || page.style.display === 'none' || !page.style.display) return;
 
-        var GUILD_ID = "1190527980120850493";
-        var PERMAFLEET_ID = "1236721094153732276";
-        var PERMAFLEET_NAME = "permafleet";
+        var GUILD_IDS = ["1190527980120850493","937681528790609970","1145511542637482114","1200935959961817088","259387737331859466","1376267243650023434"];
         var MAX_ROWS = 24;
 
         var voiceN = document.getElementById('permafleet-voice-n');
@@ -4169,20 +5271,33 @@
         var emptyEl = document.getElementById('permafleet-empty');
         var serverEl = document.getElementById('permafleet-online');
 
-        function resolveChannelId (channels) {
-          if (!channels || !channels.length) return PERMAFLEET_ID;
-          for (var i = 0; i < channels.length; i++) {
-            if ((channels[i].name || '').toLowerCase() === PERMAFLEET_NAME) return String(channels[i].id);
-          }
-          return PERMAFLEET_ID;
-        }
+        function membersInVoiceFromWidgets (widgets) {
+  var members = [];
+  var list = Array.isArray(widgets) ? widgets : [];
+  for (var i = 0; i < list.length; i++) {
+    var data = list[i];
+    if (!data || !Array.isArray(data.members)) continue;
+    var seen = {};
+    for (var j = 0; j < data.members.length; j++) {
+      var member = data.members[j];
+      if (!member || member.channel_id == null) continue;
+      var key = member.id != null && String(member.id) !== ''
+        ? 'id:' + String(member.id)
+        : 'name:' + String(member.username || '') + ':' + j;
+      if (seen[key]) continue;
+      seen[key] = 1;
+      members.push({
+        username: member.username || 'Member',
+        avatar_url: member.avatar_url || ''
+      });
+    }
+  }
+  return members;
+}
 
-        function renderPanel (data) {
-          var channelId = resolveChannelId(data.channels);
-          var members = (data.members || []).filter(function (m) {
-            return m.channel_id != null && String(m.channel_id) === channelId;
-          });
-          voiceN.textContent = String(members.length);
+        function renderPanel (members, partial) {
+          voiceN.textContent = partial ? String(members.length) + '+' : String(members.length);
+          voiceN.title = partial ? 'One or more Discords did not answer, so this count is short.' : '';
           listEl.innerHTML = '';
           emptyEl.hidden = members.length > 0;
           members.slice(0, MAX_ROWS).forEach(function (m) {
@@ -4203,9 +5318,7 @@
             li.appendChild(name);
             listEl.appendChild(li);
           });
-          if (typeof data.presence_count === 'number') {
-            serverEl.textContent = data.presence_count + ' online on server';
-          }
+          serverEl.textContent = '';
         }
 
         function renderFallback () {
@@ -4215,12 +5328,19 @@
           serverEl.textContent = '';
         }
 
-        window.fetch('https://discord.com/api/guilds/' + GUILD_ID + '/widget.json')
-          .then(function (res) {
-            if (!res.ok) throw new Error('widget ' + res.status);
-            return res.json();
+        function fetchWidget (guildId) {
+          return window.fetch('https://discord.com/api/guilds/' + guildId + '/widget.json')
+            .then(function (res) {
+              if (!res.ok) throw new Error('widget ' + res.status);
+              return res.json();
+            })
+            .catch(function () { return null; });
+        }
+
+        Promise.all(GUILD_IDS.map(fetchWidget))
+          .then(function (widgets) {
+            renderPanel(membersInVoiceFromWidgets(widgets), widgets.some(function (widget) { return !widget; }));
           })
-          .then(renderPanel)
           .catch(renderFallback);
 
         // QT particles: pause -> dive wave -> peel off -> pause
@@ -4436,7 +5556,7 @@
         });
       })();
     </script>
-    <script src="/scripts/alliance-votes.js?v=975c9e6cec15" defer></script>
+    <script src="/scripts/alliance-votes.js?v=26194b2d42fd" defer></script>
     <script src="/scripts/federations.js?v=521a844a6250" defer></script>
     <script src="/scripts/organizations.js?v=119af2be4be3" defer></script>
     <script src="/scripts/red-army.js?v=b7d15fd8347a" defer></script>

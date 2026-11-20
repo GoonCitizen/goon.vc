@@ -48,6 +48,10 @@ function defineClipTimelineEditor (root) {
     return Boolean(clip && clip.media === 'image');
   }
 
+  function isAudio (clip) {
+    return Boolean(clip && clip.media === 'audio');
+  }
+
   function clockTime (ms, withSeconds = true) {
     const d = new Date(ms);
     if (isNaN(d.getTime())) return '';
@@ -85,6 +89,7 @@ function defineClipTimelineEditor (root) {
     filename: 'file name',
     uploaded: 'host upload time',
     posted: 'Discord post time',
+    'discord-voice': 'voice channel',
     manual: 'set by hand',
     unknown: 'unknown'
   };
@@ -141,6 +146,7 @@ function defineClipTimelineEditor (root) {
     .clip.failed { background-color: #5b1f1f; }
     .clip.link { background-color: #1f3b5b; border-style: dashed; }
     .clip.still, .segment.still { background-color: #2a4a3b; background-repeat: repeat-x; border-style: dotted; }
+    .clip.audio, .segment.audio { background-color: #2a3a4a; border-style: dashed; }
     .clip.used::after { background: var(--accent); content: ''; height: 3px; left: 0; position: absolute; right: 0; top: 0; }
     .playhead { background: #ff5a5a; bottom: 0; pointer-events: none; position: absolute; top: 0; width: 2px; z-index: 3; }
     .program { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; gap: 3px; min-height: 64px; overflow-x: auto; padding: 6px; }
@@ -495,7 +501,7 @@ function defineClipTimelineEditor (root) {
         const blocks = track.clips.map((entry) => {
           const clip = this._clip(entry.id) || {};
           const status = clip.kind === 'link' && !clip.proxyUrl ? 'link' : (clip.proxy && clip.proxy.status);
-          const cls = ['clip', status === 'ready' ? '' : status, isStill(clip) ? 'still' : '', entry.id === this.state.clipId ? 'selected' : '', used.has(entry.id) ? 'used' : ''].filter(Boolean).join(' ');
+          const cls = ['clip', status === 'ready' ? '' : status, isStill(clip) ? 'still' : '', isAudio(clip) ? 'audio' : '', entry.id === this.state.clipId ? 'selected' : '', used.has(entry.id) ? 'used' : ''].filter(Boolean).join(' ');
           const left = (entry.offsetMs / 1000) * pps;
           const w = Math.max(6, (entry.durationMs / 1000) * pps);
           const title = `${clip.author || ''} · ${isStill(clip) ? 'screenshot · ' : ''}${clip.filename || clip.linkUrl || ''} · ${clockTime(this._clipStartMs(clip))}${status !== 'ready' ? ` · ${status === 'link' ? 'link only' : status}` : ''}`;
@@ -563,7 +569,7 @@ function defineClipTimelineEditor (root) {
           <dt>Posted</dt><dd>${esc(dateTime(Date.parse(clip.postedAt)))}</dd>
           ${isStill(clip)
             ? `<dt>Screenshot</dt><dd>${clip.width ? `${clip.width}×${clip.height} · ` : ''}shows ${esc(duration(clip.durationMs / 1000))} on the timeline</dd>`
-            : `<dt>Length</dt><dd>${clip.durationMs ? esc(duration(clip.durationMs / 1000)) : '—'}${clip.width ? ` · ${clip.width}×${clip.height}` : ''}${clip.hasAudio === false ? ' · no audio' : ''}</dd>`}
+            : `<dt>Length</dt><dd>${clip.durationMs ? esc(duration(clip.durationMs / 1000)) : '—'}${!isAudio(clip) && clip.width ? ` · ${clip.width}×${clip.height}` : ''}${isAudio(clip) ? ' · voice' : (clip.hasAudio === false ? ' · no audio' : '')}</dd>`}
           ${status ? `<dt>Status</dt><dd class="${clip.proxy.status === 'failed' ? 'error' : 'muted'}">${esc(status)}</dd>` : ''}
         </dl>
         <div class="row" title="Shift this clip on the timeline to line it up with the other angles">
@@ -597,6 +603,9 @@ function defineClipTimelineEditor (root) {
           <span class="muted">up to ${max}s</span>
         </div>${order}`;
       }
+      const overlay = isAudio(clip)
+        ? `<div class="row"><label>On film at <input type="number" step="0.1" min="0" data-seg="at" value="${segment.at || 0}" style="width:6em"> s</label><span class="muted">voice overlay</span></div>`
+        : '';
       return `
         <h3 style="margin-top:0.8em">Segment</h3>
         <div class="row">
@@ -604,6 +613,7 @@ function defineClipTimelineEditor (root) {
           <label>Out <input type="number" step="0.1" min="0" data-seg="out" value="${segment.out}" style="width:6em"></label>
           <span class="muted">${esc(duration(segment.out - segment.in))}</span>
         </div>
+        ${overlay}
         <div class="row">
           <button type="button" data-action="seg-in">In from playhead</button>
           <button type="button" data-action="seg-out">Out from playhead</button>
@@ -618,7 +628,8 @@ function defineClipTimelineEditor (root) {
       if (!this.editing) return;
       const el = this.ref.program;
       const segs = this.state.segments;
-      const total = segs.reduce((sum, s) => sum + (s.out - s.in), 0);
+      const picture = segs.filter((s) => !isAudio(this._clip(s.clipId)));
+      const total = picture.reduce((sum, s) => sum + (s.out - s.in), 0) || segs.reduce((sum, s) => Math.max(sum, (Number(s.at) || 0) + (s.out - s.in)), 0);
       this.ref.programInfo.textContent = segs.length ? `· ${segs.length} segment${segs.length === 1 ? '' : 's'} · ${duration(total)}` : '';
       if (!segs.length) {
         el.innerHTML = '<span class="empty">Mark a range on a clip and press Add to program.</span>';
@@ -629,11 +640,12 @@ function defineClipTimelineEditor (root) {
       el.innerHTML = segs.map((seg, i) => {
         const clip = this._clip(seg.clipId) || {};
         const still = isStill(clip);
-        const cls = ['segment', still ? 'still' : '', i === this.state.segmentIndex ? 'selected' : '', i === this.state.programPlaying ? 'playing' : ''].filter(Boolean).join(' ');
+        const audio = isAudio(clip);
+        const cls = ['segment', still ? 'still' : '', audio ? 'audio' : '', i === this.state.segmentIndex ? 'selected' : '', i === this.state.programPlaying ? 'playing' : ''].filter(Boolean).join(' ');
         const w = Math.max(48, (seg.out - seg.in) * pps);
-        const title = still ? `${clip.author || ''} · screenshot for ${timecode(seg.out - seg.in)}` : `${clip.author || ''} · ${timecode(seg.in)}–${timecode(seg.out)}`;
+        const title = still ? `${clip.author || ''} · screenshot for ${timecode(seg.out - seg.in)}` : audio ? `${clip.author || ''} · voice @ ${timecode(seg.at || 0)}` : `${clip.author || ''} · ${timecode(seg.in)}–${timecode(seg.out)}`;
         return `<div class="${cls}" draggable="true" data-segment="${i}" title="${esc(title)}" style="width:${w}px;${this._sprite(clip, seg.in, 52)}">` +
-          `${seg.audio === 'mute' && !still ? '<b class="mute">muted</b>' : ''}<span>${i + 1}. ${esc(clip.author || '?')} · ${still ? 'still ' : ''}${esc(duration(seg.out - seg.in))}</span></div>`;
+          `${seg.audio === 'mute' && !still ? '<b class="mute">muted</b>' : ''}<span>${i + 1}. ${esc(clip.author || '?')} · ${still ? 'still ' : audio ? 'voice ' : ''}${esc(duration(seg.out - seg.in))}</span></div>`;
       }).join('');
     }
 
@@ -649,16 +661,18 @@ function defineClipTimelineEditor (root) {
         const clip = this._clip(seg.clipId) || {};
         const rec = clip.recording || {};
         const manual = clip.override && clip.override.recordedAt;
+        const overlay = isAudio(clip);
+        const when = overlay ? (Number(seg.at) || 0) : at;
         const row = `<tr>
             <td class="num">${i + 1}</td>
-            <td class="num">${esc(timecode(at))}</td>
+            <td class="num">${esc(timecode(when))}${overlay ? ' <span class="muted">overlay</span>' : ''}</td>
             <td>${esc(clip.author || '?')}</td>
-            <td>#${esc(clip.channel || '?')}<br><a href="${esc(clip.messageUrl || '#')}" target="_blank" rel="noopener noreferrer">message</a></td>
+            <td>#${esc(clip.channel || '?')}${clip.messageUrl ? `<br><a href="${esc(clip.messageUrl)}" target="_blank" rel="noopener noreferrer">message</a>` : ''}</td>
             <td>${esc(clip.filename || clip.linkUrl || '')}</td>
-            <td class="num">${isStill(clip) ? `screenshot, ${esc(timecode(seg.out - seg.in))}` : `${esc(timecode(seg.in))}–${esc(timecode(seg.out))}`}</td>
+            <td class="num">${isStill(clip) ? `screenshot, ${esc(timecode(seg.out - seg.in))}` : overlay ? `voice, ${esc(timecode(seg.out - seg.in))}` : `${esc(timecode(seg.in))}–${esc(timecode(seg.out))}`}</td>
             <td>${esc(clockTime(this._clipStartMs(clip) + seg.in * 1000))}<br><span class="muted">${esc(SOURCE_LABEL[manual ? 'manual' : rec.source] || '')}${manual ? '' : `, ${esc(rec.confidence || 'low')}`}</span></td>
           </tr>`;
-        at += seg.out - seg.in;
+        if (!overlay) at += seg.out - seg.in;
         return row;
       }).join('');
       this.ref.sources.innerHTML = `<table><thead><tr><th>#</th><th>At</th><th>Pilot</th><th>Where</th><th>File</th><th>Range</th><th>Recorded</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -714,8 +728,13 @@ function defineClipTimelineEditor (root) {
       this._stillTimer = null;
       const video = this.ref.video;
       const still = isStill(clip);
-      video.classList.toggle('hidden', still);
-      this.ref.still.classList.toggle('hidden', !still);
+      const audio = isAudio(clip);
+      video.classList.toggle('hidden', still || audio);
+      this.ref.still.classList.toggle('hidden', !still && !audio);
+      if (audio && clip.thumbsUrl) {
+        this.ref.still.src = clip.thumbsUrl;
+        this.ref.still.alt = clip.caption || `Voice from ${clip.author || 'a channel'}`;
+      }
       if (still) {
         video.pause();
         if (video.getAttribute('src')) {
@@ -786,7 +805,13 @@ function defineClipTimelineEditor (root) {
         return;
       }
       const at = this.state.segmentIndex !== null ? this.state.segmentIndex + 1 : this.state.segments.length;
-      this.state.segments.splice(at, 0, { clipId: clip.id, in: Number(start.toFixed(3)), out: Number(end.toFixed(3)), audio: 'on', volume: 1 });
+      const row = { clipId: clip.id, in: Number(start.toFixed(3)), out: Number(end.toFixed(3)), audio: 'on', volume: 1 };
+      if (isAudio(clip)) {
+        const session = this._session();
+        const entry = session && session.tracks && session.tracks.flatMap((track) => track.clips).find((item) => item.id === clip.id);
+        row.at = Number(((entry && entry.offsetMs ? entry.offsetMs : 0) / 1000).toFixed(3));
+      }
+      this.state.segments.splice(at, 0, row);
       this.state.segmentIndex = at;
       this.state.markIn = null;
       this.state.markOut = null;
@@ -986,6 +1011,7 @@ function defineClipTimelineEditor (root) {
       if (field === 'out') seg.out = Math.min(length || Infinity, Math.max(Number(value) || 0, seg.in + 0.1));
       if (field === 'mute') seg.audio = value ? 'mute' : 'on';
       if (field === 'volume') seg.volume = Number(value);
+      if (field === 'at') seg.at = Math.max(0, Number(value) || 0);
       seg.in = Number(seg.in.toFixed(3));
       seg.out = Number(seg.out.toFixed(3));
       this.state.dirty = true;

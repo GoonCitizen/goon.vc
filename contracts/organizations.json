@@ -97,11 +97,16 @@
       "intro": [
         "The Galaxy on time.™"
       ],
-      "links": [],
       "history": [
         "After a dazzling and distinguished military career, two brothers looked toward the future and wondered how best to put their piloting abilities to use in their post-service lives. One a cargo pilot with a legendary reputation for successfully completing the most difficult and dangerous logistical resupply runs the command had to offer; the other a fighter jockey and Ace many times over, notorious for taking on insurmountable odds with reckless abandon and the uncanny ability to always come out on top.",
         "Civilian life offered them only one option which would provide the thrill and challenge their former occupations possessed; running the most sensitive freight to and through the most dangerous parts of the Galaxy. Gathering an elite group around them composed of former military personnel they had served with and mutual acquaintances from the piloting community they formed the core of Trans-Galactic. The rest, as they say, is history.",
         "Join us on the Trans-Galactic Discord Server"
+      ],
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/GGMQYSf5S7"
+        }
       ],
       "manifesto": [
         "Here at Trans-Galactic™ we aspire to provide the highest level of professionalism and performance while transporting cargo to and from any location our customers require. As a subsidiary of Extensive Enterprises™ and with an elite force of both personnel and equipment, no destination is too dangerous and no cargo beyond our ability to deliver safely and swiftly. By employing our own fighter core we save not only time, but cost as well since expensive and complicated contracts with mercenary groups are unnecessary. At Trans-Galactic we deliver the Galaxy on time, every time."
@@ -208,11 +213,16 @@
         "secondary": "Trading"
       },
       "recruiting": true,
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/4m-contractors"
+        }
+      ],
       "intro": [
         "Welcome Citizen",
         "Built by friends and driven by purpose, 4M-CONTRACTORS unites combat pilots, industrial crews, medics, merchants, and outlaws into one unstoppable organization. Through loyalty, strategy, and controlled chaos, we forge our legacy across every corner of the ‘verse."
       ],
-      "links": [],
       "history": [
         "History of 4M-CONTRACTORS",
         "In the sprawling universe of Star Citizen, where danger and opportunity collide among the stars, a group of like-minded individuals found themselves drawn together by a shared passion for adventure, camaraderie, and the thrill of the unknown. From this common ground, the organization known as 4M-CONTRACTORS emerged, carving a unique niche in the vast cosmos.",
@@ -326,187 +336,6 @@
       ]
     },
     {
-      "displayName": "A.I.M.O.S.",
-      "symbol": "AIMOS",
-      "name": "A.I.M.O.S",
-      "url": "https://robertsspaceindustries.com/orgs/AIMOS",
-      "logoUrl": "https://robertsspaceindustries.com/media/smpfsj3qorxl3r/logo/AIMOS-Logo.png",
-      "bannerUrl": "https://robertsspaceindustries.com/media/vsb1jh3jn8rqwr/banner/AIMOS-Banner.png",
-      "members": 149,
-      "model": "Syndicate",
-      "commitment": "Hardcore",
-      "roleplay": "Role play",
-      "focus": {
-        "primary": "Resources",
-        "secondary": "Security"
-      },
-      "recruiting": true,
-      "intro": [
-        "Armored Interstellar Mercenary Operations Syndicate",
-        "Comms…"
-      ],
-      "links": [
-        {
-          "label": "Comms",
-          "href": "http://discord.gg/aimos"
-        }
-      ],
-      "history": [
-        "Currently in the making."
-      ],
-      "manifesto": [
-        "Through dedication, perseverance, and unbreakable will, we will overcome any obstacle before us."
-      ],
-      "charter": [
-        "A.I.M.O.S.",
-        "ORGANIZATIONAL CHARTER",
-        "Armored Interstellar Mercenary Operations Syndicate",
-        "Founding Principles | Organizational Philosophy | Member Rights | Leadership Doctrine | Alliance Framework",
-        "PREAMBLE — WHY WE EXIST",
-        "A.I.M.O.S. was established on the belief that an organization is only as strong as the people who comprise it.",
-        "We recognize that Star Citizen is a game meant to be enjoyed, explored, and experienced together. An organization should enhance that experience, not restrict it.",
-        "We reject the idea that effective leadership requires blind obedience, that rank determines someone’s worth, or that personal circumstances should prevent someone from participating in meaningful organizational activities.",
-        "Our purpose is to create a sustainable, active, and capable community where individuals can develop their abilities, build lasting friendships, pursue their ambitions, and participate in operations at every level.",
-        "We believe in structure without oppression, discipline without disrespect, leadership without ego, and success without sacrificing enjoyment.",
-        "We are not here to own our members. We are here to empower them.",
-        "ARTICLE I — FOUNDATIONAL PRINCIPLES",
-        "All organizational decisions, policies, and leadership actions shall be guided by five foundational principles.",
-        "1. Loyalty",
-        "Loyalty is earned through mutual trust, consistency, and shared commitment. We stand behind our members, support one another through difficulties, and recognize the importance of protecting the community we’ve built.",
-        "2. Respect",
-        "Every member deserves to be treated with dignity, regardless of rank, experience, ability, background, or contribution. Authority does not excuse disrespect, intimidation, or abuse.",
-        "3. Friendship",
-        "We are a gaming community before we are a military-style organization. Building friendships, enjoying one another’s company, and creating memorable experiences are fundamental to our identity.",
-        "4. Opportunity",
-        "Every member should have the opportunity to learn, develop, lead, participate, and succeed. We invest in people rather than simply extracting value from their participation.",
-        "5. Enjoyment",
-        "The enjoyment of our members takes priority over organizational statistics, artificial activity requirements, and unnecessary competition. Success is meaningful only when the people achieving it enjoy the experience.",
-        "ARTICLE II — MEMBER AUTONOMY AND INDIVIDUAL FREEDOM",
-        "A.I.M.O.S. recognizes the individual independence of its members.",
-        "Membership does not constitute ownership of a person’s time, gameplay, personal decisions, or individual ambitions.",
-        "Members retain the freedom to:",
-        "Pursue personal objectives and independent gameplay.",
-        "Participate in activities according to their availability and interests.",
-        "Develop individual skills and professional specialties.",
-        "Express constructive opinions, disagreements, and recommendations.",
-        "Pursue leadership opportunities and personal advancement.",
-        "Maintain outside friendships and relationships with other organizations, subject to reasonable operational and security requirements.",
-        "No member should feel obligated to sacrifice their enjoyment of the game to satisfy another member’s ego, personal ambitions, or unnecessary demands.",
-        "Leadership exists to provide direction, resources, and opportunity, not to dictate how someone must enjoy their game.",
-        "ARTICLE III — ACCESSIBILITY AND INCLUSIVE PARTICIPATION",
-        "A.I.M.O.S. is committed to making organizational participation as accessible as reasonably possible.",
-        "We recognize that members have different schedules, abilities, communication preferences, experience levels, and real-life circumstances.",
-        "These differences should never automatically disqualify someone from meaningful participation.",
-        "The organization shall continuously pursue improved methods of:",
-        "Communication and operational coordination.",
-        "Training and knowledge distribution.",
-        "Alternative participation methods.",
-        "Accessible organizational systems.",
-        "Flexible role assignments.",
-        "New-player integration and mentorship.",
-        "Operational planning that accommodates different capabilities.",
-        "Where traditional methods create unnecessary barriers, we seek alternative solutions.",
-        "A member’s ability to contribute should be evaluated by what they can reasonably accomplish with the appropriate support, not simply by whether they meet a conventional standard.",
-        "We don’t look for reasons someone cannot participate. We look for ways to make participation possible.",
-        "ARTICLE IV — LEADERSHIP AND ACCOUNTABILITY",
-        "A.I.M.O.S. recognizes organizational hierarchy as a practical necessity for coordinating complex operations, managing resources, and maintaining accountability.",
-        "However, rank is a responsibility, not a privilege of superiority.",
-        "Leadership is expected to:",
-        "Lead by example.",
-        "Treat members with consistency and respect.",
-        "Provide guidance, mentorship, and opportunities for development.",
-        "Communicate expectations clearly.",
-        "Remain accountable for decisions and organizational conduct.",
-        "Recognize individual contributions.",
-        "Resolve disagreements professionally.",
-        "Prioritize organizational health over personal ego.",
-        "Members are encouraged to offer constructive criticism and communicate concerns through appropriate channels.",
-        "No leadership position grants immunity from accountability.",
-        "A good leader creates capable people, not dependent followers.",
-        "ARTICLE V — OPERATIONAL DOCTRINE",
-        "A.I.M.O.S. maintains an organized operational structure capable of conducting coordinated activities across Star Citizen.",
-        "We pursue excellence in combat, security, logistics, industry, intelligence, training, and other organizational disciplines.",
-        "Operational participation shall be based on preparation, communication, role awareness, and mutual cooperation.",
-        "During organized operations:",
-        "Members are expected to respect designated operational leadership.",
-        "Communications should remain clear, concise, and relevant.",
-        "Assigned responsibilities should be understood before execution.",
-        "Members should respect operational security and organizational procedures.",
-        "Constructive feedback and after-action reviews are encouraged.",
-        "Training and mistakes should be treated as opportunities for improvement.",
-        "Operational discipline is important because it protects the effectiveness and enjoyment of everyone involved.",
-        "However, operational structure does not extend into unnecessary control of personal gameplay outside designated activities.",
-        "We demand professionalism when it matters, not obedience for its own sake.",
-        "ARTICLE VI — KNOWLEDGE, DEVELOPMENT AND SHARED SUCCESS",
-        "A.I.M.O.S. believes knowledge should circulate throughout the organization rather than remain concentrated in positions of authority.",
-        "Experience should be shared. Opportunities should be developed. Success should create additional opportunities for others.",
-        "Members are encouraged to:",
-        "Teach and mentor less experienced players.",
-        "Share useful information and operational knowledge.",
-        "Develop new strategies and organizational solutions.",
-        "Pursue leadership and specialist positions.",
-        "Help establish sustainable income and gameplay opportunities.",
-        "Contribute to the development of organizational capabilities.",
-        "We do not measure someone’s worth solely by their current experience or resources.",
-        "We measure the strength of our organization by how effectively we help people grow.",
-        "Take the knowledge. Build your success. Bring that success back to the community.",
-        "ARTICLE VII — COMMUNITY STANDARDS",
-        "Every member shares responsibility for maintaining a welcoming, respectful, and functional community.",
-        "A.I.M.O.S. does not tolerate:",
-        "Harassment, intimidation, or targeted abuse.",
-        "Discrimination or deliberate exclusion.",
-        "Abuse of rank or organizational authority.",
-        "Deliberate disruption of organizational activities.",
-        "Knowingly compromising organizational security.",
-        "Repeated disrespect toward fellow members.",
-        "Disagreements are expected in any functioning community. They should be addressed through communication, reason, and appropriate leadership channels.",
-        "Our community should remain a place where members can relax, socialize, learn, and enjoy the game without unnecessary hostility.",
-        "ARTICLE VIII — ALLIANCE AND INTERORGANIZATIONAL RELATIONS",
-        "A.I.M.O.S. recognizes that cooperation between independent organizations creates opportunities that individual groups may not achieve alone.",
-        "We therefore establish an official alliance framework.",
-        "A.I.M.O.S. welcomes applications from organizations that share compatible values and demonstrate a willingness to cooperate respectfully.",
-        "Alliance relationships may include:",
-        "Joint operational planning and execution.",
-        "Mutual support and security cooperation.",
-        "Shared training and development.",
-        "Industry and logistical partnerships.",
-        "Intelligence and information exchange.",
-        "Recruitment and community development initiatives.",
-        "Coordinated events and organizational activities.",
-        "Alliance membership does not automatically dissolve an organization’s independence, leadership, identity, or internal structure.",
-        "Each alliance partner retains its organizational sovereignty unless otherwise agreed upon through mutual arrangements.",
-        "Cooperation must be founded on mutual benefit, respect, transparency, and clearly established expectations.",
-        "We believe independent organizations can remain independent while accomplishing more together.",
-        "ARTICLE IX — ORGANIZATIONAL ACTIVITY AND PARTICIPATION",
-        "A.I.M.O.S. strives to maintain an active community with opportunities available throughout the week.",
-        "We encourage consistent participation, communication, and community involvement.",
-        "However, real-life responsibilities, personal circumstances, and individual availability are respected.",
-        "Members are not expected to treat Star Citizen as an obligation or second occupation.",
-        "The organization shall prioritize maintaining opportunities for participation rather than imposing artificial activity requirements.",
-        "We want members to log in because they want to be here, because their friends are here, and because there is something worthwhile to experience.",
-        "ARTICLE X — GOVERNANCE AND AMENDMENTS",
-        "This charter establishes the foundational principles governing A.I.M.O.S.",
-        "Organizational policies, operational procedures, rank structures, and administrative guidelines shall remain consistent with its principles.",
-        "Leadership may establish additional procedures when necessary for organizational effectiveness, provided those procedures do not contradict the foundational rights and commitments established herein.",
-        "Members may propose amendments and improvements through appropriate organizational channels.",
-        "Significant amendments should receive leadership review and meaningful consideration of member feedback.",
-        "The charter exists to protect the organization and its people, not to become an instrument of unnecessary restriction.",
-        "THE A.I.M.O.S. DECLARATION",
-        "We are not defined by our ships, our weapons, our wealth, or our ranks.",
-        "We are defined by the people who stand beside us.",
-        "We believe loyalty is earned. Respect is mutual. Friendship is invaluable. Knowledge is meant to be shared. Leadership is a responsibility. And enjoyment is the reason we play.",
-        "We will adapt when circumstances demand it.",
-        "We will find solutions when others see obstacles.",
-        "We will create opportunities where none previously existed.",
-        "We will support our members, develop our capabilities, and build relationships that extend beyond individual operations.",
-        "We will never confuse organizational success with the personal subordination of our members.",
-        "We are here to build something people want to be part of, not something they feel obligated to serve.",
-        "A.I.M.O.S.",
-        "BREAK THE CHAINS. BUILD THE BROTHERHOOD. OWN YOUR SUCCESS.",
-        "Armored Interstellar Mercenary Operations Syndicate"
-      ]
-    },
-    {
       "displayName": "Risky Business",
       "symbol": "IDBC",
       "name": "risky business",
@@ -534,6 +363,179 @@
       "history": [],
       "manifesto": [],
       "charter": []
+    },
+    {
+      "displayName": "House of Khans",
+      "symbol": "H0K",
+      "name": "House of Khans",
+      "url": "https://robertsspaceindustries.com/orgs/H0K",
+      "logoUrl": "https://robertsspaceindustries.com/media/zlkpobg5law9kr/logo/H0K-Logo.png",
+      "bannerUrl": "https://cdn.robertsspaceindustries.com/static/images/organization/defaults/banner/corp.jpg",
+      "members": 36,
+      "model": "Corporation",
+      "commitment": "Regular",
+      "roleplay": "Role play",
+      "focus": {
+        "primary": "Security",
+        "secondary": "Engineering"
+      },
+      "recruiting": true,
+      "intro": [
+        "House of Khans is a Community that strives to bring a good fight and fun anywhere we go! Our goal is to maintain a mature a fun loving culture in our group. If you think you’re a good fit you’re welcome to join us!",
+        "Visit us on Discord – https://discord.gg/khans"
+      ],
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/khans"
+        }
+      ],
+      "history": [
+        "“There’s something special about getting together to kick someone’s ass.” – Patriarch",
+        "Established over a decade ago among the current Leadership cadre as a response to encroaching threats, House of Khans was officially formed and has grown ever since. HoK has had a historical presence in games such as EvE Online, Archeage, Life is Feudal, Rust, War Thunder, Arma III, and many more.",
+        "The Star Citizen Chapter of HoK specializes in boutique solutions that leverage Subject Matter Experts, networking, and our knowledge as advisors to help pilots traverse the universe better. Our members are rugged generalists that are capable and willing to complete their assigned mission.",
+        "Interested in joining? To be a Khan, ask a Khan!"
+      ],
+      "manifesto": [],
+      "charter": []
+    },
+    {
+      "displayName": "Obsidia",
+      "symbol": "OBSX",
+      "name": "Obsidia",
+      "url": "https://robertsspaceindustries.com/orgs/OBSX",
+      "logoUrl": "https://robertsspaceindustries.com/media/nlf8nubibgbjnr/logo/OBSX-Logo.png",
+      "bannerUrl": "https://robertsspaceindustries.com/media/8x0k6pgqnr0mir/banner/OBSX-Banner.png",
+      "members": 9,
+      "model": "Syndicate",
+      "commitment": "Regular",
+      "roleplay": null,
+      "focus": {
+        "primary": "Bounty Hunting",
+        "secondary": "Piracy"
+      },
+      "recruiting": true,
+      "intro": [
+        "Obsidia does not accept all who seek entry. We are a covert directive — a sovereign force forged from discipline, precision, and resolve. Every operative is hand-selected, trained, and trusted with missions beyond ordinary reach.",
+        "Your future or exclusion of The Directive will be decided here."
+      ],
+      "links": [],
+      "history": [
+        "“From shadow, order.”",
+        "Obsidia did not arise from ambition, but from abandonment. It was never meant to exist beyond a black file buried in the UEE’s intelligence archives — Project Obsidia, a classified initiative designed to house and train precision units capable of surgical interdiction, counter-insurgency, and asset recovery. It was a quiet tool in a violent age: autonomous, deniable, and loyal only to those who held the keys. When the Messer regime fell, the Empire scrambled to erase its own sins. Countless shadow programs were dissolved, scattered, or “lost.” But Project Obsidia didn’t disappear — it fractured and evolved. A cadre of its surviving architects, tacticians, and operatives refused to be cast aside with the broken empire. Disillusioned by both imperial authoritarianism and the chaotic rise of outlaw factions, they severed ties to their past and went dark — taking with them valuable ships, sealed doctrines, and the core code of the Directive. What they built in the void was not a rebellion, nor a rogue fleet, nor a self-righteous militia.",
+        "They built Obsidia — a sovereign directive with its own doctrine, its own structure, and its own vision of order."
+      ],
+      "manifesto": [
+        "Modern-day Obsidia operates across Stanton, Pyro, Nyx, and soon beyond. It functions as a semi-public, high-discipline force, moving with minimal footprint but maximal impact. Unlike loud mercenary groups or bloated alliances, Obsidia functions through precision, cohesion, and intent. It doesn’t seek domination through noise. It doesn’t chase popularity or numbers. It selects. Its ranks are filled with those who understand the value of discipline over disorder, loyalty over fame, and quiet efficiency over empty spectacle. Its agents are trained to work as one — whether piloting through asteroid fields, breaching derelict hulls, stabilizing forward installations, or protecting economic networks under fire.",
+        "Obsidia is not a name you hear often. But when it arrives, it is already too late."
+      ],
+      "charter": [
+        "Obsidia’s Core Values",
+        "• Fidelitas – Loyalty to the Directive and the operator beside you. Trust is earned and guarded.",
+        "• Silentium – Speak with action. Let presence be quiet, and precision be final.",
+        "• Exactus – Every deployment, every movement, every strike must be measured. No waste. No hesitation.",
+        "These values guide every member, from new recruit to Council leadership."
+      ]
+    },
+    {
+      "symbol": "MB",
+      "name": "Space Monkey Universal Services",
+      "url": "https://robertsspaceindustries.com/orgs/SMUS",
+      "logoUrl": "https://theverse.robertsspaceindustries.com/99wqffbzqko9v/logo.png",
+      "bannerUrl": "https://theverse.robertsspaceindustries.com/k6v3syowy6rf8/banner.png",
+      "members": 12,
+      "model": "Organization",
+      "commitment": "Casual",
+      "roleplay": null,
+      "focus": {
+        "primary": "Social",
+        "secondary": "Security"
+      },
+      "recruiting": true,
+      "intro": [
+        "Welcome to Space Monkey Universal Services. We’re a lawful, casual Star Citizen org built around industry, security, trade, and dependable teamwork. Casual community. Serious capability. Apes Together Strong!"
+      ],
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://discord.gg/SpaceMonkey"
+        }
+      ],
+      "history": [
+        "OUR HISTORY",
+        "Space Monkey Universal Services grew from a simple idea: good people working together can accomplish more than they can alone.",
+        "The Monkey Wrench Fleet began as an industrial group focused on mining, hauling, salvage, and keeping its members moving. As the scale of those activities grew, the need for dependable security led to the formation of the Space Monkey Marine Corps. The Space Monkey Supply Syndicate later expanded our capabilities into procurement, trade, sourcing, and commercial coordination.",
+        "These complementary branches came together as Space Monkey Universal Services—a unified organization built around industry, security, and supply, without losing the welcoming community that made it possible.",
+        "Today, SMUS combines casual participation with the ability to coordinate serious operations. Our ambitions may grow, but our purpose remains the same: help one another succeed and build a crew people can depend on.",
+        "Apes Together Strong!",
+        "Join Now! discord.gg/SpaceMonkey"
+      ],
+      "manifesto": [
+        "OUR MANIFESTO",
+        "CASUAL COMMUNITY. SERIOUS CAPABILITY.",
+        "Space Monkey Universal Services exists to help people enjoy more of the Star Citizen universe together. We believe organized teamwork should open opportunities, not turn a game into a second job. New pilots and veterans alike deserve a place where they can contribute, learn, and count on their crew.",
+        "Our operational identity is straightforward: BUILD. SUPPLY. PROTECT. Our branches specialize in different work, but none is secondary to the others. Every successful expedition, trade, and security operation contributes to the strength of the whole organization.",
+        "THREE BRANCHES. ONE TROOP.",
+        "MONKEY WRENCH FLEET (MWF)",
+        "The fleet behind the fleet.",
+        "MWF is our industrial strength: mining, salvage, hauling, engineering, recovery, maintenance, transport, and large-scale logistics. Industrial work is an achievement in its own right, not merely preparation for someone else’s victory. MWF has the people, ships, and expertise to move operations forward.",
+        "SPACE MONKEY MARINE CORPS (SMMC)",
+        "You pay. We deploy. They fall.",
+        "SMMC is our lawful combat and security arm. Its crews undertake mercenary contracts, escorts, fleet defense, tactical operations, anti-piracy work, and the protection of people, cargo, and objectives. We fight to accomplish a mission or defend what matters—not to harass other players.",
+        "SPACE MONKEY SUPPLY SYNDICATE (SMSS)",
+        "Markets move. We move faster.",
+        "SMSS is our commercial and procurement arm. Its members navigate markets, trade goods, source rare equipment, acquire materials, coordinate contracts, and connect the organization with the resources it needs. It focuses on opportunity and acquisition rather than duplicating the industrial work of MWF.",
+        "THE WAY WE OPERATE",
+        "We value community over ego, competence over rank, and reliability over promises. Members are welcome to explore all three branches, help when they can, and play at their own pace. Attendance and roleplay are never compulsory. When we commit to a joint operation, we communicate, cooperate, and respect one another’s time.",
+        "We are a lawful organization. Piracy, scams, griefing, and violence without a legitimate objective have no place under our banner. We defend our members, fulfill legitimate contracts, and respect the wider community.",
+        "THE BENEFITS OF BELONGING",
+        "SMUS offers dependable teammates, organized industrial, commercial, and tactical activities, shared experience, recognition through earned ranks, and exclusive member pricing through the SMSS marketplace. Every member begins with a 10% store discount, increasing by 10 percentage points per earned rank to 60% at Rank 5.",
+        "One Organization. Three Divisions. Unlimited Opportunities.",
+        "APES TOGETHER STRONG."
+      ],
+      "charter": [
+        "ARTICLE I — MEMBERSHIP",
+        "Space Monkey Universal Services (SMUS) welcomes Star Citizen players of all experience levels who support our values and lawful operating standards. No specific ship, profession, or prior experience is required for general membership.",
+        "Participation is voluntary. There are no mandatory weekly playtimes, deployments, or roleplay obligations. Members may work within any of the three branches and are encouraged to share knowledge and assist other players.",
+        "ARTICLE II — LEADERSHIP",
+        "Organization — Leader — Master Title",
+        "SMUS — TheyCallMeHero — Grand Simian",
+        "SMMC — ConvergedGaming — Ape-X Commander",
+        "SMSS — CurseofJericho — Magnate of Monkey Business",
+        "MWF — Milinko01 — Kong of Industry",
+        "ARTICLE III — RANKS & MEMBER DISCOUNTS",
+        "All new members join as Rank 0: Space Monkey. Ranks 1–5 are earned through participation and contribution. Rank recognizes activity and service; it does not replace practical experience or make every senior member an automatic mission commander.",
+        "Rank — Title — SMSS Store Discount",
+        "5 — Prime Ape — 60%",
+        "4 — Branch Commander — 50%",
+        "3 — Senior Simian — 40%",
+        "2 — Monkey Major — 30%",
+        "1 — Monkey First Class — 20%",
+        "0 — Space Monkey — 10%",
+        "The discount starts at 10% upon joining and increases by 10 percentage points for each rank earned. It applies to all items listed for sale on the official SMSS UEX storefront:",
+        "https://uexcorp.space/marketplace/orgs/@JERICHOSC",
+        "ARTICLE IV — CODE OF CONDUCT",
+        "Respect. Treat fellow members and other players with courtesy. Harassment, discrimination, bullying, targeted abuse, and personal attacks are not tolerated.",
+        "Integrity. Do not scam, steal from fellow members, deliberately mislead teammates, or exploit the trust of the organization.",
+        "Cooperation. Follow the agreed plan when participating in an organized mission. Communicate honestly about your availability and ability to fulfill an assigned role.",
+        "Reputation. When representing SMUS, conduct yourself in a way that reflects our values of reliability, professionalism, and fair play.",
+        "No mandatory roleplay. Our ranks and branding are part of our identity, not an expectation of in-character conduct, military formalities, or blind obedience.",
+        "ARTICLE V — RULES OF ENGAGEMENT",
+        "SMUS is a lawful organization. Members may engage in legitimate security and mercenary contracts, self-defense, defense of fellow members, protection of assets or cargo, escort operations, anti-piracy actions, and the defense of operational objectives.",
+        "We do not engage in piracy or griefing under the SMUS banner. Attacking uninvolved players solely for entertainment at their expense, repeated malicious targeting, scams, and violence without a legitimate gameplay objective are prohibited.",
+        "Members may defend themselves, their crew, and their property against aggression. They are not expected to surrender ships or cargo to hostile players.",
+        "We fight for a reason, not simply because we can.",
+        "ARTICLE VI — ORGANIZED OPERATIONS",
+        "SMUS may organize mining expeditions, salvage missions, trade initiatives, freight convoys, escort contracts, fleet operations, tactical deployments, and community activities.",
+        "Joining an operation is optional. Once a member accepts a role, they should coordinate with the appointed operation leader, communicate changes in availability, and make a reasonable effort to fulfill their commitment.",
+        "Operational leaders coordinate the mission and assign responsibilities according to capability and the needs of the activity. Leadership exists to help the crew succeed, not to establish unnecessary authority.",
+        "ARTICLE VII — OUR COMMITMENT",
+        "SMUS strives to offer a welcoming community, dependable teammates, shared knowledge, worthwhile activities across all three branches, recognition of contributions, and exclusive SMSS member discounts—without compulsory attendance or roleplay.",
+        "We ask members to respect each other, contribute when they can, and remember that the organization is only as strong as the people who stand together.",
+        "CASUAL COMMUNITY. SERIOUS CAPABILITY.",
+        "APES TOGETHER STRONG."
+      ],
+      "displayName": "Monkey Business"
     }
   ]
 }

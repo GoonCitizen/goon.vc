@@ -368,13 +368,17 @@ function client () {
     const mine = proposal.you && proposal.you.memberVote;
     const officer = ((proposal.you && proposal.you.officers) || []).length > 0;
     const counts = `<p class="pf-intro">${memberLine(proposal.members)}</p>${memberBar(proposal.members)}`;
+    const named = (proposal.memberVotes || []).filter((vote) => vote.name);
+    const who = named.length
+      ? `<ul class="pf-votes-list">${named.map((vote) => `<li>${esc(vote.name)}${(vote.orgs || []).length ? ` · ${esc(vote.orgs.map((org) => org.name).join(', '))}` : ''} · <strong>${esc(vote.choice)}</strong></li>`).join('')}</ul>`
+      : '';
     const how = '<p class="pf-votes-note">Every member has a say: one vote each, the latest from any of your linked accounts counts. It is advice to the member orgs, who decide. On Discord, run <code>/vote</code> in any server with our bot.</p>';
-    if (proposal.status !== 'open') return `<section class="pf-votes-panel"><h2>Members</h2>${counts}</section>`;
-    if (!proposal.bridge) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}<p class="pf-votes-note">Member votes are not set up right now.</p></section>`;
-    if (!overview.you || !overview.you.signedIn) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}<p class="pf-votes-note"><a href="${esc(loginPath)}">Sign in</a> to vote here.</p></section>`;
+    if (proposal.status !== 'open') return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${who}</section>`;
+    if (!proposal.bridge) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${who}<p class="pf-votes-note">Member votes are not set up right now.</p></section>`;
+    if (!overview.you || !overview.you.signedIn) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${who}${how}<p class="pf-votes-note"><a href="${esc(loginPath)}">Sign in</a> to vote here.</p></section>`;
     const yours = `<p class="pf-votes-note">${mine ? `Your vote: <strong>${esc(mine.choice)}</strong> (${esc(when(mine.castAt))})` : 'You have not voted.'}</p>`;
-    if (officer) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}${yours}<p class="pf-votes-note">Your vote for your org above sets it.</p></section>`;
-    return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${how}
+    if (officer) return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${who}${how}${yours}<p class="pf-votes-note">Your vote for your org above sets it.</p></section>`;
+    return `<section class="pf-votes-panel"><h2>Members</h2>${counts}${who}${how}
       <form class="pf-votes-form" data-member-ballot>
         ${yours}
         ${choiceButtons(mine ? mine.choice : null)}
@@ -420,9 +424,11 @@ function client () {
       ${renderMemberBallot(proposal, overview)}
       <h2>Member organizations</h2>
       <ul class="pf-votes-orgs">${proposal.organizations.map((org) => orgItem(org, {
-        sub: org.officers
+        sub: [org.officers
           ? officerLine(org)
           : (org.castAt ? `${when(org.castAt)}${org.by ? ` · ${org.by}` : ''}` : (org.custody === 'none' ? 'no officers on record' : '')),
+        (org.advisors || []).map((vote) => `${vote.name} voted ${vote.choice}`).join(', ')
+        ].filter(Boolean).join(' · '),
         badge: choiceBadge(org.choice)
       })).join('')}</ul>
       ${renderProof(proposal)}`;

@@ -520,12 +520,8 @@ class Leagues {
     if (!found) return null;
     let member = `${DISCORD_MEMBER}${found.id}`;
     if (this.settings.members) {
-      member = (await this.settings.members.memberFor(member, {
-        create: true,
-        via: 'directory',
-        profile: { username: found.handle },
-        displayName: found.name
-      })).id;
+      const existing = await this.settings.members.memberFor(member).catch(() => null);
+      if (existing) member = existing.id;
     }
     return { member, name: found.name, username: found.handle };
   }

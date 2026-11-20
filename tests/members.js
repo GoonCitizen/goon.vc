@@ -672,8 +672,8 @@ describe('Members', function () {
     assert.strictEqual(signedOut.status, 401);
     assert.strictEqual((await request('/services/members/profiles/0123456789abcdef')).status, 401);
 
-    const me = await members.linkDiscord({ id: '500250000', username: 'mepilot', global_name: 'Me' }, 'Me Pilot');
-    const other = await members.linkDiscord({ id: '500260000', username: 'them' }, 'Them');
+    const me = await members.memberFor('discord:500250000', { create: true, via: 'oauth', displayName: 'Me Pilot', profile: { username: 'mepilot', globalName: 'Me' } });
+    const other = await members.memberFor('discord:500260000', { create: true, via: 'command', displayName: 'Them', profile: { username: 'them' } });
     const cookie = `goon.member=${await members._createSession(me.id, 'discord')}`;
     const headers = { Cookie: cookie };
 

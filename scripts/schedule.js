@@ -23,12 +23,17 @@ const ROOT = path.resolve(__dirname, '..');
 function parseArgs (argv) {
   const args = { brand: null, fromJson: null, offline: false, outDir: null };
   const list = argv.slice(2);
+  const operand = (flag) => {
+    const value = list.shift();
+    if (value == null || value.startsWith('-')) throw new Error(`Missing value for ${flag}`);
+    return value;
+  };
   while (list.length) {
     const a = list.shift();
-    if (a === '--brand') args.brand = list.shift();
-    else if (a === '--from-json') args.fromJson = list.shift();
+    if (a === '--brand') args.brand = operand(a);
+    else if (a === '--from-json') args.fromJson = operand(a);
     else if (a === '--offline') args.offline = true;
-    else if (a === '--out-dir') args.outDir = list.shift();
+    else if (a === '--out-dir') args.outDir = operand(a);
     else throw new Error(`Unknown flag: ${a}`);
   }
   return args;

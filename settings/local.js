@@ -46,15 +46,12 @@ module.exports = {
     redirectUri: process.env.DISCORD_REDIRECT_URI || null,
     schedule: {
       brand: process.env.DISCORD_SCHEDULE_BRAND || 'permafleet',
-      // Member orgs' and squadrons' Discord servers whose events join guildId's
-      // on the PERMAFLEET schedule. The bot must be in each to see their events.
+      // Extras on the PERMAFLEET schedule besides member-org Discords from
+      // contracts/alliance.json (GoonVC merges those automatically). The bot
+      // must be in each to see their events.
       servers: process.env.DISCORD_SCHEDULE_SERVERS
         ? process.env.DISCORD_SCHEDULE_SERVERS.split(',').map((id) => id.trim()).filter(Boolean)
         : [
-            '1145511542637482114', // 4M-CONTRACTORS (discord.gg/4m-contractors)
-            '937681528790609970', // TRDE, "Trans-Galactic" (discord.gg/GGMQYSf5S7)
-            '1439226629867044976', // AIMOS (discord.gg/aimos)
-            '1200935959961817088', // Risky Business, IDBC (discord.gg/riskyb)
             '635948860459450400' // SC Shellback, SHELLBACKS org (RED ARMY; no public invite)
           ],
       // Last successful fetch; reused when Discord is unreachable.
@@ -96,6 +93,7 @@ module.exports = {
   },
 
   // /services/operations: per-operation metrics from Discord gateway events (Fabric Store).
+  // PERMAFLEET voice counts every member-org Discord in contracts/alliance.json.
   operations: {
     path: process.env.GOON_OPERATIONS_STORE || 'stores/operations',
     file: 'contracts/operations.json',
@@ -141,7 +139,10 @@ module.exports = {
     // member present for 30 minutes). goon.vc pays voice only.
     sources: (process.env.GOON_PRESENCE_SOURCES || 'voice').split(','),
     channels: [], // empty = every voice channel the bot can see counts
-    announcements: [goonSquad.channels.idlerpg.id] // G00N SQUAD #idlerpg
+    announcements: [goonSquad.channels.idlerpg.id], // G00N SQUAD #idlerpg
+    // Prepended to every #idlerpg post. Unset posts the game text as written,
+    // which is what production does. Env only (this file is tracked).
+    prefix: process.env.GOON_PRESENCE_PREFIX || ''
   },
 
   // /tournaments: templates and every tournament run from one (Fabric Store, kept forever).
@@ -165,7 +166,7 @@ module.exports = {
     file: process.env.GOON_ALLIANCE_ROSTER || 'contracts/alliance.json'
   },
 
-  // /red-army: orgs and Discord servers that have added the bot but are not yet
+  // /operations/red-army: orgs and Discord servers that have added the bot but are not yet
   // PERMAFLEET members (contracts/red-army.json). Not a vote and not a federation.
   redArmy: {
     file: process.env.GOON_RED_ARMY_ROSTER || 'contracts/red-army.json'
@@ -191,6 +192,16 @@ module.exports = {
     payGraceHours: 24,
     deliveryDays: 7,
     confirmDays: 3,
+    allowMainnet: process.env.GOON_MARKET_MAINNET === '1',
+    arbiters: (process.env.GOON_MARKET_ARBITERS || '').split(',').map((s) => s.trim()).filter(Boolean)
+  },
+
+  // /bounties: a price in aUEC on an RSI handle. GOON_BOUNTIES=0 turns the board off.
+  bounties: {
+    enabled: process.env.GOON_BOUNTIES !== '0',
+    path: process.env.GOON_BOUNTIES_STORE || 'stores/bounties',
+    network: process.env.GOON_MARKET_NETWORK || null,
+    allowMainnet: process.env.GOON_MARKET_MAINNET === '1',
     arbiters: (process.env.GOON_MARKET_ARBITERS || '').split(',').map((s) => s.trim()).filter(Boolean)
   },
 
@@ -236,6 +247,9 @@ module.exports = {
 
   // /clips: videos and screenshots from the Discord clip channels, low-res proxies for the
   // storyboard editor, and server-side renders (Fabric Store + media on disk).
+  // `/clips listen` joins the caller's voice channel and records talk (not Go Live
+  // video); GOON_CLIPS_VOICE=0 turns that off. One channel at a time; idle leave
+  // when empty. Public JSON is names only.
   // Channels are ids, exact names, or "/regex/" (default: names with "clip(s)"/"video(s)"/"screenshot(s)",
   // plus every media channel); threads under a matched channel are read too.
   // Needs ffmpeg + ffprobe on PATH; the bot needs View Channel + Read Message History.
@@ -276,7 +290,13 @@ module.exports = {
         ? process.env.GOON_CLIPS_STREAM_CHANNELS.split(',').map((s) => s.trim()).filter(Boolean)
         : [goonSquad.channels.streams.id, '/(^|[^a-z])streams?([^a-z]|$)/']
     },
-    poll: process.env.GOON_CLIPS !== '0'
+    poll: process.env.GOON_CLIPS !== '0',
+    voice: {
+      enabled: process.env.GOON_CLIPS_VOICE !== '0',
+      chunkMs: process.env.GOON_CLIPS_VOICE_CHUNK_MS ? Number(process.env.GOON_CLIPS_VOICE_CHUNK_MS) : undefined,
+      silenceMs: process.env.GOON_CLIPS_VOICE_SILENCE_MS ? Number(process.env.GOON_CLIPS_VOICE_SILENCE_MS) : undefined,
+      idleMs: process.env.GOON_CLIPS_VOICE_IDLE_MS ? Number(process.env.GOON_CLIPS_VOICE_IDLE_MS) : undefined
+    }
   },
 
   // Relay of G00N SQUAD public channels (@everyone can view; text / announcement,

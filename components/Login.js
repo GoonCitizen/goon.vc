@@ -77,6 +77,8 @@ function renderFooterHtml (props) {
  * @param {string} [props.waitingPath] Where members waiting for review are sent.
  * @param {string} [props.membersPath] Profiles are `<membersPath>/<id>`; signed in,
  *   the footer Login buttons become a card for the member linking there.
+ * @param {string} [props.adminPath] Operator panel. A footer link appears when
+ *   the session member has `admin: true`.
  */
 function renderLoginScript (props) {
   return `<script type="text/javascript">
@@ -84,6 +86,7 @@ function renderLoginScript (props) {
         var loginPath = ${JSON.stringify(props.path)};
         var waitingPath = ${JSON.stringify(props.waitingPath || '/waiting')};
         var membersPath = ${JSON.stringify(props.membersPath || '/members')};
+        var adminPath = ${JSON.stringify(props.adminPath || '/admin')};
         var path = (window.location.pathname || '/').replace(/\\/+$/, '') || '/';
         var onLoginPage = path === loginPath;
 
@@ -125,6 +128,32 @@ function renderLoginScript (props) {
         }
 
         var siteFooter = document.getElementById('site-member-footer');
+        function adminHost () {
+          var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
+            return window.getComputedStyle(el).display !== 'none';
+          });
+          for (var i = 0; i < pages.length; i++) {
+            var button = pages[i].querySelector('.footer-login-button');
+            if (button && button.parentElement) return button.parentElement;
+          }
+          return siteFooter;
+        }
+        function setAdminLink (member) {
+          var host = adminHost();
+          var link = document.getElementById('site-admin-link');
+          if (!link && host) {
+            link = document.createElement('a');
+            link.id = 'site-admin-link';
+            link.className = 'site-admin-link';
+            link.href = adminPath;
+            link.textContent = 'Admin';
+            host.appendChild(link);
+          } else if (link && host && link.parentElement !== host) host.appendChild(link);
+          if (!link) return;
+          link.hidden = !(member && member.admin);
+          if (path.toLowerCase() === String(adminPath).toLowerCase()) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        }
         if (siteFooter) {
           var pages = Array.prototype.filter.call(document.querySelectorAll('main'), function (el) {
             return window.getComputedStyle(el).display !== 'none';
@@ -168,6 +197,7 @@ function renderLoginScript (props) {
             text.appendChild(small);
             el.appendChild(text);
           });
+          setAdminLink(member);
         }
 
         window.goonMember = markMember;
@@ -393,6 +423,14 @@ function renderLoginScript (props) {
           profileLink.textContent = 'View your profile »';
           profileLine.appendChild(profileLink);
           sessionBox.appendChild(profileLine);
+          if (member.admin) {
+            var adminLine = document.createElement('p');
+            var adminA = document.createElement('a');
+            adminA.href = adminPath;
+            adminA.textContent = 'Admin »';
+            adminLine.appendChild(adminA);
+            sessionBox.appendChild(adminLine);
+          }
           if (member.review && member.review.status !== 'approved') {
             var reviewLine = document.createElement('p');
             var reviewLink = document.createElement('a');

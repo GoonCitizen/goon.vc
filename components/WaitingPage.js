@@ -35,12 +35,12 @@ function renderHtml (props) {
       <h1>Waiting area</h1>
       <p id="waiting-status" class="waiting-status" role="status"></p>
       <section id="waiting-signed-out" hidden>
-        <p>New members sign in with Discord, then wait here while an alliance administrator looks them over.</p>
+        <p>New members sign in with Discord. Officers on record wait here while an administrator approves them. Everyone else can claim an RSI handle without waiting.</p>
         <p class="waiting-links"><a class="goon-button" href="${escapeHtml(props.loginPath)}">Sign in</a></p>
       </section>
       <section id="waiting-pending" hidden>
         <h2>You’re in line</h2>
-        <p>Thanks for signing in<span id="waiting-name"></span>. An alliance administrator reviews every new Discord sign-in and has been told you’re here. There’s nothing else to do: come back to this page to see the result.</p>
+        <p>Thanks for signing in<span id="waiting-name"></span>. An administrator reviews officer sign-ins. There’s nothing else to do: come back to this page to see the result.</p>
         <p class="waiting-since" id="waiting-since"></p>
         <p id="waiting-join" hidden>You’re not in our Discord yet; joining it helps. ${join}</p>
         <p class="waiting-links"><a href="${escapeHtml(props.eventsPath)}">Events</a> <a href="${escapeHtml(props.squadronsPath)}">PERMAFLEET squadrons</a></p>

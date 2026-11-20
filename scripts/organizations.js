@@ -21,9 +21,17 @@ const MEMBERS = [
   { symbol: 'LCRP', displayName: 'Legacy Corporation' },
   { symbol: 'DOUBLEDOGZ', displayName: 'DoubleDog Delivery, Inc.' },
   { symbol: '4MCONTRACT', displayName: '4M Contractors' },
-  { symbol: 'AIMOS', displayName: 'A.I.M.O.S.' },
-  { symbol: 'IDBC', displayName: 'Risky Business' }
+  { symbol: 'IDBC', displayName: 'Risky Business' },
+  { symbol: 'H0K', displayName: 'House of Khans' },
+  { symbol: 'OBSX', displayName: 'Obsidia' }
 ];
+
+// G00N calls this seat Monkey Business. The public RSI organization is SMUS.
+const MONKEY_BUSINESS = {
+  displayName: 'Monkey Business',
+  symbol: 'MB',
+  source: 'SMUS'
+};
 
 async function fetchOrganization (symbol) {
   const url = `${parseRsiOrganization.RSI_ORIGIN}/orgs/${encodeURIComponent(symbol)}`;
@@ -45,6 +53,22 @@ async function main () {
       console.warn(`[ORGS] ${member.symbol} failed (${error.message}); keeping previous record`);
       organizations.push(kept);
     }
+  }
+  try {
+    const smus = await fetchOrganization(MONKEY_BUSINESS.source);
+    if (!smus.links.some((link) => /discord\.gg\/spacemonkey/i.test(link.href))) {
+      smus.links.push({ label: 'Discord', href: 'https://discord.gg/SpaceMonkey' });
+    }
+    organizations.push(Object.assign(smus, {
+      displayName: MONKEY_BUSINESS.displayName,
+      symbol: MONKEY_BUSINESS.symbol
+    }));
+    console.log(`[ORGS] ${MONKEY_BUSINESS.symbol} from ${MONKEY_BUSINESS.source} ok`);
+  } catch (error) {
+    const kept = (previous.organizations || []).find((org) => org.symbol === MONKEY_BUSINESS.symbol);
+    if (!kept) throw error;
+    console.warn(`[ORGS] ${MONKEY_BUSINESS.symbol} failed (${error.message}); keeping previous record`);
+    organizations.push(kept);
   }
   const payload = {
     fetchedAt: new Date().toISOString(),

@@ -26,7 +26,7 @@ Fabric relay below only dials out), no bitcoind, no
 signatures through the core federation helpers; it never holds a buyer's or
 seller's key, and the coins sit in a vault the Hub watches. The one Discord gateway client is the metrics bot
 below (non-privileged intents unless the Fabric relay, the Market forum mirror, or campaigns are configured, `autoCommands: false`); it never answers chat,
-only the `/idlerpg`, `/1v1`, `/vote`, `/market`, `/rsi`, `/hangar`, `/goon`, and `/help` application commands, and DMs only when a command starts it: inside a setup
+only the `/idlerpg`, `/1v1`, `/vote`, `/market`, `/rsi`, `/hangar`, `/clips`, `/goon`, and `/help` application commands, and DMs only when a command starts it: inside a setup
 script a server admin started with `/goon setup` (or `/goon council`, `embassy`,
 `permafleet`, `voice`, `roles`, which also create those channels and Prospect ranks on the admin's server
 when the bot may and the admin is one of the org's officers on record), the hangar walkthrough a member started with `/hangar guide`,
@@ -50,10 +50,12 @@ control live on the board: the title picks the server, the zone label picks the
 zone (default: the visitor's local zone; remembered in `localStorage`, kept in
 `?tz=`), the footer downloads the SVG. The board's `#schedule-*` text ids are
 the element's contract. `/operations/PERMAFLEET/schedule` is the same element
-pinned to `server=permafleet`: the home server's events plus those of the member
-orgs' and squadrons' servers in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
-4M-CONTRACTORS, TRDE, AIMOS, Risky Business (IDBC), and SC Shellback (SHELLBACK) — a listed server's events show once the bot is
-in it; DOUBLEDOGZ points at the G00N SQUAD server), home server first so its day themes win, PERMAFLEET brand, no server
+pinned to `server=permafleet`: the home server's events plus those of every member
+org Discord on the roster (`contracts/alliance.json` `guildId`; today TRDE, 4M-CONTRACTORS,
+Risky Business (IDBC), House of Khans (H0K), and Monkey Business (MB) — INFN and DOUBLEDOGZ
+share G00N SQUAD) and extras in `discord.schedule.servers` (`DISCORD_SCHEDULE_SERVERS`; today
+SC Shellback (SHELLBACK)) — a listed server's events show once the bot is
+in it, home server first so its day themes win, PERMAFLEET brand, no server
 picker; a single server id draws just that server under its own name; every calendar renders through `EventsPage.calendar()` so they
 share the look, the stacked phone layout, and the zone preference. The page footer's "Add our bot to your Discord" button
 hits `GET /services/discord/invite`, which redirects to the OAuth invite for the
@@ -86,7 +88,11 @@ Store). Bots cannot read listing prices or perks, so the button links to
 Discord's subscriptions page; the block stays hidden when there are no tiers.
 The home page shows a G00N SQUAD overview (copy in `GoonSPA` `overviewParagraphs`,
 facts from the G00N record) and our own Discord member list built from the
-guild's public `widget.json` (no iframe). PERMAFLEET detail lives under
+guild's public `widget.json` (no iframe). The PERMAFLEET operation page
+lists people in voice the same way, one widget per unique member-org Discord
+in `contracts/alliance.json` (INFN and DOUBLEDOGZ share G00N SQUAD, so once; a server
+with its widget off contributes nobody), names and avatars only — never
+Discord ids. PERMAFLEET detail lives under
 `/operations/PERMAFLEET/*`; the overview keeps a short teaser.
 `/operations/PERMAFLEET/squadrons` is "Your path to membership" (join → Prospect
 ranks → selected by leadership → elite units; never name a rank as the
@@ -105,9 +111,11 @@ The G00N SQUAD Discord's live channel and Prospect role ids live in
 `contracts/goon-squad.json` (`#clips`, `#embassy`, the PERMAFLEET voice channel,
 Prospect I–VI); PERMAFLEET setup matches those ids on that server even after a
 rename. `/operations` lists the operations in `contracts/operations.json` — currently
-only PERMAFLEET, whose **metrics** count the public PERMAFLEET voice channel.
-Each entry names the Discord channels its metrics count (channel id, exact
-name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
+only PERMAFLEET, whose **metrics** count members in voice on every member-org
+Discord (`guilds: "alliance"` in `contracts/operations.json`, unique
+`guildId`s from `contracts/alliance.json`; a channel matcher of `"/./"` is
+every voice channel the bot can see there). Each entry names the Discord
+channels its metrics count (channel id, exact name, or `"/regex/"`). `services/operations.js` runs a `@fabric/discord`
 gateway client (Guilds + GuildVoiceStates + GuildMessages only) into a
 `@fabric/discord` `MetricsPipeline`; plugins (`voice`, `messages` from
 `@fabric/discord/plugins`) keep per-operation UTC day buckets in a Fabric Store
@@ -130,7 +138,9 @@ community). Doorman's Discord adapter is **attached** to the same `@fabric/disco
 has `replies: false`, never logs in, and never answers `!` commands). There is still
 exactly one gateway client and one Doorman. Apart from application command replies and the Market forum mirror (below), the only thing it posts is IdleRPG game
 announcements (welcomes, level-ups, battles, finds, penalties), and only to the text
-channels in `presence.announcements` (G00N SQUAD `#idlerpg`); the bot needs
+channels in `presence.announcements` (G00N SQUAD `#idlerpg`). A `presence.prefix`
+(`GOON_PRESENCE_PREFIX`; unset posts the game text as written) is prepended to
+those posts, so a local bot can be told apart from production. The bot needs
 View Channel + Send Messages there. Chatting is penalized only in those
 announcement channels (never in voice channel chat or anywhere else); with
 none configured, `Presence` turns penalties off. IdleRPG credits every member present in a voice channel the bot
@@ -182,15 +192,15 @@ IdleRPG card fed by that route; the `/services/idlerpg` page is the players
 & statistics view (`components/IdleRPGPage.js`: stats, 30-day bars, level
 histogram, battles + most slain, leaderboard, rules). Site copy: `idlerpg{Path,Heading,Tagline,Intro,
 DocumentTitle}` in `GoonSPA`.
-Settings: `presence.{path,tickMs,luck,channels,sources,gateway}` (`GOON_PRESENCE_STORE`,
-`GOON_PRESENCE_TICK_MS`, `GOON_PRESENCE_SOURCES`); `gateway: false` keeps serving stored stats. `npm run
+Settings: `presence.{path,tickMs,luck,channels,sources,gateway,prefix}` (`GOON_PRESENCE_STORE`,
+`GOON_PRESENCE_TICK_MS`, `GOON_PRESENCE_SOURCES`, `GOON_PRESENCE_PREFIX`); `gateway: false` keeps serving stored stats. `npm run
 link:doorman` / `link:idlerpg` point at `../doorman` / `../idlerpg`; with a
 linked `idlerpg`, run its own `npm run link:rpg` to use `../rpg`.
 The PERMAFLEET section (`/operations/PERMAFLEET`, its `/schedule`,
-`/squadrons[/<id>]`, `/onboarding`, and `/votes[/<id>]`, `/organizations`, and
+`/squadrons[/<id>]`, `/how-we-operate`, `/onboarding`, and `/votes[/<id>]`, `/organizations`, and
 `/federations[/<id>]`) swaps the site header for its own menu bar
 (`components/PermafleetHeader.js`: Overview, Schedule, Squadrons,
-Organizations, Join), shown while the router sets `body.pf-section`. Votes and
+Organizations, Join), shown while the router sets `body.pf-section`. How we operate, votes, and
 federations are deliberately not in the menu; they are reached by link.
 `/operations/PERMAFLEET/votes` is **alliance votes**: one vote per member org,
 composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
@@ -198,8 +208,10 @@ composed as a Fabric named **Federation** (`services/alliance.js`, pure parts in
 `GOON_ALLIANCE_STORE`; page `components/PermafleetVotes.js`). The roster is `contracts/alliance.json`
 (`GOON_ALLIANCE_ROSTER`): `name`, `network`, `publisher`, and per org its
 `symbol` and its `officers` (below). G00N SQUAD's officers on record are
-remaeus, kersa (neorion), and thejohnram. INFN's officer on record is
-ADSVOLCANO. **Only officers vote for an org**;
+remaeus, kersa (neorion), and thejohnram. For the other orgs, an officer is someone who holds that org's role and PERMAFLEET OFFICERS, Officer 1, Officer 2, or ORG STEWARDS on a Discord the bot is in. INFN's officers on record are
+ADSVOLCANO, Lord_Phobos, AwfulWaffle16, Drewsta, Vincent_Lucerne, Fadingdoughnut0, thejohnram, and RockyTyger. TRDE's officers on record are trickE, Famous-Wolf, and MD Monster. LCRP's officers on record are Ablckbrn, Revan33, and MD Monster. DOUBLEDOGZ's officers on record are DoubleDogDelivery, remaeus, and Lord_Phobos. 4M Contractors' officers on record are Masterjedi, Commander-Sonic, and ZedDaMedic. Risky Business's officers on record are Thoriaz and psycoses. House of
+Khans' officers on record are Patriarch and Cian. Obsidia's officers on record are Mello,
+toast, and Valgar. Monkey Business's officers on record are ConvergedGaming and CurseofJericho. The public RSI organization is Space Monkey Universal Services. **Only officers vote for an org**;
 leadership puts them on record by account, and there is no other role in the
 vote. **User-facing copy never mentions keys**: officers and members sign in
 and press a button (or run `/vote`), and goon.vc signs for them. An org with
@@ -290,7 +302,8 @@ The latest vote per member counts, across their linked accounts and merges;
 votes are taken only while the proposal is open (409), and an older `castAt`
 from the same member is refused (409). Proposal JSON adds `members { yes, no,
 abstain, total }`, the counted `memberVotes` frames (choice, time, platform,
-account pubkey — no names, member ids, or account ids), `bridge`, and
+account pubkey — no member ids or account ids; an officer on record is also
+named with their org, as `advisors` on that org), `bridge`, and
 `you.memberVote`; summaries add `members`.
 `/federations` (`components/Federations.js`,
 `federationsPath` in `GoonSPA`) lists every alliance federation and every org
@@ -303,9 +316,15 @@ the vote pages link to them. Public JSON carries officer display names and count
 never Discord ids, account keys, or member ids; federation pages list officers by
 name only (the descriptor still lists their keys so anyone can check a vote). A broken roster leaves
 votes off (503) without failing the site. Tests: `tests/alliance.js`.
+`/operations/PERMAFLEET/how-we-operate` (`components/PermafleetOperate.js`) is
+how the fleet flies: a standing 24/7 megaparty drawn from every member org,
+typically two or three things at once on G00N SQUAD or a member org's Discord.
+It is not in the menu bar; the overview's "The megaparty" teaser links to it.
+Copy follows the pinned #getting-started, #alliance, #embassy, #permafleet,
+#beacon, and #logistics posts (and the public megaparty talk in #alliance).
 `/operations/PERMAFLEET/onboarding` (`components/PermafleetOnboarding.js`) is
-for leaders of orgs joining the Protectorate: open an embassy in #embassy, tag
-pilots `[PERMAFLEET]` on RSI, name their officers, set up their Discord; then
+for leaders of orgs joining the Protectorate: open an embassy in #embassy, name
+their officers, set up their Discord; then
 what we expect of every member org (its own #embassy channel, a public
 PERMAFLEET voice channel, and the Prospect system for onboarding new members),
 what member orgs get, and the ground rules. Its copy follows the pinned #getting-started,
@@ -317,20 +336,20 @@ from `contracts/organizations.json`, a plain-text snapshot of public RSI org
 pages refreshed by `npm run build:organizations` (never fetched at serve time).
 Each org card, profile, PERMAFLEET overview tile, onboarding list, and votes
 org row shows whether the bot is in that org's Discord (`guildId` on
-`contracts/alliance.json`; DOUBLEDOGZ shares the G00N SQUAD server; LCRP has
-none on record). Live status is `GET /services/organizations`
+`contracts/alliance.json`; INFN and DOUBLEDOGZ share the G00N SQUAD server; LCRP and Obsidia have
+none on record). House of Khans and Monkey Business are the servers behind `discord.gg/khans` and `discord.gg/SpaceMonkey`. Trans-Galactic, 4M Contractors, and Risky Business keep the invites they shared. Live status is `GET /services/organizations`
 (`{ symbol, name, path, discord: { linked, name } }`, names only — never guild
 ids), filled by `Organizations.client()` from `Events.list().guilds`. An org
 with no `guildId`, or one the bot is not in, shows as not linked. `guildId` is
 not part of the alliance federation descriptor.
-`/red-army` is **RED ARMY**: Discord servers and organizations that have added
+`/operations/red-army` is **RED ARMY**: Discord servers and organizations that have added
 the goon.vc bot but are not yet PERMAFLEET members (`contracts/red-army.json`,
 `services/redArmy.js`, `functions/redArmy.js` — not a vote and not a Fabric
 federation). Named orgs list officers on record (Robert's Rejects / mr_meaner,
 SHELLBACKS / Brock_85); SHELLBACKS is the Shellback Industries org, not the
-SHELLBACK elite infantry squadron. Monkey Business is the next org joining.
-Alliance friends with PERMAFLEET Officer overlap or a mention on the G00N
-`#red-army` pin (BLACK EXODUS, Rintak, SC Homies) sit here too until they are
+SHELLBACK elite infantry squadron. House of Khans, Obsidia, and Monkey
+Business are PERMAFLEET members. Alliance friends with PERMAFLEET Officer overlap or a
+mention on the G00N `#red-army` pin (Rintak, SC Homies) sit here too until they are
 members. Named `servers` are Discords not tied to an RSI org (DIA is a private
 Discord). Other servers the bot is in show up live, minus the home server,
 alliance `guildId`s, and an ignore list (personal and Fabric-suite servers).
@@ -340,7 +359,16 @@ never guild ids, account keys, or member ids), filled by `RedArmyPage.client()`.
 The G00N Discord role RED ARMY is pinned in `contracts/goon-squad.json`. The
 `/organizations` index and the PERMAFLEET operation page (below the squadrons
 path, after the member tiles) teaser it.
-`/resources` indexes guides and tools; `/resources/gooncitizen` describes the
+`/resources` indexes guides and tools. One-off tools are pages under that
+index, inside the site shell. The breakdown planner is
+`/resources/breakdown-tool`. The PDC Dashboard (`/resources/pdc-dashboard`)
+is the PDC Loadout Lab: Perseus and Polaris point-defense planning numbers,
+labeled unverified. The Navigator (`/resources/navigator`) plans quantum
+travel from a Star Citizen Wiki starmap snapshot (`assets/tool-scripts/navigator.json`):
+system jump first, then a planet, moon, or point, with time and fuel for the
+drive and tank, and a refuel where the place has vehicle services. Add a tool by listing it on `tools` in `GoonSPA`
+(`id`, `name`, `html`, `css`, `script`) and keeping its stylesheet scoped to
+`.tool-sheet`. `/resources/gooncitizen` describes the
 GoonCitizen desktop app. `/resources/1v1-leaderboard` is the 1v1 dogfight ladder
 synced from the pinned `# LEADERBOARD` message in G00N SQUAD #1v1-challenges
 (`services/leaderboard.js`, Fabric Store `stores/leaderboard`,
@@ -558,6 +586,7 @@ must be on for the shared application in the Developer Portal. Settings:
 `market.{enabled,path,forum,tags,ttlMs,sync,webhook,network,allowMainnet,dibsHours,payHours,payGraceHours,deliveryDays,confirmDays,feeSats,arbiters,rateUrl}`;
 `GOON_MARKET=0` turns it off. Tests: `tests/marketPost.js`,
 `tests/marketEscrow.js`, `tests/market.service.js`.
+**Bounties** (`/bounties`, `services/bounties.js`, page `components/BountiesPage.js`) are player bounties: a price in aUEC on an RSI handle. Kill that pilot and the poster pays the reward in game. The site keeps the record and does not move aUEC. Posting and claiming both require a linked RSI handle (`Members.rsiHandles`); the error points at `/services/rsi`. The poster confirms the kill (`paid`) or turns the claim away, which reopens it. Public JSON is handles, the reward, and the status — never member ids. `/bounty` (`list`, `post`, `claim`, `done`, `mine`) runs in servers and in the bot’s DMs. `GOON_BOUNTIES=0` turns the board off. The old bitcoin escrow machine remains in `functions/bountyEscrow.js` and is not what the board runs. Tests: `tests/bounties.service.js`.
 The **Fabric relay** (`services/fabricRelay.js`, packs in
 `functions/discordFabricShare.js`) puts messages from the G00N SQUAD **public
 channels** (`discord.guildId` only; text and announcement channels @everyone
@@ -585,16 +614,17 @@ the newest 20 per channel are re-shared on connect and every 30 minutes for
 peers that joined later. A deletion only stops re-sharing — peers keep what they
 already have. `GOON_FABRIC_RELAY=0` turns it off.
 Discord **application commands** (`services/commands.js`) are answered on that
-same gateway client (interactions need no intents) and registered globally for
-servers only when it is ready (`/market` also installs on a member's own account
-and runs in DMs and group DMs). The application is shared (today "sensemaker"),
+same gateway client (interactions need no intents) and registered globally when
+it is ready. `/idlerpg`, `/1v1`, `/vote`, `/bounty`, `/rsi`, and `/hangar` also
+run in the bot’s DMs. `/goon`, `/schedule`, and `/clips` stay in servers, where
+they act on that server. `/market` also installs on a member's own account and
+runs in DMs and group DMs, and `/help` follows it. The application is shared (today "sensemaker"),
 so only these names are upserted, never `set()`, and unchanged ones are skipped.
-Everyone who runs one in a server (except `/help`) gets a goon.vc member profile: the command
-links their Discord (`Members#linkDiscord`: the same member Discord login
-signs in to, found by the `discord:<id>` account; not a login, and an existing
-display name is kept),
-even when the command is then refused. A button press links only on Confirm
-(and on Buy with escrow under a Market post).
+A command does not create a profile or link an account. Discord is linked when
+that person finishes Discord sign-in, and a Fabric key when they finish
+Passport sign-in. `/vote` from someone who has not signed in asks them to sign
+in, except an officer on record, who can still sign for their org. It runs in
+any server the bot is in, and in the bot’s DMs.
 `/idlerpg profile [pilot]` | `leaderboard` | `stats` reply from `Presence`
 (`discordPlayer`, `players`, `report`): public numbers and display names, with
 links to the player pages. `/1v1 winner loser score [league] [note]` is run by
@@ -602,7 +632,8 @@ one of the two players (the Open League unless `league`, which autocompletes;
 `score` is a choice from `1-0` to `5-4`, and best of n follows from the winner's
 games). It stores a private proposal (`Leagues#proposeDuel`, `/proposal/<id>` in the leagues Store,
 7 days to answer). It then posts a card with Confirm / Decline buttons
-(`1v1:confirm|decline:<proposal>`) pinging only the opponent. The opponent's
+(`1v1:confirm|decline:<proposal>`) pinging only the opponent. In the bot’s DMs
+the same card is sent to the opponent, and the caller is told they were asked. The opponent's
 Confirm (`Leagues#confirmDuel`) links them too and logs the duel, dated when it
 was proposed, with `by` the proposer and `confirmedBy` the opponent. Decline
 by the opponent, a withdrawal by the proposer, and expiry log nothing. The card
@@ -617,7 +648,7 @@ name equal to their server display name (nickname, then display name) or their
 handle, e.g. one typed into a tournament (logged `link`). Otherwise they join under it, or as
 `name (username)` when another member holds the name. Bots and self-duels are refused.
 Errors are ephemeral. Replies carry no Discord ids and ping no one except the
-opponent asked to confirm. `/vote proposal choice` (any member, any server; `proposal`
+opponent asked to confirm. `/vote proposal choice` (any member, in a server or the bot’s DMs; `proposal`
 autocompletes open alliance proposals by title or short id, `choice` is yes / no / abstain)
 casts the caller's advisory member vote through `Alliance#memberVote` with their
 `discord:<id>` account (Commands takes `alliance` lazily, since Alliance starts later);
@@ -639,13 +670,21 @@ or the listing page's `#buy` box (the order needs a refund address, so it opens
 on goon.vc), with a pointer to `/sessions` while they have no Fabric key.
 Replies are private (deferred: a sale posts to the forum first) and carry
 display names and links only.
-`/help [command]` (same install and contexts as `/market`; `command` offers the
+`/services/discord` is that same `/help`, expanded: how to add the bot and where commands run, then every command running right now with each argument. JSON clients get `{ commands }` at the same path. `/help [command]` (same install and contexts as `/market`; `command` offers the
 commands running right now as choices, built from `Commands#definitions`, so it
 never lists one that isn't registered) replies privately with every running
 command and its subcommands, or one command in detail: each subcommand's
 arguments (`[optional]`), a line of `HELP` copy with its goon.vc page, where it
 runs, and Manage Server for `/goon`. It reads nothing about the caller and
 makes no member profile. Add a `HELP` entry with every new command.
+`/clips` (registered only while clips voice is on; `GOON_CLIPS_VOICE=0` turns it
+off) `listen` joins the caller’s current voice channel and records talk into
+`/clips`; `leave` disconnects. Servers only; Mute Members; the reply is private
+and names the channel (never an id). A notice in that channel has Record me /
+Don’t record me — other speakers, including people who join later, are mixed
+only after they press Record me. The bot is visible in the channel while
+recording. Commands takes `clips` lazily, same pattern as market.
+`GOON_COMMANDS=0` skips registration.
 `/schedule` (registered only while scheduling runs; `GOON_SCHEDULE=0` turns it
 off) `open` posts a poll in the channel it was run. `people` (names or
 `@handles`, commas between display names) and/or `role` and `also` say who
@@ -704,7 +743,7 @@ vote for the org. Anyone else gets a refusal saying to ask in #embassy to be
 put on record; nobody is taken for an officer because of a role name or a
 typed answer. PERMAFLEET scripts make, match, and hand out **no steward-type
 role** (G00N SQUAD's ORG STEWARDS role is for non-alliance org leaders and is
-never touched). `goon-setup` asks for the
+never touched). `goon-setup` is one panel: each step rewrites that same DM instead of sending another. It asks for the
 features wanted (schedule calendar, clips, IdleRPG announcements, and PERMAFLEET
 membership — offered only to an org's officers on record; others
 are told why), then only the matching steps (PERMAFLEET schedule or own calendar,
@@ -815,13 +854,16 @@ intent it hasn't granted is asked for. Only then does the gateway ask for
 `GuildMembers` (plus `DirectMessages` / `Channel` as for scripts;
 `Community.gateway(settings)` says which). Community supplies the `discord`
 audience (`Community#discordAudience`: `guild.members.fetch()` for each server
-the bot is in, or only the campaign's own server; role and exclusion filters;
-never bots) and the activity hook (last active: the later of `Presence#lastSeen`,
+the bot is in, or only the campaign's own server; a successful listing is
+kept warm for a few minutes so Send after preview does not ask Discord again,
+and a refused fetch uses that cache or Discord's member cache, else 429
+“Could not list the members…”; role and exclusion filters; never bots) and
+the activity hook (last active: the later of `Presence#lastSeen`,
 the last time the member was present in voice, and `Activity#lastPosted`, their
 last post in the home server), and lists the scripts a campaign may offer (those without
-`requires`). `/goon campaign message [role] [exclude_role] [active_days] [script]
+`requires`). `/goon campaign [script] [message] [role] [exclude_role] [active_days]
 [send_at]` (Manage Server; registered only while campaigns run) saves a draft
-owned by the server and shows its author a private preview: the message, every
+owned by the server. `script` comes first; `message` is required unless a script carries the conversation. It shows its author a private preview: the message, every
 member it reaches by name, who is skipped (excluded role, opted out, not active
 lately), and Send — or Schedule, when `send_at` is "in 2 hours" or a date up to
 30 days ahead — plus Cancel
@@ -984,6 +1026,19 @@ public `durationMs`, so blocks, lanes, and session span work unchanged;
 sessions count `screenshotCount` inside `clipCount`). In a project its segment
 is `{ in: 0, out }`, `out` being how long it shows (≤ `maxStillSeconds`, 60 s;
 added at `stillSeconds`), rendered as a looped still (`-loop 1`) over silence.
+**Voice:** `/clips listen` (Mute Members; the caller must be in that voice
+channel) joins through `@fabric/discord` voice receive (`joinVoiceReceive` on
+the shared operations Discord client; `@discordjs/voice` lives in that package)
+and records people talking — not Go Live video or game audio — into
+`media: 'audio'` clips (`kind: 'voice'`, `recording.source: 'discord-voice'`).
+The caller is included; everyone else (including people who join later) is
+recorded only after they press Record me on the notice in that channel.
+`/clips leave` disconnects; the bot also leaves after `idleMs` of an empty
+channel. One channel at a time (`maxConcurrent: 1`); a restart does not rejoin. Chunks rotate on
+`chunkMs` (60s) or `silenceMs` (3s of nobody speaking). Public JSON and UI are
+names only (speakers, channel) — never Discord user ids. `GOON_CLIPS_VOICE=0`
+turns listen off (and skips registering `/clips`). Settings
+`clips.voice.{enabled,chunkMs,silenceMs,idleMs}`.
 Medal links (most #clips posts) are downloaded with yt-dlp and
 become local clips too; other hosts stay link-only unless listed in
 `externalLinks` (`GOON_CLIPS_LINKS`: unset = `medal.tv`, `1`/`all` = YouTube,
@@ -1036,15 +1091,19 @@ multi-hour sessions stay whole, separate evenings don't merge) with one track pe
 `<clip-library>` (`components/ClipLibrary.js`): each session is a card
 that wraps beside the others (as wide as up to four of its clips; bigger
 sessions take the row) holding clip cards (sprite thumbnail with hover scrub, pilot, recorded time, length or "Screenshot", caption),
-search + pilot / channel / sort / link / screenshot filters, a player (`?clip=<id>`) with
+search + pilot / channel / sort / link / screenshot / voice filters, a player (`?clip=<id>`) with
 details, the Discord link, and the other pilots' overlapping angles at the same
 moment, "Start a project" per session, and the project list.
 `/clips/timeline?session=<id>|clip=<id>` is `<clip-timeline-editor>`
 (`components/ClipTimelineEditor.js`) browsing one session. Both are shadow
 DOM with no goon.vc dependencies; `components/ClipsPage.js` sets `src` only on
 the active route. Projects live at `/clips/projects/<id>`: a program of segments
-`{ clipId, in, out, audio, volume }`, saved as revisions (409 on a stale
-`revision`; old revisions kept, nothing deleted). A render
+`{ clipId, in, out, audio, volume, at? }`, saved as revisions (409 on a stale
+`revision`; old revisions kept, nothing deleted). Audio clips are overlays
+(`at` seconds on the film; mixed onto `[aout]` with `adelay` / `amix`); picture
+stays the video/screenshot concat (or black if the project is voice-only).
+“Start a project” on a session includes overlapping voice clips as overlays.
+A render
 (`functions/clipRenderPlan.js`, a pure ffmpeg argument builder; one at a time,
 `maxRenderSeconds` / `maxSegments`) cuts from the masters (fetching the source
 again only for a clip without one, so deleted messages and links still render) and
@@ -1133,9 +1192,9 @@ sign-in inside an existing session: signed in, the login page's buttons become
 OAuth state; `POST /services/members/passport { fabric, link: true }` for
 Passport); a login while signed out never links. Each Fabric key is proven by
 its own signature; device clusters are not imported (accounts linked
-`via: cluster` by earlier versions stay until unlinked). Running a Discord
-command links `via: command`; a `@handle` typed into a duel makes a placeholder
-member `via: directory`. Linking an account another member already holds
+`via: cluster` by earlier versions stay until unlinked). A Discord command,
+a Market mirror, or a `@handle` typed into a duel does not create a member.
+Linking an account another member already holds
 **merges** them: the older member survives with its name and avatar, accounts
 and logs combine, the other id becomes an alias (`mergedInto`), and `merged
 { from, into }` is emitted. Members saved before accounts
@@ -1158,7 +1217,31 @@ from the profile page and lands back on it (`?linked=discord[&merged=1]` or
 **Members** (`/members`, `components/MembersPage.js`, `membersPath` in `GoonSPA`) is the future member
 directory. It isn't open yet: `GET /services/members/directory` returns
 `{ directory: false, members: [<you>] }` (401 signed out), so the page lists
-only the signed-in member. Each member's profile is `/members/<member id>`
+only the signed-in member. **Admin** (`/admin`, `components/AdminPage.js`,
+`services/admin.js`) is the operator panel. `contracts/goon-squad.json`
+`admins` names who may open it (today remaeus: Discord `420222636954615808`,
+Fabric identity `id1yqr9kjh0h3mxrjnrhermxnetkpgsk2zgcj9es5hlqr5ft75hv9zq6s7hsu`,
+also known as ChairmanPoW). A signed-in member matches by a linked Discord
+account or by the Fabric identity of a linked Passport key (the compressed
+`pubkeyHex`, or either parity of an x-only key); a display name, an RSI
+handle, and a one-time claim-link session do not. `GET /services/members/session`
+adds `admin: true` for them, and the footer and the login card show Admin.
+`GET /services/admin` is 401 signed out and 404 for everyone else, and the
+page is not framed. It lists every PERMAFLEET org's setup (Discord on record,
+whether the bot is in that server, the invite, and the officers on record —
+names when that person has a profile, otherwise the account), every member
+and their linked accounts (Discord id, Fabric `id1` when the compressed key
+was stored, RSI handle), each campaign's status and counts (no server ids,
+no recipients), check-in and welcome status, and the officers waiting for
+review. Approve and Turn away
+there decide one officer (`POST /services/admin/reviews/<id> { decision }`)
+and leave the rest of the queue waiting. It does not send or schedule
+campaigns. **Campaigns** (`/campaigns`, `components/CampaignsPage.js`,
+`services/campaignDesk.js`) is the same operators: the list, one campaign’s
+message, script, and log, a preview of who it would reach by name, a new draft
+from a script anyone may run (the message is optional), and Send now, which
+previews a draft and then starts that preview. Signed out is 401
+and anyone else is 404. No server ids or recipient ids. Each member's profile is `/members/<member id>`
 (`GET /services/members/profiles/<id>`: display name, avatar, member since,
 in the G00N SQUAD Discord, linked accounts as labels — Discord username, RSI
 handle with its citizen page, a short Fabric key fingerprint — and RSI handles,
@@ -1191,41 +1274,49 @@ the directory later means listing more members from `_directory` and
 widening `_profile`'s self check.
 **Waiting area** (`/waiting`, `components/WaitingPage.js`, `waitingPath` in `GoonSPA`; `services/reviews.js`,
 review state in `services/members.js`, script
-`contracts/scripts/member-review.json`) holds new Discord sign-ins until an
-alliance reviewer approves them. Settings `members.review.{enabled,reviewers}`
+`contracts/scripts/member-review.json`) holds **officers on record** after a
+Discord sign-in until an administrator approves them. Officers are the Discord
+accounts in `contracts/alliance.json` and the named officers in
+`contracts/red-army.json` (`functions/reviewOfficers.js`). Everyone else is
+approved as they sign in (`review.auto`) and can claim an RSI handle; a denial
+from when every sign-in waited is cleared the next time their session is read.
+Settings `members.review.{enabled,reviewers}`
 (`GOON_MEMBERS_REVIEW=0` turns it off; `GOON_MEMBERS_REVIEWERS`, comma list of
 Discord user ids, default @remaeus `420222636954615808`). It is a status only:
 nothing on the site is gated by it yet. The first start with reviews on
 records `/reviews/since`; members created before it count as approved
-(`grandfathered`), and so does anyone already approved. A member created
+(`grandfathered`), and so does anyone already approved. An officer created
 after it gets `review { status: 'pending', requestedAt }` on their first
-Discord sign-in or Discord link (Passport-only members have none), is indexed
-at `/reviews/pending`, and the sign-in lands on `/waiting?signedIn=discord`
-instead of `/sessions` (a denied member lands there too). A merge keeps the
+Discord sign-in or Discord link (Passport-only members have none), indexed one
+record at a time under `/reviews/pending/<id>` (an older single map at
+`/reviews/pending` is split on the next read), and the sign-in lands on
+`/waiting?signedIn=discord` instead of `/sessions` (a denied officer lands
+there too). A merge keeps the
 better review (approved, then pending, then denied). Members emits `review`
 on joining and `reviewed` on a decision; `Reviews` only logs a join and DMs
 nobody. A reviewer runs `/goon review` (registered only while reviews run;
 `/goon` still defaults to Manage Server, so reviewers need it where they run
-it) to get the `member-review` script in their DMs: everyone waiting (longest
-first, with how long, whether they are in the G00N SQUAD Discord, and any RSI
-handle), a multi-select of whom to approve, then whom to turn away, then a
-summary to confirm (`review.notifiedAt` notes who was shown). The script `requires` "goon.vc reviewer", a
+it) to get the `member-review` script in their DMs: one officer at a time
+(longest waiting), with their Discord id, org, RSI handle, and how long they
+have waited, and Approve / Turn away / Leave waiting buttons. Approving or
+turning one away does not decide the others (`review.notifiedAt` notes who
+was shown). The script `requires` "goon.vc reviewer", a
 Community requirement (`Community#requirement`) that checks the Discord id
-against the reviewer list at start and again before the `members.review`
-action decides, so `/goon campaign` never offers it. A member someone else
-already decided is left as they are. Session JSON carries `review { status,
+against the reviewer list at start and again before anything changes, so `/goon campaign` never offers it. A member someone else
+already decided is left as they are. The admin panel decides the same way,
+one officer per button. Session JSON carries `review { status,
 requestedAt, reviewedAt }` (or null) while reviews are on, never the
 reviewer; `GET /services/members` adds `review: true|false`. Tests:
-`tests/memberReviews.js`, `tests/reviews.js`.
-**RSI profile claim** (`/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
+`tests/memberReviews.js`, `tests/reviews.js`, `tests/reviewQueue.js`.
+**RSI profile claim** (`/services/rsi`, `components/RsiClaimPage.js`, `rsiClaimPath` in `GoonSPA`; parser
 `functions/rsiCitizen.js`, codes `functions/rsiClaim.js`) links an `rsi:<Handle>`
-account (the handle as RSI writes it) to a member. `/rsi claim` (servers and
+account (the handle as RSI writes it) to a member. The page is `/services/rsi`. JSON clients at that path get GoonCitizen's RSI interface (`@rsi/star-citizen/rsi`: the index, `/orgs/:sid`, `/citizens/:handle`, `/citizens/:handle/verify`, and `/claim`). `/rsi` and `/rsi/claim?t=` redirect to the page; a claim link without `t` is left for that interface. `/rsi claim` (servers and
 the bot's DMs) links the caller's Discord and replies privately with a
-**one-time sign-in link** (`Members#claimLink`: `<siteUrl>/rsi/claim?t=<64 hex>`,
+**one-time sign-in link** (`Members#claimLink`: `<siteUrl>/services/rsi/claim?t=<64 hex>`,
 kept as `/claim-links/<sha256>`, single use, 30 minutes); opening it starts a
 session (`provider: 'rsi-link'`, at most an hour, and never allowed to unlink
-an account: 403) and lands on `/rsi`, and a used, expired, or
-forged link lands on `/rsi?error=link`. The link is a login, so it only ever
+an account: 403) and lands on `/services/rsi`, and a used, expired, or
+forged link lands on `/services/rsi?error=link`. An older `/rsi/claim` link still redeems. The link is a login, so it only ever
 goes out ephemerally. Signed in any way, the page asks for the handle (`POST
 /services/members/rsi/claims { handle }` → a `g00n:` + 7 hex code, kept 24 h at
 `/rsi-claims/<member>`, the same code while the handle is the same), the member
@@ -1263,7 +1354,7 @@ import `history`); a hangar counts only while its member still holds that
 handle, and a member merge moves hangars to the survivor. `/hangar status`
 shows the caller's last import. `GET /services/hangar` is fleet totals only
 (`members`, `ships`, `models [{ model, manufacturer, count, owners }]`,
-`updatedAt`; no names, handles, or ids), shown on `/rsi`;
+`updatedAt`; no names, handles, or ids), shown on `/services/rsi`;
 `GET /services/hangar/members` (per member: display name, handle, ships,
 import time) needs `Authorization: Bearer $GOON_SCRIPTS_TOKEN` (404 without
 it). Settings: `hangar.{enabled,path}`. Tests: `tests/rsiClaim.js`,

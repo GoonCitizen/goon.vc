@@ -78,8 +78,12 @@ class FakeDiscord extends EventEmitter {
       fetch: async (id) => ({
         send: async (payload) => {
           if (this.closed) throw Object.assign(new Error('Cannot send messages to this user'), { code: 50007 });
-          this.dms.push({ id, payload });
-          return { id: `dm-${this.dms.length}` };
+          const record = { id, payload };
+          this.dms.push(record);
+          return {
+            id: `dm-${this.dms.length}`,
+            edit: async (next) => { record.payload = next; return record; }
+          };
         }
       })
     };
@@ -231,6 +235,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
 
     const press = async (customId, extra = {}) => {
       const before = discord.dms.length;
+      const beforeContent = last().content;
       discord.client.emit('interactionCreate', Object.assign({
         customId,
         user: { id: ADMIN },
@@ -239,7 +244,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         editReply: async () => {},
         followUp: async (payload) => { throw new Error(`refused: ${payload.content}`); }
       }, extra));
-      await until(() => discord.dms.length > before);
+      await until(() => discord.dms.length > before || last().content !== beforeContent);
     };
 
     await press(ids()[0]);
@@ -295,6 +300,7 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       ['embassy', false], ['voice', false], ['prospects', false], ['council', false], ['permafleet', false]
     ], 'the checklist the admin saw is recorded with the answers');
     assert.ok(guild.fetched.filter((entry) => entry.user === ADMIN).length >= 2, 'checked at start and again before recording');
+    assert.strictEqual(discord.dms.length, 1, 'setup rewrites one DM instead of sending a message per step');
 
     const report = JSON.stringify(await service.report());
     assert.ok(!report.includes(ADMIN), 'the report carries no user ids');
@@ -729,14 +735,23 @@ describe('Community service (shared Doorman + DM scripts)', function () {
     /** Gives a fake guild a member list (`members.fetch()` with no options). */
     function withMembers (guild, people) {
       const fetchOne = guild.members.fetch;
+      const roster = () => new Map(people.map((person) => [person.id, {
+        id: person.id,
+        displayName: person.name,
+        user: { id: person.id, username: person.name.toLowerCase(), bot: person.bot === true },
+        roles: { cache: new Map((person.roles || []).map((role) => [role, { id: role }])) }
+      }]));
+      guild.memberFetches = 0;
+      guild.members.cache = new Map();
       guild.members.fetch = async (options) => {
         if (options) return fetchOne(options);
-        return new Map(people.map((person) => [person.id, {
-          id: person.id,
-          displayName: person.name,
-          user: { id: person.id, username: person.name.toLowerCase(), bot: person.bot === true },
-          roles: { cache: new Map((person.roles || []).map((role) => [role, { id: role }])) }
-        }]));
+        guild.memberFetches += 1;
+        if (guild.failMemberFetch) {
+          throw Object.assign(new Error('Rate limited'), { status: 429, retryAfter: 5.993 });
+        }
+        const members = roster();
+        guild.members.cache = members;
+        return members;
       };
       return guild;
     }
@@ -819,6 +834,46 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       assert.deepStrictEqual(kersa, { target: `discord/users/${ADMIN}`, name: 'Kersa', source: GUILD, sourceName: 'G00N SQUAD' });
     });
 
+    it('reuses a warm member list so Send does not fetch Discord again', async function () {
+      const { home } = guilds();
+      const service = community({ gateway: false });
+      service.discord = new FakeDiscord(home);
+      const { filter } = doorman('types/campaign');
+      const staff = { owner: { kind: 'staff' } };
+      await service.discordAudience(filter({}), staff);
+      assert.strictEqual(home.memberFetches, 1);
+      await service.discordAudience(filter({}), staff);
+      assert.strictEqual(home.memberFetches, 1, 'Send uses the preview listing');
+    });
+
+    it('uses Discord’s member cache when a refresh is refused', async function () {
+      const { home } = guilds();
+      const service = community({ gateway: false });
+      service.discord = new FakeDiscord(home);
+      const { filter } = doorman('types/campaign');
+      const staff = { owner: { kind: 'staff' } };
+      await service.discordAudience(filter({}), staff);
+      assert.strictEqual(home.memberFetches, 1);
+      home.failMemberFetch = true;
+      service._memberLists.get(GUILD).at = 0;
+      const people = await service.discordAudience(filter({}), staff);
+      assert.ok(people.some((person) => person.name === 'Kersa'));
+      assert.strictEqual(home.memberFetches, 2, 'it tried to refresh');
+    });
+
+    it('returns 429 when Discord refuses a listing and there is no cache', async function () {
+      const { home } = guilds();
+      home.failMemberFetch = true;
+      const service = community({ gateway: false });
+      service.discord = new FakeDiscord(home);
+      const { filter } = doorman('types/campaign');
+      await assert.rejects(service.discordAudience(filter({}), { owner: { kind: 'staff' } }), (error) => {
+        assert.strictEqual(error.status, 429);
+        assert.match(error.message, /Could not list the members of G00N SQUAD/);
+        return true;
+      });
+    });
+
     it('DMs a server campaign with Stop buttons that stick, and serves the API with the token only', async function () {
       const { home } = guilds();
       const operations = new FakeOperations();
@@ -835,7 +890,9 @@ describe('Community service (shared Doorman + DM scripts)', function () {
       const shown = await campaigns.preview(draft.id);
       assert.strictEqual(shown.reach, 2);
       assert.deepStrictEqual(shown.recipients.map((recipient) => recipient.name).sort(), ['Kersa', 'Ratgrot']);
+      assert.strictEqual(home.memberFetches, 1);
       await campaigns.schedule(draft.id, { preview: shown.id, by: 'Kersa' });
+      assert.strictEqual(home.memberFetches, 1, 'Send uses the preview listing');
       while (await campaigns.tick());
       assert.strictEqual(campaigns.campaign(draft.id).status, 'sent');
       assert.deepStrictEqual(discord.dms.map((dm) => dm.id).sort(), [ADMIN, MEMBER].sort());
@@ -1332,7 +1389,8 @@ describe('Community service (shared Doorman + DM scripts)', function () {
         assert.ok(!('preview' in preview), 'the Doorman preview id stays inside');
         assert.deepStrictEqual([preview.recent, preview.earlier, preview.welcomed], [1, 1, 0], 'Fresh joined too recently; Oldtimer before the window');
         assert.strictEqual(preview.message, welcomeContract.message);
-        assert.ok(preview.roles.alliance.includes('[AIM] A.I.M.O.S.'));
+        assert.ok(preview.roles.alliance.includes('Risky Business'));
+        assert.ok(!preview.roles.alliance.includes('[AIM] A.I.M.O.S.'));
         assert.strictEqual(preview.script.id, 'permafleet-apply');
         assert.ok(preview.script.questions.some((question) => /RSI handle/.test(question.say)));
         const again = await welcome.preview();

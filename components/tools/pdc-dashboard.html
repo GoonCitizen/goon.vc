@@ -1,0 +1,65 @@
+<div class="pdc">
+  <header class="top">
+    <div>
+      <p class="page-back"><a href="/resources">&larr; Resources</a></p>
+      <div class="eyebrow">Fleet engineering // alpha data</div>
+      <h1>PDC Loadout Lab</h1>
+      <div class="sub">Compare candidate point-defense turrets and configure all 6 Perseus or 7 Polaris mounts. Values are planning aids—not authoritative live-game data.</div>
+      <div class="pill-row"><span class="pill"><span class="dot"></span> Unverified &amp; patch-sensitive dataset</span></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="pdc-reset" type="button">Reset</button>
+      <button class="btn" id="pdc-save" type="button">Save locally</button>
+      <button class="btn primary" id="pdc-export" type="button">Export loadout</button>
+    </div>
+  </header>
+  <section class="grid">
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Ship configuration</h2>
+        <div class="ship-switch" role="group" aria-label="Select ship">
+          <button type="button" data-ship="Perseus" class="active">Perseus · 6</button>
+          <button type="button" data-ship="Polaris">Polaris · 7</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="metrics">
+          <div class="metric"><label>Mounted</label><strong id="pdc-mounted">6 / 6</strong><small>active turrets</small></div>
+          <div class="metric"><label>Est. DPS</label><strong id="pdc-dps">1,002</strong><small>all PDCs combined</small></div>
+          <div class="metric"><label>Energy share</label><strong id="pdc-energy">100%</strong><small>laser-fed mounts</small></div>
+          <div class="metric"><label>Confidence</label><strong id="pdc-confidence">Low</strong><small>configuration validity</small></div>
+        </div>
+        <div class="slots" id="pdc-slots" aria-live="polite"></div>
+        <div class="charts">
+          <div class="chart"><h3>Estimated damage mix</h3><div id="pdc-damage"></div></div>
+          <div class="chart"><h3>Loadout composition</h3><div id="pdc-mix"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel-head">
+        <h2>PDC comparison</h2>
+        <div class="legend"><span><i class="sw laser"></i>Laser</span><span><i class="sw ballistic"></i>Ballistic</span><span><i class="sw salvage"></i>Salvaged</span></div>
+      </div>
+      <div class="panel-body table-wrap">
+        <table class="compare">
+          <thead><tr><th>Type</th><th>Class</th><th>Est. DPS</th><th>Supply</th><th>Status</th></tr></thead>
+          <tbody id="pdc-comparison"></tbody>
+        </table>
+        <div class="detail" id="pdc-detail" aria-live="polite"></div>
+        <div class="note">Select a row for notes. DPS is nominal sustained weapon output only; it does not model tracking, convergence, missile interception logic, capacitors, ammunition, server performance, or firing arcs.</div>
+      </div>
+    </article>
+    <article class="panel full">
+      <div class="panel-head"><h2>Compatibility &amp; evidence guardrails</h2><span class="tag salvage">Planning assumptions</span></div>
+      <div class="panel-body">
+        <div class="assumption"><b>◆</b><div><strong>Slot counts are user-specified.</strong> This dashboard uses 6 mounts for Perseus and 7 for Polaris because those counts were requested. Verify against your current ship build and patch.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Cross-ship fitting is speculative.</strong> A PDC being detachable, lootable, or visually mountable does not prove persistence, insurance survival, power compatibility, targeting behavior, or intended support.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Mauler PDC identity is unresolved.</strong> Community/game-file reports describe it as a distinct Mauler turret that may reuse M2C “Swarm” localization or behavior. The dashboard therefore separates the two while assigning the same provisional performance.</div></div>
+        <div class="assumption"><b>◆</b><div><strong>Alpha values change.</strong> Re-check after patches, wipes, component rebalances, or insurance/claim changes. “Est.” means unverified in this file.</div></div>
+      </div>
+    </article>
+  </section>
+  <div class="footer">Offline dashboard · No network calls · Configuration is stored only in this browser when you choose Save locally.</div>
+  <div class="toast" id="pdc-toast" role="status"></div>
+</div>

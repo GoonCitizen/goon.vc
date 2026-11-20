@@ -22,11 +22,34 @@ const ACTION_ROW = 1;
 const BUTTON_COMPONENT = 2;
 const BUTTON_STYLE = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
 const BUTTON = /^1v1:(confirm|decline):([0-9a-f]{12})$/;
-const CAMPAIGN_BUTTON = /^campaign:(send|schedule|cancel):([0-9a-f]{12})(?::(\d{1,12}))?(?::([0-9a-f]{8}))?$/;
+/**
+ * A campaign card button. Send is `campaign:send:<id>:<preview>`, schedule is
+ * `campaign:schedule:<id>:<unix>:<preview>`, cancel is `campaign:cancel:<id>`.
+ * The preview is 8 hex, so it cannot share a slot with the unix time: an
+ * all-digit preview would otherwise be read as a time and the send refused.
+ * @param {string} customId
+ * @returns {Array|null} `[match, action, id, sendAt, previewId]`
+ */
+function campaignButtonOf (customId) {
+  const parts = String(customId || '').split(':');
+  if (parts[0] !== 'campaign' || !/^[0-9a-f]{12}$/.test(parts[2] || '')) return null;
+  if (parts[1] === 'cancel' && parts.length === 3) return [customId, 'cancel', parts[2], undefined, undefined];
+  if (parts[1] === 'send' && (parts.length === 3 || parts.length === 4)) {
+    if (parts[3] && !/^[0-9a-f]{8}$/.test(parts[3])) return null;
+    return [customId, 'send', parts[2], undefined, parts[3]];
+  }
+  if (parts[1] === 'schedule' && parts.length >= 3 && parts.length <= 5) {
+    if (parts[3] && !/^\d{1,12}$/.test(parts[3])) return null;
+    if (parts[4] && !/^[0-9a-f]{8}$/.test(parts[4])) return null;
+    return [customId, 'schedule', parts[2], parts[3], parts[4]];
+  }
+  return null;
+}
 const SWITCH_BUTTON = /^(checkins|welcome):(send|stop|cancel)(?::([0-9a-f]{8}))?$/;
 const MARKET_BUTTON = new RegExp(`^${marketPost.BUY_PREFIX}([0-9a-f]{12})$`);
 const SCHED_VOTE = /^sched:vote:([0-9a-f]{12})$/;
 const SCHED_BUTTON = /^sched:(pick|skip):([0-9a-f]{12})(?::([0-9a-f]{2}))?$/;
+const CLIPS_CONSENT = /^clips:consent:(1|0)$/;
 const MARKET_ROWS = 10;
 const REPLY_TEXT = 1900;
 const MARKET_STATUSES = ['available', 'reserved', 'sold', 'hidden'];
@@ -37,6 +60,7 @@ const RECIPIENT_TEXT = 3500;
 const RECIPIENT_FILE = 'recipients.txt';
 const DISCORD_MEMBER = 'discord:';
 const MANAGE_GUILD = 1n << 5n;
+const MUTE_MEMBERS = 1n << 22n;
 const DM_CLOSED = 50007;
 const SETUP_SCRIPT = 'goon-setup';
 const HANGAR_SCRIPT = 'hangar-import';
@@ -63,7 +87,7 @@ const DEFINITIONS = [
     name: 'idlerpg',
     description: 'The alliance idle game: time in voice earns XP.',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       {
@@ -80,7 +104,7 @@ const DEFINITIONS = [
     name: '1v1',
     description: 'Report a 1v1 duel you fought; your opponent confirms it (Open League by default).',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       { type: OPTION.user, name: 'winner', description: 'Who won the set', required: true },
@@ -114,11 +138,11 @@ const DEFINITIONS = [
         name: 'campaign',
         description: 'DM a message to this server’s members; you see who it reaches before it goes out.',
         options: [
-          { type: OPTION.string, name: 'message', description: 'What to send', required: true, max_length: CAMPAIGN_TEXT },
+          { type: OPTION.string, name: 'script', description: 'Guided conversation behind a Start button. The message is then optional.', autocomplete: true },
+          { type: OPTION.string, name: 'message', description: 'What to send. Leave it out when a script carries the conversation.', max_length: CAMPAIGN_TEXT },
           { type: OPTION.role, name: 'role', description: 'Only members with this role (default: everyone)' },
           { type: OPTION.role, name: 'exclude_role', description: 'Skip members with this role' },
           { type: OPTION.integer, name: 'active_days', description: 'Only members in voice or posting within this many days', min_value: 1, max_value: 365 },
-          { type: OPTION.string, name: 'script', description: 'Offer a guided conversation behind a Start button', autocomplete: true },
           { type: OPTION.string, name: 'send_at', description: 'When to send: "in 2 hours" or 2026-11-01T18:00Z (default: when you press Send)' }
         ]
       },
@@ -131,7 +155,7 @@ const DEFINITIONS = [
     name: 'vote',
     description: 'Have your say on a PERMAFLEET alliance proposal (advisory; member orgs decide).',
     type: CHAT_INPUT,
-    contexts: [GUILD_CONTEXT],
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
     integration_types: [GUILD_INSTALL],
     options: [
       { type: OPTION.string, name: 'proposal', description: 'Which proposal', required: true, autocomplete: true },
@@ -229,6 +253,44 @@ const DEFINITIONS = [
     ]
   },
   {
+    name: 'bounty',
+    description: 'Player bounties: a price in aUEC on an RSI handle.',
+    type: CHAT_INPUT,
+    contexts: [GUILD_CONTEXT, BOT_DM_CONTEXT],
+    integration_types: [GUILD_INSTALL],
+    options: [
+      {
+        type: OPTION.subcommand,
+        name: 'list',
+        description: 'Open bounties.',
+        options: [{ type: OPTION.string, name: 'query', description: 'RSI handle', max_length: 60 }]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'post',
+        description: 'Put a price on a pilot. Requires your linked RSI handle.',
+        options: [
+          { type: OPTION.string, name: 'target', description: 'Their RSI handle', required: true, max_length: 60 },
+          { type: OPTION.string, name: 'reward', description: 'aUEC, such as 150000 or 150k', required: true, max_length: 20 },
+          { type: OPTION.string, name: 'note', description: 'Where they fly, or why', max_length: 500 }
+        ]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'claim',
+        description: 'Say you killed the target. Requires your linked RSI handle.',
+        options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
+      },
+      {
+        type: OPTION.subcommand,
+        name: 'done',
+        description: 'Confirm a kill you posted, and that you paid the aUEC.',
+        options: [{ type: OPTION.string, name: 'bounty', description: 'Bounty id', required: true, max_length: 16 }]
+      },
+      { type: OPTION.subcommand, name: 'mine', description: 'Bounties you posted or claimed.' }
+    ]
+  },
+  {
     name: 'rsi',
     description: 'Link your RSI profile to your G00N SQUAD profile.',
     type: CHAT_INPUT,
@@ -256,6 +318,18 @@ const DEFINITIONS = [
     ]
   },
   {
+    name: 'clips',
+    description: 'Record people talking in a voice channel into the clip library.',
+    type: CHAT_INPUT,
+    contexts: [GUILD_CONTEXT],
+    integration_types: [GUILD_INSTALL],
+    default_member_permissions: String(MUTE_MEMBERS),
+    options: [
+      { type: OPTION.subcommand, name: 'listen', description: 'Join your current voice channel and record talk until you leave, or the channel is empty.' },
+      { type: OPTION.subcommand, name: 'leave', description: 'Stop recording and leave the voice channel.' }
+    ]
+  },
+  {
     name: 'help',
     description: 'What each goon.vc command does.',
     type: CHAT_INPUT,
@@ -279,8 +353,14 @@ const HELP = {
     const browse = market && market.base ? ` Browse: <${commands._url(market.base)}>` : '';
     return `Every listing is a thread in the G00N SQUAD Market forum. Pledges change hands by RSI gifting, and escrow holds the payment until the buyer confirms the gift. Add it to your own account to use it in any DM: <${commands._url('/services/discord/install')}>.${browse}`;
   },
+  bounty: (commands) => {
+    const bounties = commands._bounties();
+    const board = bounties && bounties.base ? ` Board: <${commands._url(bounties.base)}>` : '';
+    return `A price on a pilot, in aUEC. Kill them and the poster pays you in game. Posting and claiming need a linked RSI handle.${board}`;
+  },
   rsi: (commands) => `You prove the handle is yours by putting a short code in your RSI bio for a minute. <${commands._url(commands.settings.rsiPath)}>`,
   hangar: (commands) => `Export your pledges with the Hangar Export add-on for Firefox, then import the .json file. Only fleet totals are public, never who owns what: <${commands._url(commands.settings.rsiPath)}>`,
+  clips: (commands) => `Needs Mute Members. The bot joins only when asked, records only people who press Record me (you are included when you start it), and only records talk — not Go Live video or game audio. Clips: <${commands._url(commands.settings.clipsPath)}>`,
   goon: () => 'For members who can manage the server. The PERMAFLEET channel and rank commands are for the org’s officers on record, and campaigns, check-ins, and welcome DMs show every recipient before anything is sent.'
 };
 
@@ -290,10 +370,18 @@ const WHERE = {
   anywhere: 'In servers, DMs, and group DMs once you add it to your account.'
 };
 
-/** `/name required [optional]` for a command or subcommand. */
+/** `/name required [optional]` for a command or subcommand, without Discord backticks. */
 function usage (name, options = []) {
-  const args = options.filter((option) => option.type !== OPTION.subcommand).map((option) => (option.required ? option.name : `[${option.name}]`));
-  return `\`/${[name, ...args].join(' ')}\``;
+  const args = (options || []).filter((option) => option.type !== OPTION.subcommand).map((option) => (option.required ? option.name : `[${option.name}]`));
+  return `/${[name, ...args].join(' ')}`;
+}
+
+/** Where a command can be run, in the same words `/help` uses. */
+function whereText (definition) {
+  const contexts = (definition && definition.contexts) || [];
+  if (contexts.includes(PRIVATE_CHANNEL_CONTEXT)) return WHERE.anywhere;
+  if (contexts.includes(BOT_DM_CONTEXT)) return WHERE.dm;
+  return WHERE.guild;
 }
 
 /**
@@ -446,8 +534,11 @@ function hasPermission (permissions, bit) {
  * (a DM walkthrough for exporting a hangar, and the import of that export
  * for a claimed handle, through {@link Hangar}). They ride the one gateway client {@link Operations}
  * runs; interactions need no intents. The application is shared with other
- * services, so only these commands are registered (upserted by name, global;
- * all but `/market` servers only) and nothing else is touched. Players are found by their
+ * services, so only these commands are registered (upserted by name, global)
+ * and nothing else is touched. `/idlerpg`, `/1v1`, `/vote`, `/bounty`, `/rsi`,
+ * and `/hangar` also run in the bot’s DMs. `/goon`, `/schedule`, and `/clips`
+ * stay in servers, where they act on that server. `/market` and `/help` also
+ * install on a member’s own account. Players are found by their
  * Discord account (its goon.vc member), not by name. Replies carry display
  * names only and ping no one but the player asked to confirm.
  */
@@ -490,11 +581,13 @@ class Commands {
       reviews: null,
       hangar: null,
       schedule: null,
+      clips: null,
       league: OPEN_LEAGUE_ID,
       siteUrl: 'https://goon.vc',
       idlerpgPath: '/services/idlerpg',
       leaguesPath: '/leagues',
-      rsiPath: '/rsi',
+      rsiPath: '/services/rsi',
+      clipsPath: '/clips',
       votesPath: '/operations/PERMAFLEET/votes',
       register: true,
       fetch: null,
@@ -547,7 +640,9 @@ class Commands {
     running[allianceRoles.SCRIPT.subcommand] = scripts;
     const live = DEFINITIONS.map((definition) => {
       if (definition.name === 'market') return this.settings.market ? definition : null;
+      if (definition.name === 'bounty') return this._bounties() ? definition : null;
       if (definition.name === 'schedule') return this._schedule() ? definition : null;
+      if (definition.name === 'clips') return this._clips() ? definition : null;
       if (definition.name === 'rsi') return this._members() ? definition : null;
       if (definition.name === 'hangar') {
         if (!this.settings.hangar || !this._members()) return null;
@@ -635,16 +730,17 @@ class Commands {
     const isButton = typeof interaction.isButton === 'function' && interaction.isButton();
     const isSelect = typeof interaction.isStringSelectMenu === 'function' && interaction.isStringSelectMenu();
     const button = isButton ? BUTTON.exec(String(interaction.customId || '')) : null;
-    const campaignButton = isButton ? CAMPAIGN_BUTTON.exec(String(interaction.customId || '')) : null;
+    const campaignButton = isButton ? campaignButtonOf(interaction.customId) : null;
     const switchButton = isButton ? SWITCH_BUTTON.exec(String(interaction.customId || '')) : null;
     const marketButton = isButton ? MARKET_BUTTON.exec(String(interaction.customId || '')) : null;
     const schedVote = isSelect ? SCHED_VOTE.exec(String(interaction.customId || '')) : null;
     const schedButton = isButton ? SCHED_BUTTON.exec(String(interaction.customId || '')) : null;
+    const clipsConsent = isButton ? CLIPS_CONSENT.exec(String(interaction.customId || '')) : null;
     const command = typeof interaction.isChatInputCommand === 'function' && interaction.isChatInputCommand() &&
       COMMAND_NAMES.includes(interaction.commandName) ? interaction.commandName : null;
     // A select menu this service doesn't own (a DM script) is left for Doorman.
     if (isSelect && !schedVote) return;
-    if (!button && !campaignButton && !switchButton && !marketButton && !schedVote && !schedButton && !command) return;
+    if (!button && !campaignButton && !switchButton && !marketButton && !schedVote && !schedButton && !clipsConsent && !command) return;
     let out;
     // Campaign, check-in, welcome, and schedule buttons read from Discord or post an event, which can outlast the 3 s reply window.
     let updating = false;
@@ -666,17 +762,30 @@ class Commands {
           out = await this.scheduleCommand(interaction);
         }
       }
+      else if (command === 'clips') {
+        if (!interaction.guildId) out = this._private('Use this in a server.');
+        else {
+          if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
+          out = await this.clipsCommand(interaction);
+        }
+      } else if (clipsConsent) {
+        out = await this.clipsConsent(interaction, clipsConsent[1] === '1');
+      } else if (button) {
+        // A `/1v1` card can arrive in the opponent’s DMs, where there is no guild.
+        out = await this.answer(interaction, button[1], button[2]);
+      }
       // `/market` is also installed on members' own accounts, so it runs in DMs and servers without the bot.
-      // `/rsi` and `/hangar` also run in the bot's DMs.
+      // `/rsi`, `/hangar`, `/idlerpg`, `/1v1`, `/vote`, and `/bounty` also run in the bot's DMs.
       else if (command === 'market' || marketButton || command === 'rsi' || command === 'hangar') {
         if (typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
-        const member = await this._linkMember(interaction.user, displayName(interaction.member, interaction.user));
-        if (command === 'rsi') out = await this.rsi(member);
-        else if (command === 'hangar') out = await this.hangar(interaction, member);
-        else out = marketButton ? await this.marketBuy(marketButton[1], member) : await this.market(interaction, member);
-      } else if (!interaction.guildId) out = this._private('Use this in a server.');
-      else if (button) out = await this.answer(interaction, button[1], button[2]);
-      else if (campaignButton || switchButton) {
+        const signed = await this._signedInMember(interaction.user);
+        const known = signed || await this._knownMember(interaction.user);
+        if (command === 'rsi') out = await this.rsi(known || await this._claimMember(interaction));
+        else if (command === 'hangar') out = await this.hangar(interaction, known);
+        else out = marketButton ? await this.marketBuy(marketButton[1], signed) : await this.market(interaction, signed);
+      } else if (!interaction.guildId && command !== 'idlerpg' && command !== 'vote' && command !== 'bounty' && command !== '1v1') {
+        out = this._private('Use this in a server.');
+      } else if (campaignButton || switchButton) {
         if (typeof interaction.deferUpdate === 'function') {
           await interaction.deferUpdate();
           updating = true;
@@ -688,7 +797,12 @@ class Commands {
         // Setup reads permissions from Discord and sends a DM, and a campaign
         // preview lists the server's members: both can outlast the 3 s reply window.
         if (command === 'goon' && typeof interaction.deferReply === 'function') await interaction.deferReply({ flags: EPHEMERAL });
-        const member = await this._link(interaction.user, displayName(interaction.member, interaction.user));
+        // Asking the opponent in a DM can outlast the 3 s reply window.
+        if (command === '1v1' && !interaction.guildId && typeof interaction.deferReply === 'function' && !interaction.deferred) {
+          await interaction.deferReply({ flags: EPHEMERAL });
+        }
+        const member = await this._signedInMember(interaction.user);
+        const memberId = await this._actorId(interaction.user);
         if (command === 'idlerpg') out = await this.idlerpg(interaction);
         else if (command === 'goon') {
           const subcommand = this._subcommand(interaction);
@@ -699,7 +813,11 @@ class Commands {
           else out = await this.setup(interaction, subcommand);
         }
         else if (command === 'vote') out = await this.vote(interaction, member);
-        else out = await this.duel(interaction, member);
+        else if (command === 'bounty') {
+          if (typeof interaction.deferReply === 'function' && !interaction.deferred) await interaction.deferReply({ flags: EPHEMERAL });
+          out = await this.bounty(interaction, member);
+        }
+        else out = await this.duel(interaction, memberId);
       }
     } catch (error) {
       const where = command || (schedButton || schedVote ? 'schedule' : campaignButton ? 'goon campaign card' : switchButton ? `goon ${switchButton[1]} card` : marketButton ? 'market buy button' : '1v1 card');
@@ -775,14 +893,14 @@ class Commands {
       return this._private('You need the Manage Server permission to send a campaign here.');
     }
     const options = interaction.options;
-    const text = String(options.getString('message') || '').trim();
-    if (!text) return this._private('Write the message to send.');
-    const role = this._role(options, 'role');
-    const excludeRole = this._role(options, 'exclude_role');
-    const activeDays = typeof options.getInteger === 'function' ? options.getInteger('active_days') : null;
     const script = options.getString('script');
     const offered = script ? community.campaignScripts().find((entry) => entry.id === script) : null;
     if (script && !offered) return this._private(`There is no conversation called \`${script}\`. Pick one from the list.`);
+    const text = String(options.getString('message') || '').trim();
+    if (!offered && !text) return this._private('Write the message to send.');
+    const role = this._role(options, 'role');
+    const excludeRole = this._role(options, 'exclude_role');
+    const activeDays = typeof options.getInteger === 'function' ? options.getInteger('active_days') : null;
     const now = this.settings.now();
     const sendAt = parseSendAt(options.getString('send_at'), now);
     const guildName = (interaction.guild && interaction.guild.name) || null;
@@ -792,6 +910,7 @@ class Commands {
 
     const by = displayName(interaction.member, interaction.user);
     const draft = await campaigns.create({
+      title: offered && !text ? offered.title : undefined,
       content: offered ? { type: 'script', script: offered.id, text } : { type: 'message', text },
       filter: {
         roles: role ? [String(role.id)] : [],
@@ -809,18 +928,18 @@ class Commands {
     this._campaignAuthors.set(draft.id, String(interaction.user.id));
     while (this._campaignAuthors.size > 500) this._campaignAuthors.delete(this._campaignAuthors.keys().next().value);
 
-    const quote = text.length > 1200 ? `${text.slice(0, 1199)}…` : text;
     const audience = role ? `<@&${role.id}>` : `**${escapeMarkdown(guildName || 'this server')}**`;
     const skipped = [
       excludeRole ? `skipping <@&${excludeRole.id}>` : null,
       preview.optedOut ? `${number(preview.optedOut)} opted out` : null,
       preview.inactive ? `${number(preview.inactive)} not active in ${plural(activeDays, 'day')}` : null
     ].filter(Boolean);
-    const lines = [
-      `**Campaign preview** — ${escapeMarkdown(guildName || 'this server')}`,
-      quote.split('\n').map((line) => `> ${line}`).join('\n'),
-      `Reaches **${number(preview.reach)}** ${preview.reach === 1 ? 'member' : 'members'} of ${audience}${skipped.length ? `; ${skipped.join(', ')}` : ''}.`
-    ];
+    const lines = [`**Campaign preview** — ${escapeMarkdown(guildName || 'this server')}`];
+    if (text) {
+      const quote = text.length > 1200 ? `${text.slice(0, 1199)}…` : text;
+      lines.push(quote.split('\n').map((line) => `> ${line}`).join('\n'));
+    }
+    lines.push(`Reaches **${number(preview.reach)}** ${preview.reach === 1 ? 'member' : 'members'} of ${audience}${skipped.length ? `; ${skipped.join(', ')}` : ''}.`);
     if (offered) lines.push(`Offers **${escapeMarkdown(offered.title)}** behind a Start button.`);
     const names = (preview.recipients || []).map((recipient) => recipient.name || 'Unnamed member');
     const buttons = [];
@@ -1015,7 +1134,7 @@ class Commands {
   }
 
   /**
-   * `/goon review`: DM a reviewer everyone waiting for review on goon.vc.
+   * `/goon review`: DM a reviewer the officers waiting for review, one at a time.
    * Reviewers are goon.vc's own list, not a server permission.
    * @param {Object} interaction
    * @returns {Promise<Object>} reply
@@ -1033,8 +1152,8 @@ class Commands {
       }
       throw error;
     }
-    if (!result.pending) return this._private('Nobody is waiting for review right now.');
-    return this._private(`Check your DMs: ${result.pending === 1 ? '1 sign-in is' : `${result.pending} sign-ins are`} waiting for review.`);
+    if (!result.pending) return this._private('No officers are waiting for review right now.');
+    return this._private(`Check your DMs: ${result.pending === 1 ? '1 officer sign-in is' : `${result.pending} officer sign-ins are`} waiting for review.`);
   }
 
   /**
@@ -1152,6 +1271,83 @@ class Commands {
     return !community || typeof community.maySendCampaign !== 'function' || community.maySendCampaign(userId) === true;
   }
 
+  _permission (definition) {
+    if (!definition || !definition.default_member_permissions) return null;
+    if (String(definition.default_member_permissions) === String(MUTE_MEMBERS)) return 'Mute Members';
+    return 'Manage Server';
+  }
+
+  _permissionLabel (definition) {
+    const permission = this._permission(definition);
+    if (permission === 'Mute Members') return ' (who can mute members)';
+    if (permission === 'Manage Server') return ' (server managers)';
+    return '';
+  }
+
+  /**
+   * One running command the way `/help command` explains it, plus each
+   * argument. `/services/discord` shows every one of these; Discord’s `/help`
+   * is the same text, shortened to a message.
+   * @param {Object} definition
+   * @returns {Object}
+   */
+  _guideEntry (definition) {
+    const argument = (option) => ({
+      name: option.name,
+      description: option.description || '',
+      required: !!option.required,
+      choices: (option.choices || []).map((choice) => choice.name)
+    });
+    const subcommands = (definition.options || []).filter((option) => option.type === OPTION.subcommand);
+    const args = (definition.options || []).filter((option) => option.type !== OPTION.subcommand);
+    const permission = this._permission(definition);
+    return {
+      name: definition.name,
+      description: definition.description,
+      about: HELP[definition.name] ? HELP[definition.name](this) : '',
+      where: whereText(definition),
+      permission,
+      usage: subcommands.length ? null : usage(definition.name, args),
+      options: subcommands.length ? [] : args.map(argument),
+      subcommands: subcommands.map((option) => ({
+        name: option.name,
+        description: option.description,
+        usage: usage(`${definition.name} ${option.name}`, option.options),
+        options: (option.options || []).map(argument)
+      }))
+    };
+  }
+
+  /**
+   * Every command running right now, except `/help` itself.
+   * @returns {Array<Object>}
+   */
+  guide () {
+    return this.definitions.filter((definition) => definition.name !== 'help').map((definition) => this._guideEntry(definition));
+  }
+
+  /**
+   * `GET /services/discord` for clients that are not asking for the HTML page.
+   * @returns {Function}
+   */
+  middleware () {
+    return (req, res, next) => {
+      const pathname = String(req.path || '').replace(/\/+$/, '') || '/';
+      if (pathname !== '/services/discord') return next();
+      const method = String(req.method || 'GET').toUpperCase();
+      res.setHeader('Cache-Control', 'no-store');
+      if (method !== 'GET') {
+        res.statusCode = 405;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
+        return;
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ ok: true, commands: this.guide() }));
+    };
+  }
+
   _private (content) {
     return { content, flags: EPHEMERAL };
   }
@@ -1218,6 +1414,7 @@ class Commands {
       return this._private('The walkthrough is not running right now. Export your hangar with the Hangar Export browser extension, then run `/hangar import` with the .json file.');
     }
     const handles = rsiHandles(member);
+    const holder = member || (handles.length ? null : await this._claimMember(interaction));
     try {
       await community.beginScript(HANGAR_SCRIPT, {
         user: `discord/users/${interaction.user.id}`,
@@ -1231,8 +1428,8 @@ class Commands {
       throw error;
     }
     const text = 'Check your DMs: I’ve sent the first step of exporting your hangar.';
-    if (handles.length) return this._private(text);
-    return this._claimReply(member, `${text}\nYou’ll also need to claim your RSI handle before the import: open this link.`);
+    if (handles.length || !holder) return this._private(text);
+    return this._claimReply(holder, `${text}\nYou’ll also need to claim your RSI handle before the import: open this link.`);
   }
 
   async hangarImport (interaction, member) {
@@ -1254,6 +1451,8 @@ class Commands {
       return this._private('I couldn’t download that file from Discord. Try again in a moment.');
     }
     if (text.length > HANGAR_FILE_BYTES) return this._private('That file is over 5 MB; a Hangar Export file is much smaller.');
+    const holder = member || await this._claimMember(interaction);
+    if (!holder) return this._private('Sign in on goon.vc first.');
     let data;
     try {
       data = JSON.parse(text);
@@ -1261,14 +1460,14 @@ class Commands {
       return this._private('I couldn’t read that file as JSON. Attach the .json file exactly as Hangar Export saved it.');
     }
     try {
-      const result = await this.settings.hangar.importExport(member.id, data);
+      const result = await this.settings.hangar.importExport(holder.id, data);
       return this._private([
         `Synced ${plural(result.ships, 'ship')} (${plural(result.models, 'model')}) for **${escapeMarkdown(result.handle)}**.`,
         `Only fleet totals are public: <${this._url(this.settings.rsiPath)}>. Run \`/hangar import\` again with a newer export whenever your hangar changes.`
       ].join('\n'));
     } catch (error) {
       if (error && error.code === 'UNCLAIMED') {
-        return this._claimReply(member, error.handle
+        return this._claimReply(holder, error.handle
           ? `That export is for **${escapeMarkdown(error.handle)}**, which you haven’t claimed on goon.vc. Claim it, then run \`/hangar import\` again.`
           : 'Claim your RSI handle on goon.vc first, then run `/hangar import` again.');
       }
@@ -1277,6 +1476,7 @@ class Commands {
   }
 
   async hangarStatus (member) {
+    if (!member) return this._private('Nothing synced yet. Claim your RSI handle with `/rsi claim`, then run `/hangar guide`.');
     const status = await this.settings.hangar.status(member.id);
     if (!status) {
       return this._private(rsiHandles(member).length
@@ -1346,20 +1546,38 @@ class Commands {
   }
 
   /**
-   * The goon.vc member for a Discord user, linked on the members Store when
-   * there is one. Everyone who runs a command gets a profile this way.
-   * @returns {Promise<string>} member id
+   * A Discord account that has finished sign-in, or null. Running a command
+   * does not create or link a profile.
+   * @returns {Promise<Object|null>}
    */
-  async _link (user, name) {
-    return (await this._linkMember(user, name)).id;
+  async _signedInMember (user) {
+    const members = this.settings.members;
+    if (!members || !user || !user.id) return null;
+    const member = await members.memberFor(`${DISCORD_MEMBER}${user.id}`).catch(() => null);
+    if (!member) return null;
+    const account = (member.accounts || []).find((held) => held.key === `${DISCORD_MEMBER}${user.id}`);
+    if (member.lastLoginAt) return member;
+    if (account && (account.via === 'oauth' || account.via === 'passport' || account.via === 'bio')) return member;
+    return null;
   }
 
-  /** {@link Commands#_link}, returning the member record. */
-  async _linkMember (user, name) {
+  /** A member record that already exists for this Discord account, linked or not. */
+  async _knownMember (user) {
     const members = this.settings.members;
-    if (members) return members.linkDiscord(user, name);
-    const key = `${DISCORD_MEMBER}${user.id}`;
-    return { id: key, displayName: name, accounts: [{ key, platform: 'discord', id: String(user.id) }] };
+    if (!members || !user || !user.id) return null;
+    return members.memberFor(`${DISCORD_MEMBER}${user.id}`).catch(() => null);
+  }
+
+  /** A member record for an RSI claim link. Not a completed login until the link is opened. */
+  async _claimMember (interaction) {
+    const members = this._members();
+    if (!members) return null;
+    return members.linkDiscord(interaction.user, displayName(interaction.member, interaction.user));
+  }
+
+  async _actorId (user) {
+    const member = await this._signedInMember(user);
+    return member ? member.id : `${DISCORD_MEMBER}${user.id}`;
   }
 
   /** The member id of a Discord user who has one, else their account key; links nothing. */
@@ -1423,9 +1641,35 @@ class Commands {
     const claim = proposer === 'winner'
       ? `**${escapeMarkdown(winnerName)}** says they beat you`
       : `**${escapeMarkdown(loserName)}** says you beat them`;
-    const lines = [
-      `<@${other.id}>, ${claim} ${score[0]}–${score[1]} (best of ${proposal.bestOf}) in the ${this._leagueLink(league)}.`
-    ];
+    const card = this._duelCard(proposal, league, claim, other, !!interaction.guildId);
+    if (interaction.guildId) return card;
+    const asked = displayName(null, other) || 'them';
+    try {
+      await this._deliver(other, { content: card.content, components: card.components });
+    } catch (error) {
+      await leagues.declineDuel(proposal.id, member).catch(() => {});
+      if (error && error.code === 50007) {
+        return this._private(`I couldn’t DM **${escapeMarkdown(asked)}**. They need to allow DMs from server members, or run \`/1v1\` in a server you’re both in.`);
+      }
+      throw error;
+    }
+    return this._private(`Asked **${escapeMarkdown(asked)}** to confirm in their DMs. The duel counts once they do.`);
+  }
+
+  /**
+   * The Confirm / Decline card for a proposed duel. In a server it pings the
+   * opponent in that channel. In the bot’s DMs the same card is sent to them,
+   * so the mention is left off.
+   * @param {Object} proposal
+   * @param {Object} league
+   * @param {string} claim
+   * @param {Object} other
+   * @param {boolean} mention
+   * @returns {Object} Discord message
+   */
+  _duelCard (proposal, league, claim, other, mention) {
+    const line = `${claim} ${proposal.score[0]}–${proposal.score[1]} (best of ${proposal.bestOf}) in the ${this._leagueLink(league)}.`;
+    const lines = [mention ? `<@${other.id}>, ${line}` : line];
     if (proposal.note) lines.push(`> ${escapeMarkdown(proposal.note)}`);
     lines.push(`Confirm to log it. This expires <t:${Math.floor(Date.parse(proposal.expiresAt) / 1000)}:R>.`);
     return {
@@ -1437,8 +1681,30 @@ class Commands {
           { type: BUTTON_COMPONENT, style: BUTTON_STYLE.danger, label: 'Decline', custom_id: `1v1:decline:${proposal.id}` }
         ]
       }],
-      allowedMentions: { users: [other.id] }
+      allowedMentions: mention ? { users: [other.id] } : { parse: [] }
     };
+  }
+
+  /**
+   * A direct message from the bot. Tests pass `settings.deliver`; otherwise
+   * the user object or the gateway client sends it.
+   * @param {Object} user
+   * @param {Object} message
+   * @returns {Promise<void>}
+   */
+  async _deliver (user, message) {
+    const payload = Object.assign({ allowedMentions: { parse: [] } }, message);
+    if (typeof this.settings.deliver === 'function') return this.settings.deliver(user, payload);
+    if (user && typeof user.send === 'function') return user.send(payload);
+    const client = this.client;
+    if (!client || !client.users || typeof client.users.fetch !== 'function') {
+      const error = new Error('Discord is not connected.');
+      error.status = 503;
+      throw error;
+    }
+    const cached = client.users.cache && typeof client.users.cache.get === 'function' ? client.users.cache.get(String(user.id)) : null;
+    const fetched = cached || await client.users.fetch(String(user.id));
+    return fetched.send(payload);
   }
 
   /**
@@ -1464,7 +1730,6 @@ class Commands {
       ? await leagues.confirmDuel(proposalId, member)
       : await leagues.declineDuel(proposalId, member);
     if (result.duel) {
-      await this._link(interaction.user, displayName(interaction.member, interaction.user));
       if (typeof leagues.relinkMembers === 'function') await leagues.relinkMembers();
     }
     const league = result.league || await leagues.getLeague(result.proposal.league);
@@ -1499,9 +1764,131 @@ class Commands {
     return typeof market === 'function' ? market() : market;
   }
 
+  _bounties () {
+    const bounties = this.settings.bounties;
+    return typeof bounties === 'function' ? bounties() : bounties;
+  }
+
+  /**
+   * `/bounty`: list, post, claim, done, and mine. Replies are private and
+   * carry handles and links only. Posting and claiming need a linked RSI handle.
+   * @param {Object} interaction
+   * @param {Object} member
+   * @returns {Promise<Object>}
+   */
+  async bounty (interaction, member) {
+    const bounties = this._bounties();
+    if (!bounties) return this._private('The bounty board is not running right now.');
+    if (interaction.user && interaction.user.bot) return this._private('Bots don’t post bounties.');
+    const subcommand = this._subcommand(interaction);
+    const options = interaction.options;
+    const base = bounties.base;
+    if (subcommand === 'mine' || subcommand === 'post' || subcommand === 'claim' || subcommand === 'done') {
+      if (!member) return this._private('Sign in on goon.vc first. A command does not link your account.');
+    }
+    if (subcommand === 'list' || subcommand === 'mine') {
+      const query = subcommand === 'list' ? String(options.getString('query') || '').trim() : '';
+      const rows = bounties.list(subcommand === 'mine' ? { status: 'all', mine: member } : { q: query });
+      const all = this._url(base);
+      if (!rows.length) return this._private(subcommand === 'mine' ? `You have no bounties. [The board](<${all}>)` : `No open bounties${query ? ` match “${escapeMarkdown(query)}”` : ''}. [The board](<${all}>)`);
+      const head = subcommand === 'mine' ? '**Your bounties**' : '**Bounties**';
+      const lines = rows.slice(0, 10).map((bounty) => `**${escapeMarkdown(bounty.target)}** · ${escapeMarkdown(bounty.reward)} · ${bounty.status} · [open](<${this._url(bounty.path)}>)`);
+      return this._private(this._fit(head, lines, `[The board](<${all}>)`));
+    }
+    if (subcommand === 'post') {
+      const created = await bounties.create({
+        target: options.getString('target'),
+        reward: options.getString('reward'),
+        note: options.getString('note')
+      }, member);
+      return this._private(`Posted **${escapeMarkdown(created.reward)}** on **${escapeMarkdown(created.target)}**. <${this._url(created.path)}>`);
+    }
+    const id = String(options.getString('bounty') || '').trim().toLowerCase();
+    const page = this._url(`${base}/${id}`);
+    if (subcommand === 'claim') {
+      const claimed = await bounties.claim(id, member);
+      return this._private(`You claimed the bounty on **${escapeMarkdown(claimed.target)}**. The poster confirms the kill and pays you in game. <${page}>`);
+    }
+    if (subcommand === 'done') {
+      const updated = await bounties.confirm(id, member);
+      return this._private(`Confirmed the kill on **${escapeMarkdown(updated.target)}**. Pay **${escapeMarkdown(updated.claimantHandle)}** ${escapeMarkdown(updated.reward)} in game. <${page}>`);
+    }
+    return this._private(`Bounties: <${this._url(base)}>`);
+  }
+
   _schedule () {
     const schedule = this.settings.schedule;
     return schedule && typeof schedule.open === 'function' ? schedule : null;
+  }
+
+  _clips () {
+    const clips = this.settings.clips;
+    const service = typeof clips === 'function' ? clips() : clips;
+    return service && typeof service.listen === 'function' && service.voiceEnabled !== false ? service : null;
+  }
+
+  /**
+   * `/clips listen` joins the caller's voice channel and records talk until
+   * `/clips leave` or the channel stays empty. Mute Members only. Private
+   * reply; names only. Other speakers opt in on the channel notice.
+   * @param {Object} interaction
+   * @returns {Promise<Object>} reply
+   */
+  async clipsCommand (interaction) {
+    const clips = this._clips();
+    if (!clips) return this._private('Voice clips are not running right now.');
+    if (interaction.user && interaction.user.bot) return this._private('Bots don’t record.');
+    if (!this._canMuteMembers(interaction)) return this._private('You need the Mute Members permission to record a voice channel.');
+    const subcommand = this._subcommand(interaction);
+    if (subcommand === 'leave') {
+      const status = await clips.leaveVoice();
+      if (status && status.stopped) return this._private('Left the voice channel. Recordings are in the clip library.');
+      return this._private('I was not listening.');
+    }
+    const voice = interaction.member && interaction.member.voice;
+    const channelId = voice && (voice.channelId || (voice.channel && voice.channel.id));
+    if (!channelId) return this._private('Join a voice channel first, then run `/clips listen`.');
+    const channelName = (voice.channel && voice.channel.name) || null;
+    const listening = await clips.listen({
+      guildId: interaction.guildId,
+      channelId: String(channelId),
+      channelName,
+      by: String(interaction.user.id)
+    });
+    const where = listening.channel ? `#${escapeMarkdown(listening.channel)}` : 'that channel';
+    const page = this._url(this.settings.clipsPath);
+    const notice = listening.notice
+      ? 'Others in the channel (and anyone who joins later) are recorded only after they press Record me on the notice there.'
+      : 'I couldn’t post the opt-in notice in that channel, so only you are recorded until they can press Record me.';
+    return this._private(`Listening in ${where} — your talk is recorded into the clip library (not Go Live video). ${notice} [Clips](<${page}>) · \`/clips leave\` to stop.`);
+  }
+
+  /**
+   * Record-me / Don’t-record-me on the voice-channel notice. Anyone in the
+   * server may press them; only opted-in speakers are mixed.
+   * @param {Object} interaction
+   * @param {boolean} yes
+   * @returns {Promise<Object>} reply
+   */
+  async clipsConsent (interaction, yes) {
+    const clips = this._clips();
+    if (!clips || typeof clips.consent !== 'function') return this._private('Voice clips are not running right now.');
+    const user = interaction.user || {};
+    if (user.bot) return this._private('Bots aren’t recorded.');
+    const result = clips.consent(String(user.id), yes);
+    if (!result.listening) return this._private('Nobody is recording right now.');
+    if (yes) return this._private('You’re included. Talk in this channel is recorded into the clip library with your display name.');
+    return this._private('You won’t be recorded. Press Record me if you change your mind.');
+  }
+
+  _canMuteMembers (interaction) {
+    const perms = interaction && interaction.memberPermissions;
+    if (!perms || typeof perms.has !== 'function') return false;
+    try {
+      return perms.has(MUTE_MEMBERS) || perms.has('MuteMembers');
+    } catch (_) {
+      return false;
+    }
   }
 
   /**
@@ -1615,27 +2002,24 @@ class Commands {
   help (interaction) {
     const options = interaction.options;
     const asked = options && typeof options.getString === 'function' ? options.getString('command') : null;
-    const live = this.definitions.filter((definition) => definition.name !== 'help');
+    const live = this.guide();
     if (!asked) {
-      const lines = live.map((definition) => {
-        const parts = (definition.options || []).filter((option) => option.type === OPTION.subcommand).map((option) => option.name);
-        const manage = definition.default_member_permissions ? ' (server managers)' : '';
-        return `**/${definition.name}**${parts.length ? ` ${parts.join(' · ')}` : ''}${manage} — ${definition.description}`;
+      const lines = live.map((command) => {
+        const parts = command.subcommands.map((option) => option.name);
+        const manage = command.permission === 'Mute Members' ? ' (who can mute members)' : command.permission ? ' (server managers)' : '';
+        return `**/${command.name}**${parts.length ? ` ${parts.join(' · ')}` : ''}${manage} — ${command.description}`;
       });
-      return this._private(this._fit('**goon.vc commands**', lines, `Run \`/help command\` for one in detail, or visit <${this._url('/')}>.`));
+      return this._private(this._fit('**goon.vc commands**', lines, `Run \`/help command\` for one in detail, or read every command at <${this._url('/services/discord')}>.`));
     }
     const name = String(asked).replace(/^\//, '').trim().toLowerCase();
-    const definition = live.find((entry) => entry.name === name);
-    if (!definition) return this._private(`\`/${name}\` isn’t running right now. Run \`/help\` for the commands that are.`);
-    const head = [`**/${definition.name}** — ${definition.description}`];
-    if (HELP[definition.name]) head.push(HELP[definition.name](this));
-    const subcommands = (definition.options || []).filter((option) => option.type === OPTION.subcommand);
-    const lines = subcommands.length
-      ? subcommands.map((option) => `${usage(`${definition.name} ${option.name}`, option.options)} — ${option.description}`)
-      : [usage(definition.name, definition.options)];
-    const contexts = definition.contexts || [];
-    const where = contexts.includes(PRIVATE_CHANNEL_CONTEXT) ? WHERE.anywhere : contexts.includes(BOT_DM_CONTEXT) ? WHERE.dm : WHERE.guild;
-    const tail = definition.default_member_permissions ? `${where} Needs Manage Server.` : where;
+    const command = live.find((entry) => entry.name === name);
+    if (!command) return this._private(`\`/${name}\` isn’t running right now. Run \`/help\` for the commands that are.`);
+    const head = [`**/${command.name}** — ${command.description}`];
+    if (command.about) head.push(command.about);
+    const lines = command.subcommands.length
+      ? command.subcommands.map((option) => `\`${option.usage}\` — ${option.description}`)
+      : [`\`${command.usage}\``];
+    const tail = command.permission ? `${command.where} Needs ${command.permission}.` : command.where;
     return this._private(this._fit(head.join('\n'), lines, tail));
   }
 
@@ -1677,7 +2061,11 @@ class Commands {
       const head = query ? `**Market:** ${plural(listings.length, 'listing')} matching “${escapeMarkdown(query)}”` : '**Market:** newest listings';
       return this._private(this._fit(head, listings.slice(0, MARKET_ROWS).map((listing) => this._listingLine(listing)), `[See them all](<${all}>)`));
     }
+    if (subcommand === 'sell' || subcommand === 'mine' || subcommand === 'edit') {
+      if (!member) return this._private('Sign in on goon.vc first. A command does not link your account.');
+    }
     if (subcommand === 'sell') {
+      if (!member) return this._private('Sign in on goon.vc before you sell. A command does not link your account.');
       const image = typeof options.getAttachment === 'function' ? options.getAttachment('image') : null;
       if (image && image.contentType && !/^image\//.test(image.contentType)) return this._private('The image has to be a picture.');
       const input = { title: options.getString('item'), price: options.getString('price') };
@@ -1794,7 +2182,7 @@ class Commands {
    * on record for an org in the proposal also signs for that org, which
    * votes once its threshold of officers agree.
    * @param {Object} interaction
-   * @param {string} member The caller's goon.vc member id.
+   * @param {Object|null} member The caller, once they have signed in.
    * @returns {Promise<Object>} reply
    */
   async vote (interaction, member) {
@@ -1807,9 +2195,24 @@ class Commands {
     if (!/^[0-9a-f]{12,64}$/.test(id)) return this._private('Pick the proposal from the list.');
     const account = `${DISCORD_MEMBER}${interaction.user.id}`;
     const actor = await alliance.actorFor(account);
-    const proposal = actor.officers.length
-      ? await alliance.vote(id, { account, choice }, actor)
-      : await alliance.memberVote(id, { account, member, choice });
+    const memberId = member && member.id;
+    const found = await alliance.getProposal(id);
+    if (!found) return this._private('No such proposal.');
+    let proposal;
+    if (actor.officers.length) {
+      try {
+        proposal = await alliance.vote(id, { account, choice }, actor);
+      } catch (error) {
+        if (!error || error.status !== 403) throw error;
+        if (!memberId) return this._private('Sign in on goon.vc to vote on this one. It was opened before your org listed you, so it can’t take an org signature.');
+        proposal = await alliance.memberVote(id, { account, member: memberId, choice });
+      }
+    } else if (!memberId) {
+      if (found.status !== 'open') return this._private(`Voting on this proposal is closed (${found.status}).`);
+      return this._private('Sign in on goon.vc before you vote. A command does not link your account.');
+    } else {
+      proposal = await alliance.memberVote(id, { account, member: memberId, choice });
+    }
     const members = proposal.members;
     const tally = proposal.tally;
     const lines = [`Recorded your **${choice}** on **${escapeMarkdown(proposal.title)}**.`];

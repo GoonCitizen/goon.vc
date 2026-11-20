@@ -61,13 +61,20 @@
     return `${n} ${n === 1 ? one : (many || one + 's')}`;
   }
 
-  function counts (videos, stills) {
-    if (!stills) return plural(videos, 'clip');
-    return videos ? `${plural(videos, 'clip')} and ${plural(stills, 'screenshot')}` : plural(stills, 'screenshot');
+  function counts (videos, stills, voice) {
+    const parts = [];
+    if (videos) parts.push(plural(videos, 'clip'));
+    if (stills) parts.push(plural(stills, 'screenshot'));
+    if (voice) parts.push(plural(voice, 'voice clip'));
+    return parts.join(' · ') || plural(0, 'clip');
   }
 
   function isStill (clip) {
     return Boolean(clip && clip.media === 'image');
+  }
+
+  function isAudio (clip) {
+    return Boolean(clip && clip.media === 'audio');
   }
 
   const SOURCE_LABEL = {
@@ -76,6 +83,7 @@
     filename: 'from the file name',
     uploaded: 'estimated from the host upload',
     posted: 'estimated from the Discord post',
+    'discord-voice': 'from voice',
     manual: 'set by hand',
     unknown: 'unknown'
   };
@@ -164,6 +172,7 @@
       </select>
       <label class="muted"><input type="checkbox" data-ref="links" checked> Links</label>
       <label class="muted"><input type="checkbox" data-ref="stills" checked> Screenshots</label>
+      <label class="muted"><input type="checkbox" data-ref="voice" checked> Voice</label>
     </div>
     <div data-ref="projectsSection" class="hidden">
       <h3 class="section-title">Projects</h3>
@@ -332,7 +341,8 @@
         channel: this.ref.channel.value,
         sort: this.ref.sort.value,
         links: this.ref.links.checked,
-        stills: this.ref.stills.checked
+        stills: this.ref.stills.checked,
+        voice: this.ref.voice.checked
       };
     }
 
@@ -340,6 +350,7 @@
       if (!clip) return false;
       if (!f.links && clip.kind === 'link' && !clip.proxyUrl) return false;
       if (!f.stills && isStill(clip)) return false;
+      if (!f.voice && isAudio(clip)) return false;
       if (f.pilot && clip.author !== f.pilot) return false;
       if (f.channel && clip.channel !== f.channel) return false;
       if (!f.query) return true;
@@ -372,8 +383,9 @@
       const s = this.state.status || {};
       const pilots = new Set(clips.map((clip) => clip.author).filter(Boolean)).size;
       const stills = clips.filter(isStill).length;
+      const voice = clips.filter(isAudio).length;
       const parts = [
-        `${counts(clips.length - stills, stills)} from ${plural(pilots, 'pilot')} in ${plural(this.state.sessions.length, 'session')}`
+        `${counts(clips.length - stills - voice, stills, voice)} from ${plural(pilots, 'pilot')} in ${plural(this.state.sessions.length, 'session')}`
       ];
       if (s.pending) parts.push(`${s.pending} still processing`);
       const channels = this.state.channels.map((c) => `#${c.name}`).join(', ');
@@ -426,7 +438,7 @@
         const any = Object.keys(this.state.clips).length;
         this.ref.sessions.innerHTML = `<div class="empty">${any
           ? 'No clips match. Try another search or pilot.'
-          : 'No clips yet. Post a video or screenshot in a clips channel on our Discord and it shows up here at the next check.'}</div>`;
+          : 'No clips yet. Post a video or screenshot in a clips channel, or run /clips listen in voice, and it shows up here.'}</div>`;
       } else {
         this.ref.sessions.innerHTML = shown.map((group) => this._sessionHtml(group)).join('');
       }
@@ -456,7 +468,7 @@
       return `<section ${box} data-session="${esc(s.id)}">
         <div class="session-head">
           <h3>${esc(dayLabel(startMs))} · ${esc(start)}${end && end !== start ? `–${esc(end)}` : ''}</h3>
-          <span class="muted">${esc(longDuration(s.durationMs))} · ${counts(s.clipCount - (s.screenshotCount || 0), s.screenshotCount || 0)}${filtered} · ${esc(pilots)}</span>
+          <span class="muted">${esc(longDuration(s.durationMs))} · ${counts(s.clipCount - (s.screenshotCount || 0) - (s.voiceCount || 0), s.screenshotCount || 0, s.voiceCount || 0)}${filtered} · ${esc(pilots)}</span>
           <span class="actions">
             <a class="button" href="${esc(this.timeline)}?session=${encodeURIComponent(s.id)}">Open timeline</a>
             <button type="button" class="primary" data-action="start" data-session="${esc(s.id)}">Start a project</button>
@@ -480,7 +492,11 @@
       } else {
         inner = '<span class="placeholder">Processing…</span>';
       }
-      const badge = isStill(clip) ? '<span class="badge">Screenshot</span>' : clip.durationMs ? `<span class="badge">${duration(clip.durationMs)}</span>` : '';
+      const badge = isStill(clip)
+        ? '<span class="badge">Screenshot</span>'
+        : isAudio(clip)
+          ? `<span class="badge">Voice${clip.durationMs ? ` · ${duration(clip.durationMs)}` : ''}</span>`
+          : clip.durationMs ? `<span class="badge">${duration(clip.durationMs)}</span>` : '';
       const angles = this._angles(clip).length;
       const angleBadge = angles ? `<span class="badge left">+${plural(angles, 'angle')}</span>` : '';
       const caption = String(clip.caption || '')
@@ -578,14 +594,17 @@
       const angles = this._angles(clip);
       const session = this.state.sessions.find((s) => s.clips.some((c) => c.id === clip.id));
       const still = isStill(clip);
-      const noun = still ? 'screenshot' : 'video';
+      const audio = isAudio(clip);
+      const noun = still ? 'screenshot' : audio ? 'voice clip' : 'video';
       const media = clip.proxyUrl && still
         ? `<img class="still" src="${esc(clip.proxyUrl)}" alt="${esc(clip.caption || `Screenshot by ${clip.author || 'a pilot'}`)}">`
-        : clip.proxyUrl
-          ? `<video data-ref-video controls autoplay playsinline preload="metadata" src="${esc(clip.proxyUrl)}"></video>`
-          : `<div class="linkbox">${clip.kind === 'link'
-            ? `<span>This clip is a link.</span>${clip.linkUrl ? `<a class="button primary" href="${esc(clip.linkUrl)}" target="_blank" rel="noopener">Watch on ${esc(hostOf(clip.linkUrl))}</a>` : ''}`
-            : `<span>${clip.proxy && clip.proxy.status === 'failed' ? `This ${noun} could not be loaded.` : `This ${noun} is still being processed.`}</span>`}</div>`;
+        : clip.proxyUrl && audio
+          ? `<audio data-ref-video controls autoplay preload="metadata" src="${esc(clip.proxyUrl)}"></audio>`
+          : clip.proxyUrl
+            ? `<video data-ref-video controls autoplay playsinline preload="metadata" src="${esc(clip.proxyUrl)}"></video>`
+            : `<div class="linkbox">${clip.kind === 'link'
+              ? `<span>This clip is a link.</span>${clip.linkUrl ? `<a class="button primary" href="${esc(clip.linkUrl)}" target="_blank" rel="noopener">Watch on ${esc(hostOf(clip.linkUrl))}</a>` : ''}`
+              : `<span>${clip.proxy && clip.proxy.status === 'failed' ? `This ${noun} could not be loaded.` : `This ${noun} is still being processed.`}</span>`}</div>`;
       const anglesHtml = angles.length
         ? `<h4 class="muted" style="margin:0.8em 0 0.2em">Other angles</h4><div class="row angles">${angles.map((other) => `<button type="button" data-angle="${esc(other.id)}">${esc(other.author)}</button>`).join('')}</div>`
         : '';
@@ -603,7 +622,8 @@
             ${Number.isFinite(recorded) ? `<dt>Recorded</dt><dd>${esc(dateTime(recorded))} <span class="muted">(${esc(SOURCE_LABEL[rec.source] || rec.source || 'unknown')})</span></dd>` : ''}
             ${Number.isFinite(posted) ? `<dt>Posted</dt><dd>${esc(dateTime(posted))}</dd>` : ''}
             ${clip.durationMs && !still ? `<dt>Length</dt><dd>${duration(clip.durationMs)}</dd>` : ''}
-            ${clip.width && clip.height ? `<dt>Original</dt><dd>${clip.width}×${clip.height}${clip.hasAudio === false ? ', no sound' : ''}</dd>` : ''}
+            ${clip.speakers && clip.speakers.length ? `<dt>Speakers</dt><dd>${esc(clip.speakers.map((row) => row.name).join(', '))}</dd>` : ''}
+            ${!audio && clip.width && clip.height ? `<dt>Original</dt><dd>${clip.width}×${clip.height}${clip.hasAudio === false ? ', no sound' : ''}</dd>` : ''}
             ${clip.channel ? `<dt>Channel</dt><dd>#${esc(clip.channel)}${clip.thread ? ` › ${esc(clip.thread)}` : ''}${clip.guild ? ` <span class="muted">${esc(clip.guild)}</span>` : ''}</dd>` : ''}
             ${clip.filename ? `<dt>File</dt><dd>${esc(clip.filename)}</dd>` : ''}
             ${clip.stream && clip.stream.url ? `<dt>Stream</dt><dd><a href="${esc(clip.stream.url)}" target="_blank" rel="noopener">${esc(hostOf(clip.stream.url))}/${esc(clip.stream.channel)}</a>${clip.linkUrl ? ` · <a href="${esc(clip.linkUrl)}" target="_blank" rel="noopener">broadcast</a>` : ''}</dd>` : ''}
@@ -616,7 +636,7 @@
         </div>
       </div>`;
       overlay.classList.remove('hidden');
-      const video = overlay.querySelector('video');
+      const video = overlay.querySelector('video, audio');
       if (video && at) video.addEventListener('loadedmetadata', () => { video.currentTime = Math.min(at, video.duration || at); }, { once: true });
       if (!wasOpen) this._lastFocus = this.shadowRoot.activeElement;
       overlay.querySelector('[data-action="close"]').focus({ preventScroll: true });
@@ -627,7 +647,7 @@
       if (!this.state.openId) return;
       const id = this.state.openId;
       this.state.openId = null;
-      const video = this.ref.overlay.querySelector('video');
+      const video = this.ref.overlay.querySelector('video, audio');
       if (video) video.pause();
       this.ref.overlay.innerHTML = '';
       this.ref.overlay.classList.add('hidden');
@@ -646,7 +666,7 @@
       const clip = this.state.clips[this.state.openId];
       const other = this.state.clips[otherId];
       if (!clip || !other) return;
-      const video = this.ref.overlay.querySelector('video');
+      const video = this.ref.overlay.querySelector('video, audio');
       const now = Date.parse(clip.recordedAt) + ((video && !isStill(clip) && video.currentTime) || 0) * 1000;
       const at = Math.max(0, Math.min((other.durationMs || 0) / 1000, (now - Date.parse(other.recordedAt)) / 1000));
       this.open(otherId, at);
@@ -661,7 +681,7 @@
         clearTimeout(typing);
         typing = setTimeout(() => this._renderSessions(), 150);
       });
-      for (const name of ['pilot', 'channel', 'sort', 'links', 'stills']) {
+      for (const name of ['pilot', 'channel', 'sort', 'links', 'stills', 'voice']) {
         this.ref[name].addEventListener('change', () => this._renderSessions());
       }
       sr.addEventListener('click', (event) => {
